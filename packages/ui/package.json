@@ -13,7 +13,7 @@
     "@radix-ui/react-dialog": "^1.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@autoswarm/config": "workspace:*",

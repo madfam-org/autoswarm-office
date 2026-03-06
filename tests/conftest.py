@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from packages.orchestrator.src.types import AgentRole
+from autoswarm_orchestrator.types import AgentRole
 
 
 @pytest.fixture()

@@ -2,7 +2,7 @@
 
 # ── Development ─────────────────────────────────────
 dev:
-	pnpm dev & uv run --directory apps/nexus-api fastapi dev src/main.py --port 4300
+	pnpm dev & uv run --directory apps/nexus-api uvicorn nexus_api.main:app --host 0.0.0.0 --port 4300 --reload
 
 build:
 	pnpm build

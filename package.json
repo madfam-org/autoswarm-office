@@ -20,6 +20,11 @@
     "clean": "turbo clean && rm -rf node_modules",
     "prepare": "husky"
   },
+  "pnpm": {
+    "overrides": {
+      "@janua/nextjs-sdk": "workspace:*"
+    }
+  },
   "devDependencies": {
     "@autoswarm/config": "workspace:*",
     "@commitlint/cli": "^19.6.1",

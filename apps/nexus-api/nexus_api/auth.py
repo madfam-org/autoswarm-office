@@ -101,6 +101,14 @@ async def get_current_user(
     Returns a user dict containing at minimum ``sub``, ``roles``, and
     ``org_id`` from the JWT claims.
     """
+    if settings.environment == "development":
+        return {
+            "sub": "dev-user-00000000",
+            "roles": ["admin", "tactician"],
+            "org_id": "dev-org",
+            "email": "dev@autoswarm.local",
+        }
+
     payload = await verify_jwt(credentials.credentials, settings)
 
     return {

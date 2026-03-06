@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from packages.orchestrator.src.compute_tokens import ComputeTokenManager
+from autoswarm_orchestrator.compute_tokens import ComputeTokenManager
 
 
 @pytest.fixture()

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     colyseus_secret: str = "change-me-in-production"
 
     # -- Server ---------------------------------------------------------------
+    environment: str = "production"
     port: int = 4300
     cors_origins: list[str] = [
         "http://localhost:4301",

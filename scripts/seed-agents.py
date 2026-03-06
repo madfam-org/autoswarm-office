@@ -135,11 +135,15 @@ def seed_via_api() -> None:
         write_json_files()
         return
 
-    client = httpx.Client(base_url=API_BASE, timeout=10.0)
+    client = httpx.Client(
+        base_url=API_BASE,
+        timeout=10.0,
+        headers={"Authorization": "Bearer dev-token"},
+    )
 
     # Check API health first.
     try:
-        health = client.get("/health")
+        health = client.get("/health/health")
         health.raise_for_status()
     except (httpx.ConnectError, httpx.HTTPStatusError):
         print(f"Cannot reach Nexus API at {API_BASE}")

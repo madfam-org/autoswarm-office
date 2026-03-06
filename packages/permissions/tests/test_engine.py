@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from packages.permissions.src.engine import PermissionEngine
-from packages.permissions.src.matrix import DEFAULT_PERMISSION_MATRIX
-from packages.permissions.src.types import ActionCategory, PermissionLevel, PermissionResult
+from autoswarm_permissions.engine import PermissionEngine
+from autoswarm_permissions.matrix import DEFAULT_PERMISSION_MATRIX
+from autoswarm_permissions.types import ActionCategory, PermissionLevel, PermissionResult
 
 
 @pytest.fixture()

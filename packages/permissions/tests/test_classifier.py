@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from packages.permissions.src.classifier import ActionClassifier
-from packages.permissions.src.engine import PermissionEngine
-from packages.permissions.src.types import ActionCategory, PermissionLevel
+from autoswarm_permissions.classifier import ActionClassifier
+from autoswarm_permissions.engine import PermissionEngine
+from autoswarm_permissions.types import ActionCategory, PermissionLevel
 
 
 @pytest.fixture()

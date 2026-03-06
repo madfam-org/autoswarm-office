@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from packages.orchestrator.src.draft import (
+from autoswarm_orchestrator.draft import (
     ROLE_WEIGHTS,
     _ROLE_NAMES,
     draft_agent_role,
     generate_agent_name,
 )
-from packages.orchestrator.src.types import AgentRole
+from autoswarm_orchestrator.types import AgentRole
 
 
 class TestDraftWithPreference:

@@ -82,5 +82,5 @@ def create_app() -> FastAPI:
     return app
 
 
-# Module-level app instance for ``uvicorn src.main:app``.
+# Module-level app instance for ``uvicorn nexus_api.main:app``.
 app = create_app()

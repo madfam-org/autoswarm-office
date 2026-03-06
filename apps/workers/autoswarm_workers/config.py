@@ -19,7 +19,10 @@ class Settings(BaseSettings):
     # -- AI Inference ---------------------------------------------------------
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
+    openrouter_api_key: str | None = None
     ollama_base_url: str = "http://localhost:11434"
+    default_model: str = "claude-sonnet-4-20250514"
+    inference_sensitivity: str = "internal"
 
     model_config = {
         "env_file": ".env",

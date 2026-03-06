@@ -33,6 +33,20 @@ def fetch_context(state: CRMState) -> CRMState:
 
     Retrieves contact history, recent interactions, and relevant
     business context to inform the draft.
+
+    In production this node calls a real CRM API (Salesforce, HubSpot,
+    etc.) to fetch the contact record and interaction history.  The LLM
+    can be used via ``call_llm()`` to summarise long interaction
+    histories into concise context.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # context_summary = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": f"Summarise CRM history:\n{raw_history}"}],
+    #     system_prompt="Summarise the contact history into key points for drafting communication.",
+    # )
     """
     messages = state.get("messages", [])
     recipient = state.get("recipient", "unknown@example.com")
@@ -69,12 +83,25 @@ def draft_communication(state: CRMState) -> CRMState:
 
     Uses the inference engine to generate an appropriate email, message,
     or CRM update based on the fetched context and task instructions.
+
+    In production this node calls ``call_llm()`` with the CRM context
+    to generate a personalised draft that accounts for the contact
+    history and relationship stage.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # draft = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": f"Draft {crm_action} for {recipient}"}],
+    #     system_prompt="Draft a professional communication based on the CRM context provided.",
+    # )
     """
     messages = state.get("messages", [])
     recipient = state.get("recipient", "unknown")
     crm_action = state.get("crm_action", "email")
 
-    # In production the inference engine generates the actual content.
+    # Fallback: static template when no LLM is available.
     draft = (
         f"Subject: Follow-up on our recent discussion\n\n"
         f"Dear {recipient},\n\n"
@@ -149,7 +176,12 @@ def send(state: CRMState) -> CRMState:
     """Execute the approved outbound CRM action.
 
     Only reached if the approval gate was passed.  In production this
-    node dispatches the actual email or CRM API call.
+    node dispatches the actual email or CRM API call via the configured
+    email provider (SendGrid, SES, etc.) or CRM write API.
+
+    # Production integration:
+    # Dispatch via real email/CRM provider SDK rather than placeholder.
+    # The LLM is not needed here -- this is a pure API dispatch node.
     """
     messages = state.get("messages", [])
     recipient = state.get("recipient", "unknown")

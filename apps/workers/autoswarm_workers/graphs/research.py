@@ -32,14 +32,26 @@ def formulate_query(state: ResearchState) -> ResearchState:
 
     Extracts key terms and intent from the conversation messages to
     build an effective search strategy.
+
+    In production this node calls ``call_llm()`` with a query-rewriting
+    system prompt to distil the raw task into an optimised search query
+    with key terms, intent, and scope constraints.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # refined_query = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": raw_text}],
+    #     system_prompt="Rewrite this into an optimal search query. Return only the query.",
+    # )
     """
     messages = state.get("messages", [])
     raw_text = " ".join(
         msg.content for msg in messages if hasattr(msg, "content") and msg.content
     )
 
-    # In production the inference engine rewrites the query for optimal
-    # retrieval.  Here we use the raw concatenation as the query.
+    # Fallback: use raw concatenation when no LLM is available.
     refined_query = raw_text.strip() or state.get("query", "")
 
     query_message = AIMessage(
@@ -62,12 +74,18 @@ def search(state: ResearchState) -> ResearchState:
     This is a read-only operation -- no interrupts required.  In
     production this node calls external search APIs (web, internal
     knowledge base, CRM) and collects results.
+
+    # Production integration:
+    # In production this dispatches to real search providers (web APIs,
+    # internal knowledge base, CRM search).  The LLM can also be used
+    # to re-rank or filter results via call_llm() with a relevance
+    # scoring prompt.
     """
     messages = state.get("messages", [])
     query = state.get("query", "")
 
-    # Simulated search results.  Real implementation dispatches to
-    # configured search providers.
+    # Fallback: simulated search results when no search providers are
+    # configured.  Real implementation replaces this with API calls.
     sources: list[dict[str, Any]] = [
         {
             "title": f"Source for: {query[:80]}",
@@ -101,6 +119,19 @@ def synthesize(state: ResearchState) -> ResearchState:
 
     Combines information from all sources, resolves contradictions, and
     produces a unified narrative.
+
+    In production this node calls ``call_llm()`` with a synthesis system
+    prompt to produce a coherent narrative from the collected sources,
+    resolving contradictions and highlighting key findings.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # synthesis_text = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": f"Synthesize these sources:\n{source_summaries}"}],
+    #     system_prompt="You are a research analyst. Synthesize sources into a coherent analysis.",
+    # )
     """
     messages = state.get("messages", [])
     sources = state.get("sources", [])
@@ -110,6 +141,7 @@ def synthesize(state: ResearchState) -> ResearchState:
         f"- {s.get('title', 'Unknown')}: {s.get('snippet', '')}" for s in sources
     )
 
+    # Fallback: concatenation-based synthesis when no LLM is available.
     synthesis_text = (
         f"Research synthesis for query: {query[:200]}\n\n"
         f"Based on {len(sources)} sources:\n{source_summaries}\n\n"
@@ -134,6 +166,19 @@ def format_report(state: ResearchState) -> ResearchState:
 
     Produces a human-readable report with citations and
     recommendations.
+
+    In production this node calls ``call_llm()`` to rewrite the
+    synthesis into a polished, executive-ready report with proper
+    citations and a clear recommendation section.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # report_text = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": f"Format this into a report:\n{synthesis}"}],
+    #     system_prompt="Format the research synthesis into a structured report with sections.",
+    # )
     """
     messages = state.get("messages", [])
     synthesis = state.get("synthesis", "")

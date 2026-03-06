@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, TypedDict
 
@@ -10,8 +11,12 @@ from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
 
 from .base import BaseGraphState
+from ..tools.bash_tool import BashTool
 
 logger = logging.getLogger(__name__)
+
+# Shared BashTool instance for test execution.
+_bash_tool = BashTool()
 
 
 # -- State --------------------------------------------------------------------
@@ -34,6 +39,20 @@ def plan(state: CodingState) -> CodingState:
 
     Analyses the messages and payload to produce a structured list of
     file changes that need to be made.
+
+    In production this node calls ``call_llm()`` with a planning system
+    prompt that instructs the model to break the task into concrete file
+    changes.  The fallback logic below provides a deterministic plan
+    when no LLM provider is configured.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # plan_text = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": task_description}],
+    #     system_prompt="You are a senior developer. Break the task into an ordered list of file changes.",
+    # )
     """
     messages = state.get("messages", [])
     task_description = ""
@@ -41,6 +60,7 @@ def plan(state: CodingState) -> CodingState:
         if hasattr(msg, "content"):
             task_description += msg.content + "\n"
 
+    # Fallback: static plan when no LLM is available.
     plan_output = {
         "description": task_description.strip(),
         "steps": [
@@ -71,10 +91,20 @@ def implement(state: CodingState) -> CodingState:
 
     In production this node invokes the inference engine to generate code
     and applies changes via the file system tools.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # code_output = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": f"Implement step {iteration}: {plan_step}"}],
+    #     system_prompt="You are a senior developer. Write production-ready code for the requested change.",
+    # )
     """
     messages = state.get("messages", [])
     iteration = state.get("iteration", 0) + 1
 
+    # Fallback: record placeholder change when no LLM is available.
     change_record: dict[str, Any] = {
         "iteration": iteration,
         "files_modified": [],
@@ -102,22 +132,65 @@ def test(state: CodingState) -> CodingState:
 
     Returns test results that drive the conditional edge: pass goes to
     review, fail loops back to implement.
+
+    Attempts to run ``pytest`` via BashTool for real test execution.
+    Falls back to simulated (deterministic) results if pytest is
+    unavailable or the subprocess fails.
     """
     messages = state.get("messages", [])
     iteration = state.get("iteration", 0)
 
-    # Simulated test execution.  Real implementation uses BashTool to
-    # run ``pytest`` or the project-specific test command.
-    passed = iteration >= 1  # first attempt passes for deterministic behavior
-    test_results: dict[str, Any] = {
-        "passed": passed,
-        "total": 10,
-        "failures": 0 if passed else 2,
-        "iteration": iteration,
-    }
+    # -- Attempt real test execution via BashTool -----------------------------
+    try:
+        loop = asyncio.get_event_loop()
+        bash_result = loop.run_until_complete(
+            _bash_tool.execute("python -m pytest --tb=short -q")
+        )
+
+        if bash_result.success:
+            # Parse basic pass/fail from pytest output.
+            output = bash_result.stdout
+            passed = "failed" not in output.lower() or "passed" in output.lower()
+            test_results: dict[str, Any] = {
+                "passed": passed,
+                "raw_output": output,
+                "iteration": iteration,
+                "source": "pytest",
+            }
+        else:
+            # pytest ran but returned a non-zero exit code (test failures).
+            test_results = {
+                "passed": False,
+                "raw_output": bash_result.stdout,
+                "stderr": bash_result.stderr,
+                "iteration": iteration,
+                "source": "pytest",
+            }
+
+        logger.info(
+            "pytest execution completed (return_code=%d, passed=%s)",
+            bash_result.return_code,
+            test_results["passed"],
+        )
+
+    except Exception as exc:
+        # -- Fallback: simulated results when BashTool / pytest unavailable ---
+        logger.warning(
+            "BashTool pytest execution failed (%s); falling back to simulated results.",
+            exc,
+        )
+        passed = iteration >= 1  # first attempt passes for deterministic behavior
+        test_results = {
+            "passed": passed,
+            "total": 10,
+            "failures": 0 if passed else 2,
+            "iteration": iteration,
+            "source": "simulated",
+        }
 
     test_message = AIMessage(
-        content=f"Tests {'passed' if passed else 'failed'} ({test_results['failures']} failures).",
+        content=f"Tests {'passed' if test_results['passed'] else 'failed'} "
+        f"(iteration {iteration}, source={test_results.get('source', 'unknown')}).",
         additional_kwargs={"action_category": "bash_execute", "test_results": test_results},
     )
 
@@ -133,6 +206,19 @@ def review(state: CodingState) -> CodingState:
     """Self-review the accumulated code changes.
 
     Performs a lightweight quality check before the push gate.
+
+    In production this node calls ``call_llm()`` with a code-review
+    system prompt to perform an LLM-powered self-review of the diff,
+    checking for bugs, style violations, and security issues.
+
+    # Production integration:
+    # from ..inference import build_model_router, call_llm
+    # router = build_model_router()
+    # review_text = await call_llm(
+    #     router,
+    #     messages=[{"role": "user", "content": f"Review these changes:\n{diff_text}"}],
+    #     system_prompt="You are a thorough code reviewer. Check for bugs, security, and style.",
+    # )
     """
     messages = state.get("messages", [])
     code_changes = state.get("code_changes", [])

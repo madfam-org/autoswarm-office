@@ -42,5 +42,11 @@ htmlcov/
 # Docker
 *.log
 
+# Next.js generated
+next-env.d.ts
+
+# Seed data exports
+data/
+
 # Misc
 *.tsbuildinfo

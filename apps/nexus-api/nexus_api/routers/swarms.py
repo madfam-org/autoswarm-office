@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -43,6 +44,11 @@ class SwarmTaskResponse(BaseModel):
     completed_at: str | None
 
     model_config = {"from_attributes": True}
+
+
+class TaskStatusUpdate(BaseModel):
+    status: str = Field(..., pattern=r"^(running|completed|failed|cancelled)$")
+    result: dict[str, Any] | None = None
 
 
 # -- Helpers ------------------------------------------------------------------
@@ -160,4 +166,43 @@ async def get_task(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
         )
+    return _task_to_response(task)
+
+
+@router.patch("/tasks/{task_id}", response_model=SwarmTaskResponse)
+async def update_task_status(
+    task_id: str,
+    body: TaskStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> SwarmTaskResponse:
+    """Update a task's status.
+
+    When the status transitions to ``completed`` or ``failed`` the
+    ``completed_at`` timestamp is set automatically.
+    """
+    try:
+        uid = uuid.UUID(task_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid UUID"
+        ) from exc
+
+    result = await db.execute(select(SwarmTask).where(SwarmTask.id == uid))
+    task = result.scalar_one_or_none()
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    task.status = body.status
+
+    if body.result is not None:
+        task.payload = {**(task.payload or {}), "result": body.result}
+
+    if body.status in ("completed", "failed"):
+        task.completed_at = datetime.now(timezone.utc)
+
+    await db.flush()
+    await db.refresh(task)
+
     return _task_to_response(task)

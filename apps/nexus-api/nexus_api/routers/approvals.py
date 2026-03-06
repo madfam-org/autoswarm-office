@@ -22,6 +22,16 @@ router = APIRouter(tags=["approvals"])
 # -- Request / Response schemas -----------------------------------------------
 
 
+class CreateApprovalRequest(BaseModel):
+    agent_id: str
+    action_category: str
+    action_type: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+    reasoning: str = ""
+    urgency: str = Field(default="medium", pattern=r"^(low|medium|high|critical)$")
+    diff: str | None = None
+
+
 class ApprovalAction(BaseModel):
     feedback: str | None = Field(default=None, max_length=2000)
 
@@ -124,6 +134,58 @@ async def list_pending_approvals(
     )
     requests = result.scalars().all()
     return [_approval_to_response(r) for r in requests]
+
+
+@router.post("/", response_model=ApprovalRequestResponse, status_code=status.HTTP_201_CREATED)
+async def create_approval_request(
+    body: CreateApprovalRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ApprovalRequestResponse:
+    """Create a new approval request.
+
+    Called by workers internally when an agent hits a HITL interrupt.
+    No authentication required.
+    """
+    try:
+        agent_uuid = uuid.UUID(body.agent_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid agent_id UUID"
+        ) from exc
+
+    approval_req = ApprovalRequest(
+        agent_id=agent_uuid,
+        action_category=body.action_category,
+        action_type=body.action_type,
+        payload=body.payload,
+        reasoning=body.reasoning,
+        urgency=body.urgency,
+        diff=body.diff,
+        status="pending",
+    )
+    db.add(approval_req)
+    await db.flush()
+    await db.refresh(approval_req)
+
+    response_data = _approval_to_response(approval_req)
+
+    # Broadcast the new approval request to all connected WebSocket clients.
+    await manager.send_approval_request(response_data.model_dump(mode="json"))
+
+    return response_data
+
+
+@router.get("/{request_id}", response_model=ApprovalRequestResponse)
+async def get_approval_request(
+    request_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> ApprovalRequestResponse:
+    """Retrieve a single approval request by ID.
+
+    Used by workers for polling approval status. No authentication required.
+    """
+    approval_req = await _get_request_or_404(request_id, db)
+    return _approval_to_response(approval_req)
 
 
 @router.post(

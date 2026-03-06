@@ -23,24 +23,25 @@ These ports do not conflict with Janua (4100-4104) or Enclii (4200-4204).
 ## Commands
 
 ```bash
-make dev          # Start all services (TS + Python)
-make test         # Run all tests
-make lint         # Run all linters
-make typecheck    # TypeScript + mypy
-make build        # Build all packages
-make docker-dev   # Start Postgres + Redis
-make db-migrate   # Run Alembic migrations
-make db-seed      # Seed departments and agents
+make dev              # Start all services (TS + Python)
+make test             # Run all tests
+make lint             # Run all linters
+make typecheck        # TypeScript + mypy
+make build            # Build all packages
+make docker-dev       # Start Postgres + Redis
+make db-migrate       # Run Alembic migrations
+make db-seed          # Seed departments and agents
+make generate-assets  # Regenerate pixel-art sprite PNGs
 
-pnpm dev          # TypeScript services only
-pnpm build        # Build TypeScript packages
-pnpm lint         # ESLint
-pnpm test         # TypeScript tests
-pnpm typecheck    # TypeScript type checking
+pnpm dev              # TypeScript services only
+pnpm build            # Build TypeScript packages
+pnpm lint             # ESLint
+pnpm test             # TypeScript tests (137 tests across 8 suites)
+pnpm typecheck        # TypeScript type checking
 
-uv run pytest     # Python tests
-uv run ruff check .  # Python linting
-uv run mypy .     # Python type checking
+uv run pytest         # Python tests (165 tests)
+uv run ruff check .   # Python linting
+uv run mypy .         # Python type checking
 ```
 
 ## MADFAM Ecosystem
@@ -73,6 +74,7 @@ uv run mypy .     # Python type checking
 - **Strict mode**: enabled in all tsconfig.json files
 - **Linter**: ESLint with shared config from `packages/config/eslint`
 - **Formatter**: Prettier
+- **Tests**: vitest with jsdom + @testing-library/react for UI components
 - **Build**: Turborepo for monorepo orchestration
 - **Package manager**: pnpm with workspace protocol
 
@@ -92,3 +94,14 @@ uv run mypy .     # Python type checking
 - Synergy bonuses stack multiplicatively (see `packages/orchestrator/src/synergy.py`).
 - The permission matrix is evaluated by `packages/permissions/src/engine.py` before
   every tool invocation in the worker.
+
+## Sprite Assets
+
+- Pre-generated pixel-art PNGs live in `apps/office-ui/public/assets/` (sprites,
+  tilesets, UI icons). These are committed to the repo.
+- Regenerate with `make generate-assets` (runs `scripts/generate-assets.js` using
+  `@napi-rs/canvas`).
+- `BootScene.ts` loads sprite files with automatic canvas-rectangle fallback if any
+  PNG fails to load. Department zone overlays are always canvas-generated.
+- `OfficeScene.ts` plays walk animations for the Tactician (4 dirs x 3 frames) and
+  idle/working animations for agents.

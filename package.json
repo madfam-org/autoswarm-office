@@ -18,7 +18,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "clean": "turbo clean && rm -rf node_modules",
-    "prepare": "husky"
+    "prepare": "husky",
+    "generate-assets": "node scripts/generate-assets.js"
   },
   "pnpm": {
     "overrides": {
@@ -29,6 +30,8 @@
     "@autoswarm/config": "workspace:*",
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
+    "@napi-rs/canvas": "^0.1.65",
+    "@vitest/coverage-v8": "^2.1.8",
     "husky": "^9.1.7",
     "prettier": "^3.4.2",
     "turbo": "^2.3.3",

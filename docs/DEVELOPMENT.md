@@ -87,18 +87,34 @@ exist. The main categories are:
 # Run all tests (TypeScript + Python)
 make test
 
-# TypeScript tests only (via Turborepo)
+# TypeScript tests only (via Turborepo, 137 tests across 8 suites)
 pnpm test
 
-# Python tests only (via pytest)
+# Python tests only (via pytest, 165 tests)
 uv run pytest
 
 # Python tests with coverage
 uv run pytest --cov
 
+# TypeScript tests with coverage
+pnpm test -- --coverage
+
 # Run a specific Python test file
 uv run pytest tests/test_permissions.py -v
 ```
+
+### TypeScript Test Suites
+
+| Package | Suite | Tests |
+|---------|-------|-------|
+| `@autoswarm/shared-types` | Type guards and validators | 22 |
+| `@autoswarm/colyseus` | Movement handlers | 25 |
+| `@autoswarm/colyseus` | Interaction handlers | 15 |
+| `@autoswarm/gateway` | Memory management | 20 |
+| `@autoswarm/ui` | Button component | 14 |
+| `@autoswarm/ui` | AgentCard component | 12 |
+| `@autoswarm/ui` | ApprovalModal component | 12 |
+| `@autoswarm/office-ui` | useApprovals hook | 17 |
 
 ## Linting and Formatting
 
@@ -153,6 +169,24 @@ make docker-up
 # Stop everything
 make docker-down
 ```
+
+## Sprite Assets
+
+The Office UI uses pixel-art sprite PNGs for the Phaser game layer. These are
+committed to the repo at `apps/office-ui/public/assets/` so they're available
+without extra build steps.
+
+To regenerate the sprites (e.g. after changing colors or adding new roles):
+
+```bash
+# Generates 12 PNG files (7 sprites, 1 tileset, 4 UI icons)
+make generate-assets
+```
+
+The generator (`scripts/generate-assets.js`) uses `@napi-rs/canvas` to
+programmatically draw pixel-art characters, tilesets, and icons. The Phaser
+`BootScene` loads these files and falls back to canvas-generated colored
+rectangles if any PNG is missing.
 
 ## Build
 

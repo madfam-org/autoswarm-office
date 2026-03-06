@@ -1,4 +1,4 @@
-.PHONY: dev build test lint clean docker-up docker-down db-migrate setup
+.PHONY: dev build test lint clean docker-up docker-down db-migrate setup generate-assets
 
 # ── Development ─────────────────────────────────────
 dev:
@@ -48,6 +48,10 @@ db-migrate:
 
 db-seed:
 	uv run python scripts/seed-agents.py
+
+# ── Assets ─────────────────────────────────────────
+generate-assets:
+	node scripts/generate-assets.js
 
 # ── Setup ───────────────────────────────────────────
 setup:

@@ -20,40 +20,93 @@ const COLORS = {
   alertIcon: 0xef4444, // red
 };
 
+const AGENT_ROLES = ['planner', 'coder', 'reviewer', 'researcher', 'crm', 'support'] as const;
+
 export class BootScene extends Phaser.Scene {
+  private failedKeys: Set<string> = new Set();
+
   constructor() {
     super({ key: 'BootScene' });
   }
 
   preload(): void {
-    // Generate placeholder textures since we don't have real sprite assets yet.
-    // Each texture is a colored rectangle rendered to a canvas texture.
+    // Track failed loads so we can fall back to canvas-generated textures
+    this.load.on('loaderror', (fileObj: Phaser.Loader.File) => {
+      this.failedKeys.add(fileObj.key);
+    });
 
-    this.createRectTexture('tactician', SPRITE_SIZE, SPRITE_SIZE, COLORS.tactician);
-    this.createRectTexture('agent-planner', SPRITE_SIZE, SPRITE_SIZE, COLORS.planner);
-    this.createRectTexture('agent-coder', SPRITE_SIZE, SPRITE_SIZE, COLORS.coder);
-    this.createRectTexture('agent-reviewer', SPRITE_SIZE, SPRITE_SIZE, COLORS.reviewer);
-    this.createRectTexture('agent-researcher', SPRITE_SIZE, SPRITE_SIZE, COLORS.researcher);
-    this.createRectTexture('agent-crm', SPRITE_SIZE, SPRITE_SIZE, COLORS.crm);
-    this.createRectTexture('agent-support', SPRITE_SIZE, SPRITE_SIZE, COLORS.support);
+    // Spritesheets
+    this.load.spritesheet('tactician', '/assets/sprites/tactician.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    for (const role of AGENT_ROLES) {
+      this.load.spritesheet(`agent-${role}`, `/assets/sprites/agent-${role}.png`, {
+        frameWidth: 32,
+        frameHeight: 32,
+      });
+    }
 
-    // Department zone overlays
+    // Tileset
+    this.load.spritesheet('office-tileset', '/assets/tilesets/office-tileset.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+
+    // UI icons
+    this.load.image('icon-approve', '/assets/ui/icon-approve.png');
+    this.load.image('icon-deny', '/assets/ui/icon-deny.png');
+    this.load.image('icon-inspect', '/assets/ui/icon-inspect.png');
+    this.load.image('icon-alert', '/assets/ui/icon-alert.png');
+  }
+
+  create(): void {
+    // Generate canvas fallbacks for any textures that failed to load from files
+    this.generateFallbacks();
+
+    // Department zone overlays are always canvas-generated (variable-size)
     this.createRectTexture('zone-engineering', TILE_SIZE * 6, TILE_SIZE * 5, COLORS.deptEngineering);
     this.createRectTexture('zone-sales', TILE_SIZE * 6, TILE_SIZE * 5, COLORS.deptSales);
     this.createRectTexture('zone-support', TILE_SIZE * 6, TILE_SIZE * 5, COLORS.deptSupport);
     this.createRectTexture('zone-research', TILE_SIZE * 6, TILE_SIZE * 5, COLORS.deptResearch);
 
-    // UI icons
-    this.createRectTexture('review-station', TILE_SIZE, TILE_SIZE, COLORS.reviewStation);
-    this.createRectTexture('alert-icon', 16, 16, COLORS.alertIcon);
+    // Floor and wall tiles — fallback only if file load failed
+    if (this.failedKeys.has('office-tileset')) {
+      this.createRectTexture('floor-tile', TILE_SIZE, TILE_SIZE, COLORS.floor);
+      this.createRectTexture('wall-tile', TILE_SIZE, TILE_SIZE, COLORS.wall);
+      this.createRectTexture('review-station', TILE_SIZE, TILE_SIZE, COLORS.reviewStation);
+    }
 
-    // Floor tile
-    this.createRectTexture('floor-tile', TILE_SIZE, TILE_SIZE, COLORS.floor);
-    this.createRectTexture('wall-tile', TILE_SIZE, TILE_SIZE, COLORS.wall);
+    this.scene.start('OfficeScene');
   }
 
-  create(): void {
-    this.scene.start('OfficeScene');
+  private generateFallbacks(): void {
+    // Tactician fallback
+    if (this.failedKeys.has('tactician')) {
+      this.createRectTexture('tactician', SPRITE_SIZE, SPRITE_SIZE, COLORS.tactician);
+    }
+
+    // Agent fallbacks
+    for (const role of AGENT_ROLES) {
+      const key = `agent-${role}`;
+      if (this.failedKeys.has(key)) {
+        this.createRectTexture(key, SPRITE_SIZE, SPRITE_SIZE, COLORS[role]);
+      }
+    }
+
+    // UI icon fallbacks
+    if (this.failedKeys.has('icon-alert')) {
+      this.createRectTexture('icon-alert', 16, 16, COLORS.alertIcon);
+    }
+    if (this.failedKeys.has('icon-approve')) {
+      this.createRectTexture('icon-approve', 16, 16, 0x10b981);
+    }
+    if (this.failedKeys.has('icon-deny')) {
+      this.createRectTexture('icon-deny', 16, 16, 0xef4444);
+    }
+    if (this.failedKeys.has('icon-inspect')) {
+      this.createRectTexture('icon-inspect', 16, 16, 0x06b6d4);
+    }
   }
 
   private createRectTexture(

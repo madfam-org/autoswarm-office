@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: autoswarm-office
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: autoswarm-office
+    madfam.io/project: autoswarm
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: autoswarm-office
+  source:
+    repoURL: https://github.com/madfam-org/autoswarm-office
+    targetRevision: main
+    path: infra/k8s/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: autoswarm
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

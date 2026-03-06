@@ -1,0 +1,28 @@
+{
+  "name": "@autoswarm/colyseus",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@autoswarm/shared-types": "workspace:*",
+    "@colyseus/core": "^0.15.58",
+    "@colyseus/ws-transport": "^0.15.20",
+    "@colyseus/schema": "^2.0.35",
+    "express": "^4.21.2",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@autoswarm/config": "workspace:*",
+    "@types/express": "^5.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

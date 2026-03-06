@@ -1,0 +1,436 @@
+# AutoSwarm Office -- Full Reference
+
+> Gamified multi-agent business orchestration platform
+> Part of the MADFAM ecosystem (Janua, Dhanam, Enclii)
+
+## Project Structure
+
+```
+autoswarm-office/
+  .github/workflows/        CI/CD pipelines
+    ci.yml                   Main CI (lint, typecheck, test, build, security)
+    deploy-enclii.yml        Docker build + push + Enclii lifecycle callback
+    lint.yml                 Fast lint-only for PRs
+  apps/
+    nexus-api/               FastAPI central API (Python 3.12)
+      src/
+        main.py              App entry point, mounts routers
+        auth.py              Janua JWT validation dependency
+        config.py            Pydantic settings from env vars
+        database.py          SQLAlchemy async engine + session
+        models.py            ORM models (Department, Agent, ApprovalRequest, SwarmTask, ComputeTokenLedger)
+        ws.py                WebSocket ConnectionManager singleton
+        routers/
+          agents.py          CRUD for swarm agents
+          approvals.py       Approval request management + WebSocket
+          billing.py         Dhanam billing integration
+          departments.py     CRUD for departments
+          health.py          Health and readiness probes
+          swarms.py          Task dispatch and monitoring
+    office-ui/               Next.js 14 + Phaser 3 spatial UI
+      src/
+        app/page.tsx         Root page component
+        app/layout.tsx       Root layout with providers
+        game/PhaserGame.tsx  Phaser game wrapper component
+        game/scenes/         Phaser scenes (BootScene, OfficeScene)
+        middleware.ts        Janua session validation
+    colyseus/                Colyseus game state server
+      src/index.ts           Server entry point and room definitions
+    gateway/                 OpenClaw heartbeat daemon
+      src/
+        index.ts             Gateway entry point
+        heartbeat.ts         30-minute cron job for proactive agent wakeups
+        memory.ts            Markdown persistence (MEMORY.md, SOUL.md)
+    workers/                 LangGraph task execution workers
+  packages/
+    shared-types/            TypeScript type definitions
+      src/
+        agent.ts             AgentRole, AgentStatus, Agent, SynergyBonus
+        approval.ts          PermissionLevel, ActionCategory, ApprovalRequest, ApprovalResponse, PermissionMatrix
+        billing.ts           ComputeTokenBucket, SubscriptionTier, TierCapabilities
+        office.ts            Department, ReviewStation, TacticianPosition, OfficeState, GamepadInput
+    ui/                      Shared React components
+      src/
+        agent-card.tsx       Agent info card component
+        approval-modal.tsx   HITL approval modal component
+        button.tsx           Base button component
+    config/                  Shared ESLint and TypeScript configs
+    orchestrator/            Swarm orchestration engine (Python)
+      src/
+        orchestrator.py      Main orchestrator class
+        draft.py             Agent drafting logic
+        synergy.py           Auto Chess synergy calculator
+        compute_tokens.py    Compute token budget management
+        types.py             AgentRole, AgentStatus, AgentConfig, SwarmTask, DepartmentConfig
+        roles/
+          definitions.py     RoleDefinition for each AgentRole (tools, permissions)
+    permissions/             HITL permission engine (Python)
+      src/
+        types.py             PermissionLevel, ActionCategory, PermissionResult
+        matrix.py            DEFAULT_PERMISSION_MATRIX
+        classifier.py        Action classification logic
+        engine.py            Permission evaluation engine
+    inference/               LLM provider abstraction (Python)
+      src/
+        base.py              Abstract provider interface
+        router.py            Model routing logic
+        types.py             Inference request/response types
+        providers/
+          anthropic.py       Claude provider
+          openai.py          OpenAI provider
+          openrouter.py      OpenRouter provider
+          ollama.py          Local Ollama provider
+          generic.py         Generic OpenAI-compatible provider
+  infra/
+    docker/
+      Dockerfile.nexus-api   Python FastAPI container
+      Dockerfile.office-ui   Next.js container with build args
+      Dockerfile.colyseus    Node.js Colyseus container
+      docker-compose.yml     Infrastructure only (Postgres + Redis)
+      docker-compose.dev.yml Full stack with all services
+    k8s/
+      base/                  Kustomize base (namespace)
+      production/            Production overlays (deployments, configmaps, secrets)
+  scripts/
+    setup.sh                 First-time dev environment setup
+    seed-agents.py           Seed departments, agents, permissions, synergies
+```
+
+## API Endpoints
+
+All endpoints are prefixed with `/api/v1` unless noted.
+
+### Health
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /health | No | Liveness probe (always 200) |
+| GET | /ready | No | Readiness probe (checks DB + Redis, returns 503 if degraded) |
+
+### Agents
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /agents/ | Yes | List all agents (optional ?department_id filter) |
+| POST | /agents/ | Yes | Create (draft) a new agent |
+| GET | /agents/{id} | Yes | Get agent by ID |
+| PUT | /agents/{id} | Yes | Update agent fields |
+| POST | /agents/{id}/assign | Yes | Assign agent to a department |
+| DELETE | /agents/{id} | Yes | Delete an agent |
+
+### Departments
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /departments/ | Yes | List all departments |
+| POST | /departments/ | Yes | Create a department (slug must be unique) |
+| GET | /departments/{id} | Yes | Get department with agent list |
+| PUT | /departments/{id} | Yes | Update department fields |
+
+### Approvals
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /approvals/ | Yes | List pending approval requests |
+| POST | /approvals/{id}/approve | Yes | Approve a pending request |
+| POST | /approvals/{id}/deny | Yes | Deny with optional feedback |
+| WS | /approvals/ws | No | Real-time approval event stream |
+
+### Swarms
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /swarms/dispatch | Yes | Dispatch a task to the swarm |
+| GET | /swarms/tasks | Yes | List active tasks (queued/pending/running) |
+| GET | /swarms/tasks/{id} | Yes | Get task by ID |
+
+### Billing
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /billing/status | Yes | Current subscription status (via Dhanam) |
+| GET | /billing/usage | Yes | Compute token usage for billing period |
+| GET | /billing/tokens | Yes | Current token bucket state |
+
+## Key Types
+
+### Python (packages/orchestrator/src/types.py)
+
+```python
+class AgentRole(str, Enum):
+    PLANNER = "planner"
+    CODER = "coder"
+    REVIEWER = "reviewer"
+    RESEARCHER = "researcher"
+    CRM = "crm"
+    SUPPORT = "support"
+
+class AgentStatus(str, Enum):
+    IDLE = "idle"
+    WORKING = "working"
+    WAITING_APPROVAL = "waiting_approval"
+    PAUSED = "paused"
+    ERROR = "error"
+
+class AgentConfig(BaseModel):
+    id: str
+    name: str
+    role: AgentRole
+    level: int  # 1-10
+    department_id: str | None
+    status: AgentStatus
+
+class SwarmTask(BaseModel):
+    id: str
+    description: str
+    assigned_agent_ids: list[str]
+    graph_type: str  # sequential | parallel | coding | research | crm
+    payload: dict
+    status: str  # pending | queued | running | completed | failed
+    created_at: datetime
+
+class DepartmentConfig(BaseModel):
+    id: str
+    name: str
+    slug: str
+    max_agents: int
+    agent_ids: list[str]
+```
+
+### Python (packages/permissions/src/types.py)
+
+```python
+class PermissionLevel(str, Enum):
+    ALLOW = "allow"
+    ASK = "ask"
+    DENY = "deny"
+
+class ActionCategory(str, Enum):
+    FILE_READ = "file_read"
+    FILE_WRITE = "file_write"
+    BASH_EXECUTE = "bash_execute"
+    GIT_COMMIT = "git_commit"
+    GIT_PUSH = "git_push"
+    EMAIL_SEND = "email_send"
+    CRM_UPDATE = "crm_update"
+    DEPLOY = "deploy"
+    API_CALL = "api_call"
+
+class PermissionResult(BaseModel):
+    action_category: ActionCategory
+    level: PermissionLevel
+    requires_approval: bool
+    reason: str
+```
+
+### TypeScript (packages/shared-types)
+
+```typescript
+type AgentRole = 'planner' | 'coder' | 'reviewer' | 'researcher' | 'crm' | 'support';
+type AgentStatus = 'idle' | 'working' | 'waiting_approval' | 'paused' | 'error';
+type PermissionLevel = 'allow' | 'ask' | 'deny';
+type ActionCategory = 'file_read' | 'file_write' | 'bash_execute' | 'git_commit'
+    | 'git_push' | 'email_send' | 'crm_update' | 'deploy' | 'api_call';
+
+interface Agent {
+    id: string; name: string; role: AgentRole; status: AgentStatus;
+    level: number; departmentId: string | null; currentTaskId: string | null;
+    synergyBonuses: SynergyBonus[]; createdAt: string; updatedAt: string;
+}
+
+interface SynergyBonus {
+    name: string; description: string;
+    multiplier: number; requiredRoles: AgentRole[];
+}
+
+interface ApprovalRequest {
+    id: string; agentId: string; agentName: string;
+    actionCategory: ActionCategory; actionType: string;
+    payload: Record<string, unknown>; diff?: string;
+    reasoning: string; urgency: 'low' | 'medium' | 'high' | 'critical';
+    createdAt: string;
+}
+
+interface ApprovalResponse {
+    requestId: string; result: 'approved' | 'denied';
+    feedback?: string; respondedAt: string;
+}
+
+interface Department {
+    id: string; name: string; slug: string; description: string;
+    agents: Agent[]; maxAgents: number; position: { x: number; y: number };
+}
+
+interface GamepadInput {
+    leftStickX: number; leftStickY: number;
+    rightStickX: number; rightStickY: number;
+    buttonA: boolean; buttonB: boolean;
+    buttonX: boolean; buttonY: boolean;
+}
+
+interface OfficeState {
+    departments: Department[]; reviewStations: ReviewStation[];
+    tactician: TacticianPosition; activeAgentCount: number;
+    pendingApprovalCount: number;
+}
+
+type SubscriptionTier = 'starter' | 'professional' | 'enterprise';
+
+interface ComputeTokenBucket {
+    dailyLimit: number; used: number;
+    remaining: number; resetAt: string;
+}
+
+interface TierCapabilities {
+    tier: SubscriptionTier; maxAgents: number;
+    maxDepartments: number; dailyComputeTokens: number;
+    maxConcurrentTasks: number; features: string[];
+}
+```
+
+## WebSocket Messages
+
+### Connection
+
+Connect to `ws://localhost:4300/api/v1/approvals/ws?client_id=<uuid>`
+
+### Server -> Client
+
+```json
+// New approval request from an agent
+{
+    "type": "approval_request",
+    "data": {
+        "id": "<uuid>",
+        "agent_id": "<uuid>",
+        "action_category": "git_push",
+        "action_type": "push_to_main",
+        "payload": {"branch": "feat/x", "commits": 3},
+        "diff": "--- a/file\n+++ b/file\n...",
+        "reasoning": "All tests pass.",
+        "urgency": "medium",
+        "created_at": "2026-03-06T14:30:00Z"
+    }
+}
+
+// Approval decision was made
+{
+    "type": "approval_response",
+    "data": {
+        "id": "<uuid>",
+        "status": "approved",
+        "feedback": null,
+        "responded_at": "2026-03-06T14:31:15Z"
+    }
+}
+
+// Keep-alive pong
+{"type": "pong"}
+```
+
+### Client -> Server
+
+```json
+// Keep-alive ping
+"ping"
+```
+
+## Redis Queue Format
+
+Tasks are enqueued via `LPUSH autoswarm:tasks <json>` and dequeued by workers
+via `BRPOP autoswarm:tasks 0`.
+
+```json
+{
+    "task_id": "<uuid>",
+    "graph_type": "parallel",
+    "description": "Integrate payment gateway",
+    "assigned_agent_ids": ["<uuid>", "<uuid>"],
+    "payload": {
+        "repo": "madfam-org/autoswarm-office",
+        "branch": "feat/payments"
+    }
+}
+```
+
+## JWT Claims (Janua)
+
+```json
+{
+    "sub": "user_abc123",
+    "email": "tactician@madfam.io",
+    "roles": ["admin"],
+    "org_id": "org_xyz789",
+    "iss": "https://auth.madfam.io",
+    "aud": "autoswarm-office",
+    "exp": 1741276800,
+    "iat": 1741273200
+}
+```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| DATABASE_URL | postgresql://autoswarm:autoswarm@localhost:5432/autoswarm | PostgreSQL connection |
+| REDIS_URL | redis://localhost:6379 | Redis connection |
+| JANUA_ISSUER_URL | https://auth.madfam.io | Janua OIDC issuer |
+| JANUA_CLIENT_ID | autoswarm-office | OIDC client ID |
+| JANUA_CLIENT_SECRET | (empty) | OIDC client secret |
+| NEXT_PUBLIC_JANUA_URL | https://auth.madfam.io | Client-side Janua URL |
+| DHANAM_API_URL | https://api.dhan.am | Dhanam billing API |
+| DHANAM_WEBHOOK_SECRET | (empty) | Dhanam webhook HMAC key |
+| ANTHROPIC_API_KEY | (empty) | Anthropic Claude API key |
+| OPENAI_API_KEY | (empty) | OpenAI API key |
+| OPENROUTER_API_KEY | (empty) | OpenRouter API key |
+| OLLAMA_BASE_URL | http://localhost:11434 | Local Ollama server |
+| OPENCLAW_API_KEY | (empty) | OpenClaw gateway key |
+| OPENCLAW_MEMORY_DIR | ./data/memory | Markdown memory directory |
+| COLYSEUS_SECRET | change-me-in-production | Colyseus session secret |
+| NEXUS_API_PORT | 4300 | Nexus API listen port |
+| OFFICE_UI_PORT | 4301 | Office UI listen port |
+| ADMIN_PORT | 4302 | Admin dashboard listen port |
+| COLYSEUS_PORT | 4303 | Colyseus listen port |
+| NPM_MADFAM_TOKEN | (empty) | MADFAM npm registry token |
+
+## Synergy Rules
+
+| Name | Required Roles | Multiplier |
+|------|---------------|-----------|
+| Surgical DevOps | researcher + coder | 1.30x |
+| Full Stack Review | coder + reviewer | 1.25x |
+| Strategic Planning | planner + researcher | 1.20x |
+| Customer Intel | crm + support | 1.15x |
+| War Room | planner + coder + reviewer | 1.50x |
+
+Synergies stack multiplicatively. A department with planner + coder + reviewer
+activates both "Full Stack Review" (1.25x) and "War Room" (1.50x) for a combined
+effective multiplier of 1.875x.
+
+## Default Permission Matrix
+
+| Action | Level |
+|--------|-------|
+| file_read | allow |
+| file_write | ask |
+| bash_execute | ask |
+| git_commit | ask |
+| git_push | ask |
+| email_send | ask |
+| crm_update | ask |
+| deploy | ask |
+| api_call | allow |
+
+## MADFAM Ecosystem
+
+- **Janua** (auth.madfam.io): OIDC identity provider. Provides @janua/nextjs-sdk for
+  frontend session management and Python JWT validation for the API. Read the Janua
+  llms-full.txt for complete API surface.
+
+- **Dhanam** (api.dhan.am): Billing and subscription management. Provides
+  @dhanam/billing-sdk for usage tracking and tier enforcement. Read the Dhanam
+  llms-full.txt for complete API surface.
+
+- **Enclii** (api.enclii.dev): Deployment orchestration. Watches GHCR for image pushes,
+  manages ArgoCD rollouts. Configured via .enclii.yml. Read the Enclii llms-full.txt
+  for complete API surface.

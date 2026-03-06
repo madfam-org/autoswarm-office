@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoswarm-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: autoswarm
+      POSTGRES_PASSWORD: autoswarm
+      POSTGRES_DB: autoswarm
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoswarm -d autoswarm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - madfam-shared-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: autoswarm-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - madfam-shared-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  madfam-shared-network:
+    external: false

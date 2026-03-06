@@ -1,0 +1,6 @@
+{
+  "name": "@autoswarm/config",
+  "version": "0.1.0",
+  "private": true,
+  "files": ["eslint", "typescript"]
+}

@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoswarm-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: autoswarm
+      POSTGRES_PASSWORD: autoswarm
+      POSTGRES_DB: autoswarm
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoswarm -d autoswarm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - madfam-shared-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: autoswarm-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - madfam-shared-network
+
+  nexus-api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.nexus-api
+    container_name: autoswarm-nexus-api
+    ports:
+      - "4300:4300"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://autoswarm:autoswarm@postgres:5432/autoswarm
+      REDIS_URL: redis://redis:6379/0
+      NEXUS_API_PORT: "4300"
+      ENVIRONMENT: development
+    networks:
+      - madfam-shared-network
+
+  office-ui:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.office-ui
+    container_name: autoswarm-office-ui
+    ports:
+      - "4301:3000"
+    depends_on:
+      - nexus-api
+    environment:
+      NEXT_PUBLIC_API_URL: http://nexus-api:4300
+      NEXT_PUBLIC_COLYSEUS_URL: ws://colyseus:4303
+    networks:
+      - madfam-shared-network
+
+  colyseus:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.colyseus
+    container_name: autoswarm-colyseus
+    ports:
+      - "4303:4303"
+    environment:
+      COLYSEUS_PORT: "4303"
+      REDIS_URL: redis://redis:6379/1
+    networks:
+      - madfam-shared-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  madfam-shared-network:
+    external: false

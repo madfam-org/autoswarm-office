@@ -1,0 +1,44 @@
+[project]
+name = "autoswarm-office"
+version = "0.1.0"
+description = "AutoSwarm Office — Gamified multi-agent business orchestration platform"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+  "apps/nexus-api",
+  "apps/workers",
+  "packages/inference",
+  "packages/orchestrator",
+  "packages/permissions",
+]
+
+[tool.uv]
+dev-dependencies = [
+  "pytest>=8.3.4",
+  "pytest-asyncio>=0.25.0",
+  "pytest-cov>=6.0.0",
+  "ruff>=0.8.6",
+  "mypy>=1.14.1",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["autoswarm"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

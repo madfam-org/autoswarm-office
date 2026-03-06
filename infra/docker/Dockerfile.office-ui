@@ -1,0 +1,53 @@
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/office-ui/package.json apps/office-ui/
+COPY packages/ packages/
+
+RUN pnpm install --frozen-lockfile
+
+# Stage 2: Builder
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/office-ui/node_modules ./apps/office-ui/node_modules
+COPY --from=deps /app/packages/ ./packages/
+COPY apps/office-ui/ apps/office-ui/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json turbo.json ./
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN pnpm --filter office-ui build
+
+# Stage 3: Runner
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=builder /app/apps/office-ui/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/office-ui/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/office-ui/.next/static ./.next/static
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+USER nextjs
+
+CMD ["node", "server.js"]

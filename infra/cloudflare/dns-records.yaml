@@ -1,0 +1,17 @@
+records:
+  - type: CNAME
+    name: api.autoswarm.madfam.io
+    content: autoswarm-office.cfargotunnel.com
+    proxied: true
+  - type: CNAME
+    name: office.autoswarm.madfam.io
+    content: autoswarm-office.cfargotunnel.com
+    proxied: true
+  - type: CNAME
+    name: colyseus.autoswarm.madfam.io
+    content: autoswarm-office.cfargotunnel.com
+    proxied: true
+  - type: CNAME
+    name: admin.autoswarm.madfam.io
+    content: autoswarm-office.cfargotunnel.com
+    proxied: true

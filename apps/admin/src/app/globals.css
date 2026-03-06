@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-900 text-white antialiased;
+  }
+}
+
+@layer components {
+  .pixel-border {
+    box-shadow:
+      0 0 0 2px #000,
+      0 0 0 4px #475569,
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .pixel-border-accent {
+    box-shadow:
+      0 0 0 2px #000,
+      0 0 0 4px #6366f1,
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+}

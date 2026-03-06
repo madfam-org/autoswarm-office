@@ -1,0 +1,38 @@
+# Stage 1: Builder
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/colyseus/package.json apps/colyseus/
+COPY packages/ packages/
+COPY tsconfig.json ./
+
+RUN pnpm install --frozen-lockfile
+
+COPY apps/colyseus/ apps/colyseus/
+
+RUN pnpm --filter colyseus build
+
+# Stage 2: Runner
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 appuser
+
+COPY --from=builder --chown=appuser:nodejs /app/apps/colyseus/dist ./dist
+COPY --from=builder --chown=appuser:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:nodejs /app/apps/colyseus/node_modules ./apps/colyseus/node_modules
+COPY --from=builder /app/apps/colyseus/package.json ./package.json
+
+ENV NODE_ENV=production
+
+EXPOSE 4303
+
+USER appuser
+
+CMD ["node", "dist/index.js"]

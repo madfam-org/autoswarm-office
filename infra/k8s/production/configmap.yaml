@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: autoswarm-config
+  namespace: autoswarm
+  labels:
+    app.kubernetes.io/part-of: autoswarm-office
+data:
+  JANUA_ISSUER_URL: https://janua.madfam.io/realms/autoswarm
+  DHANAM_API_URL: https://api.dhanam.madfam.io
+  NEXUS_API_PORT: "4300"
+  OFFICE_UI_PORT: "3000"
+  COLYSEUS_PORT: "4303"

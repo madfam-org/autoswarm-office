@@ -1,0 +1,50 @@
+# AutoSwarm Office
+
+> Gamified multi-agent business orchestration platform
+
+## Stack
+
+- Frontend: Next.js 14, Phaser 3, React, Tailwind CSS
+- Backend: FastAPI, SQLAlchemy, Pydantic
+- Real-time: Colyseus (WebSocket game state sync)
+- Execution: LangGraph (multi-agent workflows with interrupt support)
+- Database: PostgreSQL 16, Redis 7
+- Monorepo: pnpm workspaces (TypeScript) + UV workspaces (Python)
+
+## Entry Points
+
+- API server: apps/nexus-api/src/main.py
+- Office UI: apps/office-ui/src/app/page.tsx
+- Colyseus: apps/colyseus/src/index.ts
+- Gateway: apps/gateway/src/index.ts
+- Orchestrator: packages/orchestrator/src/orchestrator.py
+
+## API Base
+
+http://localhost:4300/api/v1
+
+## Key Endpoints
+
+- GET  /health -- liveness probe
+- GET  /ready -- readiness probe (checks DB + Redis)
+- CRUD /agents -- manage swarm agents
+- CRUD /departments -- manage virtual office departments
+- GET  /approvals -- list pending HITL approval requests
+- POST /approvals/{id}/approve -- approve an agent action
+- POST /approvals/{id}/deny -- deny an agent action
+- POST /swarms/dispatch -- dispatch a task to the swarm
+- GET  /swarms/tasks -- list active tasks
+- WS   /approvals/ws -- real-time approval event stream
+
+## Monorepo Layout
+
+- apps/ -- deployable services (nexus-api, office-ui, colyseus, gateway, workers)
+- packages/ -- shared libraries (shared-types, ui, config, orchestrator, permissions, inference)
+- infra/ -- Docker and Kubernetes configs
+- scripts/ -- setup and seed utilities
+
+## See Also
+
+- llms-full.txt -- comprehensive reference with types, WebSocket contracts, and env vars
+- docs/ARCHITECTURE.md -- component diagram and data flow
+- docs/HITL_FLOW.md -- human-in-the-loop approval mechanics

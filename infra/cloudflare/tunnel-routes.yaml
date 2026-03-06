@@ -1,0 +1,13 @@
+tunnel: autoswarm-office
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: api.autoswarm.madfam.io
+    service: http://nexus-api.autoswarm.svc.cluster.local:80
+  - hostname: office.autoswarm.madfam.io
+    service: http://office-ui.autoswarm.svc.cluster.local:80
+  - hostname: colyseus.autoswarm.madfam.io
+    service: http://colyseus.autoswarm.svc.cluster.local:80
+  - hostname: admin.autoswarm.madfam.io
+    service: http://admin.autoswarm.svc.cluster.local:80
+  - service: http_status:404

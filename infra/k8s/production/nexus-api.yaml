@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus-api
+  namespace: autoswarm
+  labels:
+    app.kubernetes.io/name: nexus-api
+    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nexus-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nexus-api
+        app.kubernetes.io/part-of: autoswarm-office
+        app.kubernetes.io/component: api
+    spec:
+      serviceAccountName: autoswarm-sa
+      containers:
+        - name: nexus-api
+          image: ghcr.io/madfam-org/autoswarm-nexus-api:latest
+          ports:
+            - containerPort: 4300
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 4300
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 4300
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          envFrom:
+            - configMapRef:
+                name: autoswarm-config
+            - secretRef:
+                name: autoswarm-secrets
+          env:
+            - name: ENVIRONMENT
+              value: production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-api
+  namespace: autoswarm
+  labels:
+    app.kubernetes.io/name: nexus-api
+    app.kubernetes.io/part-of: autoswarm-office
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: nexus-api
+  ports:
+    - port: 80
+      targetPort: 4300
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexus-api
+  namespace: autoswarm
+  labels:
+    app.kubernetes.io/name: nexus-api
+    app.kubernetes.io/part-of: autoswarm-office
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: api.autoswarm.madfam.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nexus-api
+                port:
+                  number: 80

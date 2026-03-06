@@ -1,0 +1,158 @@
+apiVersion: enclii.dev/v1
+kind: Service
+metadata:
+  name: autoswarm-nexus-api
+  project: madfam-platform
+  description: AutoSwarm Office — Core orchestration API
+spec:
+  build:
+    type: dockerfile
+    dockerfile: infra/docker/Dockerfile.nexus-api
+    context: .
+    source:
+      git:
+        repository: https://github.com/madfam-org/autoswarm-office
+        branch: main
+        autoDeploy: true
+  runtime:
+    port: 4300
+    replicas: 2
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    healthCheck: /api/v1/health
+    readinessProbe:
+      path: /api/v1/health
+      initialDelaySeconds: 10
+      periodSeconds: 5
+    livenessProbe:
+      path: /api/v1/health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+  env:
+    - name: PORT
+      value: "4300"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: autoswarm-secrets
+          key: database-url
+    - name: REDIS_URL
+      valueFrom:
+        secretKeyRef:
+          name: autoswarm-secrets
+          key: redis-url
+    - name: JANUA_ISSUER_URL
+      value: https://auth.madfam.io
+    - name: JANUA_CLIENT_ID
+      value: autoswarm-office
+    - name: JANUA_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: autoswarm-secrets
+          key: janua-client-secret
+  domains:
+    - domain: api.autoswarm.madfam.io
+      tls: true
+      tlsIssuer: cloudflare
+      primary: true
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+---
+apiVersion: enclii.dev/v1
+kind: Service
+metadata:
+  name: autoswarm-office-ui
+  project: madfam-platform
+  description: AutoSwarm Office — Spatial office UI
+spec:
+  build:
+    type: dockerfile
+    dockerfile: infra/docker/Dockerfile.office-ui
+    context: .
+    args:
+      NEXT_PUBLIC_API_URL: https://api.autoswarm.madfam.io
+      NEXT_PUBLIC_JANUA_URL: https://auth.madfam.io
+      NEXT_PUBLIC_COLYSEUS_URL: wss://colyseus.autoswarm.madfam.io
+    source:
+      git:
+        repository: https://github.com/madfam-org/autoswarm-office
+        branch: main
+        autoDeploy: true
+  runtime:
+    port: 3000
+    replicas: 2
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    healthCheck: /api/health
+    readinessProbe:
+      path: /api/health
+      initialDelaySeconds: 10
+      periodSeconds: 5
+    livenessProbe:
+      path: /api/health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+  domains:
+    - domain: office.autoswarm.madfam.io
+      tls: true
+      tlsIssuer: cloudflare
+      primary: true
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+---
+apiVersion: enclii.dev/v1
+kind: Service
+metadata:
+  name: autoswarm-colyseus
+  project: madfam-platform
+  description: AutoSwarm Office — Colyseus room server
+spec:
+  build:
+    type: dockerfile
+    dockerfile: infra/docker/Dockerfile.colyseus
+    context: .
+    source:
+      git:
+        repository: https://github.com/madfam-org/autoswarm-office
+        branch: main
+        autoDeploy: true
+  runtime:
+    port: 4303
+    replicas: 1
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+    healthCheck: /health
+    readinessProbe:
+      path: /health
+      initialDelaySeconds: 5
+      periodSeconds: 5
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 15
+      periodSeconds: 10
+  domains:
+    - domain: colyseus.autoswarm.madfam.io
+      tls: true
+      tlsIssuer: cloudflare
+      primary: true

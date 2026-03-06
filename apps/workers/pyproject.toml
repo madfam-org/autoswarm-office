@@ -1,0 +1,21 @@
+[project]
+name = "autoswarm-workers"
+version = "0.1.0"
+description = "LangGraph execution workers for AutoSwarm Office"
+requires-python = ">=3.12"
+dependencies = [
+  "langgraph>=0.2.60",
+  "langchain-core>=0.3.28",
+  "redis>=5.2.1",
+  "httpx>=0.28.1",
+  "pydantic>=2.10.5",
+  "autoswarm-inference",
+  "autoswarm-permissions",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]

@@ -1,0 +1,67 @@
+"""Health and readiness probe endpoints."""
+
+from __future__ import annotations
+
+import logging
+
+from fastapi import APIRouter, Response, status
+from sqlalchemy import text
+
+from ..database import async_session_factory
+from ..config import get_settings
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["health"])
+
+_settings = get_settings()
+
+
+@router.get("/health")
+async def health() -> dict[str, str]:
+    """Liveness probe -- always returns 200 if the process is running."""
+    return {
+        "status": "healthy",
+        "version": "0.1.0",
+        "service": "nexus-api",
+    }
+
+
+@router.get("/ready")
+async def ready(response: Response) -> dict[str, object]:
+    """Readiness probe -- validates database and Redis connectivity.
+
+    Returns 200 when all dependencies are reachable, 503 otherwise.
+    """
+    checks: dict[str, str] = {}
+
+    # -- Database check -------------------------------------------------------
+    try:
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as exc:
+        logger.error("Database readiness check failed: %s", exc)
+        checks["database"] = "unavailable"
+
+    # -- Redis check ----------------------------------------------------------
+    try:
+        import redis.asyncio as aioredis
+
+        redis_client = aioredis.from_url(_settings.redis_url, decode_responses=True)
+        await redis_client.ping()
+        await redis_client.aclose()
+        checks["redis"] = "ok"
+    except Exception as exc:
+        logger.error("Redis readiness check failed: %s", exc)
+        checks["redis"] = "unavailable"
+
+    # -- Aggregate result -----------------------------------------------------
+    all_ok = all(v == "ok" for v in checks.values())
+    if not all_ok:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return {
+        "status": "ready" if all_ok else "degraded",
+        "checks": checks,
+    }

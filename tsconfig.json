@@ -1,0 +1,10 @@
+{
+  "extends": "@autoswarm/config/typescript/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@autoswarm/*": ["packages/*/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", ".turbo"]
+}

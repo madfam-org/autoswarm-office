@@ -85,6 +85,24 @@ uv run mypy .         # Python type checking
   `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`
 - PRs require CI to pass before merge.
 
+## Skills System
+
+The `packages/skills/` package implements the AgentSkills standard.
+
+- **Core skills** (11) live in `packages/skills/skill-definitions/`. Always loaded.
+- **Community skills** (~25) live in `packages/skills/community-skills/`. Vendored from
+  [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills).
+  Disabled by default.
+- `SkillTier` enum: `CORE` | `COMMUNITY`. Set by the registry during discovery, not
+  from YAML frontmatter.
+- Enable community skills via:
+  - Env var: `AUTOSWARM_COMMUNITY_SKILLS_ENABLED=true`
+  - Runtime: `get_skill_registry().enable_community_skills()`
+  - REST API: `POST /api/v1/skills/community/enable`
+- Core skills always take precedence on name collision with community skills.
+- Community skill scripts under `community-skills/` are excluded from ruff linting
+  via `extend-exclude` in `pyproject.toml`.
+
 ## Architecture Notes
 
 - The Redis queue key is `autoswarm:tasks` (LPUSH to enqueue, BRPOP to dequeue).

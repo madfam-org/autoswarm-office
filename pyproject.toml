@@ -9,6 +9,7 @@ dependencies = [
   "autoswarm-permissions",
   "autoswarm-nexus-api",
   "autoswarm-workers",
+  "autoswarm-skills",
 ]
 
 [tool.uv.workspace]
@@ -18,6 +19,7 @@ members = [
   "packages/inference",
   "packages/orchestrator",
   "packages/permissions",
+  "packages/skills",
 ]
 
 [tool.uv.sources]
@@ -26,6 +28,7 @@ autoswarm-inference = { workspace = true }
 autoswarm-permissions = { workspace = true }
 autoswarm-nexus-api = { workspace = true }
 autoswarm-workers = { workspace = true }
+autoswarm-skills = { workspace = true }
 
 [tool.uv]
 dev-dependencies = [
@@ -40,12 +43,13 @@ dev-dependencies = [
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+extend-exclude = ["packages/skills/community-skills"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["autoswarm_orchestrator", "autoswarm_inference", "autoswarm_permissions", "nexus_api", "autoswarm_workers"]
+known-first-party = ["autoswarm_orchestrator", "autoswarm_inference", "autoswarm_permissions", "nexus_api", "autoswarm_workers", "autoswarm_skills"]
 
 [tool.mypy]
 python_version = "3.12"

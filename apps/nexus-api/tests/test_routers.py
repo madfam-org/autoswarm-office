@@ -1,13 +1,14 @@
 """Comprehensive tests for nexus-api routers.
 
-Covers the health, billing, and approvals endpoints using an in-memory SQLite
-database (configured in conftest.py) so no external services are required.
+Covers the health, billing, approvals, and skills endpoints using an in-memory
+SQLite database (configured in conftest.py) so no external services are required.
 
 Test categories
 ---------------
 - Health endpoints: liveness probe
 - Billing endpoints: status, usage, token status
 - Approval endpoints: create, list pending, approve, deny, get by ID, edge cases
+- Skills endpoints: list, community enable/disable, community status
 """
 
 from __future__ import annotations
@@ -15,8 +16,6 @@ from __future__ import annotations
 import uuid
 
 import httpx
-import pytest
-
 
 # =============================================================================
 # Health router
@@ -543,3 +542,109 @@ class TestDenyRequest:
             f"/api/v1/approvals/{approval_id}/approve", headers=auth_headers
         )
         assert resp.status_code == 409
+
+
+# =============================================================================
+# Skills router
+# =============================================================================
+
+
+class TestSkillsList:
+    """Tests for GET /api/v1/skills/."""
+
+    async def test_list_skills(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Returns a list of discovered skills."""
+        resp = await client.get("/api/v1/skills/", headers=auth_headers)
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert isinstance(body, list)
+        assert len(body) >= 11
+        first = body[0]
+        assert "name" in first
+        assert "description" in first
+        assert "tier" in first
+        assert "allowed_tools" in first
+
+    async def test_list_skills_filter_core(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Filtering by tier=core returns only core skills."""
+        resp = await client.get(
+            "/api/v1/skills/", params={"tier": "core"}, headers=auth_headers
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert all(s["tier"] == "core" for s in body)
+        assert len(body) == 11
+
+    async def test_list_skills_requires_auth(self, client: httpx.AsyncClient) -> None:
+        """Skills list requires authentication."""
+        resp = await client.get("/api/v1/skills/")
+        assert resp.status_code in (401, 403)
+
+
+class TestCommunitySkillsToggle:
+    """Tests for community skills enable/disable/status endpoints."""
+
+    async def test_community_status_default(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Community status returns enabled: false by default."""
+        resp = await client.get("/api/v1/skills/community/status", headers=auth_headers)
+
+        assert resp.status_code == 200
+        assert resp.json()["enabled"] is False
+
+    async def test_enable_community(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Enabling community skills returns 204 and status flips to true."""
+        resp = await client.post(
+            "/api/v1/skills/community/enable", headers=auth_headers
+        )
+        assert resp.status_code == 204
+
+        status_resp = await client.get(
+            "/api/v1/skills/community/status", headers=auth_headers
+        )
+        assert status_resp.json()["enabled"] is True
+
+    async def test_disable_community(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Disabling community skills returns 204 and status flips to false."""
+        await client.post("/api/v1/skills/community/enable", headers=auth_headers)
+        resp = await client.post(
+            "/api/v1/skills/community/disable", headers=auth_headers
+        )
+        assert resp.status_code == 204
+
+        status_resp = await client.get(
+            "/api/v1/skills/community/status", headers=auth_headers
+        )
+        assert status_resp.json()["enabled"] is False
+
+    async def test_community_enable_requires_auth(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Enabling community skills requires authentication."""
+        resp = await client.post("/api/v1/skills/community/enable")
+        assert resp.status_code in (401, 403)
+
+    async def test_community_disable_requires_auth(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Disabling community skills requires authentication."""
+        resp = await client.post("/api/v1/skills/community/disable")
+        assert resp.status_code in (401, 403)
+
+    async def test_community_status_requires_auth(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Community status endpoint requires authentication."""
+        resp = await client.get("/api/v1/skills/community/status")
+        assert resp.status_code in (401, 403)

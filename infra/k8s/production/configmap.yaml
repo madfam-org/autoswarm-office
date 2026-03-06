@@ -6,8 +6,18 @@ metadata:
   labels:
     app.kubernetes.io/part-of: autoswarm-office
 data:
-  JANUA_ISSUER_URL: https://janua.madfam.io/realms/autoswarm
-  DHANAM_API_URL: https://api.dhanam.madfam.io
+  JANUA_ISSUER_URL: "https://auth.madfam.io"
+  JANUA_CLIENT_ID: "autoswarm-office"
+  DHANAM_API_URL: "https://api.dhan.am"
+  ENVIRONMENT: "production"
   NEXUS_API_PORT: "4300"
   OFFICE_UI_PORT: "3000"
+  ADMIN_PORT: "3000"
   COLYSEUS_PORT: "4303"
+  GATEWAY_PORT: "4304"
+  REDIS_URL: "redis://redis-master.autoswarm.svc.cluster.local:6379"
+  NEXT_PUBLIC_API_URL: "https://api.autoswarm.madfam.io"
+  NEXT_PUBLIC_JANUA_ISSUER_URL: "https://auth.madfam.io"
+  NEXT_PUBLIC_JANUA_CLIENT_ID: "autoswarm-office"
+  NEXT_PUBLIC_COLYSEUS_URL: "wss://colyseus.autoswarm.madfam.io"
+  NEXT_PUBLIC_DHANAM_URL: "https://billing.madfam.io"

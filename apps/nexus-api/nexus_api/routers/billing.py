@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac as hmac_mod
+import json
 import logging
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -109,3 +112,49 @@ async def compute_token_status(
             else today_start.isoformat()
         ),
     }
+
+
+@router.post("/portal")
+async def create_billing_portal() -> dict[str, object]:
+    """Create a Dhanam billing portal session for self-service management."""
+    settings = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{settings.dhanam_api_url.rstrip('/')}/billing/portal",
+                headers={"Authorization": f"Bearer {settings.dhanam_webhook_secret}"},
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPError as exc:
+        logger.warning("Dhanam portal API unreachable: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Billing service unavailable",
+        ) from exc
+
+
+@router.post("/webhooks/dhanam", include_in_schema=False, dependencies=[])
+async def dhanam_webhook(request: Request) -> dict[str, str]:
+    """Receive and verify webhooks from the Dhanam billing system."""
+    settings = get_settings()
+    body = await request.body()
+    signature = request.headers.get("x-janua-signature", "")
+
+    if settings.dhanam_webhook_secret:
+        expected = hmac_mod.new(
+            settings.dhanam_webhook_secret.encode(),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac_mod.compare_digest(expected, signature):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid signature",
+            )
+
+    payload = json.loads(body)
+    event_type = payload.get("type", "unknown")
+    logger.info("Received Dhanam webhook event: %s", event_type)
+
+    return {"status": "ok"}

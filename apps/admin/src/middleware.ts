@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Check for Janua session cookie or Authorization header
-  const sessionCookie = request.cookies.get('janua_session');
+  const sessionCookie = request.cookies.get('janua-session');
   const authHeader = request.headers.get('authorization');
 
   if (!sessionCookie?.value && !authHeader) {

@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   const handleLogin = useCallback(() => {
     const redirect = searchParams.get('redirect') ?? '/';
-    document.cookie = `janua_session=${DUMMY_JWT}; path=/; max-age=86400; SameSite=Lax`;
+    document.cookie = `janua-session=${DUMMY_JWT}; path=/; max-age=86400; SameSite=Lax`;
     router.push(redirect);
   }, [searchParams, router]);
 

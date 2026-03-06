@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: autoswarm
+
+resources:
+  - configmap.yaml
+  - sealed-secret-template.yaml
+  - service-account.yaml
+  - nexus-api.yaml
+  - office-ui.yaml
+  - colyseus.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: autoswarm-office
+  app.kubernetes.io/managed-by: kustomize

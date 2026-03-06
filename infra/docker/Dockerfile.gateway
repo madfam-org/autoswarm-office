@@ -1,0 +1,44 @@
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/gateway/package.json apps/gateway/
+COPY packages/ packages/
+
+RUN pnpm install --frozen-lockfile
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/gateway/node_modules ./apps/gateway/node_modules
+COPY --from=deps /app/packages/ ./packages/
+COPY apps/gateway/ apps/gateway/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json turbo.json ./
+
+RUN pnpm --filter gateway build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 appuser
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/gateway/dist ./dist
+COPY --from=builder /app/apps/gateway/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 4304
+
+USER appuser
+
+CMD ["node", "dist/index.js"]

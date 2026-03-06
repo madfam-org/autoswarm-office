@@ -22,8 +22,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen font-sans">
         <JanuaProvider
-          issuerUrl={process.env.NEXT_PUBLIC_JANUA_ISSUER_URL ?? ''}
-          clientId={process.env.NEXT_PUBLIC_JANUA_CLIENT_ID ?? ''}
+          config={{ baseURL: process.env.NEXT_PUBLIC_JANUA_ISSUER_URL ?? '' }}
         >
           {children}
         </JanuaProvider>

@@ -140,16 +140,19 @@ autoswarm-office/
   apps/
     nexus-api/        Python -- FastAPI central API
     office-ui/        TypeScript -- Next.js + Phaser spatial UI
+      public/assets/  Generated pixel-art PNGs (sprites, tilesets, icons)
     colyseus/         TypeScript -- Colyseus game state server
     gateway/          TypeScript -- OpenClaw heartbeat daemon
     workers/          Python -- LangGraph task execution workers
   packages/
     shared-types/     TypeScript -- shared type definitions
-    ui/               TypeScript -- shared React components
+    ui/               TypeScript -- shared React components (Button, AgentCard, ApprovalModal)
     config/           TypeScript -- ESLint and TSConfig presets
     orchestrator/     Python -- swarm orchestration, synergy, compute tokens
     permissions/      Python -- HITL permission matrix and engine
     inference/        Python -- LLM provider abstraction and routing
+  scripts/
+    generate-assets.js  Node.js sprite generator (@napi-rs/canvas)
   infra/
     docker/           Dockerfiles and Compose configs
     k8s/              Kubernetes manifests (base + production overlays)

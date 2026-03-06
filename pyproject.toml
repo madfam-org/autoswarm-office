@@ -3,7 +3,13 @@ name = "autoswarm-office"
 version = "0.1.0"
 description = "AutoSwarm Office — Gamified multi-agent business orchestration platform"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "autoswarm-orchestrator",
+  "autoswarm-inference",
+  "autoswarm-permissions",
+  "autoswarm-nexus-api",
+  "autoswarm-workers",
+]
 
 [tool.uv.workspace]
 members = [
@@ -14,6 +20,13 @@ members = [
   "packages/permissions",
 ]
 
+[tool.uv.sources]
+autoswarm-orchestrator = { workspace = true }
+autoswarm-inference = { workspace = true }
+autoswarm-permissions = { workspace = true }
+autoswarm-nexus-api = { workspace = true }
+autoswarm-workers = { workspace = true }
+
 [tool.uv]
 dev-dependencies = [
   "pytest>=8.3.4",
@@ -21,6 +34,7 @@ dev-dependencies = [
   "pytest-cov>=6.0.0",
   "ruff>=0.8.6",
   "mypy>=1.14.1",
+  "aiosqlite>=0.22.1",
 ]
 
 [tool.ruff]
@@ -31,7 +45,7 @@ line-length = 100
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["autoswarm"]
+known-first-party = ["autoswarm_orchestrator", "autoswarm_inference", "autoswarm_permissions", "nexus_api", "autoswarm_workers"]
 
 [tool.mypy]
 python_version = "3.12"

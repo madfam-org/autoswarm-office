@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from packages.inference.src.base import InferenceProvider
-from packages.inference.src.router import CHEAPEST_PRIORITY, CLOUD_PRIORITY, LOCAL_PROVIDER, ModelRouter
-from packages.inference.src.types import (
+from autoswarm_inference.base import InferenceProvider
+from autoswarm_inference.router import CHEAPEST_PRIORITY, CLOUD_PRIORITY, LOCAL_PROVIDER, ModelRouter
+from autoswarm_inference.types import (
     InferenceRequest,
     InferenceResponse,
     RoutingPolicy,

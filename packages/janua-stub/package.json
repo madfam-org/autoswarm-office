@@ -1,0 +1,6 @@
+{
+  "name": "@janua/nextjs-sdk",
+  "version": "0.5.0",
+  "main": "index.js",
+  "types": "index.d.ts"
+}

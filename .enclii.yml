@@ -60,6 +60,9 @@ spec:
       tls: true
       tlsIssuer: cloudflare
       primary: true
+  slo:
+    availability: 99.9
+    latencyP99Ms: 500
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -105,6 +108,9 @@ spec:
       path: /api/health
       initialDelaySeconds: 30
       periodSeconds: 10
+  env:
+    - name: NEXT_PUBLIC_DHANAM_URL
+      value: https://billing.madfam.io
   domains:
     - domain: office.autoswarm.madfam.io
       tls: true
@@ -156,3 +162,140 @@ spec:
       tls: true
       tlsIssuer: cloudflare
       primary: true
+---
+apiVersion: enclii.dev/v1
+kind: Service
+metadata:
+  name: autoswarm-admin
+  project: madfam-platform
+  description: AutoSwarm Office — Admin dashboard
+spec:
+  build:
+    type: dockerfile
+    dockerfile: infra/docker/Dockerfile.admin
+    context: .
+    args:
+      NEXT_PUBLIC_API_URL: https://api.autoswarm.madfam.io
+      NEXT_PUBLIC_JANUA_URL: https://auth.madfam.io
+    source:
+      git:
+        repository: https://github.com/madfam-org/autoswarm-office
+        branch: main
+        autoDeploy: true
+  runtime:
+    port: 3000
+    replicas: 1
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    healthCheck: /api/health
+    readinessProbe:
+      path: /api/health
+      initialDelaySeconds: 10
+      periodSeconds: 5
+    livenessProbe:
+      path: /api/health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+  domains:
+    - domain: admin.autoswarm.madfam.io
+      tls: true
+      tlsIssuer: cloudflare
+      primary: true
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+---
+apiVersion: enclii.dev/v1
+kind: Service
+metadata:
+  name: autoswarm-gateway
+  project: madfam-platform
+  description: AutoSwarm Office — WebSocket gateway
+spec:
+  build:
+    type: dockerfile
+    dockerfile: infra/docker/Dockerfile.gateway
+    context: .
+    source:
+      git:
+        repository: https://github.com/madfam-org/autoswarm-office
+        branch: main
+        autoDeploy: true
+  runtime:
+    port: 4304
+    replicas: 1
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+    healthCheck: /health
+    readinessProbe:
+      path: /health
+      initialDelaySeconds: 5
+      periodSeconds: 5
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 15
+      periodSeconds: 10
+  domains:
+    - domain: gateway.autoswarm.madfam.io
+      tls: true
+      tlsIssuer: cloudflare
+      primary: true
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 70
+---
+apiVersion: enclii.dev/v1
+kind: Service
+metadata:
+  name: autoswarm-workers
+  project: madfam-platform
+  description: AutoSwarm Office — Background task workers
+spec:
+  build:
+    type: dockerfile
+    dockerfile: infra/docker/Dockerfile.workers
+    context: .
+    source:
+      git:
+        repository: https://github.com/madfam-org/autoswarm-office
+        branch: main
+        autoDeploy: true
+  runtime:
+    replicas: 2
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: autoswarm-secrets
+          key: database-url
+    - name: REDIS_URL
+      valueFrom:
+        secretKeyRef:
+          name: autoswarm-secrets
+          key: redis-url
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70

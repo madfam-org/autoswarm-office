@@ -1,8 +1,8 @@
-.PHONY: dev build test lint clean docker-up docker-down db-migrate setup
+.PHONY: dev build test lint clean docker-up docker-down db-migrate setup generate-assets
 
 # ── Development ─────────────────────────────────────
 dev:
-	pnpm dev & uv run --directory apps/nexus-api fastapi dev src/main.py --port 4300
+	pnpm dev & uv run --directory apps/nexus-api uvicorn nexus_api.main:app --host 0.0.0.0 --port 4300 --reload
 
 build:
 	pnpm build
@@ -48,6 +48,10 @@ db-migrate:
 
 db-seed:
 	uv run python scripts/seed-agents.py
+
+# ── Assets ─────────────────────────────────────────
+generate-assets:
+	node scripts/generate-assets.js
 
 # ── Setup ───────────────────────────────────────────
 setup:

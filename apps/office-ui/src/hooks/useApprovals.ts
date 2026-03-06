@@ -5,6 +5,8 @@ import type { ApprovalRequest, ApprovalResponse } from '@autoswarm/shared-types'
 
 const WS_URL =
   process.env.NEXT_PUBLIC_APPROVALS_WS_URL ?? 'ws://localhost:4300/api/v1/approvals/ws';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4300';
 const RECONNECT_DELAY_MS = 2000;
 const MAX_RECONNECT_ATTEMPTS = 15;
 
@@ -121,40 +123,47 @@ export function useApprovals(): ApprovalsState {
     };
   }, [connect]);
 
-  const sendResponse = useCallback(
-    (requestId: string, result: 'approved' | 'denied', feedback?: string) => {
-      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+  const sendDecision = useCallback(
+    async (requestId: string, decision: 'approve' | 'deny', feedback?: string) => {
+      const url = `${API_BASE_URL}/api/v1/approvals/${requestId}/${decision}`;
+      const body: Record<string, unknown> = {};
+      if (feedback !== undefined) {
+        body.feedback = feedback;
+      }
 
-      const response: { type: string; payload: ApprovalResponse } = {
-        type: 'approval_response',
-        payload: {
-          requestId,
-          result,
-          feedback,
-          respondedAt: new Date().toISOString(),
-        },
-      };
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          credentials: 'include',
+        });
 
-      wsRef.current.send(JSON.stringify(response));
-
-      // Optimistically remove from pending
-      setPendingApprovals((prev) => prev.filter((a) => a.id !== requestId));
+        if (res.ok) {
+          // Optimistically remove from pending -- the WS will also broadcast the
+          // resolution, but removing immediately gives a snappy UI.
+          setPendingApprovals((prev) => prev.filter((a) => a.id !== requestId));
+        }
+      } catch {
+        // Network errors are silently ignored; the approval stays in the queue
+        // and the user can retry.
+      }
     },
     [],
   );
 
   const approve = useCallback(
     (requestId: string, feedback?: string) => {
-      sendResponse(requestId, 'approved', feedback);
+      void sendDecision(requestId, 'approve', feedback);
     },
-    [sendResponse],
+    [sendDecision],
   );
 
   const deny = useCallback(
     (requestId: string, feedback?: string) => {
-      sendResponse(requestId, 'denied', feedback);
+      void sendDecision(requestId, 'deny', feedback);
     },
-    [sendResponse],
+    [sendDecision],
   );
 
   return {

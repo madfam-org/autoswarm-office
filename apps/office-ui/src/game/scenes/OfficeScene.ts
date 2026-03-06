@@ -13,7 +13,7 @@ const TACTICIAN_SPEED = 200;
 const PROXIMITY_THRESHOLD = 64;
 
 interface AgentSprite {
-  sprite: Phaser.GameObjects.Image;
+  sprite: Phaser.GameObjects.Sprite;
   alertIcon: Phaser.GameObjects.Image;
   agentId: string;
   hasPendingApproval: boolean;
@@ -27,20 +27,26 @@ const DEPARTMENT_LAYOUT: Record<string, { x: number; y: number; label: string }>
   research: { x: 480, y: 400, label: 'RESEARCH' },
 };
 
+const AGENT_ROLES = ['planner', 'coder', 'reviewer', 'researcher', 'crm', 'support'] as const;
+
 export class OfficeScene extends Phaser.Scene {
   private gamepadManager!: GamepadManager;
-  private tactician!: Phaser.GameObjects.Image;
+  private tactician!: Phaser.GameObjects.Sprite;
   private agentSprites: Map<string, AgentSprite> = new Map();
   private departmentZones: Phaser.GameObjects.Image[] = [];
   private reviewStations: Map<string, Phaser.GameObjects.Image> = new Map();
   private officeState: OfficeState | null = null;
   private stateCleanup: (() => void) | null = null;
+  private helpOverlay!: Phaser.GameObjects.Container;
+  private lastDirection: string = 'down';
 
   constructor() {
     super({ key: 'OfficeScene' });
   }
 
   create(): void {
+    this.createAnimations();
+
     this.gamepadManager = new GamepadManager();
 
     this.createFloor();
@@ -54,12 +60,21 @@ export class OfficeScene extends Phaser.Scene {
 
     // Add keyboard instructions text
     this.add
-      .text(640, 700, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | TAB: Menu', {
+      .text(640, 700, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | TAB: Menu | ?: Help', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#64748b',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+
+    this.createHelpOverlay();
+
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      if (event.key === '?') {
+        this.helpOverlay.setVisible(!this.helpOverlay.visible);
+      }
+    });
   }
 
   update(): void {
@@ -73,6 +88,24 @@ export class OfficeScene extends Phaser.Scene {
     if (dx !== 0 || dy !== 0) {
       this.tactician.x = Phaser.Math.Clamp(this.tactician.x + dx, 16, 1264);
       this.tactician.y = Phaser.Math.Clamp(this.tactician.y + dy, 16, 704);
+
+      // Determine direction for walk animation
+      if (Math.abs(dx) > Math.abs(dy)) {
+        this.lastDirection = dx > 0 ? 'right' : 'left';
+      } else {
+        this.lastDirection = dy > 0 ? 'down' : 'up';
+      }
+
+      const walkKey = `tactician-walk-${this.lastDirection}`;
+      if (this.anims.exists(walkKey) && this.tactician.anims.currentAnim?.key !== walkKey) {
+        this.tactician.play(walkKey);
+      }
+    } else {
+      // Idle: show single frame for current direction
+      const idleKey = `tactician-idle-${this.lastDirection}`;
+      if (this.anims.exists(idleKey) && this.tactician.anims.currentAnim?.key !== idleKey) {
+        this.tactician.play(idleKey);
+      }
     }
 
     // Check button presses for proximity interactions
@@ -108,11 +141,66 @@ export class OfficeScene extends Phaser.Scene {
     super.destroy();
   }
 
+  private createAnimations(): void {
+    // Tactician animations — 4 directions × 3 walk frames
+    // Spritesheet layout: frames 0-2 = down, 3-5 = left, 6-8 = up, 9-11 = right
+    const directions = ['down', 'left', 'up', 'right'] as const;
+    const hasTacticianSheet = this.textures.exists('tactician') &&
+      this.textures.get('tactician').frameTotal > 1;
+
+    if (hasTacticianSheet) {
+      directions.forEach((dir, dirIndex) => {
+        const startFrame = dirIndex * 3;
+
+        this.anims.create({
+          key: `tactician-walk-${dir}`,
+          frames: this.anims.generateFrameNumbers('tactician', {
+            start: startFrame,
+            end: startFrame + 2,
+          }),
+          frameRate: 8,
+          repeat: -1,
+        });
+
+        this.anims.create({
+          key: `tactician-idle-${dir}`,
+          frames: [{ key: 'tactician', frame: startFrame }],
+          frameRate: 1,
+          repeat: 0,
+        });
+      });
+    }
+
+    // Agent animations — 2 frames each (idle + working)
+    for (const role of AGENT_ROLES) {
+      const key = `agent-${role}`;
+      const hasSheet = this.textures.exists(key) &&
+        this.textures.get(key).frameTotal > 1;
+
+      if (hasSheet) {
+        this.anims.create({
+          key: `${key}-idle`,
+          frames: [{ key, frame: 0 }],
+          frameRate: 1,
+          repeat: 0,
+        });
+
+        this.anims.create({
+          key: `${key}-working`,
+          frames: this.anims.generateFrameNumbers(key, { start: 0, end: 1 }),
+          frameRate: 3,
+          repeat: -1,
+        });
+      }
+    }
+  }
+
   private createFloor(): void {
     // Tile the floor across the entire scene
     for (let x = 0; x < 1280; x += TILE_SIZE) {
       for (let y = 0; y < 720; y += TILE_SIZE) {
-        this.add.image(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 'floor-tile').setAlpha(0.5);
+        const textureKey = this.textures.exists('floor-tile') ? 'floor-tile' : 'office-tileset';
+        this.add.image(x + TILE_SIZE / 2, y + TILE_SIZE / 2, textureKey, 0).setAlpha(0.5);
       }
     }
 
@@ -155,7 +243,8 @@ export class OfficeScene extends Phaser.Scene {
       // Review station for each department (placed at bottom-right of zone)
       const stationX = layout.x + TILE_SIZE * 5;
       const stationY = layout.y + TILE_SIZE * 4;
-      const station = this.add.image(stationX, stationY, 'review-station');
+      const stationTexture = this.textures.exists('review-station') ? 'review-station' : 'office-tileset';
+      const station = this.add.image(stationX, stationY, stationTexture, stationTexture === 'office-tileset' ? 7 : 0);
       this.reviewStations.set(slug, station);
 
       // Station label
@@ -170,7 +259,15 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private createTactician(): void {
-    this.tactician = this.add.image(640, 360, 'tactician').setDepth(10);
+    this.tactician = this.add.sprite(640, 360, 'tactician').setDepth(10);
+
+    // Play initial idle animation if available
+    if (this.anims.exists('tactician-idle-down')) {
+      this.tactician.play('tactician-idle-down');
+    }
+
+    this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    this.cameras.main.setBounds(0, 0, 1280, 720);
 
     // Label above tactician
     const label = this.add
@@ -186,6 +283,42 @@ export class OfficeScene extends Phaser.Scene {
     this.events.on('update', () => {
       label.setPosition(this.tactician.x, this.tactician.y - 24);
     });
+  }
+
+  private createHelpOverlay(): void {
+    this.helpOverlay = this.add.container(640, 360).setDepth(100).setVisible(false);
+
+    const bg = this.add.rectangle(0, 0, 400, 300, 0x000000, 0.85);
+
+    const title = this.add
+      .text(0, -120, 'KEYBOARD SHORTCUTS', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#a5b4fc',
+      })
+      .setOrigin(0.5);
+
+    const shortcuts = [
+      'WASD / Arrows  -  Move',
+      'ENTER / A      -  Approve',
+      'ESC / B        -  Deny',
+      'E / X          -  Inspect',
+      'TAB            -  Menu',
+      '?              -  Toggle Help',
+    ];
+
+    const lines = shortcuts.map((text, i) =>
+      this.add.text(-160, -70 + i * 30, text, {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#cbd5e1',
+      }),
+    );
+
+    this.helpOverlay.add([bg, title, ...lines]);
+
+    // Make it scroll-fixed so it stays centered on screen
+    this.helpOverlay.setScrollFactor(0);
   }
 
   private onStateUpdate(state: OfficeState): void {
@@ -230,6 +363,14 @@ export class OfficeScene extends Phaser.Scene {
     if (existing) {
       // Update existing sprite state
       existing.hasPendingApproval = hasPending;
+
+      // Play status-based animation if available
+      const animKey = agent.status === 'working'
+        ? `${textureKey}-working`
+        : `${textureKey}-idle`;
+      if (this.anims.exists(animKey) && existing.sprite.anims.currentAnim?.key !== animKey) {
+        existing.sprite.play(animKey);
+      }
       return;
     }
 
@@ -240,9 +381,18 @@ export class OfficeScene extends Phaser.Scene {
     const spriteX = layout.x + 48 + col * 48;
     const spriteY = layout.y + 48 + row * 48;
 
-    const sprite = this.add.image(spriteX, spriteY, textureKey).setDepth(5);
+    const sprite = this.add.sprite(spriteX, spriteY, textureKey).setDepth(5);
+
+    // Play initial animation
+    const initialAnim = agent.status === 'working'
+      ? `${textureKey}-working`
+      : `${textureKey}-idle`;
+    if (this.anims.exists(initialAnim)) {
+      sprite.play(initialAnim);
+    }
+
     const alertIcon = this.add
-      .image(spriteX + 12, spriteY - 20, 'alert-icon')
+      .image(spriteX + 12, spriteY - 20, 'icon-alert')
       .setDepth(15)
       .setVisible(false);
 

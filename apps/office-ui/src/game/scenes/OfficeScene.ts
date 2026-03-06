@@ -35,6 +35,7 @@ export class OfficeScene extends Phaser.Scene {
   private reviewStations: Map<string, Phaser.GameObjects.Image> = new Map();
   private officeState: OfficeState | null = null;
   private stateCleanup: (() => void) | null = null;
+  private helpOverlay!: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: 'OfficeScene' });
@@ -54,12 +55,21 @@ export class OfficeScene extends Phaser.Scene {
 
     // Add keyboard instructions text
     this.add
-      .text(640, 700, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | TAB: Menu', {
+      .text(640, 700, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | TAB: Menu | ?: Help', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#64748b',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+
+    this.createHelpOverlay();
+
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      if (event.key === '?') {
+        this.helpOverlay.setVisible(!this.helpOverlay.visible);
+      }
+    });
   }
 
   update(): void {
@@ -172,6 +182,9 @@ export class OfficeScene extends Phaser.Scene {
   private createTactician(): void {
     this.tactician = this.add.image(640, 360, 'tactician').setDepth(10);
 
+    this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    this.cameras.main.setBounds(0, 0, 1280, 720);
+
     // Label above tactician
     const label = this.add
       .text(640, 340, 'YOU', {
@@ -186,6 +199,42 @@ export class OfficeScene extends Phaser.Scene {
     this.events.on('update', () => {
       label.setPosition(this.tactician.x, this.tactician.y - 24);
     });
+  }
+
+  private createHelpOverlay(): void {
+    this.helpOverlay = this.add.container(640, 360).setDepth(100).setVisible(false);
+
+    const bg = this.add.rectangle(0, 0, 400, 300, 0x000000, 0.85);
+
+    const title = this.add
+      .text(0, -120, 'KEYBOARD SHORTCUTS', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '10px',
+        color: '#a5b4fc',
+      })
+      .setOrigin(0.5);
+
+    const shortcuts = [
+      'WASD / Arrows  -  Move',
+      'ENTER / A      -  Approve',
+      'ESC / B        -  Deny',
+      'E / X          -  Inspect',
+      'TAB            -  Menu',
+      '?              -  Toggle Help',
+    ];
+
+    const lines = shortcuts.map((text, i) =>
+      this.add.text(-160, -70 + i * 30, text, {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#cbd5e1',
+      }),
+    );
+
+    this.helpOverlay.add([bg, title, ...lines]);
+
+    // Make it scroll-fixed so it stays centered on screen
+    this.helpOverlay.setScrollFactor(0);
   }
 
   private onStateUpdate(state: OfficeState): void {

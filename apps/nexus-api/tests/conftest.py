@@ -32,6 +32,7 @@ from nexus_api.config import Settings
 _test_settings = Settings(
     database_url="sqlite+aiosqlite://",
     environment="development",
+    dev_auth_bypass=True,
     _env_file=None,  # type: ignore[call-arg]
 )
 
@@ -127,18 +128,29 @@ def override_get_db() -> None:
     _fastapi_app.dependency_overrides.pop(get_db, None)
 
 
+_CSRF_TOKEN = "test-csrf-token-fixed"
+
+
 @pytest.fixture()
 async def client(override_get_db: None) -> AsyncGenerator[httpx.AsyncClient, None]:
     """Async HTTP test client wired to the FastAPI app with SQLite backing."""
     transport = httpx.ASGITransport(app=_fastapi_app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test",
+        headers={"X-CSRF-Token": _CSRF_TOKEN},
+    ) as ac:
+        ac.cookies.set("csrf-token", _CSRF_TOKEN)
         yield ac
 
 
 @pytest.fixture()
 def auth_headers() -> dict[str, str]:
-    """Return an Authorization header accepted by the dev-mode auth bypass."""
-    return {"Authorization": "Bearer test-token"}
+    """Return headers accepted by the dev-mode auth bypass, including CSRF token."""
+    return {
+        "Authorization": "Bearer test-token",
+        "X-CSRF-Token": _CSRF_TOKEN,
+    }
 
 
 @pytest.fixture()

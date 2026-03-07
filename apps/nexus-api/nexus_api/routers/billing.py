@@ -139,7 +139,7 @@ async def dhanam_webhook(request: Request) -> dict[str, str]:
     """Receive and verify webhooks from the Dhanam billing system."""
     settings = get_settings()
     body = await request.body()
-    signature = request.headers.get("x-janua-signature", "")
+    signature = request.headers.get("x-dhanam-signature", "")
 
     if settings.dhanam_webhook_secret:
         expected = hmac_mod.new(

@@ -43,7 +43,7 @@ def _verify_github_signature(
 ) -> bool:
     """Verify GitHub webhook HMAC-SHA256 signature."""
     if not secret:
-        return True  # No secret configured = skip verification (dev mode)
+        return True  # No secret configured = skip in dev (production rejects below)
     expected = "sha256=" + hmac.new(
         secret.encode(), payload_body, hashlib.sha256
     ).hexdigest()
@@ -63,8 +63,15 @@ async def github_webhook(
     settings = get_settings()
     body = await request.body()
 
-    # Verify signature if a secret is configured.
+    # In non-dev environments, a webhook secret must be configured.
     webhook_secret = settings.github_webhook_secret
+    if not webhook_secret and settings.environment != "development":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Webhook secret not configured",
+        )
+
+    # Verify signature if a secret is configured.
     if webhook_secret and not _verify_github_signature(
         body, x_hub_signature_256, webhook_secret
     ):

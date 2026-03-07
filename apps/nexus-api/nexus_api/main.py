@@ -12,6 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .database import engine
+from .logging_config import configure_logging
+from .middleware.csrf import CSRFMiddleware
+from .middleware.rate_limit import RateLimitMiddleware
+from .middleware.request_id import RequestIdMiddleware
+from .middleware.security import SecurityHeadersMiddleware
 from .routers import agents, approvals, billing, departments, gateway, health, skills, swarms
 
 logger = logging.getLogger(__name__)
@@ -55,6 +60,8 @@ def create_app() -> FastAPI:
     """Build and configure the FastAPI application instance."""
     settings = get_settings()
 
+    configure_logging(settings.log_format)
+
     app = FastAPI(
         title="AutoSwarm Nexus API",
         version="0.1.0",
@@ -67,9 +74,19 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-CSRF-Token"],
     )
+
+    # -- Middleware stack (outermost first) ------------------------------------
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(
+        RateLimitMiddleware,
+        redis_url=settings.redis_url,
+        requests_per_minute=settings.rate_limit_per_minute,
+    )
+    app.add_middleware(CSRFMiddleware)
 
     # -- Routers --------------------------------------------------------------
     app.include_router(health.router, prefix="/api/v1/health")

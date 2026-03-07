@@ -16,19 +16,28 @@ logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer()
 
-# In-memory JWKS cache to avoid fetching on every request.
+# In-memory JWKS cache with TTL-based expiration.
 _jwks_cache: dict[str, Any] | None = None
+_jwks_cache_time: float | None = None
+_JWKS_TTL_SECONDS = 3600.0
 
 
 async def _fetch_jwks(issuer_url: str) -> dict[str, Any]:
     """Fetch the JSON Web Key Set from the Janua OIDC well-known endpoint.
 
-    Results are cached in-module for the lifetime of the process.  A full
-    production deployment should add TTL-based expiration or background
-    refresh, but for an MVP the process-level cache is sufficient.
+    Results are cached in-module with a 1-hour TTL.  After the TTL expires
+    the next request will refresh the cache.
     """
-    global _jwks_cache  # noqa: PLW0603
-    if _jwks_cache is not None:
+    import time
+
+    global _jwks_cache, _jwks_cache_time  # noqa: PLW0603
+
+    now = time.monotonic()
+    if (
+        _jwks_cache is not None
+        and _jwks_cache_time is not None
+        and (now - _jwks_cache_time) < _JWKS_TTL_SECONDS
+    ):
         return _jwks_cache
 
     jwks_url = f"{issuer_url.rstrip('/')}/.well-known/jwks.json"
@@ -36,6 +45,7 @@ async def _fetch_jwks(issuer_url: str) -> dict[str, Any]:
         response = await client.get(jwks_url)
         response.raise_for_status()
         _jwks_cache = response.json()
+        _jwks_cache_time = now
         return _jwks_cache
 
 
@@ -101,7 +111,7 @@ async def get_current_user(
     Returns a user dict containing at minimum ``sub``, ``roles``, and
     ``org_id`` from the JWT claims.
     """
-    if settings.environment == "development":
+    if settings.environment == "development" and settings.dev_auth_bypass:
         return {
             "sub": "dev-user-00000000",
             "roles": ["admin", "tactician"],

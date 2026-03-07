@@ -19,6 +19,7 @@ dependencies = [
   "autoswarm-permissions",
   "autoswarm-inference",
   "autoswarm-skills",
+  "structlog>=24.0",
 ]
 
 [build-system]

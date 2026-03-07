@@ -45,6 +45,11 @@ class Settings(BaseSettings):
         "http://localhost:4302",
     ]
 
+    # -- Security -------------------------------------------------------------
+    dev_auth_bypass: bool = False
+    rate_limit_per_minute: int = 60
+    log_format: str = "json"
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

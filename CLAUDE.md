@@ -347,7 +347,8 @@ The `packages/skills/` package implements the AgentSkills standard.
 - **Agent idle breathing**: subtle scaleY tween (1.0→1.04, 2s) on idle agents.
   Paused when status changes away from idle.
 - **Agent name label backgrounds**: black rectangle at 0.5 alpha behind name
-  text for readability over zone colors.
+  text for readability over zone colors. Both `nameLabel` and `nameBackground`
+  are stored in `AgentSprite` and repositioned each frame alongside the sprite.
 - **Review station glow**: pulsing alpha tween + `preFX.addGlow()` when
   `pendingApprovals > 0`. Cleared when 0.
 - **Tactician spawn-in effect**: scale 0.5→1.0 + alpha 0→1 with Back.easeOut,
@@ -363,8 +364,9 @@ The `packages/skills/` package implements the AgentSkills standard.
   Approval badge gets `animate-pulse` + `animate-pulse-border` when count > 0.
 - **Functional minimap**: `Minimap` sub-component in `HUD.tsx` renders to
   128x96 `<canvas>`. Draws department zones as colored rectangles, agents as
-  2px role-colored dots, player as 3px indigo dot with glow ring. Fed by
-  `playerPosition` state from `page.tsx` (updated on `handlePlayerMove`).
+  2px status-colored dots (idle=slate, working=cyan, waiting_approval=amber,
+  error=red), player as 3px indigo dot with glow ring. Fed by `playerPosition`
+  state from `page.tsx` (updated on `handlePlayerMove`).
 - **Avatar editor canvas preview**: real 32x32 composited avatar drawn at 4x
   scale (128x128) using pure-canvas `drawAvatar()` utility extracted from
   `AvatarCompositor.ts` logic. Updates on every config change.

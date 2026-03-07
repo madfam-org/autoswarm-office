@@ -49,6 +49,7 @@ interface AgentSprite {
   sprite: Phaser.GameObjects.Sprite;
   alertIcon: Phaser.GameObjects.Image;
   statusHalo: Phaser.GameObjects.Arc;
+  nameLabel: Phaser.GameObjects.Text;
   nameBackground: Phaser.GameObjects.Rectangle;
   agentId: string;
   agentStatus: string;
@@ -434,7 +435,9 @@ export class OfficeScene extends Phaser.Scene {
       if (result) {
         agentSprite.sprite.setPosition(result.x, result.y);
         agentSprite.statusHalo.setPosition(result.x, result.y + 4);
+        agentSprite.nameLabel.setPosition(result.x, result.y + 20);
         agentSprite.nameBackground.setPosition(result.x, result.y + 23);
+        agentSprite.alertIcon.setPosition(result.x + 12, result.y - 20);
       }
     });
 
@@ -1049,6 +1052,7 @@ export class OfficeScene extends Phaser.Scene {
       sprite,
       alertIcon,
       statusHalo,
+      nameLabel,
       nameBackground,
       agentId: agent.id,
       agentStatus: agent.status,

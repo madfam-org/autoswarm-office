@@ -21,7 +21,7 @@ const MINIMAP_H = 96;
 
 const DEPT_COLORS: Record<string, string> = {
   engineering: '#1e3a5f',
-  sales: '#3b1e5f',
+  crm: '#3b1e5f',
   support: '#1e5f3a',
   research: '#5f3a1e',
 };
@@ -33,6 +33,14 @@ const ROLE_COLORS: Record<string, string> = {
   researcher: '#10b981',
   crm: '#f43f5e',
   support: '#0ea5e9',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  idle: '#94a3b8',
+  working: '#06b6d4',
+  waiting_approval: '#fbbf24',
+  paused: '#a78bfa',
+  error: '#ef4444',
 };
 
 function Minimap({ departments, playerPosition }: { departments: Department[]; playerPosition: { x: number; y: number } | null }) {
@@ -54,7 +62,7 @@ function Minimap({ departments, playerPosition }: { departments: Department[]; p
     // Draw department zones
     const DEPT_LAYOUT: Record<string, { x: number; y: number; w: number; h: number }> = {
       engineering: { x: 96, y: 80, w: 192, h: 160 },
-      sales: { x: 480, y: 80, w: 192, h: 160 },
+      crm: { x: 480, y: 80, w: 192, h: 160 },
       support: { x: 96, y: 400, w: 192, h: 160 },
       research: { x: 480, y: 400, w: 192, h: 160 },
     };
@@ -73,7 +81,8 @@ function Minimap({ departments, playerPosition }: { departments: Department[]; p
         const row = Math.floor(i / 3);
         const ax = (layout.x + 48 + col * 48) * scaleX;
         const ay = (layout.y + 48 + row * 48) * scaleY;
-        ctx.fillStyle = ROLE_COLORS[dept.agents[i].role] ?? '#94a3b8';
+        const agent = dept.agents[i];
+        ctx.fillStyle = STATUS_COLORS[agent.status] ?? '#94a3b8';
         ctx.fillRect(ax - 1, ay - 1, 2, 2);
       }
     }

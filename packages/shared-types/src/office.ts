@@ -23,12 +23,31 @@ export interface TacticianPosition {
   direction: 'up' | 'down' | 'left' | 'right';
 }
 
+export interface Player {
+  sessionId: string;
+  name: string;
+  x: number;
+  y: number;
+  direction: 'up' | 'down' | 'left' | 'right';
+}
+
+export interface ChatMessage {
+  id: string;
+  senderSessionId: string;
+  senderName: string;
+  content: string;
+  timestamp: number;
+  isSystem: boolean;
+}
+
 export interface OfficeState {
   departments: Department[];
   reviewStations: ReviewStation[];
-  tactician: TacticianPosition;
+  players: Player[];
+  localSessionId: string;
   activeAgentCount: number;
   pendingApprovalCount: number;
+  chatMessages: ChatMessage[];
 }
 
 export interface GamepadInput {

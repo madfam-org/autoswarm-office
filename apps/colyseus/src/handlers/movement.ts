@@ -21,8 +21,8 @@ interface ProximityResult {
 const OFFICE_BOUNDS: Bounds = {
   minX: 0,
   minY: 0,
-  maxX: 800,
-  maxY: 600,
+  maxX: 1280,
+  maxY: 704,
 };
 
 const DEFAULT_PROXIMITY_THRESHOLD = 64;
@@ -61,30 +61,34 @@ export function handleMovement(
     return;
   }
 
-  const prevX = state.tactician.x;
-  const prevY = state.tactician.y;
+  const player = state.players.get(client.sessionId);
+  if (!player) return;
 
-  state.tactician.x = x;
-  state.tactician.y = y;
+  const prevX = player.x;
+  const prevY = player.y;
+
+  player.x = x;
+  player.y = y;
 
   const dx = x - prevX;
   const dy = y - prevY;
 
   if (Math.abs(dx) > Math.abs(dy)) {
-    state.tactician.direction = dx > 0 ? "right" : "left";
+    player.direction = dx > 0 ? "right" : "left";
   } else if (dy !== 0) {
-    state.tactician.direction = dy > 0 ? "down" : "up";
+    player.direction = dy > 0 ? "down" : "up";
   }
 
   const allAgents: AgentSchema[] = [];
   state.departments.forEach((dept) => {
     for (let i = 0; i < dept.agents.length; i++) {
-      allAgents.push(dept.agents[i]);
+      const agent = dept.agents.at(i);
+      if (agent) allAgents.push(agent);
     }
   });
 
   const nearby = checkProximity(
-    state.tactician,
+    player,
     allAgents,
     DEFAULT_PROXIMITY_THRESHOLD
   );

@@ -21,11 +21,15 @@ export const gameEventBus = new GameEventBus();
 interface PhaserGameProps {
   onApprovalOpen?: (agentId: string) => void;
   officeState?: OfficeState | null;
+  sessionId?: string | null;
+  onPlayerMove?: (x: number, y: number) => void;
 }
 
 export default function PhaserGame({
   onApprovalOpen,
   officeState,
+  sessionId,
+  onPlayerMove,
 }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -38,6 +42,22 @@ export default function PhaserGame({
       onApprovalOpen(agentId);
     });
   }, [onApprovalOpen]);
+
+  // Listen for player-move events from Phaser scenes
+  useEffect(() => {
+    if (!onPlayerMove) return;
+    return gameEventBus.on('player-move', (detail) => {
+      const { x, y } = detail as { x: number; y: number };
+      onPlayerMove(x, y);
+    });
+  }, [onPlayerMove]);
+
+  // Forward session ID into Phaser via event bus
+  useEffect(() => {
+    if (sessionId) {
+      gameEventBus.emit('session-id', sessionId);
+    }
+  }, [sessionId]);
 
   // Forward office state updates into Phaser via event bus
   useEffect(() => {

@@ -27,17 +27,17 @@ function makeAgent(overrides: {
 // validatePosition
 // ---------------------------------------------------------------------------
 describe("validatePosition", () => {
-  describe("with default OFFICE_BOUNDS (0-800 x 0-600)", () => {
+  describe("with default OFFICE_BOUNDS (0-1280 x 0-704)", () => {
     it("returns true for origin (0, 0)", () => {
       expect(validatePosition(0, 0)).toBe(true);
     });
 
     it("returns true for center of the office", () => {
-      expect(validatePosition(400, 300)).toBe(true);
+      expect(validatePosition(640, 352)).toBe(true);
     });
 
-    it("returns true for max corner (800, 600)", () => {
-      expect(validatePosition(800, 600)).toBe(true);
+    it("returns true for max corner (1280, 704)", () => {
+      expect(validatePosition(1280, 704)).toBe(true);
     });
 
     it("returns false when x is below minimum", () => {
@@ -45,7 +45,7 @@ describe("validatePosition", () => {
     });
 
     it("returns false when x is above maximum", () => {
-      expect(validatePosition(801, 300)).toBe(false);
+      expect(validatePosition(1281, 300)).toBe(false);
     });
 
     it("returns false when y is below minimum", () => {
@@ -53,11 +53,11 @@ describe("validatePosition", () => {
     });
 
     it("returns false when y is above maximum", () => {
-      expect(validatePosition(400, 601)).toBe(false);
+      expect(validatePosition(400, 705)).toBe(false);
     });
 
     it("returns false when both coordinates are out of bounds", () => {
-      expect(validatePosition(-10, 700)).toBe(false);
+      expect(validatePosition(-10, 800)).toBe(false);
     });
 
     it("returns false for NaN x", () => {

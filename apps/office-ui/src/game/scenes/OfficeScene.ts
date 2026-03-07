@@ -1,16 +1,20 @@
 import Phaser from 'phaser';
 import { GamepadManager } from '../GamepadManager';
 import { gameEventBus } from '../PhaserGame';
+import { loadTiledMap } from '../TiledMapLoader';
+import type { DepartmentZone } from '../TiledMapLoader';
 import type {
   OfficeState,
   Department,
   ReviewStation,
   Agent,
+  Player,
 } from '@autoswarm/shared-types';
 
 const TILE_SIZE = 32;
 const TACTICIAN_SPEED = 200;
 const PROXIMITY_THRESHOLD = 64;
+const MOVE_THROTTLE_MS = 66; // ~15fps
 
 interface AgentSprite {
   sprite: Phaser.GameObjects.Sprite;
@@ -19,7 +23,15 @@ interface AgentSprite {
   hasPendingApproval: boolean;
 }
 
-/** Department zone layout positions on the office grid */
+interface RemotePlayerSprite {
+  sprite: Phaser.GameObjects.Sprite;
+  label: Phaser.GameObjects.Text;
+  targetX: number;
+  targetY: number;
+  direction: string;
+}
+
+/** Department zone layout positions on the office grid (procedural fallback) */
 const DEPARTMENT_LAYOUT: Record<string, { x: number; y: number; label: string }> = {
   engineering: { x: 96, y: 80, label: 'ENGINEERING' },
   sales: { x: 480, y: 80, label: 'SALES' },
@@ -32,13 +44,24 @@ const AGENT_ROLES = ['planner', 'coder', 'reviewer', 'researcher', 'crm', 'suppo
 export class OfficeScene extends Phaser.Scene {
   private gamepadManager!: GamepadManager;
   private tactician!: Phaser.GameObjects.Sprite;
+  private tacticianLabel!: Phaser.GameObjects.Text;
   private agentSprites: Map<string, AgentSprite> = new Map();
+  private remotePlayers: Map<string, RemotePlayerSprite> = new Map();
   private departmentZones: Phaser.GameObjects.Image[] = [];
+  private departmentLayouts: Map<string, { x: number; y: number; label: string }> = new Map();
   private reviewStations: Map<string, Phaser.GameObjects.Image> = new Map();
   private officeState: OfficeState | null = null;
+  private localSessionId: string = '';
   private stateCleanup: (() => void) | null = null;
+  private sessionIdCleanup: (() => void) | null = null;
   private helpOverlay!: Phaser.GameObjects.Container;
   private lastDirection: string = 'down';
+  private lastMoveTime: number = 0;
+  private lastSentX: number = 0;
+  private lastSentY: number = 0;
+  private collisionLayer: Phaser.Tilemaps.TilemapLayer | null = null;
+  private worldWidth: number = 1280;
+  private worldHeight: number = 720;
 
   constructor() {
     super({ key: 'OfficeScene' });
@@ -49,8 +72,14 @@ export class OfficeScene extends Phaser.Scene {
 
     this.gamepadManager = new GamepadManager();
 
-    this.createFloor();
-    this.createDepartmentZones();
+    // Try Tiled map first, fall back to procedural
+    const mapData = loadTiledMap(this);
+    if (mapData) {
+      this.initFromTiledMap(mapData);
+    } else {
+      this.initProceduralMap();
+    }
+
     this.createTactician();
 
     // Listen for state updates from React
@@ -58,9 +87,19 @@ export class OfficeScene extends Phaser.Scene {
       this.onStateUpdate(detail as OfficeState);
     });
 
+    // Listen for session ID from React
+    this.sessionIdCleanup = gameEventBus.on('session-id', (detail) => {
+      this.localSessionId = detail as string;
+    });
+
+    // Listen for chat focus to suppress game input while typing
+    gameEventBus.on('chat-focus', (detail) => {
+      this.gamepadManager.setChatFocused(detail as boolean);
+    });
+
     // Add keyboard instructions text
     this.add
-      .text(640, 700, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | TAB: Menu | ?: Help', {
+      .text(this.worldWidth / 2, this.worldHeight - 8, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | T: Chat | ?: Help', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#64748b',
@@ -77,6 +116,31 @@ export class OfficeScene extends Phaser.Scene {
     });
   }
 
+  private initFromTiledMap(mapData: ReturnType<typeof loadTiledMap> & object): void {
+    const data = mapData as NonNullable<ReturnType<typeof loadTiledMap>>;
+    this.worldWidth = data.worldWidth;
+    this.worldHeight = data.worldHeight;
+    this.collisionLayer = data.collisionLayer;
+
+    // Populate department layouts from Tiled data
+    for (const dept of data.departments) {
+      this.departmentLayouts.set(dept.slug, {
+        x: dept.x,
+        y: dept.y,
+        label: dept.name.toUpperCase(),
+      });
+    }
+  }
+
+  private initProceduralMap(): void {
+    // Populate layouts from hardcoded defaults
+    for (const [slug, layout] of Object.entries(DEPARTMENT_LAYOUT)) {
+      this.departmentLayouts.set(slug, layout);
+    }
+    this.createFloor();
+    this.createDepartmentZones();
+  }
+
   update(): void {
     this.gamepadManager.poll();
     const input = this.gamepadManager.getInput();
@@ -86,8 +150,8 @@ export class OfficeScene extends Phaser.Scene {
     const dy = input.leftStickY * TACTICIAN_SPEED * (this.game.loop.delta / 1000);
 
     if (dx !== 0 || dy !== 0) {
-      this.tactician.x = Phaser.Math.Clamp(this.tactician.x + dx, 16, 1264);
-      this.tactician.y = Phaser.Math.Clamp(this.tactician.y + dy, 16, 704);
+      this.tactician.x = Phaser.Math.Clamp(this.tactician.x + dx, 16, this.worldWidth - 16);
+      this.tactician.y = Phaser.Math.Clamp(this.tactician.y + dy, 16, this.worldHeight - 16);
 
       // Determine direction for walk animation
       if (Math.abs(dx) > Math.abs(dy)) {
@@ -100,6 +164,16 @@ export class OfficeScene extends Phaser.Scene {
       if (this.anims.exists(walkKey) && this.tactician.anims.currentAnim?.key !== walkKey) {
         this.tactician.play(walkKey);
       }
+
+      // Broadcast movement throttled to ~15fps
+      const now = this.time.now;
+      const positionDelta = Math.abs(this.tactician.x - this.lastSentX) + Math.abs(this.tactician.y - this.lastSentY);
+      if (now - this.lastMoveTime > MOVE_THROTTLE_MS && positionDelta > 1) {
+        this.lastMoveTime = now;
+        this.lastSentX = this.tactician.x;
+        this.lastSentY = this.tactician.y;
+        gameEventBus.emit('player-move', { x: this.tactician.x, y: this.tactician.y });
+      }
     } else {
       // Idle: show single frame for current direction
       const idleKey = `tactician-idle-${this.lastDirection}`;
@@ -107,6 +181,34 @@ export class OfficeScene extends Phaser.Scene {
         this.tactician.play(idleKey);
       }
     }
+
+    // Update label position
+    if (this.tacticianLabel) {
+      this.tacticianLabel.setPosition(this.tactician.x, this.tactician.y - 24);
+    }
+
+    // Interpolate remote players toward their target positions
+    this.remotePlayers.forEach((remote) => {
+      const lerpFactor = 0.15;
+      remote.sprite.x += (remote.targetX - remote.sprite.x) * lerpFactor;
+      remote.sprite.y += (remote.targetY - remote.sprite.y) * lerpFactor;
+      remote.label.setPosition(remote.sprite.x, remote.sprite.y - 24);
+
+      // Play walk/idle animation based on movement
+      const moving = Math.abs(remote.targetX - remote.sprite.x) > 0.5 ||
+        Math.abs(remote.targetY - remote.sprite.y) > 0.5;
+      if (moving) {
+        const walkKey = `tactician-walk-${remote.direction}`;
+        if (this.anims.exists(walkKey) && remote.sprite.anims.currentAnim?.key !== walkKey) {
+          remote.sprite.play(walkKey);
+        }
+      } else {
+        const idleKey = `tactician-idle-${remote.direction}`;
+        if (this.anims.exists(idleKey) && remote.sprite.anims.currentAnim?.key !== idleKey) {
+          remote.sprite.play(idleKey);
+        }
+      }
+    });
 
     // Check button presses for proximity interactions
     if (input.buttonA) {
@@ -133,12 +235,15 @@ export class OfficeScene extends Phaser.Scene {
     });
   }
 
-  destroy(): void {
+  shutdown(): void {
     if (this.stateCleanup) {
       this.stateCleanup();
       this.stateCleanup = null;
     }
-    super.destroy();
+    if (this.sessionIdCleanup) {
+      this.sessionIdCleanup();
+      this.sessionIdCleanup = null;
+    }
   }
 
   private createAnimations(): void {
@@ -259,7 +364,7 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private createTactician(): void {
-    this.tactician = this.add.sprite(640, 360, 'tactician').setDepth(10);
+    this.tactician = this.add.sprite(400, 300, 'tactician').setDepth(10);
 
     // Play initial idle animation if available
     if (this.anims.exists('tactician-idle-down')) {
@@ -267,22 +372,17 @@ export class OfficeScene extends Phaser.Scene {
     }
 
     this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
-    this.cameras.main.setBounds(0, 0, 1280, 720);
+    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
     // Label above tactician
-    const label = this.add
-      .text(640, 340, 'YOU', {
+    this.tacticianLabel = this.add
+      .text(400, 276, 'YOU', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '8px',
         color: '#a5b4fc',
       })
       .setOrigin(0.5)
       .setDepth(10);
-
-    // Keep label following the tactician
-    this.events.on('update', () => {
-      label.setPosition(this.tactician.x, this.tactician.y - 24);
-    });
   }
 
   private createHelpOverlay(): void {
@@ -324,14 +424,24 @@ export class OfficeScene extends Phaser.Scene {
   private onStateUpdate(state: OfficeState): void {
     this.officeState = state;
 
+    // Update local session ID if available
+    if (state.localSessionId) {
+      this.localSessionId = state.localSessionId;
+    }
+
+    // Reconcile remote player sprites
+    this.reconcileRemotePlayers(state.players ?? []);
+
     // Reconcile agent sprites with current state
     const currentAgentIds = new Set<string>();
 
     state.departments.forEach((dept: Department) => {
-      dept.agents.forEach((agent: Agent) => {
-        currentAgentIds.add(agent.id);
-        this.updateOrCreateAgentSprite(agent, dept);
-      });
+      if (dept.agents) {
+        dept.agents.forEach((agent: Agent) => {
+          currentAgentIds.add(agent.id);
+          this.updateOrCreateAgentSprite(agent, dept);
+        });
+      }
     });
 
     // Remove sprites for agents no longer in state
@@ -344,17 +454,70 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     // Update review station pending counts
-    state.reviewStations.forEach((station: ReviewStation) => {
-      const stationSprite = this.reviewStations.get(station.departmentId);
-      if (stationSprite) {
-        stationSprite.setAlpha(station.pendingApprovals > 0 ? 1 : 0.5);
+    if (state.reviewStations) {
+      state.reviewStations.forEach((station: ReviewStation) => {
+        const stationSprite = this.reviewStations.get(station.departmentId);
+        if (stationSprite) {
+          stationSprite.setAlpha(station.pendingApprovals > 0 ? 1 : 0.5);
+        }
+      });
+    }
+  }
+
+  private reconcileRemotePlayers(players: Player[]): void {
+    const currentSessionIds = new Set<string>();
+
+    for (const player of players) {
+      // Skip local player
+      if (player.sessionId === this.localSessionId) continue;
+      currentSessionIds.add(player.sessionId);
+
+      const existing = this.remotePlayers.get(player.sessionId);
+      if (existing) {
+        // Update target position for interpolation
+        existing.targetX = player.x;
+        existing.targetY = player.y;
+        existing.direction = player.direction;
+        existing.label.setText(player.name);
+      } else {
+        // Create new remote player sprite
+        const sprite = this.add.sprite(player.x, player.y, 'tactician').setDepth(9).setAlpha(0.85);
+        if (this.anims.exists('tactician-idle-down')) {
+          sprite.play('tactician-idle-down');
+        }
+
+        const label = this.add
+          .text(player.x, player.y - 24, player.name, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '7px',
+            color: '#86efac',
+          })
+          .setOrigin(0.5)
+          .setDepth(9);
+
+        this.remotePlayers.set(player.sessionId, {
+          sprite,
+          label,
+          targetX: player.x,
+          targetY: player.y,
+          direction: player.direction,
+        });
+      }
+    }
+
+    // Remove sprites for disconnected players
+    this.remotePlayers.forEach((remote, sessionId) => {
+      if (!currentSessionIds.has(sessionId)) {
+        remote.sprite.destroy();
+        remote.label.destroy();
+        this.remotePlayers.delete(sessionId);
       }
     });
   }
 
   private updateOrCreateAgentSprite(agent: Agent, dept: Department): void {
     const textureKey = `agent-${agent.role}`;
-    const layout = DEPARTMENT_LAYOUT[dept.slug];
+    const layout = this.departmentLayouts.get(dept.slug);
     if (!layout) return;
 
     const existing = this.agentSprites.get(agent.id);

@@ -20,8 +20,9 @@ function findAgent(
 
   state.departments.forEach((dept) => {
     for (let i = 0; i < dept.agents.length; i++) {
-      if (dept.agents[i].id === agentId) {
-        found = dept.agents[i];
+      const agent = dept.agents.at(i);
+      if (agent && agent.id === agentId) {
+        found = agent;
       }
     }
   });

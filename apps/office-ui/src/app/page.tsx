@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { HUD } from '@/components/HUD';
 import { DashboardPanel } from '@/components/DashboardPanel';
+import { ChatPanel } from '@/components/ChatPanel';
 import { useApprovals } from '@/hooks/useApprovals';
 import { useColyseus } from '@/hooks/useColyseus';
 import { useState, useCallback } from 'react';
@@ -24,7 +25,13 @@ const PhaserGame = dynamic(() => import('@/game/PhaserGame'), {
 });
 
 export default function HomePage() {
-  const { officeState, connected: colyseusConnected } = useColyseus();
+  const {
+    officeState,
+    connected: colyseusConnected,
+    sessionId,
+    sendMove,
+    sendChat,
+  } = useColyseus('Tactician');
   const {
     pendingApprovals,
     approve,
@@ -62,11 +69,20 @@ export default function HomePage() {
     [deny],
   );
 
+  const handlePlayerMove = useCallback(
+    (x: number, y: number) => {
+      sendMove(x, y);
+    },
+    [sendMove],
+  );
+
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-slate-900">
       <PhaserGame
         onApprovalOpen={handleApprovalOpen}
         officeState={officeState}
+        sessionId={sessionId}
+        onPlayerMove={handlePlayerMove}
       />
 
       <HUD
@@ -81,6 +97,12 @@ export default function HomePage() {
         open={dashboardOpen}
         onToggle={() => setDashboardOpen((prev) => !prev)}
         departments={officeState?.departments ?? []}
+      />
+
+      <ChatPanel
+        messages={officeState?.chatMessages ?? []}
+        onSend={sendChat}
+        localSessionId={sessionId ?? ''}
       />
 
       {activeApproval && (

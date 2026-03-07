@@ -25,12 +25,17 @@ export class GamepadManager {
   private keysDown: Set<string> = new Set();
   private keysPressedThisFrame: Set<string> = new Set();
   private prevKeysDown: Set<string> = new Set();
+  private chatFocused: boolean = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', this.onKeyDown);
       window.addEventListener('keyup', this.onKeyUp);
     }
+  }
+
+  setChatFocused(focused: boolean): void {
+    this.chatFocused = focused;
   }
 
   destroy(): void {
@@ -60,6 +65,21 @@ export class GamepadManager {
 
   /** Returns the current input state, merging gamepad and keyboard. */
   getInput(): GamepadInput {
+    // When chat is focused, suppress all keyboard input to avoid moving while typing
+    if (this.chatFocused) {
+      const gp = this.gamepad;
+      return {
+        leftStickX: gp ? this.applyDeadzone(gp.axes[0] ?? 0) : 0,
+        leftStickY: gp ? this.applyDeadzone(gp.axes[1] ?? 0) : 0,
+        rightStickX: gp ? this.applyDeadzone(gp.axes[2] ?? 0) : 0,
+        rightStickY: gp ? this.applyDeadzone(gp.axes[3] ?? 0) : 0,
+        buttonA: gp ? gp.buttons[0]?.pressed ?? false : false,
+        buttonB: gp ? gp.buttons[1]?.pressed ?? false : false,
+        buttonX: gp ? gp.buttons[2]?.pressed ?? false : false,
+        buttonY: gp ? gp.buttons[3]?.pressed ?? false : false,
+      };
+    }
+
     const gp = this.gamepad;
 
     // Gamepad axes

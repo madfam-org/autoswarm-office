@@ -7,6 +7,7 @@ import {
 } from "../schema/OfficeState";
 import { handleMovement } from "../handlers/movement";
 import { handleInteraction, handleApproval } from "../handlers/interaction";
+import { handleChat, addSystemMessage } from "../handlers/chat";
 
 interface MoveMessage {
   x: number;
@@ -23,8 +24,13 @@ interface ApproveMessage {
   feedback?: string;
 }
 
+interface ChatMessage {
+  content: string;
+}
+
 interface RoomOptions {
   nexusApiUrl?: string;
+  name?: string;
 }
 
 const DEFAULT_DEPARTMENTS: Array<{
@@ -93,12 +99,6 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
       this.state.departments.set(dept.id, department);
     }
 
-    const tactician = new TacticianSchema();
-    tactician.x = 400;
-    tactician.y = 300;
-    tactician.direction = "down";
-    this.state.tactician = tactician;
-
     this.onMessage("move", (client: Client, message: MoveMessage) => {
       handleMovement(this.state, client, message);
     });
@@ -122,6 +122,10 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
       });
     });
 
+    this.onMessage("chat", (client: Client, message: ChatMessage) => {
+      handleChat(this.state, client, message);
+    });
+
     console.log(
       `[OfficeRoom] Initialized with ${DEFAULT_DEPARTMENTS.length} departments`
     );
@@ -137,15 +141,34 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     );
   }
 
-  onJoin(client: Client): void {
+  onJoin(client: Client, options?: RoomOptions & { name?: string }): void {
     console.log(`[OfficeRoom] Client joined: ${client.sessionId}`);
-    this.broadcast("player_joined", { sessionId: client.sessionId });
+
+    const player = new TacticianSchema();
+    player.sessionId = client.sessionId;
+    player.name = options?.name ?? "Player";
+    player.x = 400;
+    player.y = 300;
+    player.direction = "down";
+    this.state.players.set(client.sessionId, player);
+
+    addSystemMessage(this.state, `${player.name} joined`);
+    this.broadcast("player_joined", {
+      sessionId: client.sessionId,
+      name: player.name,
+    });
   }
 
   onLeave(client: Client, consented: boolean): void {
     console.log(
       `[OfficeRoom] Client left: ${client.sessionId} (consented: ${consented})`
     );
+
+    const player = this.state.players.get(client.sessionId);
+    const name = player?.name ?? "Player";
+    this.state.players.delete(client.sessionId);
+
+    addSystemMessage(this.state, `${name} left`);
     this.broadcast("player_left", { sessionId: client.sessionId });
   }
 
@@ -222,11 +245,15 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
   private updateAgentInState(agentId: string, status: string): void {
     this.state.departments.forEach((dept) => {
       for (let i = 0; i < dept.agents.length; i++) {
-        const agent = dept.agents[i];
+        const agent = dept.agents.at(i);
         if (agent && agent.id === agentId) {
           agent.status = status;
           if (status === "waiting_approval") {
             this.state.pendingApprovalCount += 1;
+            addSystemMessage(
+              this.state,
+              `Agent ${agent.name} is waiting for approval`
+            );
           }
           return;
         }

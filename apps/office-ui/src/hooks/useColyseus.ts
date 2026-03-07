@@ -5,7 +5,8 @@ import type {
   OfficeState,
   Department,
   ReviewStation,
-  TacticianPosition,
+  Player,
+  ChatMessage,
 } from '@autoswarm/shared-types';
 
 const COLYSEUS_URL = process.env.NEXT_PUBLIC_COLYSEUS_URL ?? 'ws://localhost:4303';
@@ -18,67 +19,117 @@ interface ColyseusState {
   officeState: OfficeState | null;
   connected: boolean;
   error: string | null;
+  sessionId: string | null;
+  sendMove: (x: number, y: number) => void;
+  sendChat: (content: string) => void;
 }
 
-/**
- * React hook for Colyseus room connection.
- * Connects to the "office" room, listens for state changes,
- * and provides the current office state to React components.
- */
-export function useColyseus(): ColyseusState {
+interface RoomLike {
+  sessionId: string;
+  send: (type: string, data: unknown) => void;
+  leave: () => void;
+  onStateChange: (cb: (state: Record<string, unknown>) => void) => void;
+  onLeave: (cb: (code: number) => void) => void;
+  onError: (cb: (code: number, message?: string) => void) => void;
+}
+
+function parseMapSchema<T>(map: unknown): T[] {
+  if (!map) return [];
+  if (typeof (map as Iterable<unknown>)[Symbol.iterator] === 'function') {
+    // Colyseus MapSchema is iterable as [key, value] pairs
+    const result: T[] = [];
+    for (const [, value] of map as Iterable<[string, T]>) {
+      result.push(value);
+    }
+    return result;
+  }
+  if (typeof map === 'object' && map !== null && 'forEach' in map) {
+    const result: T[] = [];
+    (map as { forEach: (cb: (v: T) => void) => void }).forEach((v: T) => result.push(v));
+    return result;
+  }
+  return [];
+}
+
+function parseArraySchema<T>(arr: unknown): T[] {
+  if (!arr) return [];
+  if (Array.isArray(arr)) return arr;
+  if (typeof (arr as Iterable<unknown>)[Symbol.iterator] === 'function') {
+    return [...(arr as Iterable<T>)];
+  }
+  return [];
+}
+
+export function useColyseus(playerName?: string): ColyseusState {
   const [officeState, setOfficeState] = useState<OfficeState | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const roomRef = useRef<unknown>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const roomRef = useRef<RoomLike | null>(null);
   const reconnectAttempts = useRef(0);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const playerNameRef = useRef(playerName);
+  playerNameRef.current = playerName;
+
+  const sendMove = useCallback((x: number, y: number) => {
+    roomRef.current?.send('move', { x, y });
+  }, []);
+
+  const sendChat = useCallback((content: string) => {
+    roomRef.current?.send('chat', { content });
+  }, []);
 
   const connect = useCallback(async () => {
     try {
-      // Dynamic import to avoid SSR issues
       const { Client } = await import('colyseus.js');
       const client = new Client(COLYSEUS_URL);
-      const room = await client.joinOrCreate(ROOM_NAME);
+      const room = await client.joinOrCreate(ROOM_NAME, {
+        name: playerNameRef.current ?? 'Player',
+      });
 
-      roomRef.current = room;
+      roomRef.current = room as unknown as RoomLike;
       setConnected(true);
       setError(null);
+      setSessionId(room.sessionId);
       reconnectAttempts.current = 0;
 
-      // Listen for full state updates
-      room.onStateChange((state: Record<string, unknown>) => {
-        const departments = (state.departments ?? []) as Department[];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      room.onStateChange((rawState: any) => {
+        const state = rawState as Record<string, unknown>;
+        const departments = parseMapSchema<Department>(state.departments);
         const reviewStations = (state.reviewStations ?? []) as ReviewStation[];
-        const tactician = (state.tactician ?? {
-          x: 640,
-          y: 360,
-          direction: 'down',
-        }) as TacticianPosition;
+        const players = parseMapSchema<Player>(state.players);
+        const chatMessages = parseArraySchema<ChatMessage>(state.chatMessages);
 
         let activeCount = 0;
         let pendingCount = 0;
 
         departments.forEach((dept: Department) => {
-          dept.agents.forEach((agent) => {
-            if (agent.status === 'working') activeCount++;
-            if (agent.status === 'waiting_approval') pendingCount++;
-          });
+          if (dept.agents) {
+            const agents = parseArraySchema(dept.agents);
+            agents.forEach((agent: any) => {
+              if (agent.status === 'working') activeCount++;
+              if (agent.status === 'waiting_approval') pendingCount++;
+            });
+          }
         });
 
         setOfficeState({
           departments,
           reviewStations,
-          tactician,
+          players,
+          localSessionId: room.sessionId,
           activeAgentCount: activeCount,
           pendingApprovalCount: pendingCount,
+          chatMessages,
         });
       });
 
       room.onLeave((code: number) => {
         setConnected(false);
         roomRef.current = null;
+        setSessionId(null);
 
-        // Attempt reconnection on unexpected disconnects
         if (code !== 1000 && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
           reconnectAttempts.current++;
           reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MS);
@@ -93,7 +144,6 @@ export function useColyseus(): ColyseusState {
       setError(message);
       setConnected(false);
 
-      // Retry connection
       if (reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts.current++;
         reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MS);
@@ -108,9 +158,7 @@ export function useColyseus(): ColyseusState {
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current);
       }
-      if (roomRef.current && typeof (roomRef.current as { leave: () => void }).leave === 'function') {
-        (roomRef.current as { leave: () => void }).leave();
-      }
+      roomRef.current?.leave();
       roomRef.current = null;
     };
   }, [connect]);
@@ -120,5 +168,8 @@ export function useColyseus(): ColyseusState {
     officeState,
     connected,
     error,
+    sessionId,
+    sendMove,
+    sendChat,
   };
 }

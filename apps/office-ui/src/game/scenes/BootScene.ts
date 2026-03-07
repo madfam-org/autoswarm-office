@@ -53,6 +53,10 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 32,
     });
 
+    // Tiled map (optional — graceful fallback if missing)
+    this.load.tilemapTiledJSON('office-map', '/assets/maps/office-default.tmj');
+    this.load.image('office-tiles', '/assets/tilesets/office-tileset.png');
+
     // UI icons
     this.load.image('icon-approve', '/assets/ui/icon-approve.png');
     this.load.image('icon-deny', '/assets/ui/icon-deny.png');

@@ -13,6 +13,8 @@ import type {
   Department,
   OfficeState,
   TacticianPosition,
+  Player,
+  ChatMessage,
   ReviewStation,
   ComputeTokenBucket,
   SubscriptionTier,
@@ -320,13 +322,58 @@ describe("OfficeState type", () => {
     const state: OfficeState = {
       departments: [],
       reviewStations: [],
-      tactician: { x: 400, y: 300, direction: "down" },
+      players: [
+        { sessionId: "s1", name: "Alice", x: 400, y: 300, direction: "down" },
+      ],
+      localSessionId: "s1",
       activeAgentCount: 0,
       pendingApprovalCount: 0,
+      chatMessages: [],
     };
     expect(state.departments).toEqual([]);
-    expect(state.tactician.direction).toBe("down");
+    expect(state.players).toHaveLength(1);
+    expect(state.players[0].name).toBe("Alice");
     expect(state.activeAgentCount).toBe(0);
+  });
+});
+
+describe("Player type", () => {
+  it("can construct a player", () => {
+    const player: Player = {
+      sessionId: "abc",
+      name: "Test",
+      x: 100,
+      y: 200,
+      direction: "right",
+    };
+    expect(player.sessionId).toBe("abc");
+  });
+});
+
+describe("ChatMessage type", () => {
+  it("can construct a chat message", () => {
+    const msg: ChatMessage = {
+      id: "msg-1",
+      senderSessionId: "s1",
+      senderName: "Alice",
+      content: "Hello",
+      timestamp: Date.now(),
+      isSystem: false,
+    };
+    expect(msg.content).toBe("Hello");
+    expect(msg.isSystem).toBe(false);
+  });
+
+  it("can construct a system message", () => {
+    const msg: ChatMessage = {
+      id: "msg-2",
+      senderSessionId: "",
+      senderName: "System",
+      content: "Alice joined",
+      timestamp: Date.now(),
+      isSystem: true,
+    };
+    expect(msg.isSystem).toBe(true);
   });
 });
 

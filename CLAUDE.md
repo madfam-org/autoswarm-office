@@ -36,7 +36,7 @@ make generate-assets  # Regenerate pixel-art sprite PNGs
 pnpm dev              # TypeScript services only
 pnpm build            # Build TypeScript packages
 pnpm lint             # ESLint
-pnpm test             # TypeScript tests (151 tests across 10 suites)
+pnpm test             # TypeScript tests (168 tests across 12 suites)
 pnpm typecheck        # TypeScript type checking
 
 uv run pytest         # Python tests (238 tests)
@@ -126,6 +126,35 @@ The `packages/skills/` package implements the AgentSkills standard.
   from env vars. Graphs fall back to static logic when no LLM is configured.
 - The permission matrix is evaluated by `packages/permissions/src/engine.py` before
   every tool invocation in the worker.
+
+### Multi-Player & Chat
+
+- The Colyseus `OfficeStateSchema` uses `players: MapSchema<TacticianSchema>`
+  (keyed by `client.sessionId`) instead of a single tactician. Each player has
+  `sessionId`, `name`, `x`, `y`, `direction`.
+- `OfficeRoom.onJoin()` creates a player entry; `onLeave()` removes it. System
+  messages are broadcast to `chatMessages` on join/leave/approval events.
+- `handleMovement` looks up the moving player via `state.players.get(client.sessionId)`
+  so multiple players move independently.
+- `chatMessages: ArraySchema<ChatMessageSchema>` holds the last 50 messages
+  (user + system). The `chat` message handler validates content length (max 500).
+- Office world bounds are 1280x704 (40x22 tiles at 32px).
+- `OfficeScene` renders remote players as interpolated sprites with name labels.
+  Local player movement is broadcast via `GameEventBus` at ~15fps with a 1px
+  dead-zone to avoid flooding.
+- `ChatPanel` is a collapsible React overlay (bottom-left). `T`/`/` to focus,
+  `Esc` to unfocus. `GamepadManager.chatFocused` suppresses keyboard game input
+  while typing.
+
+### Tiled Map Support
+
+- `BootScene` loads `office-default.tmj` (Tiled JSON) and an `office-tiles` image.
+  `OfficeScene.create()` calls `loadTiledMap()`; on failure it falls back to the
+  procedural floor + department-zone rendering that existed before.
+- `TiledMapLoader.ts` parses department zones, review stations, and spawn points
+  from Tiled object layers. Collision is set on an invisible `collision` layer via
+  `setCollisionByExclusion([-1])`.
+- The default map lives at `apps/office-ui/public/assets/maps/office-default.tmj`.
 
 ## Sprite Assets
 

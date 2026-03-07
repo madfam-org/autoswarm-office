@@ -43,37 +43,48 @@ class CRMState(BaseGraphState, TypedDict, total=False):
 def fetch_context(state: CRMState) -> CRMState:
     """Fetch CRM context for the target recipient and action.
 
-    Retrieves contact history, recent interactions, and relevant
-    business context to inform the draft.
-
-    In production this node calls a real CRM API (Salesforce, HubSpot,
-    etc.) to fetch the contact record and interaction history.  The LLM
-    can be used via ``call_llm()`` to summarise long interaction
-    histories into concise context.
-
-    # Production integration:
-    # from ..inference import build_model_router, call_llm
-    # router = build_model_router()
-    # context_summary = await call_llm(
-    #     router,
-    #     messages=[{"role": "user", "content": f"Summarise CRM history:\n{raw_history}"}],
-    #     system_prompt="Summarise the contact history into key points for drafting communication.",
-    # )
+    Calls the Phyne-CRM adapter when ``PHYNE_CRM_URL`` is configured,
+    falling back to mock data otherwise.
     """
     messages = state.get("messages", [])
     recipient = state.get("recipient", "unknown@example.com")
     crm_action = state.get("crm_action", "email")
 
-    context_data = {
+    context_data: dict = {
         "recipient": recipient,
         "action": crm_action,
-        "contact_history": [
+    }
+
+    # Try Phyne-CRM adapter for real data.
+    try:
+        import os
+
+        phyne_url = os.environ.get("PHYNE_CRM_URL")
+        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
+        if phyne_url:
+            from autoswarm_inference.adapters.crm import PhyneCRMAdapter
+
+            adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            profile = _run_async(adapter.get_unified_profile(recipient))
+            activities = _run_async(
+                adapter.list_activities("contact", profile.contact.id)
+            )
+            context_data["contact_history"] = [
+                {"date": a.due_date or "", "type": a.type, "subject": a.title}
+                for a in activities
+            ]
+            context_data["account_status"] = profile.billing_status or "active"
+            context_data["last_interaction_days_ago"] = 0
+        else:
+            raise RuntimeError("PHYNE_CRM_URL not set")
+    except Exception:
+        logger.debug("Using mock CRM context (Phyne-CRM unavailable)")
+        context_data["contact_history"] = [
             {"date": "2026-03-01", "type": "email", "subject": "Follow-up on proposal"},
             {"date": "2026-02-15", "type": "meeting", "subject": "Initial discovery call"},
-        ],
-        "account_status": "active",
-        "last_interaction_days_ago": 5,
-    }
+        ]
+        context_data["account_status"] = "active"
+        context_data["last_interaction_days_ago"] = 5
 
     context_message = AIMessage(
         content=f"CRM context fetched for {recipient}: {len(context_data['contact_history'])} "
@@ -199,13 +210,8 @@ def approval_gate(state: CRMState) -> CRMState:
 def send(state: CRMState) -> CRMState:
     """Execute the approved outbound CRM action.
 
-    Only reached if the approval gate was passed.  In production this
-    node dispatches the actual email or CRM API call via the configured
-    email provider (SendGrid, SES, etc.) or CRM write API.
-
-    # Production integration:
-    # Dispatch via real email/CRM provider SDK rather than placeholder.
-    # The LLM is not needed here -- this is a pure API dispatch node.
+    Logs the drafted communication in Phyne-CRM as an activity when
+    configured, otherwise uses a placeholder result.
     """
     messages = state.get("messages", [])
     recipient = state.get("recipient", "unknown")
@@ -215,12 +221,36 @@ def send(state: CRMState) -> CRMState:
     if state.get("status") == "denied":
         return {**state, "status": "cancelled"}
 
-    send_result = {
+    send_result: dict = {
         "action": crm_action,
         "recipient": recipient,
         "delivered": True,
         "message_id": f"msg-{state.get('task_id', 'unknown')}",
     }
+
+    # Log the activity in Phyne-CRM if available.
+    try:
+        import os
+
+        phyne_url = os.environ.get("PHYNE_CRM_URL")
+        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
+        if phyne_url:
+            from autoswarm_inference.adapters.crm import PhyneCRMAdapter
+
+            adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            draft = state.get("draft_content", "")
+            activity = _run_async(
+                adapter.create_activity(
+                    type=crm_action,
+                    title=f"AutoSwarm: {crm_action} to {recipient}",
+                    description=draft[:500],
+                    entity_type="contact",
+                    entity_id=recipient,
+                )
+            )
+            send_result["phyne_activity_id"] = activity.id
+    except Exception:
+        logger.debug("Phyne-CRM activity logging skipped (unavailable)")
 
     send_message = AIMessage(
         content=f"CRM {crm_action} sent to {recipient} successfully.",

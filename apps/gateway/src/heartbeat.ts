@@ -1,6 +1,7 @@
 import { CronJob } from "cron";
 import { Octokit } from "@octokit/rest";
 import WebSocket from "ws";
+import { CRMScraper } from "./crm-scraper";
 
 interface ExternalEvent {
   source: string;
@@ -21,6 +22,7 @@ export class HeartbeatService {
   private readonly cronExpression: string;
   private cronJob: CronJob | null = null;
   private ws: WebSocket | null = null;
+  private readonly crmScraper: CRMScraper | null;
 
   constructor(
     nexusApiUrl: string,
@@ -28,6 +30,12 @@ export class HeartbeatService {
   ) {
     this.nexusApiUrl = nexusApiUrl;
     this.cronExpression = cronExpression;
+
+    const phyneCrmUrl = process.env.PHYNE_CRM_URL;
+    const phyneCrmToken = process.env.PHYNE_CRM_TOKEN ?? "";
+    this.crmScraper = phyneCrmUrl
+      ? new CRMScraper(phyneCrmUrl, phyneCrmToken)
+      : null;
   }
 
   start(): void {
@@ -73,10 +81,14 @@ export class HeartbeatService {
   }
 
   private async scrapeCRM(): Promise<ExternalEvent[]> {
-    try {
-      console.log("[heartbeat] Scraping CRM for pending contacts and follow-ups...");
-      // Stub: integrate with actual CRM API (HubSpot, Salesforce, etc.)
+    if (!this.crmScraper) {
+      console.log("[heartbeat] PHYNE_CRM_URL not set; skipping CRM scrape");
       return [];
+    }
+
+    try {
+      console.log("[heartbeat] Scraping CRM via Phyne-CRM...");
+      return await this.crmScraper.scrape();
     } catch (err) {
       console.error("[heartbeat] CRM scrape failed:", err);
       return [];
@@ -192,10 +204,16 @@ export class HeartbeatService {
   }
 
   private async scrapeTickets(): Promise<ExternalEvent[]> {
-    try {
-      console.log("[heartbeat] Scraping support tickets for escalations and SLA breaches...");
-      // Stub: integrate with ticketing system (Zendesk, Freshdesk, etc.)
+    if (!this.crmScraper) {
+      console.log("[heartbeat] PHYNE_CRM_URL not set; skipping ticket scrape");
       return [];
+    }
+
+    try {
+      console.log("[heartbeat] Scraping support tickets via Phyne-CRM...");
+      const events = await this.crmScraper.scrape();
+      // Filter for task-type activities only (ticket-like items)
+      return events.filter((e) => e.type === "activity_overdue");
     } catch (err) {
       console.error("[heartbeat] Ticket scrape failed:", err);
       return [];

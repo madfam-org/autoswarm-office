@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     ollama_base_url: str = "http://localhost:11434"
 
+    # -- Phyne-CRM ------------------------------------------------------------
+    phyne_crm_url: str | None = None
+
     # -- Colyseus -------------------------------------------------------------
     colyseus_secret: str = "change-me-in-production"
 

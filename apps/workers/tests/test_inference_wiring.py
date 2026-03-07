@@ -180,3 +180,42 @@ def test_review_node_with_mocked_llm(mock_call_llm, mock_get_router):
     review_data = state["messages"][-1].additional_kwargs.get("review")
     assert review_data["issues_found"] == 1
     assert review_data["recommendation"] == "revise"
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: tool_executor – unknown tools
+# ---------------------------------------------------------------------------
+
+
+def _make_tool_call_message(tool_name: str, tool_args: dict | None = None):
+    """Create an AIMessage with a single tool_calls entry."""
+    from langchain_core.messages import AIMessage
+
+    return AIMessage(
+        content="",
+        tool_calls=[{"name": tool_name, "args": tool_args or {}, "id": "call-1"}],
+    )
+
+
+def test_tool_executor_unknown_tool_returns_failure():
+    """tool_executor marks unrecognised tools as failed, not successful."""
+    from autoswarm_workers.graphs.base import tool_executor
+
+    state = {
+        "messages": [_make_tool_call_message("unknown_tool", {"foo": "bar"})],
+        "task_id": "task-1",
+        "agent_id": "agent-1",
+        "status": "running",
+        "result": None,
+        "requires_approval": False,
+        "approval_request_id": None,
+    }
+
+    result_state = tool_executor(state)
+
+    assert result_state["status"] == "completed"
+    tool_results = result_state["result"]["tool_results"]
+    assert len(tool_results) == 1
+    assert tool_results[0]["success"] is False
+    assert "No handler registered" in tool_results[0]["error"]
+    assert tool_results[0]["tool"] == "unknown_tool"

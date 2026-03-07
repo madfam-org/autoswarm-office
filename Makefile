@@ -1,8 +1,11 @@
-.PHONY: dev build test lint clean docker-up docker-down db-migrate setup generate-assets generate-variants post-process generate-map
+.PHONY: dev worker build test lint clean docker-up docker-down db-migrate setup generate-assets generate-variants post-process generate-map
 
 # ── Development ─────────────────────────────────────
 dev:
-	pnpm dev & uv run --directory apps/nexus-api uvicorn nexus_api.main:app --host 0.0.0.0 --port 4300 --reload
+	pnpm dev & uv run --directory apps/nexus-api uvicorn nexus_api.main:app --host 0.0.0.0 --port 4300 --reload & uv run --directory apps/workers python -m autoswarm_workers
+
+worker:
+	uv run --directory apps/workers python -m autoswarm_workers
 
 build:
 	pnpm build

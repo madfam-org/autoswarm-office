@@ -271,8 +271,9 @@ def tool_executor(state: BaseGraphState) -> BaseGraphState:
                     {
                         "tool": tool_name,
                         "args": tool_args,
-                        "output": f"[no handler for {tool_name} — placeholder result]",
-                        "success": True,
+                        "output": "",
+                        "error": f"No handler registered for tool '{tool_name}'",
+                        "success": False,
                     }
                 )
         except Exception as exc:

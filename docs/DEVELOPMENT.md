@@ -23,7 +23,7 @@ bash scripts/setup.sh
 # 3. Start PostgreSQL and Redis
 make docker-dev
 
-# 4. Start all services in development mode
+# 4. Start all services in development mode (API + UI + Colyseus + Worker)
 make dev
 ```
 
@@ -58,6 +58,12 @@ pnpm dev
 ```bash
 cd apps/colyseus
 pnpm dev
+```
+
+### Worker (Python — LangGraph task consumer)
+
+```bash
+make worker
 ```
 
 ### Gateway (Node.js)

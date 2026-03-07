@@ -23,7 +23,8 @@ These ports do not conflict with Janua (4100-4104) or Enclii (4200-4204).
 ## Commands
 
 ```bash
-make dev              # Start all services (TS + Python)
+make dev              # Start all services (TS + Python + Worker)
+make worker           # Run worker process independently
 make test             # Run all tests
 make lint             # Run all linters
 make typecheck        # TypeScript + mypy

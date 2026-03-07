@@ -38,6 +38,7 @@ class AgentConfig(BaseModel):
     level: int = Field(default=1, ge=1, le=10)
     department_id: str | None = None
     status: AgentStatus = AgentStatus.IDLE
+    skill_ids: list[str] = Field(default_factory=list)
 
 
 class SwarmTask(BaseModel):

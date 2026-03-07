@@ -261,15 +261,12 @@ describe("handleApproval", () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe("http://localhost:4300/api/approvals/req-42");
+    expect(url).toBe("http://localhost:4300/api/v1/approvals/req-42/approve");
     expect(options.method).toBe("POST");
     expect(options.headers).toEqual({ "Content-Type": "application/json" });
 
     const body = JSON.parse(options.body);
-    expect(body.requestId).toBe("req-42");
-    expect(body.result).toBe("approved");
     expect(body.feedback).toBe("Looks good");
-    expect(body.respondedAt).toBeDefined();
   });
 
   it("updates agent status to 'working' on approved", async () => {

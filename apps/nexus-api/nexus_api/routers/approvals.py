@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -13,9 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..approval_notifier import notify_approval_decision
 from ..auth import get_current_user
+from ..config import get_settings
 from ..database import async_session_factory, get_db
-from ..models import ApprovalRequest
+from ..models import ApprovalRequest, SwarmTask
 from ..ws import manager
+
+_wave_logger = logging.getLogger(__name__ + ".wave")
 
 router = APIRouter(tags=["approvals"])
 
@@ -259,10 +265,76 @@ async def approval_websocket(websocket: WebSocket) -> None:
 
     try:
         while True:
-            # Keep the connection alive; the client can send pings or commands.
             data = await websocket.receive_text()
-            # Echo-back as a simple keep-alive acknowledgement.
             if data == "ping":
                 await websocket.send_json({"type": "pong"})
+                continue
+            try:
+                message = json.loads(data)
+                if message.get("type") == "gateway:wave":
+                    await _handle_wave(message.get("data", {}))
+            except json.JSONDecodeError:
+                pass
     except WebSocketDisconnect:
         manager.disconnect(client_id)
+
+
+# -- Wave-to-task pipeline ----------------------------------------------------
+
+_EVENT_TYPE_TO_GRAPH: dict[str, str] = {
+    "pr_review_requested": "coding",
+    "ci_failure": "coding",
+    "escalation": "research",
+    "sla_breach": "crm",
+}
+
+MAX_TASKS_PER_WAVE = 10
+
+
+async def _handle_wave(wave_data: dict[str, Any]) -> None:
+    """Convert a gateway wave into SwarmTasks and enqueue them."""
+    events = wave_data.get("events", [])
+    source = wave_data.get("source", "unknown")
+    created = 0
+
+    settings = get_settings()
+
+    async with async_session_factory() as session:
+        redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
+        try:
+            for event in events[:MAX_TASKS_PER_WAVE]:
+                event_type = event.get("type", "")
+                graph_type = _EVENT_TYPE_TO_GRAPH.get(event_type, "research")
+                payload = event.get("payload", {})
+
+                task = SwarmTask(
+                    description=f"[{source}] {event_type}: {payload.get('title', 'N/A')}",
+                    graph_type=graph_type,
+                    payload=payload,
+                    status="pending",
+                )
+                session.add(task)
+                await session.flush()
+                await session.refresh(task)
+
+                task_msg = json.dumps({
+                    "task_id": str(task.id),
+                    "graph_type": graph_type,
+                    "description": task.description,
+                    "payload": payload,
+                    "assigned_agent_ids": [],
+                })
+                await redis_client.lpush("autoswarm:tasks", task_msg)
+                created += 1
+
+            await session.commit()
+        finally:
+            await redis_client.aclose()
+
+    if created > 0:
+        await manager.broadcast({
+            "type": "wave_incoming",
+            "source": source,
+            "task_count": created,
+        })
+        _wave_logger.info("Wave from %s: created %d tasks", source, created)

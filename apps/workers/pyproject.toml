@@ -12,6 +12,7 @@ dependencies = [
   "pydantic-settings>=2.7.1",
   "autoswarm-inference",
   "autoswarm-permissions",
+  "autoswarm-skills",
 ]
 
 [build-system]

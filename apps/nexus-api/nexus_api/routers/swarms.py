@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user
 from ..config import get_settings
 from ..database import get_db
-from ..models import ComputeTokenLedger, SwarmTask
+from ..models import Agent, ComputeTokenLedger, SwarmTask
 
 router = APIRouter(tags=["swarms"], dependencies=[Depends(get_current_user)])
 
@@ -30,6 +30,7 @@ class DispatchRequest(BaseModel):
         pattern=r"^(sequential|parallel|coding|research|crm)$",
     )
     assigned_agent_ids: list[str] = Field(default_factory=list)
+    required_skills: list[str] = Field(default_factory=list)
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -82,6 +83,31 @@ async def dispatch_task(
     """
     settings = get_settings()
 
+    # -- Skill-based agent matching (when no explicit agents provided) --------
+    assigned_agent_ids = body.assigned_agent_ids
+    if not assigned_agent_ids and body.required_skills:
+        # Auto-select agents by skill overlap
+        try:
+            from autoswarm_skills import DEFAULT_ROLE_SKILLS
+
+            result = await db.execute(
+                select(Agent).where(Agent.status == "idle").order_by(Agent.created_at)
+            )
+            idle_agents = result.scalars().all()
+            scored: list[tuple[float, Any]] = []
+            required = set(body.required_skills)
+            for agent in idle_agents:
+                agent_skills = set(
+                    agent.skill_ids or DEFAULT_ROLE_SKILLS.get(agent.role, [])
+                )
+                overlap = len(required & agent_skills)
+                if overlap > 0:
+                    scored.append((overlap / len(required), agent))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            assigned_agent_ids = [str(a.id) for _, a in scored[:3]]
+        except Exception:
+            pass  # Fall through to dispatch without auto-selection
+
     # -- Compute token budget check -------------------------------------------
     dispatch_cost = 10  # matches ComputeTokenManager.COST_TABLE["dispatch_task"]
 
@@ -90,7 +116,7 @@ async def dispatch_task(
     task = SwarmTask(
         description=body.description,
         graph_type=body.graph_type,
-        assigned_agent_ids=body.assigned_agent_ids,
+        assigned_agent_ids=assigned_agent_ids,
         payload=body.payload,
         status="queued",
     )
@@ -119,6 +145,7 @@ async def dispatch_task(
                     "graph_type": task.graph_type,
                     "description": task.description,
                     "assigned_agent_ids": task.assigned_agent_ids,
+                    "required_skills": body.required_skills,
                     "payload": task.payload,
                 }
             ),

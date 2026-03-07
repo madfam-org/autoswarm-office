@@ -406,6 +406,20 @@ export class OfficeScene extends Phaser.Scene {
       .setOrigin(0.5, 0)
       .setDepth(5);
 
+    // Skill badges (small text below agent name)
+    const skills = (agent as any).skills as string[] | undefined;
+    if (skills && skills.length > 0) {
+      const badgeText = skills.slice(0, 2).join(', ');
+      this.add
+        .text(spriteX, spriteY + 30, badgeText, {
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '4px',
+          color: '#94a3b8',
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(5);
+    }
+
     this.agentSprites.set(agent.id, {
       sprite,
       alertIcon,

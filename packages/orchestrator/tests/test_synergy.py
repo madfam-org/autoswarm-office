@@ -126,3 +126,80 @@ class TestSynergyCalculator:
         """Effective multiplier should always be a float."""
         result = calculator.get_effective_multiplier([AgentRole.PLANNER])
         assert isinstance(result, float)
+
+
+class TestSkillBasedSynergies:
+    """Tests for synergy rules that require specific agent skills."""
+
+    def test_full_coverage_skill_synergy(self, calculator: SynergyCalculator) -> None:
+        """coding + code-review + webapp-testing triggers Full Coverage at 1.35x."""
+        skills = ["coding", "code-review", "webapp-testing"]
+        active = calculator.calculate([], agent_skills=skills)
+        synergy_names = {name for name, _ in active}
+        assert "Full Coverage" in synergy_names
+        assert dict(active)["Full Coverage"] == pytest.approx(1.35)
+
+    def test_madfam_expert_synergy_requires_role_and_skill(
+        self, calculator: SynergyCalculator
+    ) -> None:
+        """MADFAM Expert needs coder role AND madfam-api skill."""
+        # Skill alone is not enough.
+        active = calculator.calculate([], agent_skills=["madfam-api"])
+        assert "MADFAM Expert" not in {name for name, _ in active}
+
+        # Role alone is not enough.
+        active = calculator.calculate([AgentRole.CODER], agent_skills=[])
+        assert "MADFAM Expert" not in {name for name, _ in active}
+
+        # Both together activate it.
+        active = calculator.calculate([AgentRole.CODER], agent_skills=["madfam-api"])
+        assert "MADFAM Expert" in {name for name, _ in active}
+        assert dict(active)["MADFAM Expert"] == pytest.approx(1.15)
+
+    def test_research_pipeline_synergy(self, calculator: SynergyCalculator) -> None:
+        """research + doc-coauthoring skills triggers Research Pipeline at 1.2x."""
+        skills = ["research", "doc-coauthoring"]
+        active = calculator.calculate([], agent_skills=skills)
+        synergy_names = {name for name, _ in active}
+        assert "Research Pipeline" in synergy_names
+        assert dict(active)["Research Pipeline"] == pytest.approx(1.2)
+
+    def test_skill_synergy_missing_one_skill(
+        self, calculator: SynergyCalculator
+    ) -> None:
+        """Partial skill match should NOT activate skill-based synergy."""
+        skills = ["coding", "code-review"]  # missing webapp-testing
+        active = calculator.calculate([], agent_skills=skills)
+        assert "Full Coverage" not in {name for name, _ in active}
+
+    def test_no_skills_does_not_break_role_synergies(
+        self, calculator: SynergyCalculator
+    ) -> None:
+        """Calling calculate() without agent_skills still activates role synergies."""
+        roles = [AgentRole.RESEARCHER, AgentRole.CODER]
+        active = calculator.calculate(roles)
+        assert "Surgical DevOps" in {name for name, _ in active}
+
+    def test_skill_and_role_synergies_stack(
+        self, calculator: SynergyCalculator
+    ) -> None:
+        """Role-based and skill-based synergies stack multiplicatively."""
+        roles = [AgentRole.CODER, AgentRole.REVIEWER]
+        skills = ["coding", "code-review", "webapp-testing", "madfam-api"]
+        effective = calculator.get_effective_multiplier(roles, agent_skills=skills)
+        # Full Stack Review (1.25) * Full Coverage (1.35) * MADFAM Expert (1.15)
+        expected = 1.25 * 1.35 * 1.15
+        assert effective == pytest.approx(expected)
+
+    def test_custom_skill_rule(self, calculator: SynergyCalculator) -> None:
+        """Custom rules with required_skills work correctly."""
+        custom = SynergyRule(
+            name="Custom Skill Synergy",
+            description="Test.",
+            required_roles=frozenset(),
+            required_skills=frozenset({"custom-a", "custom-b"}),
+            multiplier=1.5,
+        )
+        calculator.add_rule(custom)
+        active = calculator.calculate([], agent_skills=["custom-a", "custom-b"])
+        assert "Custom Skill Synergy" in {name for name, _ in active}

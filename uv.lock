@@ -9,6 +9,7 @@ members = [
     "autoswarm-office",
     "autoswarm-orchestrator",
     "autoswarm-permissions",
+    "autoswarm-skills",
     "autoswarm-workers",
 ]
 
@@ -161,6 +162,7 @@ dependencies = [
     { name = "autoswarm-inference" },
     { name = "autoswarm-orchestrator" },
     { name = "autoswarm-permissions" },
+    { name = "autoswarm-skills" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "pydantic" },
@@ -179,6 +181,7 @@ requires-dist = [
     { name = "autoswarm-inference", editable = "packages/inference" },
     { name = "autoswarm-orchestrator", editable = "packages/orchestrator" },
     { name = "autoswarm-permissions", editable = "packages/permissions" },
+    { name = "autoswarm-skills", editable = "packages/skills" },
     { name = "fastapi", specifier = ">=0.115.6" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pydantic", specifier = ">=2.10.5" },
@@ -199,6 +202,7 @@ dependencies = [
     { name = "autoswarm-nexus-api" },
     { name = "autoswarm-orchestrator" },
     { name = "autoswarm-permissions" },
+    { name = "autoswarm-skills" },
     { name = "autoswarm-workers" },
 ]
 
@@ -218,6 +222,7 @@ requires-dist = [
     { name = "autoswarm-nexus-api", editable = "apps/nexus-api" },
     { name = "autoswarm-orchestrator", editable = "packages/orchestrator" },
     { name = "autoswarm-permissions", editable = "packages/permissions" },
+    { name = "autoswarm-skills", editable = "packages/skills" },
     { name = "autoswarm-workers", editable = "apps/workers" },
 ]
 
@@ -254,12 +259,28 @@ dependencies = [
 requires-dist = [{ name = "pydantic", specifier = ">=2.10.5" }]
 
 [[package]]
+name = "autoswarm-skills"
+version = "0.1.0"
+source = { editable = "packages/skills" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.10.5" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
+
+[[package]]
 name = "autoswarm-workers"
 version = "0.1.0"
 source = { editable = "apps/workers" }
 dependencies = [
     { name = "autoswarm-inference" },
     { name = "autoswarm-permissions" },
+    { name = "autoswarm-skills" },
     { name = "httpx" },
     { name = "langchain-core" },
     { name = "langgraph" },
@@ -272,6 +293,7 @@ dependencies = [
 requires-dist = [
     { name = "autoswarm-inference", editable = "packages/inference" },
     { name = "autoswarm-permissions", editable = "packages/permissions" },
+    { name = "autoswarm-skills", editable = "packages/skills" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "langchain-core", specifier = ">=0.3.28" },
     { name = "langgraph", specifier = ">=0.2.60" },

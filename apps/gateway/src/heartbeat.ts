@@ -1,4 +1,5 @@
 import { CronJob } from "cron";
+import { Octokit } from "@octokit/rest";
 import WebSocket from "ws";
 
 interface ExternalEvent {
@@ -83,14 +84,111 @@ export class HeartbeatService {
   }
 
   private async scrapeGitHub(): Promise<ExternalEvent[]> {
-    try {
-      console.log("[heartbeat] Scraping GitHub for PRs, issues, and CI status...");
-      // Stub: integrate with GitHub API via Octokit
-      return [];
-    } catch (err) {
-      console.error("[heartbeat] GitHub scrape failed:", err);
+    const token = process.env.GITHUB_TOKEN;
+    const reposEnv = process.env.GITHUB_REPOS;
+    if (!token || !reposEnv) {
+      console.log("[heartbeat] GITHUB_TOKEN or GITHUB_REPOS not set; skipping GitHub scrape");
       return [];
     }
+
+    const repos = reposEnv.split(",").map((r) => r.trim()).filter(Boolean);
+    const octokit = new Octokit({ auth: token });
+    const events: ExternalEvent[] = [];
+    const now = new Date().toISOString();
+
+    for (const repo of repos) {
+      const [owner, name] = repo.split("/");
+      if (!owner || !name) continue;
+
+      try {
+        // Fetch open PRs with review requests (max 10)
+        const { data: prs } = await octokit.pulls.list({
+          owner,
+          repo: name,
+          state: "open",
+          per_page: 10,
+        });
+
+        for (const pr of prs) {
+          if (pr.requested_reviewers && pr.requested_reviewers.length > 0) {
+            events.push({
+              source: "github",
+              type: "pr_review_requested",
+              payload: {
+                repo,
+                pr_number: pr.number,
+                title: pr.title,
+                author: pr.user?.login ?? "unknown",
+                reviewers: pr.requested_reviewers.map((r) => r.login),
+                url: pr.html_url,
+              },
+              timestamp: now,
+            });
+          }
+
+          // Check CI status on head commit
+          try {
+            const { data: status } = await octokit.repos.getCombinedStatusForRef({
+              owner,
+              repo: name,
+              ref: pr.head.sha,
+            });
+
+            if (status.state === "failure") {
+              events.push({
+                source: "github",
+                type: "ci_failure",
+                payload: {
+                  repo,
+                  pr_number: pr.number,
+                  title: pr.title,
+                  sha: pr.head.sha,
+                  url: pr.html_url,
+                },
+                timestamp: now,
+              });
+            }
+          } catch {
+            // CI status may not be available for all commits
+          }
+        }
+
+        // Fetch issues labeled 'critical' (max 5)
+        const { data: issues } = await octokit.issues.listForRepo({
+          owner,
+          repo: name,
+          labels: "critical",
+          state: "open",
+          per_page: 5,
+        });
+
+        for (const issue of issues) {
+          if (issue.pull_request) continue; // skip PRs in issues endpoint
+          events.push({
+            source: "github",
+            type: "escalation",
+            payload: {
+              repo,
+              issue_number: issue.number,
+              title: issue.title,
+              url: issue.html_url,
+              labels: issue.labels
+                .map((l) => (typeof l === "string" ? l : l.name))
+                .filter(Boolean),
+            },
+            timestamp: now,
+          });
+        }
+
+        console.log(
+          `[heartbeat] GitHub: ${events.length} events from ${repo}`
+        );
+      } catch (err) {
+        console.error(`[heartbeat] GitHub scrape failed for ${repo}:`, err);
+      }
+    }
+
+    return events;
   }
 
   private async scrapeTickets(): Promise<ExternalEvent[]> {

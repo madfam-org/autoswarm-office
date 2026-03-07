@@ -124,13 +124,39 @@ class SwarmOrchestrator:
         self.token_manager.deduct("dispatch_task")
 
         roles = [self.agents[aid].role for aid in task.assigned_agent_ids]
-        multiplier = self.synergy_calculator.get_effective_multiplier(roles)
+        skills: list[str] = []
+        for aid in task.assigned_agent_ids:
+            skills.extend(self.agents[aid].skill_ids)
+        multiplier = self.synergy_calculator.get_effective_multiplier(roles, skills)
 
         task.status = "dispatched"
         for aid in task.assigned_agent_ids:
             self.agents[aid].status = AgentStatus.WORKING
 
         return multiplier
+
+    def match_agents_by_skills(
+        self,
+        required_skills: list[str],
+        max_agents: int = 3,
+    ) -> list[AgentConfig]:
+        """Score idle agents by skill overlap with required_skills, return top matches."""
+        required = set(required_skills)
+        if not required:
+            return []
+
+        scored: list[tuple[float, AgentConfig]] = []
+        for agent in self.agents.values():
+            if agent.status != AgentStatus.IDLE:
+                continue
+            agent_skills = set(agent.skill_ids)
+            overlap = len(required & agent_skills)
+            if overlap > 0:
+                score = overlap / len(required)
+                scored.append((score, agent))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [agent for _, agent in scored[:max_agents]]
 
     def get_department_agents(self, department_id: str) -> list[AgentConfig]:
         """Return all agents assigned to *department_id*.

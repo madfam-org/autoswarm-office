@@ -18,6 +18,7 @@ dependencies = [
   "autoswarm-orchestrator",
   "autoswarm-permissions",
   "autoswarm-inference",
+  "autoswarm-skills",
 ]
 
 [build-system]

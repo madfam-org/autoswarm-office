@@ -8,6 +8,7 @@ import logging
 import signal
 import sys
 
+import httpx
 import redis.asyncio as aioredis
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
@@ -25,6 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger("autoswarm.worker")
 
 QUEUE_KEY = "autoswarm:tasks"
+AGENT_STATUS_CHANNEL = "autoswarm:agent-status"
 GRAPH_BUILDERS = {
     "coding": build_coding_graph,
     "research": build_research_graph,
@@ -100,6 +102,10 @@ async def run_graph_with_interrupts(
             reasoning=reasoning,
         )
 
+        # Notify Colyseus that this agent is awaiting human approval.
+        settings = get_settings()
+        await _publish_agent_status(settings.redis_url, agent_id, "waiting_approval")
+
         approval = await handler.wait_for_approval(request_id)
 
         resume_value = {
@@ -118,6 +124,36 @@ async def run_graph_with_interrupts(
         )
 
     return result
+
+
+async def _publish_agent_status(redis_url: str, agent_id: str, new_status: str) -> None:
+    """Publish an agent status change to Redis for Colyseus consumption."""
+    if agent_id == "unknown":
+        return
+    try:
+        client = aioredis.from_url(redis_url, decode_responses=True)
+        await client.publish(
+            AGENT_STATUS_CHANNEL,
+            json.dumps({"agent_id": agent_id, "status": new_status}),
+        )
+        await client.aclose()
+    except Exception:
+        logger.warning("Failed to publish agent status for %s", agent_id)
+
+
+async def _fetch_agent_skills(nexus_url: str, agent_id: str) -> list[str]:
+    """GET /api/v1/agents/{agent_id} and return effective_skills."""
+    if agent_id == "unknown":
+        return []
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{nexus_url}/api/v1/agents/{agent_id}")
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("effective_skills", [])
+    except Exception:
+        logger.warning("Failed to fetch skills for agent %s", agent_id)
+    return []
 
 
 async def process_task(task_data: dict) -> None:
@@ -141,6 +177,21 @@ async def process_task(task_data: dict) -> None:
         else "unknown"
     )
 
+    # Fetch agent skills and build skill-augmented system prompt
+    settings = get_settings()
+    skill_ids: list[str] = []
+    agent_system_prompt = ""
+    try:
+        skill_ids = await _fetch_agent_skills(settings.nexus_api_url, agent_id)
+        if skill_ids:
+            from autoswarm_skills import get_skill_registry
+
+            registry = get_skill_registry()
+            agent_system_prompt = registry.build_system_prompt(skill_ids)
+            logger.info("Built skill prompt for agent %s with skills: %s", agent_id, skill_ids)
+    except Exception:
+        logger.warning("Failed to build skill prompt for agent %s", agent_id, exc_info=True)
+
     initial_state: dict = {
         "messages": [],
         "task_id": task_id,
@@ -149,6 +200,8 @@ async def process_task(task_data: dict) -> None:
         "result": None,
         "requires_approval": False,
         "approval_request_id": None,
+        "agent_system_prompt": agent_system_prompt,
+        "agent_skill_ids": skill_ids,
     }
 
     # Add graph-specific state
@@ -169,13 +222,18 @@ async def process_task(task_data: dict) -> None:
         redis_url=settings.redis_url,
     )
 
+    # Notify Colyseus that this agent is now working.
+    await _publish_agent_status(settings.redis_url, agent_id, "working")
+
     try:
         result = await run_graph_with_interrupts(
             compiled, initial_state, task_id, agent_id, handler
         )
         logger.info("Task %s completed with status: %s", task_id, result.get("status"))
+        await _publish_agent_status(settings.redis_url, agent_id, "idle")
     except Exception:
         logger.exception("Task %s failed", task_id)
+        await _publish_agent_status(settings.redis_url, agent_id, "error")
     finally:
         await handler.close()
 

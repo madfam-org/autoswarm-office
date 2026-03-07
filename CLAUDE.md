@@ -36,10 +36,10 @@ make generate-assets  # Regenerate pixel-art sprite PNGs
 pnpm dev              # TypeScript services only
 pnpm build            # Build TypeScript packages
 pnpm lint             # ESLint
-pnpm test             # TypeScript tests (137 tests across 8 suites)
+pnpm test             # TypeScript tests (151 tests across 10 suites)
 pnpm typecheck        # TypeScript type checking
 
-uv run pytest         # Python tests (165 tests)
+uv run pytest         # Python tests (238 tests)
 uv run ruff check .   # Python linting
 uv run mypy .         # Python type checking
 ```
@@ -110,6 +110,20 @@ The `packages/skills/` package implements the AgentSkills standard.
   `apps/nexus-api/src/ws.py`.
 - LangGraph `interrupt()` is used to pause agent execution for HITL approval.
 - Synergy bonuses stack multiplicatively (see `packages/orchestrator/src/synergy.py`).
+  Synergy rules support both role-based (`required_roles`) and skill-based
+  (`required_skills`) requirements.
+- `SwarmOrchestrator.match_agents_by_skills()` selects idle agents by skill overlap
+  score. The swarms router auto-selects agents when `required_skills` is provided
+  without explicit `assigned_agent_ids`.
+- Agents have `skill_ids` (JSON column) and `effective_skills` (computed from
+  `skill_ids` or `DEFAULT_ROLE_SKILLS` fallback). Skills flow from DB → API →
+  Colyseus schema → Phaser UI badges.
+- The gateway `HeartbeatService` scrapes GitHub events and dispatches enemy waves
+  via WebSocket to the approvals endpoint, which converts them into `SwarmTask`
+  records enqueued on Redis.
+- Worker graph nodes (`plan`, `implement`, `review`) use `call_llm()` from
+  `autoswarm_workers.inference` with a `ModelRouter` that auto-discovers providers
+  from env vars. Graphs fall back to static logic when no LLM is configured.
 - The permission matrix is evaluated by `packages/permissions/src/engine.py` before
   every tool invocation in the worker.
 

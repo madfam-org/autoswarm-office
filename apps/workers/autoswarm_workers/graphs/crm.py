@@ -2,16 +2,28 @@
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import logging
-from typing import Any, TypedDict
+from typing import TypedDict
 
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
 
 from .base import BaseGraphState
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):  # type: ignore[no-untyped-def]
+    """Run an async coroutine from a sync graph node context."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()
 
 
 # -- State --------------------------------------------------------------------
@@ -81,36 +93,48 @@ def fetch_context(state: CRMState) -> CRMState:
 def draft_communication(state: CRMState) -> CRMState:
     """Draft the outbound communication based on CRM context.
 
-    Uses the inference engine to generate an appropriate email, message,
-    or CRM update based on the fetched context and task instructions.
-
-    In production this node calls ``call_llm()`` with the CRM context
-    to generate a personalised draft that accounts for the contact
-    history and relationship stage.
-
-    # Production integration:
-    # from ..inference import build_model_router, call_llm
-    # router = build_model_router()
-    # draft = await call_llm(
-    #     router,
-    #     messages=[{"role": "user", "content": f"Draft {crm_action} for {recipient}"}],
-    #     system_prompt="Draft a professional communication based on the CRM context provided.",
-    # )
+    Calls the inference router to generate a personalised draft.
+    Falls back to a static template when no LLM is available.
     """
     messages = state.get("messages", [])
     recipient = state.get("recipient", "unknown")
     crm_action = state.get("crm_action", "email")
 
-    # Fallback: static template when no LLM is available.
-    draft = (
-        f"Subject: Follow-up on our recent discussion\n\n"
-        f"Dear {recipient},\n\n"
-        f"Thank you for your time during our recent conversation. "
-        f"I wanted to follow up on the key points we discussed.\n\n"
-        f"Looking forward to hearing from you.\n\n"
-        f"Best regards,\n"
-        f"AutoSwarm CRM Agent"
-    )
+    # Gather CRM context from prior messages for the LLM prompt.
+    crm_context = ""
+    for msg in messages:
+        kwargs = getattr(msg, "additional_kwargs", None) or {}
+        if "crm_context" in kwargs:
+            crm_context = str(kwargs["crm_context"])
+
+    try:
+        from ..inference import call_llm, get_model_router
+
+        router = get_model_router()
+        skill_ctx = state.get("agent_system_prompt", "")
+        base_prompt = "Draft a professional communication based on the CRM context provided."
+        system_prompt = f"{skill_ctx}\n\n{base_prompt}" if skill_ctx else base_prompt
+        draft = _run_async(call_llm(
+            router,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Draft a {crm_action} for {recipient}.\n"
+                    f"CRM context: {crm_context}"
+                ),
+            }],
+            system_prompt=system_prompt,
+        ))
+    except Exception:
+        draft = (
+            f"Subject: Follow-up on our recent discussion\n\n"
+            f"Dear {recipient},\n\n"
+            f"Thank you for your time during our recent conversation. "
+            f"I wanted to follow up on the key points we discussed.\n\n"
+            f"Looking forward to hearing from you.\n\n"
+            f"Best regards,\n"
+            f"AutoSwarm CRM Agent"
+        )
 
     draft_message = AIMessage(
         content=f"Draft {crm_action} prepared for {recipient}.",

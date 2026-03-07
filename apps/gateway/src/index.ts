@@ -3,7 +3,7 @@ import { HeartbeatService } from "./heartbeat";
 import { MemoryManager } from "./memory";
 
 const NEXUS_API_URL =
-  process.env.NEXUS_API_WS_URL ?? "ws://localhost:4000/ws";
+  process.env.NEXUS_API_WS_URL ?? "ws://localhost:4300/api/v1/approvals/ws";
 const CRON_EXPRESSION = process.env.HEARTBEAT_CRON ?? "*/30 * * * *";
 const MEMORY_DIR = process.env.MEMORY_DIR ?? "./data/memory";
 

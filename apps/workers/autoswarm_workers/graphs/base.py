@@ -40,9 +40,37 @@ class BaseGraphState(TypedDict, total=False):
     result: dict[str, Any] | None
     requires_approval: bool
     approval_request_id: str | None
+    agent_system_prompt: str
+    agent_skill_ids: list[str]
 
 
 # -- Shared node functions ----------------------------------------------------
+
+
+def _build_engine_for_state(state: BaseGraphState) -> PermissionEngine:
+    """Build a PermissionEngine with skill-based overrides if available."""
+    skill_ids = state.get("agent_skill_ids", [])
+    if not skill_ids:
+        return _engine
+
+    try:
+        from autoswarm_skills import get_skill_registry
+
+        registry = get_skill_registry()
+        allowed_tool_names = registry.get_allowed_tools(skill_ids)
+        overrides: dict[ActionCategory, PermissionLevel] = {}
+        for tool_name in allowed_tool_names:
+            try:
+                cat = ActionCategory(tool_name)
+                overrides[cat] = PermissionLevel.ALLOW
+            except ValueError:
+                pass
+        if overrides:
+            return PermissionEngine(matrix=DEFAULT_PERMISSION_MATRIX, overrides=overrides)
+    except Exception:
+        logger.warning("Failed to build skill-based permission overrides", exc_info=True)
+
+    return _engine
 
 
 def permission_check(state: BaseGraphState) -> BaseGraphState:
@@ -64,6 +92,7 @@ def permission_check(state: BaseGraphState) -> BaseGraphState:
         return {**state, "requires_approval": False}
 
     last_message = messages[-1]
+    engine = _build_engine_for_state(state)
 
     # -- Classify from tool_calls if present ----------------------------------
     tool_calls = getattr(last_message, "tool_calls", None)
@@ -71,7 +100,7 @@ def permission_check(state: BaseGraphState) -> BaseGraphState:
         for call in tool_calls:
             tool_name = call.get("name", "unknown")
             category = _classifier.classify(tool_name)
-            result = _engine.evaluate(category)
+            result = engine.evaluate(category)
 
             if result.level == PermissionLevel.DENY:
                 logger.warning(
@@ -109,7 +138,7 @@ def permission_check(state: BaseGraphState) -> BaseGraphState:
         )
         category = ActionCategory.API_CALL
 
-    result = _engine.evaluate(category)
+    result = engine.evaluate(category)
 
     if result.level == PermissionLevel.DENY:
         logger.warning(

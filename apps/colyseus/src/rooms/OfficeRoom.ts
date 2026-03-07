@@ -2,6 +2,7 @@ import { Room, Client } from "@colyseus/core";
 import {
   OfficeStateSchema,
   DepartmentSchema,
+  AgentSchema,
   TacticianSchema,
 } from "../schema/OfficeState";
 import { handleMovement } from "../handlers/movement";
@@ -69,16 +70,17 @@ const DEFAULT_DEPARTMENTS: Array<{
 ];
 
 export class OfficeRoom extends Room<OfficeStateSchema> {
-  private nexusApiUrl: string = "http://localhost:4000";
+  private nexusApiUrl: string = "http://localhost:4300";
 
   onCreate(options: RoomOptions): void {
     console.log("[OfficeRoom] Room created");
 
     this.setState(new OfficeStateSchema());
 
-    if (options.nexusApiUrl) {
-      this.nexusApiUrl = options.nexusApiUrl;
-    }
+    this.nexusApiUrl =
+      options.nexusApiUrl ??
+      process.env.NEXUS_API_URL ??
+      this.nexusApiUrl;
 
     for (const dept of DEFAULT_DEPARTMENTS) {
       const department = new DepartmentSchema();
@@ -123,6 +125,16 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     console.log(
       `[OfficeRoom] Initialized with ${DEFAULT_DEPARTMENTS.length} departments`
     );
+
+    // Fire-and-forget: populate agents from nexus-api database.
+    this.fetchAgentsFromApi().catch((err) =>
+      console.error("[OfficeRoom] Failed to fetch agents:", err)
+    );
+
+    // Fire-and-forget: subscribe to real-time agent status updates via Redis.
+    this.subscribeToAgentUpdates().catch((err) =>
+      console.error("[OfficeRoom] Failed to subscribe to agent updates:", err)
+    );
   }
 
   onJoin(client: Client): void {
@@ -139,5 +151,86 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
 
   onDispose(): void {
     console.log("[OfficeRoom] Room disposed");
+    if (this.redisSubscriber) {
+      this.redisSubscriber.quit().catch(() => {});
+    }
+  }
+
+  // -- Agent sync from database -----------------------------------------------
+
+  private redisSubscriber: import("redis").RedisClientType | null = null;
+
+  private async fetchAgentsFromApi(): Promise<void> {
+    for (const [deptId, dept] of this.state.departments) {
+      try {
+        const resp = await fetch(
+          `${this.nexusApiUrl}/api/v1/departments/${deptId}`
+        );
+        if (!resp.ok) continue;
+        const detail = (await resp.json()) as Record<string, any>;
+        const agents = (detail.agents ?? []) as Array<Record<string, any>>;
+        for (let i = 0; i < agents.length; i++) {
+          const a = agents[i];
+          const agent = new AgentSchema();
+          agent.id = a.id;
+          agent.name = a.name;
+          agent.role = a.role;
+          agent.status = a.status ?? "idle";
+          agent.level = a.level ?? 1;
+          agent.x = dept.x + 48 + (i % 3) * 48;
+          agent.y = dept.y + 48 + Math.floor(i / 3) * 48;
+          const skills = (a.effective_skills ?? []) as string[];
+          for (const skill of skills) {
+            agent.skills.push(skill);
+          }
+          dept.agents.push(agent);
+        }
+        console.log(
+          `[OfficeRoom] Loaded ${agents.length} agents into ${deptId}`
+        );
+      } catch (err) {
+        console.error(
+          `[OfficeRoom] Failed to fetch agents for ${deptId}:`,
+          err
+        );
+      }
+    }
+  }
+
+  private async subscribeToAgentUpdates(): Promise<void> {
+    const { createClient } = await import("redis");
+    const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+    this.redisSubscriber = createClient({ url: redisUrl });
+    await this.redisSubscriber.connect();
+    await this.redisSubscriber.subscribe(
+      "autoswarm:agent-status",
+      (message: string) => {
+        try {
+          const update = JSON.parse(message) as {
+            agent_id: string;
+            status: string;
+          };
+          this.updateAgentInState(update.agent_id, update.status);
+        } catch (err) {
+          console.error("[OfficeRoom] Bad agent-status message:", err);
+        }
+      }
+    );
+    console.log("[OfficeRoom] Subscribed to autoswarm:agent-status channel");
+  }
+
+  private updateAgentInState(agentId: string, status: string): void {
+    this.state.departments.forEach((dept) => {
+      for (let i = 0; i < dept.agents.length; i++) {
+        const agent = dept.agents[i];
+        if (agent && agent.id === agentId) {
+          agent.status = status;
+          if (status === "waiting_approval") {
+            this.state.pendingApprovalCount += 1;
+          }
+          return;
+        }
+      }
+    });
   }
 }

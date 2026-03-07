@@ -2,15 +2,27 @@
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import logging
 from typing import Any, TypedDict
 
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 
 from .base import BaseGraphState
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):  # type: ignore[no-untyped-def]
+    """Run an async coroutine from a sync graph node context."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()
 
 
 # -- State --------------------------------------------------------------------
@@ -30,29 +42,28 @@ class ResearchState(BaseGraphState, TypedDict, total=False):
 def formulate_query(state: ResearchState) -> ResearchState:
     """Refine the raw task description into a structured search query.
 
-    Extracts key terms and intent from the conversation messages to
-    build an effective search strategy.
-
-    In production this node calls ``call_llm()`` with a query-rewriting
-    system prompt to distil the raw task into an optimised search query
-    with key terms, intent, and scope constraints.
-
-    # Production integration:
-    # from ..inference import build_model_router, call_llm
-    # router = build_model_router()
-    # refined_query = await call_llm(
-    #     router,
-    #     messages=[{"role": "user", "content": raw_text}],
-    #     system_prompt="Rewrite this into an optimal search query. Return only the query.",
-    # )
+    Calls the inference router to distil the raw task into an optimised
+    search query.  Falls back to raw concatenation when unavailable.
     """
     messages = state.get("messages", [])
     raw_text = " ".join(
         msg.content for msg in messages if hasattr(msg, "content") and msg.content
     )
 
-    # Fallback: use raw concatenation when no LLM is available.
-    refined_query = raw_text.strip() or state.get("query", "")
+    try:
+        from ..inference import call_llm, get_model_router
+
+        router = get_model_router()
+        skill_ctx = state.get("agent_system_prompt", "")
+        base_prompt = "Rewrite this into an optimal search query. Return only the query."
+        system_prompt = f"{skill_ctx}\n\n{base_prompt}" if skill_ctx else base_prompt
+        refined_query = _run_async(call_llm(
+            router,
+            messages=[{"role": "user", "content": raw_text.strip()}],
+            system_prompt=system_prompt,
+        ))
+    except Exception:
+        refined_query = raw_text.strip() or state.get("query", "")
 
     query_message = AIMessage(
         content=f"Search query formulated: {refined_query[:200]}",
@@ -117,21 +128,8 @@ def search(state: ResearchState) -> ResearchState:
 def synthesize(state: ResearchState) -> ResearchState:
     """Synthesize collected sources into a coherent analysis.
 
-    Combines information from all sources, resolves contradictions, and
-    produces a unified narrative.
-
-    In production this node calls ``call_llm()`` with a synthesis system
-    prompt to produce a coherent narrative from the collected sources,
-    resolving contradictions and highlighting key findings.
-
-    # Production integration:
-    # from ..inference import build_model_router, call_llm
-    # router = build_model_router()
-    # synthesis_text = await call_llm(
-    #     router,
-    #     messages=[{"role": "user", "content": f"Synthesize these sources:\n{source_summaries}"}],
-    #     system_prompt="You are a research analyst. Synthesize sources into a coherent analysis.",
-    # )
+    Calls the inference router to produce a coherent narrative from
+    collected sources.  Falls back to concatenation when unavailable.
     """
     messages = state.get("messages", [])
     sources = state.get("sources", [])
@@ -141,12 +139,28 @@ def synthesize(state: ResearchState) -> ResearchState:
         f"- {s.get('title', 'Unknown')}: {s.get('snippet', '')}" for s in sources
     )
 
-    # Fallback: concatenation-based synthesis when no LLM is available.
-    synthesis_text = (
-        f"Research synthesis for query: {query[:200]}\n\n"
-        f"Based on {len(sources)} sources:\n{source_summaries}\n\n"
-        "Key findings have been consolidated into a unified analysis."
-    )
+    try:
+        from ..inference import call_llm, get_model_router
+
+        router = get_model_router()
+        prompt = f"Synthesize these sources:\n{source_summaries}"
+        skill_ctx = state.get("agent_system_prompt", "")
+        base_prompt = (
+            "You are a research analyst. Synthesize sources "
+            "into a coherent analysis."
+        )
+        system_prompt = f"{skill_ctx}\n\n{base_prompt}" if skill_ctx else base_prompt
+        synthesis_text = _run_async(call_llm(
+            router,
+            messages=[{"role": "user", "content": prompt}],
+            system_prompt=system_prompt,
+        ))
+    except Exception:
+        synthesis_text = (
+            f"Research synthesis for query: {query[:200]}\n\n"
+            f"Based on {len(sources)} sources:\n{source_summaries}\n\n"
+            "Key findings have been consolidated into a unified analysis."
+        )
 
     synthesis_message = AIMessage(
         content="Synthesis complete.",
@@ -164,34 +178,42 @@ def synthesize(state: ResearchState) -> ResearchState:
 def format_report(state: ResearchState) -> ResearchState:
     """Format the synthesis into a final structured report.
 
-    Produces a human-readable report with citations and
-    recommendations.
-
-    In production this node calls ``call_llm()`` to rewrite the
-    synthesis into a polished, executive-ready report with proper
-    citations and a clear recommendation section.
-
-    # Production integration:
-    # from ..inference import build_model_router, call_llm
-    # router = build_model_router()
-    # report_text = await call_llm(
-    #     router,
-    #     messages=[{"role": "user", "content": f"Format this into a report:\n{synthesis}"}],
-    #     system_prompt="Format the research synthesis into a structured report with sections.",
-    # )
+    Calls the inference router to produce a polished report.  Falls
+    back to a structured template when unavailable.
     """
     messages = state.get("messages", [])
     synthesis = state.get("synthesis", "")
     sources = state.get("sources", [])
 
-    report_sections = {
-        "executive_summary": synthesis[:500] if synthesis else "No synthesis available.",
-        "detailed_findings": synthesis,
-        "sources": [
-            {"title": s.get("title", ""), "url": s.get("url", "")} for s in sources
-        ],
-        "source_count": len(sources),
-    }
+    try:
+        from ..inference import call_llm, get_model_router
+
+        router = get_model_router()
+        skill_ctx = state.get("agent_system_prompt", "")
+        base_prompt = "Format the research synthesis into a structured report with sections."
+        system_prompt = f"{skill_ctx}\n\n{base_prompt}" if skill_ctx else base_prompt
+        formatted = _run_async(call_llm(
+            router,
+            messages=[{"role": "user", "content": f"Format this into a report:\n{synthesis}"}],
+            system_prompt=system_prompt,
+        ))
+        report_sections = {
+            "executive_summary": formatted[:500],
+            "detailed_findings": formatted,
+            "sources": [
+                {"title": s.get("title", ""), "url": s.get("url", "")} for s in sources
+            ],
+            "source_count": len(sources),
+        }
+    except Exception:
+        report_sections = {
+            "executive_summary": synthesis[:500] if synthesis else "No synthesis available.",
+            "detailed_findings": synthesis,
+            "sources": [
+                {"title": s.get("title", ""), "url": s.get("url", "")} for s in sources
+            ],
+            "source_count": len(sources),
+        }
 
     report_message = AIMessage(
         content="Research report formatted and ready for delivery.",

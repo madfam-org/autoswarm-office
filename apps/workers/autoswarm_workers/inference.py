@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
-from autoswarm_inference import ModelRouter, InferenceRequest, InferenceResponse
+from autoswarm_inference import InferenceProvider, InferenceRequest, InferenceResponse, ModelRouter
+from autoswarm_inference.providers.anthropic import AnthropicProvider
+from autoswarm_inference.providers.ollama import OllamaProvider
+from autoswarm_inference.providers.openai import OpenAIProvider
+from autoswarm_inference.providers.openrouter import OpenRouterProvider
 from autoswarm_inference.types import RoutingPolicy, Sensitivity
 
 from .config import get_settings
@@ -16,25 +19,34 @@ logger = logging.getLogger(__name__)
 def build_model_router() -> ModelRouter:
     """Instantiate a ModelRouter with available providers from config.
 
-    Each provider key maps to a dict of connection parameters.  The
-    ``ModelRouter`` uses these to construct ``InferenceProvider``
-    instances internally.  Ollama is always included as the local
-    fallback provider.
+    Creates real ``InferenceProvider`` instances for each configured
+    API key and always includes Ollama as the local fallback.
     """
     settings = get_settings()
-    providers: dict[str, dict[str, str]] = {}
+    providers: dict[str, InferenceProvider] = {}
 
     if settings.anthropic_api_key:
-        providers["anthropic"] = {"api_key": settings.anthropic_api_key}
+        providers["anthropic"] = AnthropicProvider(api_key=settings.anthropic_api_key)
     if settings.openai_api_key:
-        providers["openai"] = {"api_key": settings.openai_api_key}
+        providers["openai"] = OpenAIProvider(api_key=settings.openai_api_key)
     if settings.openrouter_api_key:
-        providers["openrouter"] = {"api_key": settings.openrouter_api_key}
+        providers["openrouter"] = OpenRouterProvider(api_key=settings.openrouter_api_key)
 
     # Always include ollama as local provider.
-    providers["ollama"] = {"base_url": settings.ollama_base_url}
+    providers["ollama"] = OllamaProvider(base_url=settings.ollama_base_url)
 
     return ModelRouter(providers=providers)
+
+
+_router: ModelRouter | None = None
+
+
+def get_model_router() -> ModelRouter:
+    """Return a lazily-initialised singleton ``ModelRouter``."""
+    global _router  # noqa: PLW0603
+    if _router is None:
+        _router = build_model_router()
+    return _router
 
 
 async def call_llm(

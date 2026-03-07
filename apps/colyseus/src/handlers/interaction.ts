@@ -97,16 +97,15 @@ export async function handleApproval(
   }
 
   try {
-    const response = await fetch(`${nexusApiUrl}/api/approvals/${requestId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        requestId,
-        result,
-        feedback: feedback ?? "",
-        respondedAt: new Date().toISOString(),
-      }),
-    });
+    const action = result === "approved" ? "approve" : "deny";
+    const response = await fetch(
+      `${nexusApiUrl}/api/v1/approvals/${requestId}/${action}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: feedback ?? null }),
+      }
+    );
 
     if (!response.ok) {
       const errorBody = await response.text();

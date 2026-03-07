@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from autoswarm_skills import DEFAULT_ROLE_SKILLS
+
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Agent
@@ -26,6 +28,7 @@ class AgentCreate(BaseModel):
     role: str = Field(default="coder", pattern=r"^(planner|coder|reviewer|researcher|crm|support)$")
     level: int = Field(default=1, ge=1, le=10)
     department_id: str | None = None
+    skill_ids: list[str] | None = None
 
 
 class AgentUpdate(BaseModel):
@@ -38,6 +41,7 @@ class AgentUpdate(BaseModel):
         pattern=r"^(idle|working|waiting_approval|paused|error)$",
     )
     level: int | None = Field(default=None, ge=1, le=10)
+    skill_ids: list[str] | None = None
 
 
 class AgentAssign(BaseModel):
@@ -52,6 +56,8 @@ class AgentResponse(BaseModel):
     level: int
     department_id: str | None
     current_task_id: str | None
+    skill_ids: list[str] | None
+    effective_skills: list[str]
     synergy_data: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
@@ -63,6 +69,7 @@ class AgentResponse(BaseModel):
 
 
 def _agent_to_response(agent: Agent) -> AgentResponse:
+    effective_skills = agent.skill_ids or DEFAULT_ROLE_SKILLS.get(agent.role, [])
     return AgentResponse(
         id=str(agent.id),
         name=agent.name,
@@ -71,6 +78,8 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
         level=agent.level,
         department_id=str(agent.department_id) if agent.department_id else None,
         current_task_id=str(agent.current_task_id) if agent.current_task_id else None,
+        skill_ids=agent.skill_ids,
+        effective_skills=effective_skills,
         synergy_data=agent.synergy_data,
         created_at=agent.created_at,
         updated_at=agent.updated_at,
@@ -125,6 +134,7 @@ async def create_agent(
         role=body.role,
         level=body.level,
         department_id=uuid.UUID(body.department_id) if body.department_id else None,
+        skill_ids=body.skill_ids,
     )
     db.add(agent)
     await db.flush()

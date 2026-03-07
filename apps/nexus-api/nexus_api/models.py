@@ -66,6 +66,7 @@ class Agent(Base):
     current_task_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
+    skill_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     synergy_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(

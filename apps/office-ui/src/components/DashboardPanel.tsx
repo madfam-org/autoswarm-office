@@ -97,12 +97,20 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
       {/* Toggle button */}
       <button
         onClick={onToggle}
-        className="pointer-events-auto absolute right-0 top-1/2 z-video -translate-y-1/2 retro-panel px-2 py-6 font-mono text-[10px] text-slate-400 transition-all hover:text-white"
+        className="pointer-events-auto absolute right-0 top-1/2 z-video -translate-y-1/2 retro-panel retro-btn px-2 py-6 font-mono text-[10px] text-slate-400 transition-all hover:text-white"
         aria-label={open ? 'Close dashboard panel' : 'Open dashboard panel'}
         aria-expanded={open}
       >
         {open ? '>' : '<'}
       </button>
+
+      {/* Backdrop overlay when open */}
+      {open && (
+        <div
+          className="fixed inset-0 z-[19] bg-black/20 animate-fade-in"
+          onClick={onToggle}
+        />
+      )}
 
       {/* Sliding panel */}
       <aside
@@ -172,10 +180,12 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
                     0,
                   );
 
+                  const agentPercent = dept.maxAgents > 0 ? (deptAgentCount / dept.maxAgents) * 100 : 0;
                   return (
                     <div
                       key={dept.id}
-                      className="retro-panel px-2 py-2 text-center"
+                      className="retro-panel px-2 py-2 text-center animate-fade-in-up"
+                      style={{ animationDelay: `${departments.indexOf(dept) * 50}ms` }}
                     >
                       <p className="pixel-text text-[6px] uppercase text-slate-500">
                         {dept.name.substring(0, 5)}
@@ -184,7 +194,19 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
                         <p className="text-cyan-400">
                           {deptAgentCount}/{dept.maxAgents} agents
                         </p>
+                        <div className="h-1 w-full bg-slate-900 rounded-full mt-0.5">
+                          <div
+                            className="h-full bg-cyan-500 rounded-full transition-all duration-500"
+                            style={{ width: `${agentPercent}%` }}
+                          />
+                        </div>
                         <p className="text-amber-400">{deptTaskCount} tasks</p>
+                        <div className="h-1 w-full bg-slate-900 rounded-full">
+                          <div
+                            className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                            style={{ width: `${deptAgentCount > 0 ? (deptTaskCount / deptAgentCount) * 100 : 0}%` }}
+                          />
+                        </div>
                         {synergyCount > 0 && (
                           <p className="text-fuchsia-400">
                             {synergyCount} synergy
@@ -224,10 +246,14 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
                       </p>
                     ) : (
                       <div className="space-y-1">
-                        {columnTasks.map((task) => (
+                        {columnTasks.map((task, taskIdx) => (
                           <div
                             key={task.id}
-                            className="flex items-center justify-between bg-slate-800/60 px-2 py-1.5 font-mono text-[8px] shadow-[0_0_0_1px_#334155]"
+                            className="flex items-center justify-between bg-slate-800/60 px-2 py-1.5 font-mono text-[8px] shadow-[0_0_0_1px_#334155] transition-all duration-150 hover:bg-slate-700/60 hover:translate-x-1 cursor-default animate-fade-in-up"
+                            style={{
+                              borderLeft: `2px solid ${column.key === 'in_progress' ? '#3b82f6' : column.key === 'review' ? '#f59e0b' : column.key === 'done' ? '#10b981' : '#64748b'}`,
+                              animationDelay: `${taskIdx * 50}ms`,
+                            }}
                           >
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-slate-200">

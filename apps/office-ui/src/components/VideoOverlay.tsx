@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { ProximityPeer } from '@/hooks/useProximityVideo';
 
 interface VideoOverlayProps {
@@ -15,21 +15,41 @@ interface VideoOverlayProps {
  */
 export function VideoOverlay({ peers, localStream }: VideoOverlayProps) {
   const activePeers = peers.filter((p) => p.stream);
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());
+  const prevPeerIds = useRef<Set<string>>(new Set());
 
-  if (activePeers.length === 0 && !localStream) return null;
+  useEffect(() => {
+    const currentIds = new Set(activePeers.map((p) => p.sessionId));
+    // Detect peers that left
+    prevPeerIds.current.forEach((id) => {
+      if (!currentIds.has(id)) {
+        setLeaving((prev) => new Set(prev).add(id));
+        setTimeout(() => {
+          setLeaving((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        }, 200);
+      }
+    });
+    prevPeerIds.current = currentIds;
+  }, [activePeers]);
+
+  if (activePeers.length === 0 && !localStream && leaving.size === 0) return null;
 
   return (
     <div className="pointer-events-none absolute top-16 left-4 z-video flex flex-col gap-2">
       {/* Local video preview (small) */}
       {localStream && (
-        <div className="relative">
+        <div className="relative animate-pop-in">
           <VideoBubble stream={localStream} muted label="You" size={48} />
         </div>
       )}
 
       {/* Remote peer videos */}
       {activePeers.map((peer) => (
-        <div key={peer.sessionId} className="relative">
+        <div key={peer.sessionId} className="relative animate-pop-in">
           <VideoBubble
             stream={peer.stream!}
             label={peer.sessionId.slice(0, 6)}

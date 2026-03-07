@@ -119,6 +119,7 @@ export default function HomePage() {
   );
   const [coWebsite, setCoWebsite] = useState<CoWebsiteEvent | null>(null);
   const [popup, setPopup] = useState<PopupEvent | null>(null);
+  const [playerPosition, setPlayerPosition] = useState<{ x: number; y: number } | null>(null);
 
   const handleApprovalOpen = useCallback(
     (agentId: string) => {
@@ -149,6 +150,7 @@ export default function HomePage() {
   const handlePlayerMove = useCallback(
     (x: number, y: number) => {
       sendMove(x, y);
+      setPlayerPosition({ x, y });
     },
     [sendMove],
   );
@@ -212,7 +214,7 @@ export default function HomePage() {
   return (
     <ErrorBoundary>
     <ToastProvider>
-    <main className="relative h-screen w-screen overflow-hidden bg-slate-900">
+    <main className="relative h-screen w-screen overflow-hidden bg-slate-900 scanline-overlay">
       <PhaserGame
         onApprovalOpen={handleApprovalOpen}
         officeState={officeState}
@@ -230,6 +232,8 @@ export default function HomePage() {
         computeTokens={officeState ? { used: 0, limit: 10000 } : undefined}
         colyseusConnected={colyseusConnected}
         approvalsConnected={approvalsConnected}
+        departments={officeState?.departments ?? []}
+        playerPosition={playerPosition}
       />
 
       <DashboardPanel
@@ -276,7 +280,7 @@ export default function HomePage() {
 
       <button
         onClick={() => setAvatarEditorOpen(true)}
-        className="absolute top-4 right-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
+        className="absolute top-4 right-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 retro-btn hover:bg-slate-700"
         aria-label="Open avatar editor"
       >
         Avatar

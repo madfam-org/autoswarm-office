@@ -68,6 +68,99 @@
       0 0 0 2px #000,
       0 0 0 4px #475569,
       inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    transition: box-shadow 200ms ease;
   }
 
+  .retro-panel:hover {
+    box-shadow:
+      0 0 0 2px #000,
+      0 0 0 4px #475569,
+      0 0 12px 2px rgba(99, 102, 241, 0.15),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .retro-btn {
+    @apply transition-all duration-150;
+  }
+
+  .retro-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  }
+
+  .retro-btn:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+}
+
+@layer utilities {
+  /* Slide in/out from right */
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slide-out-right {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+
+  /* Fade in / fade in up */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Pop in with spring overshoot */
+  @keyframes pop-in {
+    0% { transform: scale(0.6); opacity: 0; }
+    70% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Pulsing border glow */
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.6); }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 300ms ease-out both;
+  }
+  .animate-slide-out-right {
+    animation: slide-out-right 200ms ease-in both;
+  }
+  .animate-fade-in {
+    animation: fade-in 200ms ease-out both;
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 250ms ease-out both;
+  }
+  .animate-pop-in {
+    animation: pop-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .animate-pulse-border {
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+}
+
+/* CRT scanline overlay */
+.scanline-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.03) 0px,
+    rgba(0, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
 }

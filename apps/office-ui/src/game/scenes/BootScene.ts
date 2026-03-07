@@ -38,6 +38,16 @@ export class BootScene extends Phaser.Scene {
       color: '#a5b4fc',
     }).setOrigin(0.5);
 
+    // Pulsing loading text
+    this.tweens.add({
+      targets: loadingText,
+      alpha: { from: 0.7, to: 1 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
     const barBg = this.add.rectangle(width / 2, height / 2 + 10, 200, 12, 0x1e293b);
     const barFill = this.add.rectangle(width / 2 - 99, height / 2 + 10, 0, 8, 0x6366f1).setOrigin(0, 0.5);
 
@@ -46,6 +56,31 @@ export class BootScene extends Phaser.Scene {
       fontSize: '8px',
       color: '#94a3b8',
     }).setOrigin(0.5);
+
+    // Rotating tips below loading bar
+    const tips = [
+      'Walk near agents to interact...',
+      'Press T to chat...',
+      'Press R for emotes...',
+      'WASD or arrows to move...',
+      'Press E near objects to interact...',
+      'Press ? for help...',
+    ];
+    const tipText = this.add.text(width / 2, height / 2 + 55, tips[0], {
+      fontFamily: '"Press Start 2P", monospace',
+      fontSize: '7px',
+      color: '#64748b',
+    }).setOrigin(0.5);
+
+    let tipIndex = 0;
+    const tipTimer = this.time.addEvent({
+      delay: 2500,
+      callback: () => {
+        tipIndex = (tipIndex + 1) % tips.length;
+        tipText.setText(tips[tipIndex]);
+      },
+      loop: true,
+    });
 
     this.load.on('progress', (value: number) => {
       barFill.width = 198 * value;
@@ -57,6 +92,8 @@ export class BootScene extends Phaser.Scene {
       barBg.destroy();
       barFill.destroy();
       percentText.destroy();
+      tipText.destroy();
+      tipTimer.destroy();
     });
 
     // Track failed loads so we can fall back to canvas-generated textures
@@ -115,6 +152,10 @@ export class BootScene extends Phaser.Scene {
       this.createRectTexture('wall-tile', TILE_SIZE, TILE_SIZE, COLORS.wall);
       this.createRectTexture('review-station', TILE_SIZE, TILE_SIZE, COLORS.reviewStation);
     }
+
+    // Particle textures (runtime-generated, no file load)
+    this.createRectTexture('particle-dot', 2, 2, 0xffffff);
+    this.createRectTexture('particle-dust', 3, 3, 0x94a3b8);
 
     this.scene.start('OfficeScene');
   }

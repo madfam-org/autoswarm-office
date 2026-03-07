@@ -8,6 +8,7 @@ export interface Toast {
   id: string;
   message: string;
   severity: ToastSeverity;
+  dismissing?: boolean;
 }
 
 export interface ToastContextValue {
@@ -33,14 +34,21 @@ export function useToastState(): ToastContextValue {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setToasts((prev) => [...prev, { id, message, severity }]);
 
-    // Auto-dismiss after 5s
+    // Auto-dismiss after 5s (with exit animation)
     setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
+      setToasts((prev) => prev.map((t) => t.id === id ? { ...t, dismissing: true } : t));
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 200);
     }, 5000);
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    // Mark as dismissing for exit animation, then remove after delay
+    setToasts((prev) => prev.map((t) => t.id === id ? { ...t, dismissing: true } : t));
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 200);
   }, []);
 
   return { toasts, addToast, removeToast };

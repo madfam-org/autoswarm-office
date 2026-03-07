@@ -39,7 +39,7 @@ describe('useToastState', () => {
     expect(result.current.toasts[0].severity).toBe('info');
   });
 
-  it('removeToast removes by id', () => {
+  it('removeToast removes by id after exit animation', () => {
     const { result } = renderHook(() => useToastState());
 
     act(() => {
@@ -54,11 +54,20 @@ describe('useToastState', () => {
       result.current.removeToast(idToRemove);
     });
 
+    // Toast is marked as dismissing but not yet removed
+    expect(result.current.toasts).toHaveLength(2);
+    expect(result.current.toasts[0].dismissing).toBe(true);
+
+    // After exit animation delay, toast is removed
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
     expect(result.current.toasts).toHaveLength(1);
     expect(result.current.toasts[0].message).toBe('Second');
   });
 
-  it('auto-dismisses after 5 seconds', () => {
+  it('auto-dismisses after 5 seconds plus exit animation', () => {
     const { result } = renderHook(() => useToastState());
 
     act(() => {
@@ -67,8 +76,17 @@ describe('useToastState', () => {
 
     expect(result.current.toasts).toHaveLength(1);
 
+    // After 5s, toast is marked as dismissing
     act(() => {
       vi.advanceTimersByTime(5000);
+    });
+
+    expect(result.current.toasts).toHaveLength(1);
+    expect(result.current.toasts[0].dismissing).toBe(true);
+
+    // After 200ms exit animation, toast is removed
+    act(() => {
+      vi.advanceTimersByTime(200);
     });
 
     expect(result.current.toasts).toHaveLength(0);

@@ -75,7 +75,7 @@ describe('Toast system', () => {
     expect(alert.className).toContain('border-indigo-500');
   });
 
-  it('auto-dismisses after 5 seconds', () => {
+  it('auto-dismisses after 5 seconds plus exit animation', () => {
     render(
       <ToastProvider>
         <ToastTrigger />
@@ -85,14 +85,15 @@ describe('Toast system', () => {
     fireEvent.click(screen.getByText('Add Success'));
     expect(screen.getByText('Success message')).toBeInTheDocument();
 
+    // 5s auto-dismiss + 200ms exit animation delay
     act(() => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(5200);
     });
 
     expect(screen.queryByText('Success message')).not.toBeInTheDocument();
   });
 
-  it('can be manually dismissed', () => {
+  it('can be manually dismissed after exit animation', () => {
     render(
       <ToastProvider>
         <ToastTrigger />
@@ -104,6 +105,14 @@ describe('Toast system', () => {
 
     const dismissBtn = screen.getByLabelText('Dismiss');
     fireEvent.click(dismissBtn);
+
+    // Still visible during exit animation
+    expect(screen.getByText('Success message')).toBeInTheDocument();
+
+    // Removed after 200ms exit animation
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
 
     expect(screen.queryByText('Success message')).not.toBeInTheDocument();
   });

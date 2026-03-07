@@ -261,12 +261,15 @@ The `packages/skills/` package implements the AgentSkills standard.
   main page content. Class component with fallback UI + retry button.
 - **Toast system**: `ToastProvider` wraps the app in `page.tsx`. Use
   `useToast().addToast(message, severity)` from any component. Toasts auto-dismiss
-  after 5s. Severity: `success`, `error`, `warning`, `info`.
+  after 5s with a 200ms exit animation (`animate-slide-out-right`). Toasts have a
+  `dismissing` flag for exit animation state. Severity: `success`, `error`,
+  `warning`, `info`.
 - **Focus trapping**: `useFocusTrap(active)` hook returns a ref. Applied to
   `AvatarEditor`, `PopupOverlay`, `TaskDispatchPanel`. Traps Tab cycling and
   restores previous focus on close.
 - **Loading screen**: `BootScene.preload()` renders a progress bar with percentage
-  during asset loading.
+  during asset loading. Loading text pulses (alpha 0.7→1). Rotating tips cycle
+  below the bar every 2.5s ("Walk near agents to interact...", etc.).
 - **Help overlay**: Press `?` to toggle. Has backdrop, `[X]` close button, and
   gamepad mappings alongside keyboard shortcuts.
 - **Design system tokens** in `tailwind.config.ts`:
@@ -288,6 +291,60 @@ The `packages/skills/` package implements the AgentSkills standard.
   with viewport width.
 - **Touch feedback**: VirtualJoystick thumb alpha (0.4 idle/0.9 active),
   TouchActionButtons scale+alpha on press, 48px min touch targets.
+- **CSS animation vocabulary** in `globals.css` (`@layer utilities`):
+  - `animate-slide-in-right` / `animate-slide-out-right` (300ms/200ms)
+  - `animate-fade-in` / `animate-fade-in-up` (200ms/250ms)
+  - `animate-pop-in` with spring overshoot (300ms cubic-bezier)
+  - `animate-pulse-border` for glowing borders (2s infinite)
+- **`.retro-btn` class** in `globals.css`: hover=translateY(-1px)+glow,
+  active=translateY(1px)+inset shadow. Applied to dashboard toggle, avatar
+  button, chat toggle, emote button, and avatar editor action buttons.
+- **`.retro-panel:hover` glow**: subtle indigo box-shadow expansion on hover.
+- **CRT scanline overlay**: `.scanline-overlay::after` in `globals.css` with
+  `repeating-linear-gradient` at 3% opacity. Applied to `<main>` in `page.tsx`.
+- **Phaser post-FX**: CRT vignette on main camera, gated behind
+  `ENABLE_POST_FX` constant in `OfficeScene.ts`.
+- **Particle system**: Ambient dust motes (1 per 800ms, ADD blend, alpha
+  0→0.3), tactician walk dust trail, agent status particles (cyan sparkles
+  for working, red wisps for error). All gated behind `ENABLE_PARTICLES`.
+  Runtime-generated 2x2 (`particle-dot`) and 3x3 (`particle-dust`) textures
+  in `BootScene.ts`.
+- **Department zone ambient pulse**: alpha-breathing tween (0.2→0.35) on zone
+  overlays, staggered by index.
+- **Agent status halos**: colored circle beneath each agent (slate=idle,
+  cyan=working, amber+pulse=waiting_approval, red=error). Stored in
+  `AgentSprite.statusHalo`.
+- **Agent idle breathing**: subtle scaleY tween (1.0→1.04, 2s) on idle agents.
+  Paused when status changes away from idle.
+- **Agent name label backgrounds**: black rectangle at 0.5 alpha behind name
+  text for readability over zone colors.
+- **Review station glow**: pulsing alpha tween + `preFX.addGlow()` when
+  `pendingApprovals > 0`. Cleared when 0.
+- **Tactician spawn-in effect**: scale 0.5→1.0 + alpha 0→1 with Back.easeOut,
+  indigo particle burst (8 particles).
+- **Chat bubbles**: local messages right-aligned (`bg-indigo-900/50`), remote
+  left-aligned (`bg-slate-800/60`), system centered italic. Staggered
+  `animate-fade-in-up`.
+- **Dashboard enhancements**: backdrop overlay when open (click-to-close),
+  kanban cards with left-border color by status + hover translate, department
+  stat bars (cyan agents bar, amber tasks bar), staggered fade-in.
+- **HUD count animation**: agent count and approval count wrapped in
+  `<span key={count}>` with `animate-pop-in` (re-mounts on value change).
+  Approval badge gets `animate-pulse` + `animate-pulse-border` when count > 0.
+- **Functional minimap**: `Minimap` sub-component in `HUD.tsx` renders to
+  128x96 `<canvas>`. Draws department zones as colored rectangles, agents as
+  2px role-colored dots, player as 3px indigo dot with glow ring. Fed by
+  `playerPosition` state from `page.tsx` (updated on `handlePlayerMove`).
+- **Avatar editor canvas preview**: real 32x32 composited avatar drawn at 4x
+  scale (128x128) using pure-canvas `drawAvatar()` utility extracted from
+  `AvatarCompositor.ts` logic. Updates on every config change.
+  `imageSmoothingEnabled = false` + CSS `image-rendering: pixelated`.
+  Modal uses `retro-panel pixel-border-accent` with `animate-pop-in`.
+- **Color swatch feedback**: `active:scale-90`, selected swatches get
+  `ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900`.
+- **EmotePicker pop-in**: outer container `animate-pop-in`, each button
+  staggered `animate-fade-in-up` (30ms), `hover:scale-110 active:scale-95`.
+- **Video overlay animations**: peer bubbles `animate-pop-in` on connect.
 
 ## Sprite Assets
 
@@ -297,6 +354,8 @@ The `packages/skills/` package implements the AgentSkills standard.
   `@napi-rs/canvas`).
 - `BootScene.ts` loads sprite files with automatic canvas-rectangle fallback if any
   PNG fails to load. Department zone overlays are always canvas-generated. The emote
-  spritesheet (`emotes.png`, 9 frames at 32x32) is also loaded here.
+  spritesheet (`emotes.png`, 9 frames at 32x32) is also loaded here. Particle
+  textures (`particle-dot` 2x2, `particle-dust` 3x3) are runtime-generated.
 - `OfficeScene.ts` plays walk animations for the Tactician (4 dirs x 3 frames) and
-  idle/working animations for agents.
+  idle/working animations for agents. Post-FX, particles, and ambient effects are
+  gated behind `ENABLE_POST_FX` and `ENABLE_PARTICLES` constants.

@@ -75,7 +75,7 @@ export function ChatPanel({ messages, onSend, localSessionId }: ChatPanelProps) 
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="absolute bottom-4 left-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
+        className="absolute bottom-4 left-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 retro-btn hover:bg-slate-700"
       >
         Chat [T]
       </button>
@@ -106,26 +106,37 @@ export function ChatPanel({ messages, onSend, localSessionId }: ChatPanelProps) 
             <div className="h-2.5 w-2/3 animate-pulse rounded bg-slate-700" />
           </div>
         )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={msg.isSystem ? 'text-slate-500 italic' : 'text-slate-300'}
-          >
-            <span className="text-slate-600">[{formatTime(msg.timestamp)}] </span>
-            {!msg.isSystem && (
-              <span
-                className={
-                  msg.senderSessionId === localSessionId
-                    ? 'font-semibold text-indigo-400'
-                    : 'font-semibold text-emerald-400'
-                }
+        {messages.map((msg, i) => {
+          const isLocal = msg.senderSessionId === localSessionId;
+          if (msg.isSystem) {
+            return (
+              <div
+                key={msg.id}
+                className="text-center text-slate-500 italic text-[9px] py-0.5 animate-fade-in-up"
+                style={{ animationDelay: `${Math.min(i, 5) * 50}ms` }}
               >
-                {msg.senderName}:{' '}
-              </span>
-            )}
-            <span>{msg.content}</span>
-          </div>
-        ))}
+                {msg.content}
+              </div>
+            );
+          }
+          return (
+            <div
+              key={msg.id}
+              className={`flex ${isLocal ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
+              style={{ animationDelay: `${Math.min(i, 5) * 50}ms` }}
+            >
+              <div className={`max-w-[85%] rounded px-2 py-1 ${isLocal ? 'bg-indigo-900/50' : 'bg-slate-800/60'}`}>
+                <div className="flex items-baseline gap-1.5">
+                  <span className={`font-semibold text-[9px] ${isLocal ? 'text-indigo-400' : 'text-emerald-400'}`}>
+                    {msg.senderName}
+                  </span>
+                  <span className="text-slate-600 text-[8px]">{formatTime(msg.timestamp)}</span>
+                </div>
+                <span className="text-slate-300">{msg.content}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <form onSubmit={handleSubmit} className="border-t border-slate-700 p-2">

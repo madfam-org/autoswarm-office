@@ -1,6 +1,7 @@
 'use client';
 
-import type { FC } from 'react';
+import { useRef, useEffect, type FC } from 'react';
+import type { Department } from '@autoswarm/shared-types';
 
 interface HUDProps {
   activeAgentCount: number;
@@ -8,6 +9,100 @@ interface HUDProps {
   computeTokens?: { used: number; limit: number };
   colyseusConnected: boolean;
   approvalsConnected: boolean;
+  departments?: Department[];
+  playerPosition?: { x: number; y: number } | null;
+}
+
+const WORLD_WIDTH = 1280;
+const WORLD_HEIGHT = 704;
+const MINIMAP_W = 128;
+const MINIMAP_H = 96;
+
+const DEPT_COLORS: Record<string, string> = {
+  engineering: '#1e3a5f',
+  sales: '#3b1e5f',
+  support: '#1e5f3a',
+  research: '#5f3a1e',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  planner: '#8b5cf6',
+  coder: '#06b6d4',
+  reviewer: '#f59e0b',
+  researcher: '#10b981',
+  crm: '#f43f5e',
+  support: '#0ea5e9',
+};
+
+function Minimap({ departments, playerPosition }: { departments: Department[]; playerPosition: { x: number; y: number } | null }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, MINIMAP_W, MINIMAP_H);
+
+    const scaleX = MINIMAP_W / WORLD_WIDTH;
+    const scaleY = MINIMAP_H / WORLD_HEIGHT;
+
+    // Draw department zones
+    const DEPT_LAYOUT: Record<string, { x: number; y: number; w: number; h: number }> = {
+      engineering: { x: 96, y: 80, w: 192, h: 160 },
+      sales: { x: 480, y: 80, w: 192, h: 160 },
+      support: { x: 96, y: 400, w: 192, h: 160 },
+      research: { x: 480, y: 400, w: 192, h: 160 },
+    };
+
+    for (const dept of departments) {
+      const layout = DEPT_LAYOUT[dept.slug];
+      if (!layout) continue;
+      ctx.fillStyle = DEPT_COLORS[dept.slug] ?? '#334155';
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(layout.x * scaleX, layout.y * scaleY, layout.w * scaleX, layout.h * scaleY);
+      ctx.globalAlpha = 1;
+
+      // Agent dots
+      for (let i = 0; i < dept.agents.length; i++) {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const ax = (layout.x + 48 + col * 48) * scaleX;
+        const ay = (layout.y + 48 + row * 48) * scaleY;
+        ctx.fillStyle = ROLE_COLORS[dept.agents[i].role] ?? '#94a3b8';
+        ctx.fillRect(ax - 1, ay - 1, 2, 2);
+      }
+    }
+
+    // Player dot (pulsing via size alternation handled by re-render)
+    if (playerPosition) {
+      const px = playerPosition.x * scaleX;
+      const py = playerPosition.y * scaleY;
+      ctx.fillStyle = '#818cf8';
+      ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+      // Glow ring
+      ctx.strokeStyle = '#818cf8';
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }, [departments, playerPosition]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={MINIMAP_W}
+      height={MINIMAP_H}
+      className="block"
+      style={{ imageRendering: 'pixelated' }}
+    />
+  );
 }
 
 export const HUD: FC<HUDProps> = ({
@@ -16,6 +111,8 @@ export const HUD: FC<HUDProps> = ({
   computeTokens,
   colyseusConnected,
   approvalsConnected,
+  departments = [],
+  playerPosition = null,
 }) => {
   const tokenPercent = computeTokens
     ? Math.min((computeTokens.used / computeTokens.limit) * 100, 100)
@@ -63,7 +160,11 @@ export const HUD: FC<HUDProps> = ({
         <span className="pixel-text text-[8px] uppercase text-slate-400">
           Active Agents
         </span>
-        <p className="pixel-text mt-1 text-lg text-cyan-400">{activeAgentCount}</p>
+        <p className="pixel-text mt-1 text-lg text-cyan-400">
+          <span key={activeAgentCount} className="inline-block animate-pop-in">
+            {activeAgentCount}
+          </span>
+        </p>
       </div>
 
       {/* Right: Pending Approvals + Connection Status */}
@@ -73,11 +174,13 @@ export const HUD: FC<HUDProps> = ({
             Approvals
           </span>
           <p className="pixel-text mt-1 text-lg text-amber-400">
-            {pendingApprovalCount}
+            <span key={pendingApprovalCount} className="inline-block animate-pop-in">
+              {pendingApprovalCount}
+            </span>
           </p>
           {pendingApprovalCount > 0 && (
             <span
-              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-red-600 pixel-text text-[7px] text-white shadow-[0_0_0_2px_#000]"
+              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-red-600 pixel-text text-[7px] text-white shadow-[0_0_0_2px_#000] animate-pulse animate-pulse-border"
               aria-label={`${pendingApprovalCount} pending approvals`}
             >
               {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
@@ -105,9 +208,9 @@ export const HUD: FC<HUDProps> = ({
           </div>
         </div>
 
-        {/* Minimap placeholder */}
-        <div className="retro-panel flex h-24 w-32 items-center justify-center">
-          <span className="pixel-text text-[7px] text-slate-600">MINIMAP</span>
+        {/* Minimap */}
+        <div className="retro-panel overflow-hidden" style={{ width: MINIMAP_W + 8, height: MINIMAP_H + 8, padding: 4 }}>
+          <Minimap departments={departments} playerPosition={playerPosition} />
         </div>
       </div>
     </div>

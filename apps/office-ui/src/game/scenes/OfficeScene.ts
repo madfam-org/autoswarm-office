@@ -22,6 +22,8 @@ const TACTICIAN_SPEED = 200;
 const PROXIMITY_THRESHOLD = 64;
 const MOVE_THROTTLE_MS = 66; // ~15fps
 const EMOTE_DURATION_MS = 3000;
+const ENABLE_POST_FX = true;
+const ENABLE_PARTICLES = true;
 
 /** Scale font size based on viewport width for readability */
 function responsiveFontSize(base: number): string {
@@ -45,8 +47,14 @@ const EMOTE_FRAME_MAP: Record<string, number> = {
 interface AgentSprite {
   sprite: Phaser.GameObjects.Sprite;
   alertIcon: Phaser.GameObjects.Image;
+  statusHalo: Phaser.GameObjects.Arc;
+  nameBackground: Phaser.GameObjects.Rectangle;
   agentId: string;
+  agentStatus: string;
   hasPendingApproval: boolean;
+  breathingTween: Phaser.Tweens.Tween | null;
+  haloTween: Phaser.Tweens.Tween | null;
+  lastParticleTime: number;
 }
 
 interface RemotePlayerSprite {
@@ -99,6 +107,8 @@ export class OfficeScene extends Phaser.Scene {
   private collisionLayer: Phaser.Tilemaps.TilemapLayer | null = null;
   private worldWidth: number = 1280;
   private worldHeight: number = 720;
+  private dustEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private ambientEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
 
   constructor() {
     super({ key: 'OfficeScene' });
@@ -203,6 +213,40 @@ export class OfficeScene extends Phaser.Scene {
         this.helpOverlay.setVisible(!this.helpOverlay.visible);
       }
     });
+
+    // === Post-FX: CRT vignette ===
+    if (ENABLE_POST_FX && this.cameras.main.postFX) {
+      this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.25);
+    }
+
+    // === Ambient dust particles ===
+    if (ENABLE_PARTICLES && this.textures.exists('particle-dot')) {
+      this.ambientEmitter = this.add.particles(0, 0, 'particle-dot', {
+        x: { min: 0, max: this.worldWidth },
+        y: { min: 0, max: this.worldHeight },
+        lifespan: 6000,
+        frequency: 800,
+        alpha: { start: 0, end: 0.3 },
+        scale: { start: 0.5, end: 1 },
+        speedY: { min: -8, max: -3 },
+        speedX: { min: -5, max: 5 },
+        blendMode: 'ADD',
+      });
+      this.ambientEmitter.setDepth(1);
+    }
+
+    // === Dust trail emitter (inactive, emitted on movement) ===
+    if (ENABLE_PARTICLES && this.textures.exists('particle-dust')) {
+      this.dustEmitter = this.add.particles(0, 0, 'particle-dust', {
+        lifespan: 400,
+        alpha: { start: 0.4, end: 0 },
+        scale: { start: 0.8, end: 0.3 },
+        speedY: { min: -10, max: -5 },
+        speedX: { min: -8, max: 8 },
+        emitting: false,
+      });
+      this.dustEmitter.setDepth(2);
+    }
   }
 
   private initFromTiledMap(mapData: ReturnType<typeof loadTiledMap> & object): void {
@@ -298,9 +342,14 @@ export class OfficeScene extends Phaser.Scene {
         this.tactician.play(walkKey);
       }
 
-      // Broadcast movement throttled to ~15fps
+      // Dust trail when walking
       const now = this.time.now;
       const positionDelta = Math.abs(this.tactician.x - this.lastSentX) + Math.abs(this.tactician.y - this.lastSentY);
+      if (this.dustEmitter && positionDelta > 1) {
+        this.dustEmitter.emitParticleAt(this.tactician.x, this.tactician.y + 12, 1);
+      }
+
+      // Broadcast movement throttled to ~15fps
       if (now - this.lastMoveTime > MOVE_THROTTLE_MS && positionDelta > 1) {
         this.lastMoveTime = now;
         this.lastSentX = this.tactician.x;
@@ -361,7 +410,8 @@ export class OfficeScene extends Phaser.Scene {
       }
     }
 
-    // Animate alert icons
+    // Animate alert icons + agent status particles
+    const updateTime = this.time.now;
     this.agentSprites.forEach((agentSprite) => {
       if (agentSprite.hasPendingApproval) {
         agentSprite.alertIcon.setVisible(true);
@@ -371,9 +421,42 @@ export class OfficeScene extends Phaser.Scene {
         );
         // Bob animation
         agentSprite.alertIcon.y +=
-          Math.sin(this.time.now / 300) * 2;
+          Math.sin(updateTime / 300) * 2;
       } else {
         agentSprite.alertIcon.setVisible(false);
+      }
+
+      // Status particles (timer-gated)
+      if (ENABLE_PARTICLES && this.textures.exists('particle-dot') && updateTime - agentSprite.lastParticleTime > 2000) {
+        if (agentSprite.agentStatus === 'working') {
+          agentSprite.lastParticleTime = updateTime;
+          const sparkle = this.add.particles(agentSprite.sprite.x, agentSprite.sprite.y - 8, 'particle-dot', {
+            speed: { min: 10, max: 30 },
+            angle: { min: 230, max: 310 },
+            lifespan: 600,
+            alpha: { start: 0.6, end: 0 },
+            tint: 0x06b6d4,
+            scale: { start: 1, end: 0.3 },
+            emitting: false,
+          });
+          sparkle.setDepth(6);
+          sparkle.emitParticle(2);
+          this.time.delayedCall(700, () => sparkle.destroy());
+        } else if (agentSprite.agentStatus === 'error') {
+          agentSprite.lastParticleTime = updateTime;
+          const wisps = this.add.particles(agentSprite.sprite.x, agentSprite.sprite.y, 'particle-dot', {
+            speed: { min: 5, max: 15 },
+            angle: { min: 250, max: 290 },
+            lifespan: 800,
+            alpha: { start: 0.4, end: 0 },
+            tint: 0xef4444,
+            scale: { start: 0.8, end: 0.2 },
+            emitting: false,
+          });
+          wisps.setDepth(6);
+          wisps.emitParticle(3);
+          this.time.delayedCall(900, () => wisps.destroy());
+        }
       }
     });
   }
@@ -507,13 +590,23 @@ export class OfficeScene extends Phaser.Scene {
       research: 'zone-research',
     };
 
-    Object.entries(DEPARTMENT_LAYOUT).forEach(([slug, layout]) => {
+    Object.entries(DEPARTMENT_LAYOUT).forEach(([slug, layout], index) => {
       const textureKey = zoneKeys[slug] ?? 'zone-engineering';
       const zone = this.add
         .image(layout.x, layout.y, textureKey)
         .setOrigin(0, 0)
-        .setAlpha(0.3);
+        .setAlpha(0.2);
       this.departmentZones.push(zone);
+
+      // Ambient breathing pulse on zone overlays
+      this.tweens.add({
+        targets: zone,
+        alpha: { from: 0.2, to: 0.35 },
+        duration: 3000 + index * 500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
 
       // Department label
       this.add
@@ -543,11 +636,37 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private createTactician(): void {
-    this.tactician = this.add.sprite(400, 300, 'tactician').setDepth(10);
+    this.tactician = this.add.sprite(400, 300, 'tactician').setDepth(10).setAlpha(0).setScale(0.5);
 
     // Play initial idle animation if available
     if (this.anims.exists('tactician-idle-down')) {
       this.tactician.play('tactician-idle-down');
+    }
+
+    // Spawn-in effect: scale up with overshoot + fade in
+    this.tweens.add({
+      targets: this.tactician,
+      scaleX: { from: 0.5, to: 1 },
+      scaleY: { from: 0.5, to: 1 },
+      alpha: { from: 0, to: 1 },
+      duration: 400,
+      ease: 'Back.easeOut',
+    });
+
+    // Indigo particle burst at spawn
+    if (ENABLE_PARTICLES && this.textures.exists('particle-dot')) {
+      const burst = this.add.particles(400, 300, 'particle-dot', {
+        speed: { min: 20, max: 60 },
+        angle: { min: 0, max: 360 },
+        lifespan: 500,
+        alpha: { start: 0.6, end: 0 },
+        tint: 0x6366f1,
+        scale: { start: 1.5, end: 0.5 },
+        emitting: false,
+      });
+      burst.setDepth(11);
+      burst.emitParticle(8);
+      this.time.delayedCall(600, () => burst.destroy());
     }
 
     this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
@@ -643,16 +762,44 @@ export class OfficeScene extends Phaser.Scene {
       if (!currentAgentIds.has(agentId)) {
         agentSprite.sprite.destroy();
         agentSprite.alertIcon.destroy();
+        agentSprite.statusHalo.destroy();
+        agentSprite.nameBackground.destroy();
+        if (agentSprite.breathingTween) agentSprite.breathingTween.stop();
+        if (agentSprite.haloTween) agentSprite.haloTween.stop();
         this.agentSprites.delete(agentId);
       }
     });
 
-    // Update review station pending counts
+    // Update review station pending counts with glow
     if (state.reviewStations) {
       state.reviewStations.forEach((station: ReviewStation) => {
         const stationSprite = this.reviewStations.get(station.departmentId);
         if (stationSprite) {
-          stationSprite.setAlpha(station.pendingApprovals > 0 ? 1 : 0.5);
+          const hasPending = station.pendingApprovals > 0;
+          stationSprite.setAlpha(hasPending ? 1 : 0.5);
+
+          // Pulsing glow when approvals pending
+          const tweenKey = `station-pulse-${station.departmentId}`;
+          const existingTween = this.tweens.getTweensOf(stationSprite);
+          if (hasPending && existingTween.length === 0) {
+            this.tweens.add({
+              targets: stationSprite,
+              alpha: { from: 0.6, to: 1.0 },
+              duration: 800,
+              yoyo: true,
+              repeat: -1,
+              ease: 'Sine.easeInOut',
+            });
+            if (stationSprite.preFX) {
+              stationSprite.preFX.addGlow(0xfbbf24, 2);
+            }
+          } else if (!hasPending && existingTween.length > 0) {
+            this.tweens.killTweensOf(stationSprite);
+            stationSprite.setAlpha(0.5);
+            if (stationSprite.preFX) {
+              stationSprite.preFX.clear();
+            }
+          }
         }
       });
     }
@@ -738,6 +885,45 @@ export class OfficeScene extends Phaser.Scene {
       // Update existing sprite state
       existing.hasPendingApproval = hasPending;
 
+      // Update status halo color + pulse
+      if (existing.agentStatus !== agent.status) {
+        existing.agentStatus = agent.status;
+        const haloStyle = this.getHaloStyle(agent.status);
+        existing.statusHalo.setFillStyle(haloStyle.color, haloStyle.alpha);
+
+        // Manage breathing tween
+        if (agent.status === 'idle' && !existing.breathingTween) {
+          existing.breathingTween = this.tweens.add({
+            targets: existing.sprite,
+            scaleY: { from: 1.0, to: 1.04 },
+            duration: 2000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        } else if (agent.status !== 'idle' && existing.breathingTween) {
+          existing.breathingTween.stop();
+          existing.sprite.setScale(1);
+          existing.breathingTween = null;
+        }
+
+        // Pulse halo for waiting_approval
+        if (existing.haloTween) {
+          existing.haloTween.stop();
+          existing.haloTween = null;
+        }
+        if (agent.status === 'waiting_approval') {
+          existing.haloTween = this.tweens.add({
+            targets: existing.statusHalo,
+            alpha: { from: 0.2, to: 0.5 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        }
+      }
+
       // Play status-based animation if available
       const animKey = agent.status === 'working'
         ? `${textureKey}-working`
@@ -755,6 +941,10 @@ export class OfficeScene extends Phaser.Scene {
     const spriteX = layout.x + 48 + col * 48;
     const spriteY = layout.y + 48 + row * 48;
 
+    // Status halo beneath agent
+    const haloStyle = this.getHaloStyle(agent.status);
+    const statusHalo = this.add.circle(spriteX, spriteY + 4, 14, haloStyle.color, haloStyle.alpha).setDepth(4);
+
     const sprite = this.add.sprite(spriteX, spriteY, textureKey).setDepth(5);
 
     // Play initial animation
@@ -770,14 +960,18 @@ export class OfficeScene extends Phaser.Scene {
       .setDepth(15)
       .setVisible(false);
 
-    // Agent name label
-    this.add
-      .text(spriteX, spriteY + 20, agent.name.substring(0, 8), {
+    // Agent name label with background for readability
+    const nameText = agent.name.substring(0, 8);
+    const nameLabel = this.add
+      .text(spriteX, spriteY + 20, nameText, {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '6px',
         color: '#cbd5e1',
       })
       .setOrigin(0.5, 0)
+      .setDepth(6);
+    const nameBackground = this.add
+      .rectangle(spriteX, spriteY + 23, nameLabel.width + 4, nameLabel.height + 2, 0x000000, 0.5)
       .setDepth(5);
 
     // Skill badges (small text below agent name)
@@ -794,12 +988,53 @@ export class OfficeScene extends Phaser.Scene {
         .setDepth(5);
     }
 
+    // Idle breathing tween
+    let breathingTween: Phaser.Tweens.Tween | null = null;
+    if (agent.status === 'idle') {
+      breathingTween = this.tweens.add({
+        targets: sprite,
+        scaleY: { from: 1.0, to: 1.04 },
+        duration: 2000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+
+    // Pulse halo for waiting_approval
+    let haloTween: Phaser.Tweens.Tween | null = null;
+    if (agent.status === 'waiting_approval') {
+      haloTween = this.tweens.add({
+        targets: statusHalo,
+        alpha: { from: 0.2, to: 0.5 },
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+
     this.agentSprites.set(agent.id, {
       sprite,
       alertIcon,
+      statusHalo,
+      nameBackground,
       agentId: agent.id,
+      agentStatus: agent.status,
       hasPendingApproval: hasPending,
+      breathingTween,
+      haloTween,
+      lastParticleTime: 0,
     });
+  }
+
+  private getHaloStyle(status: string): { color: number; alpha: number } {
+    switch (status) {
+      case 'working': return { color: 0x06b6d4, alpha: 0.3 };
+      case 'waiting_approval': return { color: 0xfbbf24, alpha: 0.4 };
+      case 'error': return { color: 0xef4444, alpha: 0.3 };
+      default: return { color: 0x64748b, alpha: 0.2 };
+    }
   }
 
   private updateLocalAvatarTexture(): void {

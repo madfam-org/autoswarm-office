@@ -35,7 +35,7 @@ function ToastContainer({
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto flex items-center gap-2 rounded border px-4 py-2 font-mono text-xs shadow-lg backdrop-blur-sm animate-in slide-in-from-right ${SEVERITY_STYLES[toast.severity]}`}
+          className={`pointer-events-auto flex items-center gap-2 rounded border px-4 py-2 font-mono text-xs shadow-lg backdrop-blur-sm ${toast.dismissing ? 'animate-slide-out-right' : 'animate-slide-in-right'} ${SEVERITY_STYLES[toast.severity]}`}
           role="alert"
         >
           <span className="flex-1">{toast.message}</span>

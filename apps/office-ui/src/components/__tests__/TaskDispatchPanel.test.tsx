@@ -95,7 +95,7 @@ describe('TaskDispatchPanel', () => {
     const textarea = screen.getByPlaceholderText('Describe the task...');
     fireEvent.change(textarea, { target: { value: 'Something' } });
 
-    const submitBtn = screen.getByText('Dispatching...');
+    const submitBtn = screen.getByRole('button', { name: /dispatching/i });
     expect(submitBtn).toBeDisabled();
   });
 

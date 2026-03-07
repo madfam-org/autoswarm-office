@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { AvatarConfig } from '@autoswarm/shared-types';
 import {
   SKIN_TONES,
@@ -9,6 +9,7 @@ import {
   HAIR_STYLE_NAMES,
   ACCESSORY_NAMES,
 } from '@autoswarm/shared-types';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface AvatarEditorProps {
   open: boolean;
@@ -65,6 +66,7 @@ function OptionButton({
 
 export function AvatarEditor({ open, initialConfig, onSave, onClose }: AvatarEditorProps) {
   const [config, setConfig] = useState<AvatarConfig>(initialConfig);
+  const trapRef = useFocusTrap<HTMLDivElement>(open);
 
   const update = useCallback((partial: Partial<AvatarConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -74,11 +76,21 @@ export function AvatarEditor({ open, initialConfig, onSave, onClose }: AvatarEdi
     onSave(config);
   }, [config, onSave]);
 
+  // Escape to close
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="w-96 rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-xl">
+    <div className="absolute inset-0 z-modal flex items-center justify-center bg-black/70" role="dialog" aria-modal="true" aria-label="Avatar editor">
+      <div ref={trapRef} className="w-96 rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-xl">
         <h2 className="mb-4 text-center text-sm font-bold text-slate-200">
           CUSTOMIZE YOUR AVATAR
         </h2>

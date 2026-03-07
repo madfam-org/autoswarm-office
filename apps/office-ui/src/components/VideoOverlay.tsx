@@ -19,7 +19,7 @@ export function VideoOverlay({ peers, localStream }: VideoOverlayProps) {
   if (activePeers.length === 0 && !localStream) return null;
 
   return (
-    <div className="pointer-events-none absolute top-16 left-4 z-30 flex flex-col gap-2">
+    <div className="pointer-events-none absolute top-16 left-4 z-video flex flex-col gap-2">
       {/* Local video preview (small) */}
       {localStream && (
         <div className="relative">

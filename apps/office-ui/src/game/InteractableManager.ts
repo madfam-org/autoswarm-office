@@ -120,7 +120,9 @@ export class InteractableManager {
       const shouldShow = az === closestZone && az.def.interactType !== 'silent-zone';
       az.prompt.setVisible(shouldShow);
       if (shouldShow) {
-        az.prompt.setPosition(this.playerSprite.x, this.playerSprite.y - 40);
+        const promptX = Phaser.Math.Clamp(this.playerSprite.x, 60, (this.scene.scale.width || 1280) - 60);
+        const promptY = Math.max(20, this.playerSprite.y - 40);
+        az.prompt.setPosition(promptX, promptY);
       }
     }
 

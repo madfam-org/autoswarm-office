@@ -30,6 +30,35 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    // Loading screen
+    const { width, height } = this.scale;
+    const loadingText = this.add.text(width / 2, height / 2 - 30, 'LOADING OFFICE...', {
+      fontFamily: '"Press Start 2P", monospace',
+      fontSize: '12px',
+      color: '#a5b4fc',
+    }).setOrigin(0.5);
+
+    const barBg = this.add.rectangle(width / 2, height / 2 + 10, 200, 12, 0x1e293b);
+    const barFill = this.add.rectangle(width / 2 - 99, height / 2 + 10, 0, 8, 0x6366f1).setOrigin(0, 0.5);
+
+    const percentText = this.add.text(width / 2, height / 2 + 35, '0%', {
+      fontFamily: '"Press Start 2P", monospace',
+      fontSize: '8px',
+      color: '#94a3b8',
+    }).setOrigin(0.5);
+
+    this.load.on('progress', (value: number) => {
+      barFill.width = 198 * value;
+      percentText.setText(`${Math.round(value * 100)}%`);
+    });
+
+    this.load.on('complete', () => {
+      loadingText.destroy();
+      barBg.destroy();
+      barFill.destroy();
+      percentText.destroy();
+    });
+
     // Track failed loads so we can fall back to canvas-generated textures
     this.load.on('loaderror', (fileObj: Phaser.Loader.File) => {
       this.failedKeys.add(fileObj.key);

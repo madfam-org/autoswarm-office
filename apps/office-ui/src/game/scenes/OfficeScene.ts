@@ -23,6 +23,12 @@ const PROXIMITY_THRESHOLD = 64;
 const MOVE_THROTTLE_MS = 66; // ~15fps
 const EMOTE_DURATION_MS = 3000;
 
+/** Scale font size based on viewport width for readability */
+function responsiveFontSize(base: number): string {
+  const scale = Math.max(1, Math.min(window.innerWidth / 1280, 1.5));
+  return `${Math.round(base * scale)}px`;
+}
+
 /** Maps emote type to spritesheet frame index */
 const EMOTE_FRAME_MAP: Record<string, number> = {
   wave: 0,
@@ -165,10 +171,10 @@ export class OfficeScene extends Phaser.Scene {
 
     // Add keyboard instructions text
     this.add
-      .text(this.worldWidth / 2, this.worldHeight - 8, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | T: Chat | R: Emote | ?: Help', {
+      .text(this.worldWidth / 2, this.worldHeight - 8, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Interact | T: Chat | R: Emote | [?] Help', {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
-        color: '#64748b',
+        fontSize: responsiveFontSize(8),
+        color: '#94a3b8',
       })
       .setOrigin(0.5)
       .setScrollFactor(0);
@@ -186,7 +192,10 @@ export class OfficeScene extends Phaser.Scene {
         onEmote: () => gameEventBus.emit('emote-picker-toggle', null),
       });
       // Zoom in a bit more on mobile for better visibility
-      this.cameras.main.setZoom(1.5);
+      this.cameras.main.setZoom(window.innerHeight > window.innerWidth ? 1.5 : 1.2);
+      this.scale.on('resize', () => {
+        this.cameras.main.setZoom(window.innerHeight > window.innerWidth ? 1.5 : 1.2);
+      });
     }
 
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
@@ -202,14 +211,28 @@ export class OfficeScene extends Phaser.Scene {
     this.worldHeight = data.worldHeight;
     this.collisionLayer = data.collisionLayer;
 
-    // Populate department layouts from Tiled data
-    for (const dept of data.departments) {
-      this.departmentLayouts.set(dept.slug, {
-        x: dept.x,
-        y: dept.y,
-        label: dept.name.toUpperCase(),
-      });
+    // Populate department layouts from Tiled data, falling back to hardcoded
+    if (data.departments.length > 0) {
+      for (const dept of data.departments) {
+        this.departmentLayouts.set(dept.slug, {
+          x: dept.x,
+          y: dept.y,
+          label: dept.name.toUpperCase(),
+        });
+      }
+    } else {
+      for (const [slug, layout] of Object.entries(DEPARTMENT_LAYOUT)) {
+        this.departmentLayouts.set(slug, layout);
+      }
     }
+
+    // If no floor layer, render procedural floor
+    if (!data.floorLayer) {
+      this.createFloor();
+    }
+
+    // Always render department zone overlays (Tiled object layer doesn't create visuals)
+    this.createDepartmentZones();
 
     // Load interactables from Tiled object layer (manager created after tactician)
     // Deferred to after createTactician, but we store the tilemap reference
@@ -223,11 +246,10 @@ export class OfficeScene extends Phaser.Scene {
    * Check for scriptUrl properties on the tilemap and load them via ScriptBridge.
    */
   private loadMapScripts(tilemap: Phaser.Tilemaps.Tilemap): void {
-    const mapProps = tilemap.properties as
-      | Array<{ name: string; value: string | number | boolean }>
-      | undefined;
-    if (!mapProps) return;
+    const rawProps = tilemap.properties;
+    if (!rawProps || !Array.isArray(rawProps)) return;
 
+    const mapProps = rawProps as Array<{ name: string; value: string | number | boolean }>;
     const scriptProp = mapProps.find((p) => p.name === 'scriptUrl');
     if (!scriptProp || typeof scriptProp.value !== 'string') return;
 
@@ -497,7 +519,7 @@ export class OfficeScene extends Phaser.Scene {
       this.add
         .text(layout.x + 96, layout.y + 8, layout.label, {
           fontFamily: '"Press Start 2P", monospace',
-          fontSize: '10px',
+          fontSize: responsiveFontSize(10),
           color: '#94a3b8',
         })
         .setOrigin(0.5, 0);
@@ -545,10 +567,12 @@ export class OfficeScene extends Phaser.Scene {
   private createHelpOverlay(): void {
     this.helpOverlay = this.add.container(640, 360).setDepth(100).setVisible(false);
 
-    const bg = this.add.rectangle(0, 0, 400, 300, 0x000000, 0.85);
+    // Semi-transparent backdrop
+    const backdrop = this.add.rectangle(0, 0, 1280, 720, 0x000000, 0.5);
+    const bg = this.add.rectangle(0, 0, 420, 340, 0x0f172a, 0.95);
 
     const title = this.add
-      .text(0, -120, 'KEYBOARD SHORTCUTS', {
+      .text(0, -140, 'KEYBOARD SHORTCUTS', {
         fontFamily: '"Press Start 2P", monospace',
         fontSize: '10px',
         color: '#a5b4fc',
@@ -556,25 +580,36 @@ export class OfficeScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const shortcuts = [
-      'WASD / Arrows  -  Move',
-      'ENTER / A      -  Approve',
-      'ESC / B        -  Deny',
-      'E / X          -  Inspect',
-      'T or /         -  Chat',
-      'R              -  Emotes (1-9)',
-      'TAB            -  Menu',
-      '?              -  Toggle Help',
+      'WASD / Arrows     Move',
+      'ENTER / A (pad)   Approve',
+      'ESC / B (pad)     Deny',
+      'E / X (pad)       Inspect / Interact',
+      'T or /            Chat',
+      'R                 Emotes (1-9)',
+      'M / V             Mic / Camera',
+      '?                 Toggle Help',
     ];
 
     const lines = shortcuts.map((text, i) =>
-      this.add.text(-160, -70 + i * 30, text, {
+      this.add.text(-180, -90 + i * 28, text, {
         fontFamily: '"Press Start 2P", monospace',
-        fontSize: '8px',
+        fontSize: '7px',
         color: '#cbd5e1',
       }),
     );
 
-    this.helpOverlay.add([bg, title, ...lines]);
+    // Close button
+    const closeBtn = this.add
+      .text(180, -140, '[X]', {
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: '8px',
+        color: '#f87171',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.helpOverlay.setVisible(false));
+
+    this.helpOverlay.add([backdrop, bg, title, ...lines, closeBtn]);
 
     // Make it scroll-fixed so it stays centered on screen
     this.helpOverlay.setScrollFactor(0);
@@ -853,8 +888,22 @@ export class OfficeScene extends Phaser.Scene {
       }
     });
 
-    if (nearestAgentId && action === 'approve') {
-      gameEventBus.emit('approval-open', nearestAgentId);
+    if (nearestAgentId) {
+      // Flash the agent sprite for feedback
+      const agentEntry = this.agentSprites.get(nearestAgentId);
+      if (agentEntry) {
+        this.tweens.add({
+          targets: agentEntry.sprite,
+          alpha: 0.5,
+          yoyo: true,
+          duration: 150,
+          repeat: 1,
+        });
+      }
+
+      if (action === 'approve') {
+        gameEventBus.emit('approval-open', nearestAgentId);
+      }
     }
   }
 }

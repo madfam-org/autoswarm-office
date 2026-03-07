@@ -1,6 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ToastProvider } from '@/components/Toast';
 import { HUD } from '@/components/HUD';
 import { DashboardPanel } from '@/components/DashboardPanel';
 import { TaskDispatchPanel } from '@/components/TaskDispatchPanel';
@@ -208,6 +210,8 @@ export default function HomePage() {
   }, [colyseusConnected, avatarConfig, sendAvatarConfig]);
 
   return (
+    <ErrorBoundary>
+    <ToastProvider>
     <main className="relative h-screen w-screen overflow-hidden bg-slate-900">
       <PhaserGame
         onApprovalOpen={handleApprovalOpen}
@@ -272,7 +276,8 @@ export default function HomePage() {
 
       <button
         onClick={() => setAvatarEditorOpen(true)}
-        className="absolute top-4 right-4 z-20 rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
+        className="absolute top-4 right-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
+        aria-label="Open avatar editor"
       >
         Avatar
       </button>
@@ -302,5 +307,7 @@ export default function HomePage() {
         />
       )}
     </main>
+    </ToastProvider>
+    </ErrorBoundary>
   );
 }

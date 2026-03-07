@@ -36,7 +36,7 @@ make generate-assets  # Regenerate pixel-art sprite PNGs
 pnpm dev              # TypeScript services only
 pnpm build            # Build TypeScript packages
 pnpm lint             # ESLint
-pnpm test             # TypeScript tests (230 tests across 18 suites)
+pnpm test             # TypeScript tests (250 tests across 22 suites)
 pnpm typecheck        # TypeScript type checking
 
 uv run pytest         # Python tests (238 tests)
@@ -254,6 +254,40 @@ The `packages/skills/` package implements the AgentSkills standard.
   `OfficeScene` forwards these to `ScriptBridge.notifyAreaEvent()`.
 - Lifecycle: created on map load if `scriptUrl` property exists, destroyed on
   scene shutdown.
+
+### UI/UX Infrastructure
+
+- **ErrorBoundary** (`apps/office-ui/src/components/ErrorBoundary.tsx`) wraps the
+  main page content. Class component with fallback UI + retry button.
+- **Toast system**: `ToastProvider` wraps the app in `page.tsx`. Use
+  `useToast().addToast(message, severity)` from any component. Toasts auto-dismiss
+  after 5s. Severity: `success`, `error`, `warning`, `info`.
+- **Focus trapping**: `useFocusTrap(active)` hook returns a ref. Applied to
+  `AvatarEditor`, `PopupOverlay`, `TaskDispatchPanel`. Traps Tab cycling and
+  restores previous focus on close.
+- **Loading screen**: `BootScene.preload()` renders a progress bar with percentage
+  during asset loading.
+- **Help overlay**: Press `?` to toggle. Has backdrop, `[X]` close button, and
+  gamepad mappings alongside keyboard shortcuts.
+- **Design system tokens** in `tailwind.config.ts`:
+  - Semantic colors: `semantic-success`, `semantic-error`, `semantic-warning`,
+    `semantic-info`
+  - Z-index scale: `z-hud` (20), `z-video` (30), `z-backdrop` (40),
+    `z-modal` (50), `z-toast` (60)
+  - Typography: `text-retro-xs` (7px), `text-retro-sm` (8px),
+    `text-retro-base` (10px), `text-retro-lg` (12px)
+  - Button `xs` size variant in `packages/ui/src/button.tsx`
+- **Font loading**: Press Start 2P loaded via `next/font/google` in `layout.tsx`
+  (CSS variable `--font-pixel`). No HTTP `@import` in globals.css.
+- **iframe sandbox**: `CoWebsitePanel` uses `allow-scripts allow-forms allow-popups`
+  (no `allow-same-origin`).
+- **Global focus indicators**: `*:focus-visible` outline set in `globals.css`.
+- **Responsive panels**: `ChatPanel`, `DashboardPanel`, `TaskDispatchPanel` use
+  `w-full max-w-80 sm:w-80` for mobile.
+- **Responsive game fonts**: `responsiveFontSize(base)` in `OfficeScene.ts` scales
+  with viewport width.
+- **Touch feedback**: VirtualJoystick thumb alpha (0.4 idle/0.9 active),
+  TouchActionButtons scale+alpha on press, 48px min touch targets.
 
 ## Sprite Assets
 

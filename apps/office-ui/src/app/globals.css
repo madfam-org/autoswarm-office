@@ -2,9 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 @layer base {
+  *:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+
   body {
     @apply bg-slate-900 text-white antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -66,22 +70,4 @@
       inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
-  .retro-scanlines {
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.1) 2px,
-      rgba(0, 0, 0, 0.1) 4px
-    );
-    pointer-events: none;
-  }
-}
-
-@layer utilities {
-  .text-shadow-retro {
-    text-shadow:
-      2px 2px 0 #000,
-      -1px -1px 0 #000;
-  }
 }

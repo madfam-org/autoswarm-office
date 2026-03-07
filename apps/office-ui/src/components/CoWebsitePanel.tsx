@@ -46,7 +46,7 @@ export function CoWebsitePanel({ url, title, onClose }: CoWebsitePanelProps) {
 
   return (
     <div
-      className={`fixed top-0 right-0 z-50 flex h-full flex-col bg-slate-900 border-l border-slate-700 shadow-2xl transition-transform duration-300 ${
+      className={`fixed top-0 right-0 z-modal flex h-full flex-col bg-slate-900 border-l border-slate-700 shadow-2xl transition-transform duration-300 ${
         visible ? 'translate-x-0' : 'translate-x-full'
       }`}
       style={{ width: 'min(50vw, 640px)' }}
@@ -70,7 +70,7 @@ export function CoWebsitePanel({ url, title, onClose }: CoWebsitePanelProps) {
         src={url}
         title={title}
         className="flex-1 border-0 bg-white"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        sandbox="allow-scripts allow-forms allow-popups"
         allow="camera; microphone; display-capture"
       />
     </div>

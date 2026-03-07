@@ -29,7 +29,7 @@ export class VirtualJoystick {
       .setScrollFactor(0)
       .setDepth(200);
 
-    this.thumb = scene.add.circle(baseX, baseY, THUMB_RADIUS, 0xa5b4fc, 0.6)
+    this.thumb = scene.add.circle(baseX, baseY, THUMB_RADIUS, 0xa5b4fc, 0.4)
       .setScrollFactor(0)
       .setDepth(201);
 
@@ -68,6 +68,7 @@ export class VirtualJoystick {
     this.pointerId = pointer.id;
     this.startX = this.base.x;
     this.startY = this.base.y;
+    this.thumb.setAlpha(0.9);
     this.updateThumb(pointer.x, pointer.y);
   };
 
@@ -82,6 +83,7 @@ export class VirtualJoystick {
     this.pointerId = -1;
     this._axisX = 0;
     this._axisY = 0;
+    this.thumb.setAlpha(0.4);
     this.thumb.setPosition(this.base.x, this.base.y);
   };
 

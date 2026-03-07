@@ -30,7 +30,7 @@ export const HUD: FC<HUDProps> = ({
 
   return (
     <div
-      className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex items-start justify-between p-4"
+      className="pointer-events-none absolute left-0 right-0 top-0 z-hud flex items-start justify-between p-4"
       role="status"
       aria-label="Game HUD"
     >

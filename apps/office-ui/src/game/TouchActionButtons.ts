@@ -26,13 +26,13 @@ export class TouchActionButtons {
       .setDepth(200);
 
     // Approve (top) — green
-    this.createButton(0, -36, 0x22c55e, 'A', () => events.onApprove());
+    this.createButton(0, -44, 0x22c55e, 'A', () => events.onApprove());
     // Deny (left) — red
-    this.createButton(-36, 0, 0xef4444, 'D', () => events.onDeny());
+    this.createButton(-44, 0, 0xef4444, 'D', () => events.onDeny());
     // Inspect (right) — cyan
-    this.createButton(36, 0, 0x06b6d4, 'E', () => events.onInspect());
+    this.createButton(44, 0, 0x06b6d4, 'E', () => events.onInspect());
     // Emote (bottom) — yellow
-    this.createButton(0, 36, 0xfbbf24, 'R', () => events.onEmote());
+    this.createButton(0, 44, 0xfbbf24, 'R', () => events.onEmote());
   }
 
   setVisible(visible: boolean): void {
@@ -50,9 +50,18 @@ export class TouchActionButtons {
     label: string,
     callback: () => void,
   ): void {
-    const circle = this.scene.add.circle(x, y, 18, color, 0.6)
+    const circle = this.scene.add.circle(x, y, 24, color, 0.6)
       .setInteractive()
-      .on('pointerdown', callback);
+      .on('pointerdown', () => {
+        circle.setScale(0.85).setAlpha(0.9);
+        callback();
+      })
+      .on('pointerup', () => {
+        circle.setScale(1).setAlpha(0.6);
+      })
+      .on('pointerout', () => {
+        circle.setScale(1).setAlpha(0.6);
+      });
 
     const text = this.scene.add.text(x, y, label, {
       fontFamily: '"Press Start 2P", monospace',

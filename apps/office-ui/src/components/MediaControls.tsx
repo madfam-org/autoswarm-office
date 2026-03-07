@@ -48,7 +48,7 @@ export function MediaControls({
   if (!visible) return null;
 
   return (
-    <div className="absolute top-4 left-4 z-30 flex gap-2">
+    <div className="absolute top-4 left-4 z-video flex gap-2">
       <button
         onClick={onToggleAudio}
         className={`rounded px-2 py-1 text-xs font-mono transition-colors ${
@@ -57,6 +57,7 @@ export function MediaControls({
             : 'bg-red-900/80 text-red-300 hover:bg-red-800'
         }`}
         title={audioEnabled ? 'Mute (M)' : 'Unmute (M)'}
+        aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
       >
         {audioEnabled ? 'MIC ON' : 'MIC OFF'}
       </button>
@@ -69,6 +70,7 @@ export function MediaControls({
             : 'bg-red-900/80 text-red-300 hover:bg-red-800'
         }`}
         title={videoEnabled ? 'Camera Off (V)' : 'Camera On (V)'}
+        aria-label={videoEnabled ? 'Turn camera off' : 'Turn camera on'}
       >
         {videoEnabled ? 'CAM ON' : 'CAM OFF'}
       </button>

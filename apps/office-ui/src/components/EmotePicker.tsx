@@ -68,7 +68,7 @@ export function EmotePicker({ onEmote }: EmotePickerProps) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="absolute bottom-4 right-4 z-20 rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
+        className="absolute bottom-4 right-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
         title="Emotes [R]"
       >
         Emotes [R]
@@ -77,12 +77,13 @@ export function EmotePicker({ onEmote }: EmotePickerProps) {
   }
 
   return (
-    <div className="absolute bottom-4 right-4 z-20 rounded border border-slate-700 bg-slate-900/95 p-3 shadow-lg">
+    <div className="absolute bottom-4 right-4 z-hud rounded border border-slate-700 bg-slate-900/95 p-3 shadow-lg">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-400">EMOTES</span>
         <button
           onClick={() => setOpen(false)}
           className="text-xs text-slate-500 hover:text-slate-300"
+          aria-label="Close emotes"
         >
           Esc
         </button>
@@ -94,6 +95,7 @@ export function EmotePicker({ onEmote }: EmotePickerProps) {
             onClick={() => handleEmote(emote.type)}
             className="flex flex-col items-center gap-0.5 rounded p-2 text-center hover:bg-slate-800"
             title={`${emote.label} [${i + 1}]`}
+            aria-label={`${emote.label} - Press ${i + 1}`}
           >
             <span className="text-xl">{emote.icon}</span>
             <span className="text-[8px] text-slate-500">{i + 1}</span>

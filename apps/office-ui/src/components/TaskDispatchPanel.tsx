@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef, type FC } from 'react';
 import type { Department } from '@autoswarm/shared-types';
 import type { DispatchRequest, DispatchResponse, DispatchStatus } from '@/hooks/useTaskDispatch';
 import { gameEventBus } from '@/game/PhaserGame';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useToast } from '@/hooks/useToast';
 
 const GRAPH_TYPES = ['coding', 'research', 'crm', 'sequential', 'parallel'] as const;
 
@@ -36,6 +38,8 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
   const [agentsExpanded, setAgentsExpanded] = useState(false);
   const [skillsExpanded, setSkillsExpanded] = useState(false);
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const trapRef = useFocusTrap<HTMLElement>(open);
+  const { addToast } = useToast();
 
   // Slide animation
   useEffect(() => {
@@ -46,13 +50,20 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
     }
   }, [open]);
 
-  // Auto-clear success after 3s
+  // Toast on status change + auto-clear success after 3s
   useEffect(() => {
     if (status === 'success') {
+      addToast('Task dispatched successfully', 'success');
       const timer = setTimeout(() => onReset(), 3000);
       return () => clearTimeout(timer);
     }
-  }, [status, onReset]);
+  }, [status, onReset, addToast]);
+
+  useEffect(() => {
+    if (error) {
+      addToast(error, 'error');
+    }
+  }, [error, addToast]);
 
   // Suppress game input while text fields focused
   const handleFocus = useCallback(() => {
@@ -113,11 +124,13 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
 
   return (
     <aside
-      className={`fixed right-0 top-0 z-50 h-full w-80 transform transition-transform duration-300 ${
+      ref={trapRef}
+      className={`fixed right-0 top-0 z-modal h-full w-full max-w-80 transform transition-transform duration-300 sm:w-80 ${
         visible ? 'translate-x-0' : 'translate-x-full'
       }`}
       aria-label="Task dispatch panel"
       role="dialog"
+      aria-modal="true"
     >
       <div className="flex h-full flex-col bg-slate-900/95 backdrop-blur-sm pixel-border-accent">
         {/* Header */}
@@ -148,7 +161,8 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
               onBlur={handleBlur}
               maxLength={2000}
               rows={3}
-              className="w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 placeholder-slate-600 focus:border-indigo-500 focus:outline-none resize-none"
+              aria-required="true"
+              className="w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none resize-none"
               placeholder="Describe the task..."
             />
             <p className="mt-0.5 font-mono text-[7px] text-slate-600 text-right">
@@ -238,7 +252,7 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
                 onChange={(e) => setSkillsInput(e.target.value)}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
-                className="mt-2 w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 placeholder-slate-600 focus:border-indigo-500 focus:outline-none"
+                className="mt-2 w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
                 placeholder="coding, review, testing..."
               />
             )}
@@ -262,9 +276,14 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
           <button
             onClick={handleSubmit}
             disabled={!description.trim() || status === 'submitting'}
-            className="w-full rounded bg-indigo-600 px-4 py-2 font-mono text-[10px] uppercase text-white transition-colors hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded bg-indigo-600 px-4 py-2 font-mono text-[10px] uppercase text-white transition-colors hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
-            {status === 'submitting' ? 'Dispatching...' : 'Dispatch'}
+            {status === 'submitting' ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Dispatching...
+              </span>
+            ) : 'Dispatch'}
           </button>
         </div>
       </div>

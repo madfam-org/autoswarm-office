@@ -97,7 +97,7 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
       {/* Toggle button */}
       <button
         onClick={onToggle}
-        className="pointer-events-auto absolute right-0 top-1/2 z-30 -translate-y-1/2 retro-panel px-2 py-6 font-mono text-[10px] text-slate-400 transition-all hover:text-white"
+        className="pointer-events-auto absolute right-0 top-1/2 z-video -translate-y-1/2 retro-panel px-2 py-6 font-mono text-[10px] text-slate-400 transition-all hover:text-white"
         aria-label={open ? 'Close dashboard panel' : 'Open dashboard panel'}
         aria-expanded={open}
       >
@@ -106,7 +106,7 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
 
       {/* Sliding panel */}
       <aside
-        className={`absolute right-0 top-0 z-20 h-full w-80 transform transition-transform duration-300 ${
+        className={`absolute right-0 top-0 z-hud h-full w-full max-w-80 transform transition-transform duration-300 sm:w-80 ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
         aria-label="Dashboard panel"
@@ -219,8 +219,8 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
                     </div>
 
                     {columnTasks.length === 0 ? (
-                      <p className="py-1 font-mono text-[8px] text-slate-700">
-                        No tasks
+                      <p className="py-2 text-center font-mono text-[8px] text-slate-600 italic">
+                        No tasks yet
                       </p>
                     ) : (
                       <div className="space-y-1">

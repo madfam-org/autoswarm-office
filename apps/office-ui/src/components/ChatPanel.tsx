@@ -75,7 +75,7 @@ export function ChatPanel({ messages, onSend, localSessionId }: ChatPanelProps) 
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="absolute bottom-4 left-4 z-20 rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
+        className="absolute bottom-4 left-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
       >
         Chat [T]
       </button>
@@ -83,12 +83,13 @@ export function ChatPanel({ messages, onSend, localSessionId }: ChatPanelProps) 
   }
 
   return (
-    <div className="absolute bottom-4 left-4 z-20 flex w-80 flex-col rounded border border-slate-700 bg-slate-900/95 shadow-lg">
+    <div className="absolute bottom-4 left-4 z-hud flex w-full max-w-80 flex-col rounded border border-slate-700 bg-slate-900/95 shadow-lg sm:w-80">
       <div className="flex items-center justify-between border-b border-slate-700 px-3 py-1">
         <span className="text-xs font-semibold text-slate-400">CHAT</span>
         <button
           onClick={() => setCollapsed(true)}
           className="text-xs text-slate-500 hover:text-slate-300"
+          aria-label="Collapse chat"
         >
           _
         </button>
@@ -98,6 +99,13 @@ export function ChatPanel({ messages, onSend, localSessionId }: ChatPanelProps) 
         ref={listRef}
         className="flex h-48 flex-col gap-0.5 overflow-y-auto px-3 py-2 text-xs"
       >
+        {messages.length === 0 && (
+          <div className="flex h-full flex-col justify-center gap-2 opacity-40">
+            <div className="h-2.5 w-3/4 animate-pulse rounded bg-slate-700" />
+            <div className="h-2.5 w-1/2 animate-pulse rounded bg-slate-700" />
+            <div className="h-2.5 w-2/3 animate-pulse rounded bg-slate-700" />
+          </div>
+        )}
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -131,7 +139,7 @@ export function ChatPanel({ messages, onSend, localSessionId }: ChatPanelProps) 
           onKeyDown={handleKeyDown}
           placeholder="Type a message... (T to focus, Esc to unfocus)"
           maxLength={500}
-          className="w-full rounded bg-slate-800 px-2 py-1 text-xs text-slate-200 placeholder-slate-600 outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-full rounded bg-slate-800 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 outline-none focus:ring-1 focus:ring-indigo-500"
         />
       </form>
     </div>

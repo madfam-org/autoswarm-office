@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@autoswarm/shared-types": "workspace:*",
-    "cron": "^3.3.1",
+    "cron": "^4.4.0",
     "ws": "^8.18.0",
-    "dotenv": "^16.4.7",
-    "@octokit/rest": "^21.0.0"
+    "dotenv": "^17.3.1",
+    "@octokit/rest": "^22.0.1"
   },
   "devDependencies": {
     "@autoswarm/config": "workspace:*",
@@ -23,6 +23,6 @@
     "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^4.0.18"
   }
 }

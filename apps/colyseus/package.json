@@ -12,18 +12,18 @@
   },
   "dependencies": {
     "@autoswarm/shared-types": "workspace:*",
-    "@colyseus/core": "^0.15.57",
-    "@colyseus/ws-transport": "^0.15.3",
-    "@colyseus/schema": "^2.0.35",
-    "express": "^4.21.2",
-    "dotenv": "^16.4.7",
-    "redis": "^4.7.0"
+    "@colyseus/core": "^0.17.39",
+    "@colyseus/ws-transport": "^0.17.9",
+    "@colyseus/schema": "^4.0.17",
+    "express": "^5.2.1",
+    "dotenv": "^17.3.1",
+    "redis": "^5.11.0"
   },
   "devDependencies": {
     "@autoswarm/config": "workspace:*",
     "@types/express": "^5.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^4.0.18"
   }
 }

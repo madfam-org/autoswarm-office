@@ -23,12 +23,24 @@ interface PlayerEmoteEvent {
   emoteType: string;
 }
 
+export interface CoWebsiteEvent {
+  url: string;
+  title: string;
+}
+
+export interface PopupEvent {
+  title: string;
+  content: string;
+}
+
 interface PhaserGameProps {
   onApprovalOpen?: (agentId: string) => void;
   officeState?: OfficeState | null;
   sessionId?: string | null;
   onPlayerMove?: (x: number, y: number) => void;
   onEmote?: (type: string) => void;
+  onCoWebsite?: (event: CoWebsiteEvent) => void;
+  onPopup?: (event: PopupEvent) => void;
 }
 
 export default function PhaserGame({
@@ -37,6 +49,8 @@ export default function PhaserGame({
   sessionId,
   onPlayerMove,
   onEmote,
+  onCoWebsite,
+  onPopup,
 }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -67,6 +81,22 @@ export default function PhaserGame({
       onEmote(type);
     });
   }, [onEmote]);
+
+  // Listen for cowebsite events from InteractableManager
+  useEffect(() => {
+    if (!onCoWebsite) return;
+    return gameEventBus.on('open_cowebsite', (detail) => {
+      onCoWebsite(detail as CoWebsiteEvent);
+    });
+  }, [onCoWebsite]);
+
+  // Listen for popup events from InteractableManager
+  useEffect(() => {
+    if (!onPopup) return;
+    return gameEventBus.on('show_popup', (detail) => {
+      onPopup(detail as PopupEvent);
+    });
+  }, [onPopup]);
 
   // Forward session ID into Phaser via event bus
   useEffect(() => {

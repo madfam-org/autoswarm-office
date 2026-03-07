@@ -4,6 +4,9 @@ import { gameEventBus } from '../PhaserGame';
 import { loadTiledMap } from '../TiledMapLoader';
 import type { DepartmentZone } from '../TiledMapLoader';
 import { compositeAvatar } from '../AvatarCompositor';
+import { VirtualJoystick } from '../VirtualJoystick';
+import { TouchActionButtons } from '../TouchActionButtons';
+import { InteractableManager } from '../InteractableManager';
 import type {
   OfficeState,
   Department,
@@ -74,6 +77,10 @@ export class OfficeScene extends Phaser.Scene {
   private emotePickerCleanup: (() => void) | null = null;
   private avatarConfigCleanup: (() => void) | null = null;
   private localAvatarConfig: AvatarConfig | null = null;
+  private virtualJoystick: VirtualJoystick | null = null;
+  private touchButtons: TouchActionButtons | null = null;
+  private interactableManager: InteractableManager | null = null;
+  private isTouchDevice: boolean = false;
   private helpOverlay!: Phaser.GameObjects.Container;
   private lastDirection: string = 'down';
   private lastMoveTime: number = 0;
@@ -134,6 +141,13 @@ export class OfficeScene extends Phaser.Scene {
       this.updateLocalAvatarTexture();
     });
 
+    // Set up interactable manager after tactician is created
+    this.interactableManager = new InteractableManager(this, this.tactician);
+    if (this._pendingTilemap) {
+      this.interactableManager.loadFromTilemap(this._pendingTilemap);
+      this._pendingTilemap = null;
+    }
+
     // Add keyboard instructions text
     this.add
       .text(this.worldWidth / 2, this.worldHeight - 8, 'WASD: Move | ENTER: Approve | ESC: Deny | E: Inspect | T: Chat | R: Emote | ?: Help', {
@@ -145,6 +159,20 @@ export class OfficeScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     this.createHelpOverlay();
+
+    // Mobile touch controls
+    this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (this.isTouchDevice) {
+      this.virtualJoystick = new VirtualJoystick(this);
+      this.touchButtons = new TouchActionButtons(this, {
+        onApprove: () => this.handleProximityInteraction('approve'),
+        onDeny: () => gameEventBus.emit('approval-deny', null),
+        onInspect: () => this.handleProximityInteraction('inspect'),
+        onEmote: () => gameEventBus.emit('emote-picker-toggle', null),
+      });
+      // Zoom in a bit more on mobile for better visibility
+      this.cameras.main.setZoom(1.5);
+    }
 
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       if (event.key === '?') {
@@ -167,7 +195,14 @@ export class OfficeScene extends Phaser.Scene {
         label: dept.name.toUpperCase(),
       });
     }
+
+    // Load interactables from Tiled object layer (manager created after tactician)
+    // Deferred to after createTactician, but we store the tilemap reference
+    this._pendingTilemap = data.tilemap;
   }
+
+  /** Tilemap reference for deferred interactable loading */
+  private _pendingTilemap: Phaser.Tilemaps.Tilemap | null = null;
 
   private initProceduralMap(): void {
     // Populate layouts from hardcoded defaults
@@ -182,9 +217,17 @@ export class OfficeScene extends Phaser.Scene {
     this.gamepadManager.poll();
     const input = this.gamepadManager.getInput();
 
+    // Merge virtual joystick input with gamepad/keyboard
+    let stickX = input.leftStickX;
+    let stickY = input.leftStickY;
+    if (this.virtualJoystick && (this.virtualJoystick.axisX !== 0 || this.virtualJoystick.axisY !== 0)) {
+      stickX = this.virtualJoystick.axisX;
+      stickY = this.virtualJoystick.axisY;
+    }
+
     // Move tactician based on input
-    const dx = input.leftStickX * TACTICIAN_SPEED * (this.game.loop.delta / 1000);
-    const dy = input.leftStickY * TACTICIAN_SPEED * (this.game.loop.delta / 1000);
+    const dx = stickX * TACTICIAN_SPEED * (this.game.loop.delta / 1000);
+    const dy = stickY * TACTICIAN_SPEED * (this.game.loop.delta / 1000);
 
     if (dx !== 0 || dy !== 0) {
       this.tactician.x = Phaser.Math.Clamp(this.tactician.x + dx, 16, this.worldWidth - 16);
@@ -247,12 +290,22 @@ export class OfficeScene extends Phaser.Scene {
       }
     });
 
+    // Update interactable zones
+    if (this.interactableManager) {
+      this.interactableManager.update();
+    }
+
     // Check button presses for proximity interactions
     if (input.buttonA) {
       this.handleProximityInteraction('approve');
     }
     if (input.buttonX) {
-      this.handleProximityInteraction('inspect');
+      // If overlapping an interactable, interact with it; otherwise inspect agent
+      if (this.interactableManager?.hasActiveOverlap()) {
+        this.interactableManager.interact();
+      } else {
+        this.handleProximityInteraction('inspect');
+      }
     }
 
     // Animate alert icons
@@ -292,6 +345,18 @@ export class OfficeScene extends Phaser.Scene {
     if (this.avatarConfigCleanup) {
       this.avatarConfigCleanup();
       this.avatarConfigCleanup = null;
+    }
+    if (this.interactableManager) {
+      this.interactableManager.destroy();
+      this.interactableManager = null;
+    }
+    if (this.virtualJoystick) {
+      this.virtualJoystick.destroy();
+      this.virtualJoystick = null;
+    }
+    if (this.touchButtons) {
+      this.touchButtons.destroy();
+      this.touchButtons = null;
     }
   }
 

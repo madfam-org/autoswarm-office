@@ -183,6 +183,32 @@ The `packages/skills/` package implements the AgentSkills standard.
 - Remote players' avatar textures are applied during `reconcileRemotePlayers()`
   based on their `avatarConfig` schema field.
 
+### Interactive Map Objects
+
+- `InteractableManager` (`apps/office-ui/src/game/InteractableManager.ts`) parses
+  the `interactables` Tiled object layer and creates Phaser zones with overlap
+  detection. Each object has an `interactType` property: `url`, `popup`,
+  `jitsi-zone`, or `silent-zone`.
+- When the player overlaps an interactable zone, a `[E] label` prompt appears.
+  Pressing E (buttonX) triggers the action.
+- `url` and `jitsi-zone` types emit `open_cowebsite` → `CoWebsitePanel.tsx`
+  renders a sliding iframe panel from the right (50vw max 640px, sandboxed).
+- `popup` type emits `show_popup` → `PopupOverlay.tsx` renders a centered modal.
+- `silent-zone` emits `silent_zone_enter`/`silent_zone_exit` events for
+  muting proximity audio (Feature 4).
+
+### Mobile Support
+
+- `VirtualJoystick` (`apps/office-ui/src/game/VirtualJoystick.ts`) renders at
+  bottom-left: 80px base + 32px thumb, pointer drag with 0.2 deadzone.
+  Only responds to left-half screen touches.
+- `TouchActionButtons` (`apps/office-ui/src/game/TouchActionButtons.ts`) renders
+  4 circular buttons at bottom-right: Approve (green), Deny (red), Inspect (cyan),
+  Emote (yellow).
+- `useTouchDetection` hook detects touch capability and orientation.
+- OfficeScene applies 1.5x camera zoom on touch devices for better visibility.
+- Joystick input merges with gamepad/keyboard in the update loop.
+
 ## Sprite Assets
 
 - Pre-generated pixel-art PNGs live in `apps/office-ui/public/assets/` (sprites,

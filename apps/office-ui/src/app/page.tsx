@@ -6,12 +6,15 @@ import { DashboardPanel } from '@/components/DashboardPanel';
 import { ChatPanel } from '@/components/ChatPanel';
 import { EmotePicker } from '@/components/EmotePicker';
 import { AvatarEditor } from '@/components/AvatarEditor';
+import { CoWebsitePanel } from '@/components/CoWebsitePanel';
+import { PopupOverlay } from '@/components/PopupOverlay';
 import { useApprovals } from '@/hooks/useApprovals';
 import { useColyseus } from '@/hooks/useColyseus';
 import type { PlayerEmoteEvent } from '@/hooks/useColyseus';
 import { useAvatarConfig } from '@/hooks/useAvatarConfig';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ApprovalModal } from '@autoswarm/ui';
+import type { CoWebsiteEvent, PopupEvent } from '@/game/PhaserGame';
 import type { ApprovalRequest, AvatarConfig } from '@autoswarm/shared-types';
 
 const PhaserGame = dynamic(() => import('@/game/PhaserGame'), {
@@ -62,6 +65,8 @@ export default function HomePage() {
   const [activeApproval, setActiveApproval] = useState<ApprovalRequest | null>(
     null,
   );
+  const [coWebsite, setCoWebsite] = useState<CoWebsiteEvent | null>(null);
+  const [popup, setPopup] = useState<PopupEvent | null>(null);
 
   const handleApprovalOpen = useCallback(
     (agentId: string) => {
@@ -103,6 +108,20 @@ export default function HomePage() {
     [sendEmote],
   );
 
+  const handleCoWebsite = useCallback(
+    (event: CoWebsiteEvent) => {
+      setCoWebsite(event);
+    },
+    [],
+  );
+
+  const handlePopup = useCallback(
+    (event: PopupEvent) => {
+      setPopup(event);
+    },
+    [],
+  );
+
   const handleAvatarSave = useCallback(
     (config: AvatarConfig) => {
       saveAvatarConfig(config);
@@ -137,6 +156,8 @@ export default function HomePage() {
         sessionId={sessionId}
         onPlayerMove={handlePlayerMove}
         onEmote={handleEmote}
+        onCoWebsite={handleCoWebsite}
+        onPopup={handlePopup}
       />
 
       <HUD
@@ -174,6 +195,19 @@ export default function HomePage() {
       >
         Avatar
       </button>
+
+      <CoWebsitePanel
+        url={coWebsite?.url ?? null}
+        title={coWebsite?.title ?? ''}
+        onClose={() => setCoWebsite(null)}
+      />
+
+      <PopupOverlay
+        open={!!popup}
+        title={popup?.title ?? ''}
+        content={popup?.content ?? ''}
+        onClose={() => setPopup(null)}
+      />
 
       {activeApproval && (
         <ApprovalModal

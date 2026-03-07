@@ -8,8 +8,16 @@ import {
   OUTFIT_COLORS,
   HAIR_STYLE_NAMES,
   ACCESSORY_NAMES,
+  resolveColorMap,
 } from '@autoswarm/shared-types';
+import { composeLayers } from '@/game/sprite-data/renderer';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import bodyTemplates from '@autoswarm/shared-types/src/sprite-data/body.json';
+import hairTemplates from '@autoswarm/shared-types/src/sprite-data/hair.json';
+import accessoryTemplates from '@autoswarm/shared-types/src/sprite-data/accessories.json';
+
+const HAIR_STYLE_KEYS = ['short', 'long', 'spiky', 'curly'] as const;
+const PLAYER_ACC_KEYS = ['glasses', 'crown', 'headphones', 'hat'] as const;
 
 interface AvatarEditorProps {
   open: boolean;
@@ -18,122 +26,35 @@ interface AvatarEditorProps {
   onClose: () => void;
 }
 
-/** Draw the avatar onto a 2D canvas context at 32x32 resolution */
+/** Draw the avatar onto a 2D canvas context at 32x32 resolution using shared templates */
 function drawAvatar(ctx: CanvasRenderingContext2D, config: AvatarConfig) {
   ctx.clearRect(0, 0, 32, 32);
 
-  const skinColor = SKIN_TONES[config.skinTone] ?? SKIN_TONES[0];
-  const outfitColor = OUTFIT_COLORS[config.outfitColor] ?? OUTFIT_COLORS[0];
-  const hairColor = HAIR_COLORS[config.hairColor] ?? HAIR_COLORS[0];
+  const colorMap = resolveColorMap(config);
 
-  const cx = 12;
-  const cy = 4;
+  const layers: ((string | null)[][] | null)[] = [
+    bodyTemplates.front_stand,
+  ];
 
-  // Head
-  ctx.fillStyle = skinColor;
-  ctx.fillRect(cx, cy, 8, 8);
-  drawOutline(ctx, cx, cy, 8, 8);
-
-  // Eyes
-  ctx.fillStyle = '#0f0f1a';
-  ctx.fillRect(cx + 2, cy + 3, 2, 2);
-  ctx.fillRect(cx + 5, cy + 3, 2, 2);
-
-  // Hair
-  if (config.hairStyle >= 0) {
-    ctx.fillStyle = hairColor;
-    switch (config.hairStyle) {
-      case 0:
-        ctx.fillRect(cx, cy, 8, 3);
-        break;
-      case 1:
-        ctx.fillRect(cx - 1, cy, 10, 4);
-        ctx.fillRect(cx - 1, cy + 4, 2, 6);
-        ctx.fillRect(cx + 7, cy + 4, 2, 6);
-        break;
-      case 2:
-        ctx.fillRect(cx, cy - 2, 8, 2);
-        ctx.fillRect(cx + 1, cy - 3, 2, 1);
-        ctx.fillRect(cx + 4, cy - 4, 2, 2);
-        ctx.fillRect(cx + 6, cy - 3, 2, 1);
-        break;
-      case 3:
-        ctx.fillRect(cx - 1, cy - 1, 10, 4);
-        ctx.fillRect(cx - 1, cy + 3, 2, 2);
-        ctx.fillRect(cx + 7, cy + 3, 2, 2);
-        break;
+  // Hair overlay
+  if (config.hairStyle >= 0 && config.hairStyle < HAIR_STYLE_KEYS.length) {
+    const styleKey = HAIR_STYLE_KEYS[config.hairStyle];
+    const hairStyle = hairTemplates[styleKey];
+    if (hairStyle?.front) {
+      layers.push(hairStyle.front);
     }
   }
 
-  // Body
-  ctx.fillStyle = darken(outfitColor, 0.15);
-  ctx.fillRect(cx, cy + 8, 8, 12);
-  drawOutline(ctx, cx, cy + 8, 8, 12);
-
-  // Outfit accent
-  ctx.fillStyle = outfitColor;
-  ctx.fillRect(cx + 1, cy + 9, 6, 5);
-
-  // Legs
-  const legY = cy + 20;
-  ctx.fillStyle = darken(outfitColor, 0.3);
-  ctx.fillRect(cx, legY, 4, 4);
-  drawOutline(ctx, cx, legY, 4, 4);
-  ctx.fillRect(cx + 4, legY, 4, 4);
-  drawOutline(ctx, cx + 4, legY, 4, 4);
-
-  // Accessories
-  if (config.accessory >= 0) {
-    switch (config.accessory) {
-      case 0:
-        ctx.strokeStyle = '#374151';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(cx + 1, cy + 2, 3, 3);
-        ctx.strokeRect(cx + 5, cy + 2, 3, 3);
-        ctx.beginPath();
-        ctx.moveTo(cx + 4, cy + 3);
-        ctx.lineTo(cx + 5, cy + 3);
-        ctx.stroke();
-        break;
-      case 1:
-        ctx.fillStyle = '#fbbf24';
-        ctx.fillRect(cx + 1, cy - 3, 6, 2);
-        ctx.fillRect(cx + 1, cy - 4, 2, 1);
-        ctx.fillRect(cx + 3, cy - 5, 2, 2);
-        ctx.fillRect(cx + 5, cy - 4, 2, 1);
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(cx + 3, cy - 4, 2, 1);
-        break;
-      case 2:
-        ctx.strokeStyle = '#374151';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(cx + 4, cy, 5, Math.PI, 0);
-        ctx.stroke();
-        ctx.fillStyle = '#374151';
-        ctx.fillRect(cx - 1, cy - 1, 3, 4);
-        ctx.fillRect(cx + 6, cy - 1, 3, 4);
-        break;
-      case 3:
-        ctx.fillStyle = '#4a5568';
-        ctx.fillRect(cx - 2, cy - 2, 12, 3);
-        ctx.fillRect(cx, cy - 5, 8, 4);
-        break;
+  // Accessory overlay
+  if (config.accessory >= 0 && config.accessory < PLAYER_ACC_KEYS.length) {
+    const accKey = PLAYER_ACC_KEYS[config.accessory];
+    const accGrid = accessoryTemplates.player?.[accKey];
+    if (accGrid) {
+      layers.push(accGrid);
     }
   }
-}
 
-function drawOutline(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  ctx.strokeStyle = '#0f0f1a';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-}
-
-function darken(hex: string, factor: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgb(${Math.round(r * (1 - factor))},${Math.round(g * (1 - factor))},${Math.round(b * (1 - factor))})`;
+  composeLayers(ctx, 0, 0, layers, colorMap);
 }
 
 function AvatarPreview({ config }: { config: AvatarConfig }) {

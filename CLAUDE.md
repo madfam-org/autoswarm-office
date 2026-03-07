@@ -352,6 +352,22 @@ The `packages/skills/` package implements the AgentSkills standard.
   tilesets, UI icons). These are committed to the repo.
 - Regenerate with `make generate-assets` (runs `scripts/generate-assets.js` using
   `@napi-rs/canvas`).
+- **Pixel-data template system**: All sprite art is defined as 2D arrays of
+  single-character palette tokens (body, hair, accessories) or direct hex colors
+  (emotes, tiles, icons) in `packages/shared-types/src/sprite-data/*.json`.
+  - `body.json` — 12 body templates (4 directions x 3 walk frames, 32x32)
+  - `hair.json` — 16 hair overlays (4 styles x 4 directions)
+  - `accessories.json` — 10 accessories (4 player + 6 agent role)
+  - `emotes.json` — 9 pictographic emotes (32x32)
+  - `tiles.json` — 8 tiles (32x32), `icons.json` — 4 icons (16x16)
+  - `palette.json` — token definitions, `resolve-colors.ts` — avatar config to
+    color map resolver with `darken()`/`lighten()` utilities
+- **Shared renderers** (`renderPixelData()` + `composeLayers()`):
+  - `scripts/sprite-data/renderer.js` — Node.js build-time (used by generate-assets)
+  - `apps/office-ui/src/game/sprite-data/renderer.ts` — browser/Phaser runtime
+- `AvatarCompositor.ts` and `AvatarEditor.tsx` both use the shared renderer +
+  `resolveColorMap()` to composite body + hair + accessory layers. No duplicated
+  drawing logic.
 - `BootScene.ts` loads sprite files with automatic canvas-rectangle fallback if any
   PNG fails to load. Department zone overlays are always canvas-generated. The emote
   spritesheet (`emotes.png`, 9 frames at 32x32) is also loaded here. Particle

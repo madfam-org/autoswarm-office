@@ -1,0 +1,36 @@
+{
+  "tokens": {
+    "S": "skin",
+    "O": "#0f0f1a",
+    "H": "hair",
+    "C": "outfit",
+    "D": "outfit_dark",
+    "L": "outfit_light",
+    "E": "#0f0f1a",
+    "W": "#ffffff",
+    "X": "shadow",
+    "G": "highlight",
+    "B": "belt",
+    "P": "pants",
+    "K": "skin_shadow",
+    "R": "shoe",
+    "T": null
+  },
+  "fixed": {
+    "crown_gold": "#fbbf24",
+    "crown_gem": "#ef4444",
+    "glasses_frame": "#374151",
+    "headphones_band": "#374151",
+    "hat_color": "#4a5568",
+    "clipboard_wood": "#d4a574",
+    "clipboard_paper": "#ffffff",
+    "laptop_body": "#374151",
+    "laptop_screen": "#67e8f9",
+    "magnifier_rim": "#78716c",
+    "book_cover": "#065f46",
+    "book_pages": "#ecfdf5",
+    "card_white": "#ffffff",
+    "card_text": "#9ca3af",
+    "wrench_metal": "#9ca3af"
+  }
+}

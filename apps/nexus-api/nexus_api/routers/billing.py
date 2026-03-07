@@ -17,6 +17,7 @@ from ..auth import get_current_user
 from ..config import get_settings
 from ..database import get_db
 from ..models import ComputeTokenLedger
+from ..tenant import TenantContext, get_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ async def billing_status() -> dict[str, object]:
 @router.get("/usage")
 async def compute_usage(
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> dict[str, object]:
     """Return compute token usage aggregated from the ledger.
 
@@ -66,6 +68,7 @@ async def compute_usage(
             func.count(ComputeTokenLedger.id).label("count"),
         )
         .where(ComputeTokenLedger.created_at >= today_start)
+        .where(ComputeTokenLedger.org_id == tenant.org_id)
         .group_by(ComputeTokenLedger.action)
     )
     rows = result.all()
@@ -83,6 +86,7 @@ async def compute_usage(
 @router.get("/tokens")
 async def compute_token_status(
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> dict[str, object]:
     """Return the current compute token bucket status.
 
@@ -93,7 +97,8 @@ async def compute_token_status(
 
     result = await db.execute(
         select(func.coalesce(func.sum(ComputeTokenLedger.amount), 0)).where(
-            ComputeTokenLedger.created_at >= today_start
+            ComputeTokenLedger.created_at >= today_start,
+            ComputeTokenLedger.org_id == tenant.org_id,
         )
     )
     used: int = result.scalar_one()

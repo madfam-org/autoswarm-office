@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Department
+from ..tenant import TenantContext, get_tenant
 
 router = APIRouter(tags=["departments"], dependencies=[Depends(get_current_user)])
 
@@ -134,9 +135,12 @@ async def _get_dept_or_404(dept_id: str, db: AsyncSession) -> Department:
 @router.get("/", response_model=list[DepartmentResponse])
 async def list_departments(
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> list[DepartmentResponse]:
     """List all departments."""
-    result = await db.execute(select(Department).order_by(Department.name))
+    result = await db.execute(
+        select(Department).where(Department.org_id == tenant.org_id).order_by(Department.name)
+    )
     departments = result.scalars().all()
     return [_dept_to_response(d) for d in departments]
 
@@ -145,6 +149,7 @@ async def list_departments(
 async def create_department(
     body: DepartmentCreate,
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> DepartmentResponse:
     """Create a new department."""
     # Uniqueness check on slug.
@@ -162,6 +167,7 @@ async def create_department(
         max_agents=body.max_agents,
         position_x=body.position_x,
         position_y=body.position_y,
+        org_id=tenant.org_id,
     )
     db.add(dept)
     await db.flush()

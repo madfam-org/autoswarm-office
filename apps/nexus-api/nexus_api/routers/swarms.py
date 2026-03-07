@@ -16,6 +16,7 @@ from ..auth import get_current_user
 from ..config import get_settings
 from ..database import get_db
 from ..models import Agent, ComputeTokenLedger, SwarmTask
+from ..tenant import TenantContext, get_tenant
 
 router = APIRouter(tags=["swarms"], dependencies=[Depends(get_current_user)])
 
@@ -75,6 +76,7 @@ def _task_to_response(task: SwarmTask) -> SwarmTaskResponse:
 async def dispatch_task(
     body: DispatchRequest,
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> SwarmTaskResponse:
     """Dispatch a new swarm task.
 
@@ -119,6 +121,7 @@ async def dispatch_task(
         assigned_agent_ids=assigned_agent_ids,
         payload=body.payload,
         status="queued",
+        org_id=tenant.org_id,
     )
     db.add(task)
     await db.flush()
@@ -128,6 +131,7 @@ async def dispatch_task(
         action="dispatch_task",
         amount=dispatch_cost,
         task_id=task.id,
+        org_id=tenant.org_id,
     )
     db.add(ledger_entry)
     await db.flush()
@@ -163,11 +167,13 @@ async def dispatch_task(
 @router.get("/tasks", response_model=list[SwarmTaskResponse])
 async def list_active_tasks(
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> list[SwarmTaskResponse]:
     """List tasks that are currently queued or in progress."""
     result = await db.execute(
         select(SwarmTask)
         .where(SwarmTask.status.in_(["queued", "pending", "running"]))
+        .where(SwarmTask.org_id == tenant.org_id)
         .order_by(SwarmTask.created_at.desc())
     )
     tasks = result.scalars().all()

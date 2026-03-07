@@ -16,6 +16,7 @@ from autoswarm_skills import DEFAULT_ROLE_SKILLS
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Agent
+from ..tenant import TenantContext, get_tenant
 
 router = APIRouter(tags=["agents"], dependencies=[Depends(get_current_user)])
 
@@ -106,9 +107,10 @@ async def _get_agent_or_404(agent_id: str, db: AsyncSession) -> Agent:
 async def list_agents(
     department_id: str | None = None,
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> list[AgentResponse]:
     """List all agents, optionally filtered by department."""
-    stmt = select(Agent)
+    stmt = select(Agent).where(Agent.org_id == tenant.org_id)
     if department_id is not None:
         try:
             dept_uid = uuid.UUID(department_id)
@@ -127,6 +129,7 @@ async def list_agents(
 async def create_agent(
     body: AgentCreate,
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> AgentResponse:
     """Draft a new agent."""
     agent = Agent(
@@ -135,6 +138,7 @@ async def create_agent(
         level=body.level,
         department_id=uuid.UUID(body.department_id) if body.department_id else None,
         skill_ids=body.skill_ids,
+        org_id=tenant.org_id,
     )
     db.add(agent)
     await db.flush()

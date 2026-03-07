@@ -40,12 +40,17 @@ class Department(Base):
     max_agents: Mapped[int] = mapped_column(Integer, default=5)
     position_x: Mapped[int] = mapped_column(Integer, default=0)
     position_y: Mapped[int] = mapped_column(Integer, default=0)
+    org_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="default", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
-    agents: Mapped[list[Agent]] = relationship("Agent", back_populates="department", lazy="selectin")
+    agents: Mapped[list[Agent]] = relationship(
+        "Agent", back_populates="department", lazy="selectin"
+    )
 
 
 class Agent(Base):
@@ -68,6 +73,9 @@ class Agent(Base):
     )
     skill_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     synergy_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    org_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="default", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
@@ -97,8 +105,13 @@ class ApprovalRequest(Base):
     urgency: Mapped[str] = mapped_column(String(20), nullable=False, default="medium")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    org_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="default", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    responded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     agent: Mapped[Agent] = relationship("Agent", lazy="selectin")
 
@@ -116,8 +129,13 @@ class SwarmTask(Base):
     assigned_agent_ids: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    org_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="default", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class ComputeTokenLedger(Base):
@@ -135,5 +153,8 @@ class ComputeTokenLedger(Base):
     )
     task_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("swarm_tasks.id"), nullable=True
+    )
+    org_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="default", index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

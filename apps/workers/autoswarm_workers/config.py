@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     phyne_crm_url: str | None = None
     phyne_crm_token: str | None = None
 
+    # -- Search ---------------------------------------------------------------
+    search_api_key: str | None = None
+    search_provider: str = "tavily"
+    repo_base_path: str = "/tmp/autoswarm-repos"
+
     # -- AI Inference ---------------------------------------------------------
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None

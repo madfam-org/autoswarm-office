@@ -41,6 +41,8 @@ class CodingState(BaseGraphState, TypedDict, total=False):
     test_results: dict[str, Any] | None
     branch_name: str | None
     iteration: int
+    worktree_path: str | None
+    repo_path: str | None
 
 
 # -- Node functions -----------------------------------------------------------
@@ -96,12 +98,29 @@ def plan(state: CodingState) -> CodingState:
         additional_kwargs={"plan": plan_output, "action_category": "file_read"},
     )
 
+    # Create a worktree for isolated work when a repo_path is available.
+    worktree_path = state.get("worktree_path")
+    repo_path = state.get("repo_path")
+    if repo_path and not worktree_path:
+        try:
+            from ..tools.git_tool import GitTool
+
+            git_tool = GitTool()
+            task_id = state.get("task_id", "unknown")
+            worktree_path = _run_async(
+                git_tool.create_worktree(repo_path, f"task-{task_id}")
+            )
+            logger.info("Created worktree at %s", worktree_path)
+        except Exception:
+            logger.warning("Failed to create worktree; working in-place", exc_info=True)
+
     return {
         **state,
         "messages": [*messages, plan_message],
         "status": "planning",
         "code_changes": [],
         "iteration": state.get("iteration", 0),
+        "worktree_path": worktree_path,
     }
 
 
@@ -110,9 +129,15 @@ def implement(state: CodingState) -> CodingState:
 
     Calls the inference router with the current plan step context.
     Falls back to a placeholder change record when no LLM is available.
+    Commands execute inside the worktree when available.
     """
     messages = state.get("messages", [])
     iteration = state.get("iteration", 0) + 1
+
+    # Constrain BashTool to the worktree directory if available.
+    worktree_path = state.get("worktree_path")
+    if worktree_path:
+        _bash_tool.allowed_cwd = worktree_path
 
     try:
         from ..inference import call_llm, get_model_router
@@ -182,10 +207,15 @@ def test(state: CodingState) -> CodingState:
     iteration = state.get("iteration", 0)
 
     # -- Attempt real test execution via BashTool -----------------------------
+    worktree_path = state.get("worktree_path")
+    test_cmd = "python -m pytest --tb=short -q"
+    if worktree_path:
+        test_cmd = f"cd {worktree_path} && {test_cmd}"
+
     try:
         loop = asyncio.get_event_loop()
         bash_result = loop.run_until_complete(
-            _bash_tool.execute("python -m pytest --tb=short -q")
+            _bash_tool.execute(test_cmd)
         )
 
         if bash_result.success:
@@ -312,18 +342,41 @@ def push_gate(state: CodingState) -> CodingState:
     decision = interrupt(approval_context)
 
     # Execution resumes here after the human responds.
+    worktree_path = state.get("worktree_path")
+
     if decision.get("approved", False):
         push_message = AIMessage(
             content=f"Push approved. Pushing to branch '{branch}'.",
             additional_kwargs={"action_category": "git_push"},
         )
+        # Cleanup worktree after push.
+        if worktree_path:
+            try:
+                from ..tools.git_tool import GitTool
+
+                git_tool = GitTool()
+                _run_async(git_tool.cleanup_worktree(worktree_path))
+                logger.info("Cleaned up worktree at %s", worktree_path)
+            except Exception:
+                logger.warning("Failed to cleanup worktree", exc_info=True)
         return {
             **state,
             "messages": [*state.get("messages", []), push_message],
             "status": "pushed",
+            "worktree_path": None,
         }
 
-    # Denied -- record feedback and stop.
+    # Denied -- cleanup worktree and record feedback.
+    if worktree_path:
+        try:
+            from ..tools.git_tool import GitTool
+
+            git_tool = GitTool()
+            _run_async(git_tool.cleanup_worktree(worktree_path))
+            logger.info("Cleaned up worktree at %s (push denied)", worktree_path)
+        except Exception:
+            logger.warning("Failed to cleanup worktree", exc_info=True)
+
     feedback = decision.get("feedback", "No feedback provided")
     deny_message = AIMessage(
         content=f"Push denied. Feedback: {feedback}",
@@ -333,6 +386,7 @@ def push_gate(state: CodingState) -> CodingState:
         **state,
         "messages": [*state.get("messages", []), deny_message],
         "status": "denied",
+        "worktree_path": None,
     }
 
 

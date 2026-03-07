@@ -171,6 +171,8 @@ _TOOL_REGISTRY: dict[str, Any] = {
     "terminal": _bash_tool,
     "git_push": _git_tool,
     "git_commit": _git_tool,
+    "create_worktree": _git_tool,
+    "cleanup_worktree": _git_tool,
 }
 
 

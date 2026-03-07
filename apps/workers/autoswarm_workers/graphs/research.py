@@ -82,35 +82,52 @@ def formulate_query(state: ResearchState) -> ResearchState:
 def search(state: ResearchState) -> ResearchState:
     """Execute the search strategy and collect source material.
 
-    This is a read-only operation -- no interrupts required.  In
-    production this node calls external search APIs (web, internal
-    knowledge base, CRM) and collects results.
-
-    # Production integration:
-    # In production this dispatches to real search providers (web APIs,
-    # internal knowledge base, CRM search).  The LLM can also be used
-    # to re-rank or filter results via call_llm() with a relevance
-    # scoring prompt.
+    Uses the WebSearchProvider when ``SEARCH_API_KEY`` is configured,
+    falling back to dummy sources otherwise.
     """
     messages = state.get("messages", [])
     query = state.get("query", "")
 
-    # Fallback: simulated search results when no search providers are
-    # configured.  Real implementation replaces this with API calls.
-    sources: list[dict[str, Any]] = [
-        {
-            "title": f"Source for: {query[:80]}",
-            "url": "https://example.com/result-1",
-            "snippet": "Relevant excerpt from the source material...",
-            "relevance_score": 0.92,
-        },
-        {
-            "title": f"Secondary source for: {query[:80]}",
-            "url": "https://example.com/result-2",
-            "snippet": "Additional context from a secondary source...",
-            "relevance_score": 0.85,
-        },
-    ]
+    sources: list[dict[str, Any]] = []
+
+    # Try real web search via Tavily.
+    try:
+        import os
+
+        api_key = os.environ.get("SEARCH_API_KEY", "")
+        if api_key:
+            from ..search.web import WebSearchProvider
+
+            provider = WebSearchProvider(api_key=api_key)
+            results = _run_async(provider.search(query))
+            sources = [
+                {
+                    "title": r.title,
+                    "url": r.url,
+                    "snippet": r.snippet,
+                    "relevance_score": 0.9,
+                }
+                for r in results
+            ]
+    except Exception:
+        logger.debug("Web search failed; using dummy sources")
+
+    # Fallback to dummy sources when no real results.
+    if not sources:
+        sources = [
+            {
+                "title": f"Source for: {query[:80]}",
+                "url": "https://example.com/result-1",
+                "snippet": "Relevant excerpt from the source material...",
+                "relevance_score": 0.92,
+            },
+            {
+                "title": f"Secondary source for: {query[:80]}",
+                "url": "https://example.com/result-2",
+                "snippet": "Additional context from a secondary source...",
+                "relevance_score": 0.85,
+            },
+        ]
 
     search_message = AIMessage(
         content=f"Search complete: {len(sources)} sources found.",

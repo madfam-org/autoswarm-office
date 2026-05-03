@@ -134,6 +134,30 @@ class Settings(BaseSettings):
     csp_extra_sources: str = ""
     log_format: str = "json"
 
+    # -- WebSocket message-flood guards ---------------------------------------
+    # Per-client inbound message limits on long-lived WS connections.
+    # /events/ws and /approvals/ws share the same defaults (the OpsFeed
+    # and approval queue UIs have similar interaction patterns) but are
+    # split so they can be tuned independently.
+    events_ws_rate_limit: int = 30
+    events_ws_rate_window_seconds: float = 60.0
+    approvals_ws_rate_limit: int = 30
+    approvals_ws_rate_window_seconds: float = 60.0
+
+    # -- Health endpoint dashboard sizing -------------------------------------
+    # How many recent DLQ entries `/api/v1/health/dlq-stats` returns.
+    # Bumped here when an ops dashboard wants a deeper history without a
+    # code change.
+    dlq_recent_limit: int = 10
+
+    # HMAC signing secret for the consent_ledger row digests. Required in
+    # production — the literal sentinel ``dev-default-CHANGE-ME`` is
+    # rejected by ``_validate_config`` outside the development environment.
+    # Old rows signed under a previous secret will fail
+    # ``verify_signature``, which is the desired auditable behaviour at
+    # the migration boundary.
+    consent_ledger_signing_secret: str = "dev-default-CHANGE-ME"
+
     # -- Revenue-loop probe (A.7) ---------------------------------------------
     # Bearer token the external probe presents to hit /api/v1/probe/*.
     # Empty default means the endpoints return 503 (feature not configured),
@@ -172,6 +196,26 @@ class Settings(BaseSettings):
             raise ValueError(
                 "COLYSEUS_SECRET must be set in production (cannot use default). "
                 "Generate with: openssl rand -hex 32"
+            )
+
+        if (
+            self.consent_ledger_signing_secret == "dev-default-CHANGE-ME"
+            and self.environment == "production"
+        ):
+            raise ValueError(
+                "CONSENT_LEDGER_SIGNING_SECRET must be set in production "
+                "(cannot use the dev-default sentinel). The consent ledger "
+                "is a legal-compliance audit trail (LFPDPPP, GDPR, CASL, "
+                "SB-1001) and its row digests must be HMAC-signed with a "
+                "server-only secret. Generate with: openssl rand -hex 32"
+            )
+
+        if self.worker_api_token == "dev-bypass" and self.environment == "production":
+            raise ValueError(
+                "WORKER_API_TOKEN=='dev-bypass' is not allowed in production. "
+                "Set a strong shared secret (openssl rand -hex 32) — the "
+                "worker→API auth path uses constant-time comparison against "
+                "this value, and the dev sentinel is publicly known."
             )
 
         return self

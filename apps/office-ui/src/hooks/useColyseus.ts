@@ -7,6 +7,7 @@ import type {
   ReviewStation,
   Player,
   ChatMessage,
+  Agent,
 } from '@autoswarm/shared-types';
 import { MAX_RECONNECT_DELAY_MS } from '@/lib/constants';
 
@@ -218,8 +219,8 @@ export function useColyseus(options?: string | ColyseusOptions): ColyseusState {
 
         departments.forEach((dept: Department) => {
           if (dept.agents) {
-            const agents = parseArraySchema(dept.agents);
-            agents.forEach((agent: { status?: string }) => {
+            const agents = parseArraySchema<Agent>(dept.agents);
+            agents.forEach((agent) => {
               if (agent.status === 'working') activeCount++;
               if (agent.status === 'waiting_approval') pendingCount++;
             });

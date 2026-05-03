@@ -1,28 +1,214 @@
-# Selva Office (AutoSwarm) — Product Roadmap
+# Selva Office — Product Roadmap
 
 > **Selva** is the autonomous virtual office product by **Innovaciones MADFAM SAS de CV**.
 > It runs at `selva.town` and integrates with the full MADFAM ecosystem.
+> _The legacy "AutoSwarm Office" name is retained only inside historical migration
+> identifiers and a few infra namespaces. The product, repo, and brand are Selva._
 
 ---
 
-## Current Status: v2.0.0 — Enterprise Mexican Market MVP ✅
+## Current Status: v2.2.0 — Outbound Voice Mode + Consent Ledger ✅
 
-| Metric | Value |
-|--------|-------|
-| API routes | 139 |
-| Built-in tools | 74 |
-| Workflow graphs | 12 (coding, research, crm, deployment, puppeteer, meeting, project, billing, accounting, sales, intelligence, custom) |
-| Ecosystem adapters | 6 (Karafiel, Dhanam, PhyneCRM, Tezca, Crawler, A2A) |
-| Skills (en + es-MX) | 17 |
-| Alembic migrations | 16 (0000–0015) |
-| TS tests | 817+ passing |
-| Enterprise tests | 308+ |
-| Python lint | 0 errors |
-| Messaging gateways | 18 channels |
-| Solarpunk visual phases | 4/4 complete |
-| PWA installable | Yes |
+> Supersedes the v2.0.0 "Enterprise Mexican Market MVP" milestone. v2.1.1 added
+> autonomous-pipeline security hardening; v2.2.0 added the three-mode voice/consent
+> system + append-only consent ledger.
+
+| Metric | Value | Source |
+|--------|-------|--------|
+| Built-in tools | 240 (`selva_tools/builtins/`) | `grep -rE "^class [A-Z][A-Za-z]+Tool" packages/tools/src/selva_tools/builtins/` |
+| Workflow graphs | 12 (accounting, billing, coding, crm, deployment, intelligence, meeting, operations, project, puppeteer, research, sales) | `apps/workers/selva_workers/graphs/*.py` |
+| Ecosystem adapters | 6 (Karafiel, Dhanam, PhyneCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
+| Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
+| Alembic migrations | 25 (0000–0018 + Wave 2 chain) | `apps/nexus-api/alembic/versions/*.py` |
+| Test files | 794 (pytest + vitest + playwright) | `find apps packages tests -name "test_*.py" -o -name "*.test.ts" -o -name "*.spec.ts"` |
+| Python lint | 0 errors | `uv run ruff check .` |
+| Messaging gateways | 18 channels | `packages/tools/src/selva_tools/gateways/` |
+| Solarpunk visual phases | 4/4 complete | — |
+| PWA installable | Yes | — |
+| Tool/skill audience boundary | Platform vs Tenant (shadow mode) | `packages/permissions/src/selva_permissions/audience.py` |
+| Outbound voice modes | 3 (`user_direct`, `dyad_selva_plus_user`, `agent_identified`) + ledger | `packages/tools/src/selva_tools/builtins/email.py` |
 
 ---
+
+## Roadmap to Production-Truthful (post v2.2.0)
+
+After the v2.2.x security + UX remediation pass landed (see commits
+on chore/full-remediation; merged to main as one combined PR), the
+platform is roughly 45-55% of "fully production stable + data-truthful."
+The remediation closed the most weaponizable holes (worker token
+cross-tenant bypass, webhook fail-open, ledger forgery, email From:
+spoofing, artifact path traversal). The remaining 45% is harder:
+schema migration discipline, cross-service alignment, operational
+maturity, and real load + chaos testing.
+
+This roadmap sequences the next 6-10 weeks of work to close that gap.
+
+### Phase 1 — high-leverage, low-design (1-2 weeks)
+
+These are mechanical fixes blocked only by execution time. Each is
+foundationally one-line dangerous if left undone.
+
+- **Postgres RLS rollout** — migration to enable RLS on every tenant
+  table; policies that filter by `current_setting('app.current_org_id')`;
+  `get_db` runs `SET LOCAL app.current_org_id` from the auth context.
+  Closes the entire class of "missed `.where(org_id == tenant.org_id)`"
+  bugs. Today the system relies on every router author remembering it;
+  the events router pre-remediation was a perfect example of why that's
+  brittle.
+- **12 remaining webhook handlers hardened** — same fail-closed
+  treatment as Discord/WhatsApp/generic in commit e71337c. Telegram,
+  Slack, Mattermost, DingTalk, Feishu, WeCom, Weixin, BlueBubbles,
+  HomeAssistant, Matrix, Twilio SMS, Email-whitelist all share the same
+  `if settings.<secret>: <check>` shape that fails open when secret
+  unset.
+- **Gateway → Celery SSRF gap** — `routers/gateway.py:_validate_webhook_url`
+  resolves the URL at admission, but `run_acp_workflow_task.delay(target_url)`
+  hands the URL to a Celery worker that re-resolves DNS. Pass resolved
+  IP into the task signature; route the actual fetch through
+  `_build_safe_request_kwargs` from `selva_tools.builtins.http_tools`.
+- **`@colyseus/core` 0.17 migration** — `OfficeRoom.ts` is written for
+  0.15.x; the dependency is pinned at 0.17.42. `Room<TState>` is now
+  `Room<TOptions>` and `onLeave(client, consented: boolean)` is now
+  `(client, code?: number)`. Library API is well-documented; mechanical.
+- **Office-ui WebSocket clients add `?token=`** — events + approvals WS
+  endpoints now require `?token=<jwt>` (and `?org_id=` for worker-token
+  callers) per the new auth in commit f35f1b1. Frontend connect URLs
+  need updating before the WS auth lands in prod or the office-ui
+  feed will be silent.
+- **Stripe webhook handler** — even if it just verifies signature and
+  returns 200, scaffold the contract with `stripe.Webhook.construct_event`
+  (uses constant-time signing internally) and ≤300s timestamp tolerance.
+  Add to test coverage now even if endpoint is stubbed.
+- **Production secrets provisioned** — `WORKER_API_TOKEN`,
+  `CONSENT_LEDGER_SIGNING_SECRET`, `COLYSEUS_SERVICE_TOKEN` all need
+  strong values in staging + prod. Settings validators now refuse
+  weak / dev defaults in production environment.
+- **OTel exporter actually wired** — `OTEL_EXPORTER_OTLP_ENDPOINT` is
+  read but no-op when unset. Pick a backend (Honeycomb / Tempo /
+  Datadog), wire the env var, get traces flowing for at least one
+  request path end-to-end.
+- **Sentry DSN per service** — `init_sentry()` exists but DSNs are
+  missing from `.env.example`; verify it's actually catching errors.
+  Add source-map upload for office-ui in CI.
+
+### Phase 2 — mid-leverage, more design (next month)
+
+- **Tenant onboarding UI for outbound identity** — `outbound_user_email`,
+  `outbound_user_name`, `outbound_agent_slug` as first-class
+  `tenant_configs` columns + Alembic migration + onboarding step + UI.
+  Until this exists, the email lockdown (commit f35f1b1) reads from
+  `tenant_configs.brand_name` / `razon_social` / `tenant_identities`
+  joined on `canonical_id` as best-effort fallbacks; tenants who haven't
+  manually populated `tenant_identities` get email refusals with
+  "Tenant outbound identity not configured."
+- **Schema codegen TS↔Python** — 29 Python ORM models, ~7 TypeScript
+  shared-types interfaces. Frontend hooks call uncovered endpoints with
+  `Record<string, unknown>` ad-hoc shapes. Pipeline: `datamodel-code-generator`
+  generates JSON Schema → `json-schema-to-typescript` emits TS. CI fails
+  on drift.
+- **AUDIENCE_FILTER_ENABLED=true** — currently shadow-mode (default
+  `false`). After 24-48h observation in production confirms the
+  shadow-block log is empty, flip the gate so platform-only tools
+  actually refuse tenant invocations.
+- **Mypy baseline elimination** — 144 errors in nexus-api, ~20 in
+  workers. Ratchet via CI: no new errors allowed; fix 10/week. Most are
+  `dict[str, Any]` overuse and missing return types in routers.
+- **Real load test** — target 100 concurrent SwarmTasks; measure DLQ
+  depth, worker pool saturation, Redis Stream lag, LLM provider rate
+  limits hit. Calibrate `MAX_CONCURRENT_TASKS`, `dispatch_rate_limit`,
+  `TIER_DAILY_TASK_LIMIT` from data instead of guesswork.
+- **Backup/restore drill** — full restore from backup in staging;
+  measure RTO; document RPO; verify off-site/cross-region storage.
+  `Makefile` has `db-backup` / `db-restore` targets but no evidence
+  of regular testing.
+- **SLO definitions + dashboards** — target latency p50/p95/p99 per
+  endpoint class; error budget; SLI dashboard. Today there are no SLOs
+  documented anywhere.
+- **Alert wiring** — DLQ depth, error rate, consent-ledger-grants
+  invariant violation, JWKS fetch failures, LLM provider failures,
+  Redis pool saturation. Page on-call for criticals.
+- **Test coverage to 75%** on critical paths (auth, swarms.dispatch,
+  email tools, voice-mode gate, consent ledger, worker org-scoping).
+  Security regression tests landed in v2.2.x; broader coverage still
+  needed.
+
+### Phase 3 — architectural (next quarter)
+
+- **Audit trail completeness** — Postgres CDC (Debezium → Kafka → audit
+  topic) or systematic `emit_event` review on every state change. Today
+  many writes (tenant_configs updates, marketplace publish/install,
+  agent CRUD) don't emit a TaskEvent.
+- **Idempotency tokens** — every mutation endpoint accepts an
+  idempotency key; replay-safe. Today retry semantics depend on each
+  caller getting it right.
+- **Per-tenant data residency** — Mexican LFPDPPP enforcement now
+  active; SAT submissions need data in-country. Likely needs
+  tenant-scoped DB per region OR partitioning by tenant region.
+- **Multi-region failover** — read replicas; automatic failover; tested.
+- **Compliance audit prep** — SOC 2 Type II is a 6-12 month engagement;
+  ISO 27001 similar; LFPDPPP enforcement already active per the v2.2.0
+  voice-mode/consent-ledger work.
+- **Pricing contract codified** — Tulana decision doc → JSON →
+  Dhanam catalog API → bundle page UI all read from one place; CI
+  fails if they drift. Current state: CLAUDE.md cites a non-existent
+  `scripts/seed-mvp.py` for pricing; bundle prices live in
+  `apps/office-ui/src/app/bundles/page.tsx`; Dhanam tier-fetch path
+  is hardcoded fallback dict in `nexus_api/billing_tiers.py`.
+- **Real PMF measurement loop** — RFC 0013 widget exists; needs adoption
+  tracking, score stability, composite informing tier sunsetting
+  decisions automatically.
+
+### Cross-service unknowns (need direct audit of sibling repos)
+
+These cannot be assessed from inside selva-office:
+
+- **Janua** — JWT signing key rotation, refresh token revocation, enterprise
+  SSO `org_id` claim mapping production state
+- **Dhanam** — actual tier-fetch API; whether it's the source of truth
+  selva-office expects, or also fallback-driven
+- **Enclii** — rollback success rate, staged rollout discipline, RFC
+  0017 digest-pinning enforcement post-deploy
+- **PhyneCRM** — own tenant isolation enforcement; whether activities
+  from any worker are accepted or properly scoped
+- **Karafiel** — Mexican SAT compliance (CFDI, RFC validation) production
+  hardening
+- **Tulana** — PMF measurement loop ownership and integration
+
+### Honest scorecard (post v2.2.x remediation)
+
+| Dimension | Today | Target |
+|---|---|---|
+| App-layer tenant scoping | 90% | 95% |
+| Postgres-layer isolation (RLS) | 5% | 90% |
+| Outbound governance | 90% | 95% |
+| Webhook signature verification | 30% | 95% |
+| Consent ledger integrity | 90% | 95% |
+| Audit trail breadth | 60% | 90% |
+| Type safety (Python) | 60% | 90% |
+| Type safety (TS) | 80% | 95% |
+| Concurrency under load | 50% | 85% |
+| Observability — logs | 85% | 95% |
+| Observability — traces | 10% | 80% |
+| Observability — alerts | 5% | 90% |
+| SLO/SLI definitions | 0% | 80% |
+| Backups + DR | unknown | 90% |
+| Deployment pipeline | 70% | 90% |
+| Pricing source-of-truth | 30% | 85% |
+| Schema coherence cross-language | 40% | 85% |
+| Frontend code health | 60% | 85% |
+| A11y (WCAG 2.1 AA) | 65% | 90% |
+
+Weighted overall: roughly 45-55% of "fully production stable +
+data-truthful." Was 25-30% before the v2.2.x remediation.
+
+---
+
+## Historical (pre-v2.2.x)
+
+> Sections below capture prior milestones, sprint history, ecosystem
+> integration map, and the older Factory-as-a-Product / Enterprise
+> Autonomy roadmaps. Forward-looking sequencing lives in the
+> "Roadmap to Production-Truthful" section above.
 
 ## Completed Milestones
 
@@ -274,9 +460,9 @@ Selva seats at $149-499/mo as the autonomous AI workforce:
 ```
 MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 │
-├── 🏢 Selva Office (autoswarm-office/) — THIS PRODUCT
+├── 🏢 Selva Office (selva-office/) — THIS PRODUCT
 │   ├── selva.town — Virtual office + AI agent swarm
-│   ├── 74 built-in tools, 12 graphs, 6 adapters, 18 gateways, A2A protocol
+│   ├── 240 built-in tools, 12 graphs, 6 adapters, 18 gateways, A2A protocol
 │   └── Solarpunk UI, PWA, LiveKit SFU, es-MX locale, multi-tenant
 │
 ├── 🔐 Janua (janua/) — Authentication & SSO
@@ -423,7 +609,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 - `[x]` Ecosystem inference centralized (Fortuna, Yantra4D, PhyneCRM → Selva proxy)
 - `[x]` Service resource registry (8 external accounts tracked)
 - `[x]` Email delivery verified (Resend Pro, madfam.io domain)
-- `[x]` 6 autoswarm pods healthy (nexus-api, workers, gateway, colyseus, office-ui, admin)
+- `[x]` 6 selva pods healthy (nexus-api, workers, gateway, colyseus, office-ui, admin)
 - `[x]` ArgoCD synced to latest commit
 - `[x]` Dev-bypass rejected in production auth
 - `[ ]` Anthropic API credit balance > $0

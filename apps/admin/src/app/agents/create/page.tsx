@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AgentRole, Department } from '@autoswarm/shared-types';
 import { Button } from '@autoswarm/ui';
-
-const NEXUS_API_URL =
-  process.env.NEXT_PUBLIC_NEXUS_API_URL ?? 'http://localhost:4300';
+import { apiFetch } from '@/lib/api';
 
 const AGENT_ROLES: AgentRole[] = [
   'planner',
@@ -27,7 +25,7 @@ export default function CreateAgentPage() {
 
   const fetchDepartments = useCallback(async () => {
     try {
-      const res = await fetch(`${NEXUS_API_URL}/api/v1/departments`);
+      const res = await apiFetch('/api/v1/departments');
       if (res.ok) {
         setDepartments(await res.json());
       }
@@ -58,9 +56,8 @@ export default function CreateAgentPage() {
         body.departmentId = departmentId;
       }
 
-      const res = await fetch(`${NEXUS_API_URL}/api/v1/agents`, {
+      const res = await apiFetch('/api/v1/agents', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 

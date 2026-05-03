@@ -267,10 +267,14 @@ async def publish_skill(
     The ``yaml_content`` field must contain valid SKILL.md content with
     YAML frontmatter delimited by ``---`` fences.
     """
-    # Validate YAML content is parseable
+    # Validate YAML content is parseable.
+    # NOTE: ``parse_skill_md_string`` can raise ``yaml.YAMLError`` (not a
+    # ``ValueError`` subclass) on malformed YAML, and ``pydantic.ValidationError``
+    # (which IS a ``ValueError`` subclass) on schema mismatch. ``Exception`` is
+    # the smallest common ancestor that catches both.
     try:
         parse_skill_md_string(body.yaml_content)
-    except (ValueError, Exception) as exc:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid YAML skill content: {exc}",
@@ -385,10 +389,13 @@ async def install_skill(
             status_code=status.HTTP_404_NOT_FOUND, detail="Marketplace entry not found"
         )
 
-    # Parse the YAML to extract the skill name for the directory
+    # Parse the YAML to extract the skill name for the directory.
+    # NOTE: see publish() for the rationale on the broad ``except Exception``
+    # — ``parse_skill_md_string`` raises ``yaml.YAMLError`` (not a
+    # ``ValueError`` subclass) plus ``pydantic.ValidationError``.
     try:
         meta, _ = parse_skill_md_string(entry.yaml_content)
-    except (ValueError, Exception) as exc:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Stored YAML content is invalid: {exc}",

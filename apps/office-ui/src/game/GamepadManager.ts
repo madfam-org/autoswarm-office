@@ -95,14 +95,14 @@ export class GamepadManager {
     // Gamepad axes
     let leftStickX = gp ? this.applyDeadzone(gp.axes[0] ?? 0) : 0;
     let leftStickY = gp ? this.applyDeadzone(gp.axes[1] ?? 0) : 0;
-    let rightStickX = gp ? this.applyDeadzone(gp.axes[2] ?? 0) : 0;
-    let rightStickY = gp ? this.applyDeadzone(gp.axes[3] ?? 0) : 0;
+    const rightStickX = gp ? this.applyDeadzone(gp.axes[2] ?? 0) : 0;
+    const rightStickY = gp ? this.applyDeadzone(gp.axes[3] ?? 0) : 0;
 
     // Gamepad buttons (pressed this frame only for actions)
     let buttonA = gp ? gp.buttons[0]?.pressed ?? false : false;
     let buttonB = gp ? gp.buttons[1]?.pressed ?? false : false;
     let buttonX = gp ? gp.buttons[2]?.pressed ?? false : false;
-    let buttonY = gp ? gp.buttons[3]?.pressed ?? false : false;
+    const buttonY = gp ? gp.buttons[3]?.pressed ?? false : false;
 
     // Keyboard fallback: WASD for left stick (held = continuous movement)
     if (this.keysDown.has('KeyW') || this.keysDown.has('ArrowUp')) {

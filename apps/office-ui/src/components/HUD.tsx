@@ -1,7 +1,15 @@
 'use client';
 
-import { useRef, useEffect, type FC } from 'react';
+import { memo, useRef, useEffect, type FC } from 'react';
 import type { Department } from '@autoswarm/shared-types';
+
+/**
+ * Player position changes faster than 4px (one minimap pixel at default scale)
+ * are visually indistinguishable on the minimap. Skipping re-renders below this
+ * threshold reduces canvas redraws from ~15Hz (player-move event rate) to
+ * roughly the rate at which the player visibly moves across the minimap.
+ */
+const MINIMAP_POSITION_REDRAW_THRESHOLD_PX = 4;
 
 interface HUDProps {
   activeAgentCount: number;
@@ -48,7 +56,12 @@ const STATUS_COLORS: Record<string, string> = {
   error: '#ef4444',
 };
 
-function Minimap({ departments, playerPosition }: { departments: Department[]; playerPosition: { x: number; y: number } | null }) {
+interface MinimapProps {
+  departments: Department[];
+  playerPosition: { x: number; y: number } | null;
+}
+
+function MinimapInner({ departments, playerPosition }: MinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -135,6 +148,28 @@ function Minimap({ departments, playerPosition }: { departments: Department[]; p
     />
   );
 }
+
+/**
+ * Memoised Minimap. The canvas redraws on every prop change, so we want to
+ * skip re-renders when the change is visually imperceptible. Departments are
+ * compared by reference (the parent re-creates the array on state changes,
+ * but it's stable across position updates). Player position changes smaller
+ * than {@link MINIMAP_POSITION_REDRAW_THRESHOLD_PX} are ignored — at the
+ * default minimap scale (160x90 over 1600x896) one minimap pixel is roughly
+ * 10 world px on the X axis and 10 world px on the Y axis, so 4px is well
+ * under one pixel of visible movement and saves >70% of redraws.
+ */
+const Minimap = memo(MinimapInner, (prev, next) => {
+  if (prev.departments !== next.departments) return false;
+  const a = prev.playerPosition;
+  const b = next.playerPosition;
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    Math.abs(a.x - b.x) < MINIMAP_POSITION_REDRAW_THRESHOLD_PX &&
+    Math.abs(a.y - b.y) < MINIMAP_POSITION_REDRAW_THRESHOLD_PX
+  );
+});
 
 export const HUD: FC<HUDProps> = ({
   activeAgentCount,
@@ -257,6 +292,8 @@ export const HUD: FC<HUDProps> = ({
             <span
               className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-red-600 pixel-text text-[7px] text-white shadow-[0_0_0_2px_#000] animate-pulse animate-pulse-border"
               aria-label={`${pendingApprovalCount} pending approvals`}
+              aria-live="polite"
+              role="status"
             >
               {pendingApprovalCount > 9 ? '9+' : pendingApprovalCount}
             </span>
@@ -264,22 +301,40 @@ export const HUD: FC<HUDProps> = ({
         </button>
 
         {/* Connection indicators */}
-        <div className="hidden sm:block retro-panel px-3 py-2 font-mono text-[8px]">
-          <div className="flex items-center gap-2">
+        <div
+          className="hidden sm:block retro-panel px-3 py-2 font-mono text-[8px]"
+          role="group"
+          aria-label="Connection status"
+        >
+          <div
+            className="flex items-center gap-2"
+            title={`Room: ${colyseusConnected ? 'connected' : 'disconnected'}`}
+          >
             <span
               className={`inline-block h-2 w-2 rounded-full ${
                 colyseusConnected ? 'bg-emerald-400' : 'bg-red-500 animate-pulse'
               }`}
+              aria-hidden="true"
             />
             <span className="text-slate-400">Room</span>
+            <span className="sr-only">
+              {colyseusConnected ? 'connected' : 'disconnected'}
+            </span>
           </div>
-          <div className="mt-1 flex items-center gap-2">
+          <div
+            className="mt-1 flex items-center gap-2"
+            title={`API: ${approvalsConnected ? 'connected' : 'disconnected'}`}
+          >
             <span
               className={`inline-block h-2 w-2 rounded-full ${
                 approvalsConnected ? 'bg-emerald-400' : 'bg-red-500 animate-pulse'
               }`}
+              aria-hidden="true"
             />
             <span className="text-slate-400">API</span>
+            <span className="sr-only">
+              {approvalsConnected ? 'connected' : 'disconnected'}
+            </span>
           </div>
         </div>
 

@@ -1,8 +1,10 @@
 'use client';
 
 import { type FC } from 'react';
+import { CloseButton } from '@autoswarm/ui';
 import { useMetrics, type MetricsPeriod } from '@/hooks/useMetrics';
 import type { TrendPoint } from '@autoswarm/shared-types';
+import { formatHM } from '@/lib/format-time';
 
 interface MetricsDashboardProps {
   open: boolean;
@@ -102,13 +104,7 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({
                 </button>
               ))}
             </div>
-            <button
-              onClick={onClose}
-              className="font-mono text-[10px] text-slate-500 hover:text-white"
-              aria-label="Close metrics dashboard"
-            >
-              [X]
-            </button>
+            <CloseButton onClick={onClose} label="Close metrics dashboard" shortcut="ESC" />
           </div>
         </div>
 
@@ -252,12 +248,7 @@ export const MetricsDashboard: FC<MetricsDashboardProps> = ({
                       <div className="flex items-center justify-between">
                         <span className="text-red-400">{err.event_type}</span>
                         <span className="text-slate-600">
-                          {err.created_at
-                            ? new Date(err.created_at).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : ''}
+                          {err.created_at ? formatHM(err.created_at) : ''}
                         </span>
                       </div>
                       {err.error_message && (

@@ -22,13 +22,28 @@ import {
   EMOTE_DURATION_MS,
   ANIM_FADE_MS,
   DUST_MOTE_INTERVAL_MS,
+  DUST_EMIT_INTERVAL_MS,
   STATUS_PARTICLE_INTERVAL_MS,
   SPAWN_OFFSET,
   SPAWN_GRID_SPACING,
   HALO_RADIUS,
   HALO_Y_OFFSET,
   EMOTE_Y_OFFSET,
+  DEFAULT_SPAWN,
+  LEGACY_FLOOR_EXTENT,
+  SKYLIGHT_POSITIONS,
+  ZONE_PARTICLE_REGIONS,
 } from '../constants';
+import {
+  TILE_MONITOR_ON,
+  TILE_PLANT_SMALL,
+  TILE_PLANT_LARGE,
+  TILE_COFFEE_MACHINE,
+  TILE_SERVER_RACK,
+  TILE_WATER_COOLER,
+  TILE_CANDLE,
+  TILE_GROW_LIGHT,
+} from '../tile-ids';
 import { EVENT_CHAT_FOCUS, EVENT_EMOTE_PICKER_FOCUS } from '../../lib/constants';
 import type {
   OfficeState,
@@ -112,7 +127,7 @@ const AGENT_ROLES = ['planner', 'coder', 'reviewer', 'researcher', 'crm', 'suppo
 
 export class OfficeScene extends Phaser.Scene {
   private gamepadManager!: GamepadManager;
-  private tactician!: Phaser.GameObjects.Sprite;
+  private tactician: Phaser.GameObjects.Sprite | undefined;
   private tacticianLabel!: Phaser.GameObjects.Text;
   private agentSprites: Map<string, AgentSprite> = new Map();
   private remotePlayers: Map<string, RemotePlayerSprite> = new Map();
@@ -146,6 +161,7 @@ export class OfficeScene extends Phaser.Scene {
   private worldWidth: number = 1600;
   private worldHeight: number = 896;
   private dustEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private lastDustEmitTime: number = 0;
   private ambientEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private agentBehavior: AgentBehavior = new AgentBehavior();
   private clickPath: Array<{ x: number; y: number }> = [];
@@ -221,7 +237,7 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     // Set up interactable manager after tactician is created
-    this.interactableManager = new InteractableManager(this, this.tactician);
+    this.interactableManager = new InteractableManager(this, this.tactician!);
     if (this._pendingTilemap) {
       this.interactableManager.loadFromTilemap(this._pendingTilemap);
       this.loadMapScripts(this._pendingTilemap);
@@ -327,15 +343,7 @@ export class OfficeScene extends Phaser.Scene {
 
     // === Skylight light pools (warm golden pools on the floor) ===
     if (ENABLE_PARTICLES) {
-      const SKYLIGHTS = [
-        { x: 12, y: 7 },   // Engineering center
-        { x: 37, y: 7 },   // Research center
-        { x: 12, y: 21 },  // CRM center
-        { x: 37, y: 21 },  // Support center
-        { x: 24, y: 14 },  // Central atrium
-      ];
-
-      for (const sky of SKYLIGHTS) {
+      for (const sky of SKYLIGHT_POSITIONS) {
         // Light pool circle
         const pool = this.add.circle(
           sky.x * TILE_SIZE + TILE_SIZE / 2,
@@ -384,12 +392,13 @@ export class OfficeScene extends Phaser.Scene {
     if (ENABLE_PARTICLES) {
       // Engineering: subtle purple grow-light sparkles (emit from top of zone)
       if (this.textures.exists('particle-spore')) {
+        const eng = ZONE_PARTICLE_REGIONS.engineering;
         this.add.particles(0, 0, 'particle-spore', {
           emitZone: {
             type: 'random',
             source: new Phaser.Geom.Rectangle(
-              1 * TILE_SIZE, 2 * TILE_SIZE,
-              22 * TILE_SIZE, 2 * TILE_SIZE,
+              eng.x * TILE_SIZE, eng.y * TILE_SIZE,
+              eng.w * TILE_SIZE, eng.h * TILE_SIZE,
             ),
           } as Phaser.Types.GameObjects.Particles.ParticleEmitterRandomZoneConfig,
           speedY: { min: 3, max: 10 },
@@ -404,12 +413,13 @@ export class OfficeScene extends Phaser.Scene {
 
       // Support: zen water ripple sparkles
       if (this.textures.exists('particle-sparkle')) {
+        const sup = ZONE_PARTICLE_REGIONS.support;
         this.add.particles(0, 0, 'particle-sparkle', {
           emitZone: {
             type: 'random',
             source: new Phaser.Geom.Rectangle(
-              25 * TILE_SIZE, 16 * TILE_SIZE,
-              24 * TILE_SIZE, 12 * TILE_SIZE,
+              sup.x * TILE_SIZE, sup.y * TILE_SIZE,
+              sup.w * TILE_SIZE, sup.h * TILE_SIZE,
             ),
           } as Phaser.Types.GameObjects.Particles.ParticleEmitterRandomZoneConfig,
           speed: { min: 1, max: 5 },
@@ -424,9 +434,10 @@ export class OfficeScene extends Phaser.Scene {
 
       // Atrium: bioluminescent spores rising
       if (this.textures.exists('particle-spore')) {
+        const atr = ZONE_PARTICLE_REGIONS.atrium;
         this.add.particles(0, 0, 'particle-spore', {
-          x: { min: 10 * TILE_SIZE, max: 18 * TILE_SIZE },
-          y: 15 * TILE_SIZE,
+          x: { min: atr.xMin * TILE_SIZE, max: atr.xMax * TILE_SIZE },
+          y: atr.y * TILE_SIZE,
           speedY: { min: -5, max: -15 },
           speedX: { min: -3, max: 3 },
           alpha: { start: 0, end: 0,
@@ -504,20 +515,14 @@ export class OfficeScene extends Phaser.Scene {
   private createAnimatedProps(furnitureLayer: Phaser.Tilemaps.TilemapLayer): void {
     if (!ENABLE_PARTICLES) return;
 
-    // Tile IDs (1-indexed): monitor_on=33, plant_small=35, plant_large=36,
-    // server_rack=41, coffee_machine=39
-    const MONITOR_ON_ID = 33;
-    const PLANT_SMALL_ID = 35;
-    const PLANT_LARGE_ID = 36;
-    const SERVER_RACK_ID = 41;
-    const COFFEE_MACHINE_ID = 39;
-
+    // Tile IDs imported from `../tile-ids` (canonical names: monitor_on=33,
+    // plant_small=35, plant_large=36, coffee_machine=39, server_rack=41).
     furnitureLayer.forEachTile((tile) => {
       if (!tile || tile.index <= 0) return;
       const worldX = tile.pixelX + 16;
       const worldY = tile.pixelY + 16;
 
-      if (tile.index === MONITOR_ON_ID) {
+      if (tile.index === TILE_MONITOR_ON) {
         // Monitor screen flicker: subtle alpha glow rectangle
         const glow = this.add.rectangle(worldX, worldY - 4, 12, 8, 0x67e8f9, 0.15);
         glow.setDepth(3);
@@ -531,7 +536,7 @@ export class OfficeScene extends Phaser.Scene {
         });
       }
 
-      if (tile.index === PLANT_SMALL_ID || tile.index === PLANT_LARGE_ID) {
+      if (tile.index === TILE_PLANT_SMALL || tile.index === TILE_PLANT_LARGE) {
         // Plant sway: gentle oscillation overlay
         const leaf = this.add.rectangle(worldX, worldY - 6, 6, 4, 0x2d8a4e, 0.2);
         leaf.setDepth(3);
@@ -545,7 +550,7 @@ export class OfficeScene extends Phaser.Scene {
         });
       }
 
-      if (tile.index === SERVER_RACK_ID && this.textures.exists('particle-dot')) {
+      if (tile.index === TILE_SERVER_RACK && this.textures.exists('particle-dot')) {
         // Server LED blinks
         this.add.particles(worldX + 6, worldY - 8, 'particle-dot', {
           lifespan: 600,
@@ -559,7 +564,7 @@ export class OfficeScene extends Phaser.Scene {
         }).setDepth(3);
       }
 
-      if (tile.index === COFFEE_MACHINE_ID && this.textures.exists('particle-dot')) {
+      if (tile.index === TILE_COFFEE_MACHINE && this.textures.exists('particle-dot')) {
         // Coffee steam
         this.add.particles(worldX, worldY - 10, 'particle-dot', {
           lifespan: 1500,
@@ -582,10 +587,9 @@ export class OfficeScene extends Phaser.Scene {
   private setupTileAnimations(furnitureLayer: Phaser.Tilemaps.TilemapLayer): void {
     // Animated tile definitions: map furniture tile IDs to overlay behavior.
     // Each entry creates a small colored rectangle overlay that cycles alpha/color.
-    const WATER_COOLER_ID = 39; // coffee_machine doubles as water feature
-    const CANDLE_ID = 35;       // plant_small position (candle in some maps)
-    const GROW_LIGHT_ID = 41;   // server_rack position (grow light in some maps)
-
+    // The aliases (WATER_COOLER, CANDLE, GROW_LIGHT) intentionally map to the
+    // same physical tile sprites as the canonical names — see ../tile-ids.ts
+    // for the rationale (theme-dependent semantic re-use).
     const animDefs: Array<{
       tileId: number;
       colors: number[];
@@ -596,7 +600,7 @@ export class OfficeScene extends Phaser.Scene {
       height: number;
     }> = [
       {
-        tileId: WATER_COOLER_ID,
+        tileId: TILE_WATER_COOLER,
         colors: [0x67e8f9, 0xa8dadc, 0x67e8f9, 0xa8dadc],
         alphas: [0.1, 0.18, 0.14, 0.08],
         duration: 250,
@@ -605,7 +609,7 @@ export class OfficeScene extends Phaser.Scene {
         height: 6,
       },
       {
-        tileId: CANDLE_ID,
+        tileId: TILE_CANDLE,
         colors: [0xf6d55c, 0xf59e0b, 0xf6d55c, 0xd4a43a],
         alphas: [0.2, 0.3, 0.25, 0.15],
         duration: 200,
@@ -614,7 +618,7 @@ export class OfficeScene extends Phaser.Scene {
         height: 6,
       },
       {
-        tileId: GROW_LIGHT_ID,
+        tileId: TILE_GROW_LIGHT,
         colors: [0x9b59b6, 0xbb88ff, 0xd4b0ff, 0xbb88ff],
         alphas: [0.1, 0.2, 0.3, 0.2],
         duration: 400,
@@ -705,6 +709,9 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   update(): void {
+    // Hot-path null safety: tactician may be undefined if loadTiledMap()
+    // failed before createTactician() ran, or after shutdown() cleared it.
+    if (!this.tactician) return;
     this.gamepadManager.poll();
     const input = this.gamepadManager.getInput();
 
@@ -810,11 +817,18 @@ export class OfficeScene extends Phaser.Scene {
         this.tactician.play(walkKey);
       }
 
-      // Dust trail when walking
+      // Dust trail when walking — throttled to ~12fps (DUST_EMIT_INTERVAL_MS)
+      // to avoid emitting on every frame (~60Hz). At 80ms intervals the
+      // visible density is unchanged but particle pressure drops ~80%.
       const now = this.time.now;
       const positionDelta = Math.abs(this.tactician.x - this.lastSentX) + Math.abs(this.tactician.y - this.lastSentY);
-      if (this.dustEmitter && positionDelta > 1) {
+      if (
+        this.dustEmitter &&
+        positionDelta > 1 &&
+        now - this.lastDustEmitTime > DUST_EMIT_INTERVAL_MS
+      ) {
         this.dustEmitter.emitParticleAt(this.tactician.x, this.tactician.y + 12, 1);
+        this.lastDustEmitTime = now;
       }
 
       // Broadcast movement throttled to ~15fps
@@ -1067,6 +1081,9 @@ export class OfficeScene extends Phaser.Scene {
     // Clean up companion sprites
     this.companionSprites.forEach((rect) => rect.destroy());
     this.companionSprites.clear();
+    // Clear tactician reference so update() short-circuits if a frame fires
+    // after shutdown but before the scene is fully torn down.
+    this.tactician = undefined;
   }
 
   private createAnimations(): void {
@@ -1105,9 +1122,13 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private createFloor(): void {
-    // Tile the floor across the entire scene
-    for (let x = 0; x < 1280; x += TILE_SIZE) {
-      for (let y = 0; y < 720; y += TILE_SIZE) {
+    // Procedural fallback only paints LEGACY_FLOOR_EXTENT (1280x720). This
+    // intentionally disagrees with worldWidth/Height (1600x896) — the Tiled
+    // map fills the larger extent; this fallback preserves the pre-50x28
+    // legacy footprint when no map is loaded. See ../constants.ts for notes.
+    const { width: floorW, height: floorH } = LEGACY_FLOOR_EXTENT;
+    for (let x = 0; x < floorW; x += TILE_SIZE) {
+      for (let y = 0; y < floorH; y += TILE_SIZE) {
         const textureKey = this.textures.exists('floor-tile') ? 'floor-tile' : 'office-tileset';
         this.add.image(x + TILE_SIZE / 2, y + TILE_SIZE / 2, textureKey, 0).setAlpha(0.5);
       }
@@ -1116,11 +1137,11 @@ export class OfficeScene extends Phaser.Scene {
     // Draw grid lines for visual structure
     const graphics = this.add.graphics();
     graphics.lineStyle(1, 0x334155, 0.3);
-    for (let x = 0; x <= 1280; x += TILE_SIZE) {
-      graphics.lineBetween(x, 0, x, 720);
+    for (let x = 0; x <= floorW; x += TILE_SIZE) {
+      graphics.lineBetween(x, 0, x, floorH);
     }
-    for (let y = 0; y <= 720; y += TILE_SIZE) {
-      graphics.lineBetween(0, y, 1280, y);
+    for (let y = 0; y <= floorH; y += TILE_SIZE) {
+      graphics.lineBetween(0, y, floorW, y);
     }
   }
 
@@ -1203,9 +1224,10 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private createTactician(): void {
-    // Use map-defined spawn point, or fall back to lobby center
-    let spawnX = 416; // default-spawn col 13
-    let spawnY = 480; // default-spawn row 15
+    // Use map-defined spawn point, or fall back to DEFAULT_SPAWN (lobby centre,
+    // col 13 / row 15 of the 50x28 map).
+    let spawnX: number = DEFAULT_SPAWN.x;
+    let spawnY: number = DEFAULT_SPAWN.y;
     if (this.spawnPoints.length > 0) {
       const sp = this.spawnPoints[0]!;
       spawnX = sp.x;
@@ -1294,6 +1316,7 @@ export class OfficeScene extends Phaser.Scene {
       if (this.gamepadManager.isFocused() || this.helpOverlay.visible) return;
       // Only left click
       if (pointer.button !== 0) return;
+      if (!this.tactician) return;
 
       const worldX = pointer.worldX;
       const worldY = pointer.worldY;
@@ -1403,7 +1426,7 @@ export class OfficeScene extends Phaser.Scene {
     this.reconcileRemotePlayers(state.players ?? []);
 
     // Reconcile local player companion
-    if (state.players && this.localSessionId) {
+    if (state.players && this.localSessionId && this.tactician) {
       const localPlayer = state.players.find((p: Player) => p.sessionId === this.localSessionId);
       if (localPlayer) {
         this.reconcileCompanionSprite(
@@ -1733,12 +1756,13 @@ export class OfficeScene extends Phaser.Scene {
       return;
     }
 
-    // Calculate position within department zone with some offset
+    // Calculate position within department zone with some offset.
+    // SPAWN_OFFSET = inset from zone edge; SPAWN_GRID_SPACING = gap between agents.
     const agentIndex = dept.agents.indexOf(agent);
     const col = agentIndex % 3;
     const row = Math.floor(agentIndex / 3);
-    const spriteX = layout.x + 48 + col * 48;
-    const spriteY = layout.y + 48 + row * 48;
+    const spriteX = layout.x + SPAWN_OFFSET + col * SPAWN_GRID_SPACING;
+    const spriteY = layout.y + SPAWN_OFFSET + row * SPAWN_GRID_SPACING;
 
     // Status halo beneath agent
     const haloStyle = this.getHaloStyle(agent.status);
@@ -1958,6 +1982,7 @@ export class OfficeScene extends Phaser.Scene {
     let targetY: number;
 
     if (sessionId === this.localSessionId) {
+      if (!this.tactician) return;
       targetX = this.tactician.x;
       targetY = this.tactician.y;
     } else {
@@ -2009,16 +2034,18 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private handleProximityInteraction(action: 'approve' | 'inspect'): void {
+    if (!this.tactician) return;
     // Find the nearest agent with a pending approval within proximity
     let nearestAgentId: string | null = null;
     let nearestDist = PROXIMITY_THRESHOLD;
+    const tactician = this.tactician;
 
     this.agentSprites.forEach((agentSprite) => {
       if (!agentSprite.hasPendingApproval) return;
 
       const dist = Phaser.Math.Distance.Between(
-        this.tactician.x,
-        this.tactician.y,
+        tactician.x,
+        tactician.y,
         agentSprite.sprite.x,
         agentSprite.sprite.y,
       );
@@ -2056,12 +2083,14 @@ export class OfficeScene extends Phaser.Scene {
       return;
     }
 
+    if (!this.tactician) return;
+    const tactician = this.tactician;
     // Find nearest remote player
     let nearestId: string | null = null;
     let nearestDist = Infinity;
     this.remotePlayers.forEach((remote, sessionId) => {
       const dist = Phaser.Math.Distance.Between(
-        this.tactician.x, this.tactician.y,
+        tactician.x, tactician.y,
         remote.sprite.x, remote.sprite.y,
       );
       if (dist < nearestDist) {
@@ -2103,7 +2132,9 @@ export class OfficeScene extends Phaser.Scene {
   private cancelFollow(): void {
     this.followTarget = null;
     this.cameras.main.stopFollow();
-    this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    if (this.tactician) {
+      this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    }
     if (this.followLabel) {
       this.followLabel.destroy();
       this.followLabel = null;
@@ -2142,7 +2173,9 @@ export class OfficeScene extends Phaser.Scene {
   private exitExplorerMode(): void {
     this.explorerMode = false;
     this.cameras.main.setZoom(this.explorerPrevZoom);
-    this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    if (this.tactician) {
+      this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    }
     gameEventBus.emit('explorer-mode', false);
   }
 }

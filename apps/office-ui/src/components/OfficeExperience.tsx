@@ -21,6 +21,7 @@ import { MediaControls } from '@/components/MediaControls';
 import { RecordingControls } from '@/components/RecordingControls';
 import { MeetingNotesPanel } from '@/components/MeetingNotesPanel';
 import { DemoBanner } from '@/components/DemoBanner';
+import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { useApprovals } from '@/hooks/useApprovals';
 import { useTaskDispatch } from '@/hooks/useTaskDispatch';
 import { useCalendar } from '@/hooks/useCalendar';
@@ -48,7 +49,7 @@ import { MetricsDashboard } from '@/components/MetricsDashboard';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { ApprovalModal } from '@autoswarm/ui';
 import type { CoWebsiteEvent, PopupEvent } from '@/game/PhaserGame';
-import type { ApprovalRequest, AvatarConfig } from '@autoswarm/shared-types';
+import type { ApprovalRequest, AvatarConfig, CompanionType } from '@autoswarm/shared-types';
 import { getSessionUser } from '@/lib/api';
 
 const WorkflowEditor = dynamic(
@@ -82,13 +83,11 @@ export interface OfficeExperienceProps {
 export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const isDemo = mode === 'demo';
 
-  // Lazy-load gameEventBus ref to bridge emote events to Phaser
+  // Lazy-load gameEventBus ref to bridge emote events to Phaser. The actual
+  // import + listener wiring is consolidated into one useEffect lower in this
+  // component (search for "consolidated PhaserGame loader") to avoid 5
+  // separate dynamic imports racing on cleanup.
   const gameEventBusRef = useRef<{ emit: (event: string, detail: unknown) => void } | null>(null);
-  useEffect(() => {
-    import('@/game/PhaserGame').then((mod) => {
-      gameEventBusRef.current = mod.gameEventBus;
-    });
-  }, []);
 
   const handlePlayerEmote = useCallback((event: PlayerEmoteEvent) => {
     gameEventBusRef.current?.emit('player-emote', event);
@@ -226,10 +225,20 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     reset: resetMeetingNotes,
   } = useMeetingNotes();
 
-  // Wire up the refs now that all hooks are initialized
-  proximityUpdateRef.current = videoHandleProximity;
-  webrtcSignalRef.current = videoHandleSignal;
-  spotlightActiveRef.current = spotlightHandleActive;
+  // Wire up the refs in an effect (not during render) so React's concurrent
+  // mode does not desync them when a render is interrupted and replayed.
+  // Assigning during the render body would bind the ref to the in-flight
+  // closures even if React throws away the render, leaving callers with
+  // stale handlers.
+  useEffect(() => {
+    proximityUpdateRef.current = videoHandleProximity;
+  });
+  useEffect(() => {
+    webrtcSignalRef.current = videoHandleSignal;
+  });
+  useEffect(() => {
+    spotlightActiveRef.current = spotlightHandleActive;
+  });
   const {
     pendingApprovals,
     approve,
@@ -284,31 +293,36 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const [megaphoneActive, setMegaphoneActive] = useState(false);
   const [megaphoneSpeaker, setMegaphoneSpeaker] = useState<string | null>(null);
   const [currentRoom, setCurrentRoom] = useState('office');
-  const [companionType, setCompanionType] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try { return localStorage.getItem('autoswarm:companion-type') ?? ''; } catch { return ''; }
-    }
-    return '';
-  });
+  // Persisted via useLocalStorageState — hydration-safe. The hook returns the
+  // default during SSR + first client render, then reads localStorage in a
+  // post-mount effect, avoiding the `useState(() => localStorage.getItem(...))`
+  // hydration mismatch.
+  const [companionType, setCompanionType] = useLocalStorageState<CompanionType>(
+    'autoswarm:companion-type',
+    '',
+    {
+      parse: (raw) => {
+        const allowed: CompanionType[] = ['', 'cat', 'dog', 'robot', 'dragon', 'parrot'];
+        return allowed.includes(raw as CompanionType) ? (raw as CompanionType) : '';
+      },
+    },
+  );
   const [musicStatus, setMusicStatus] = useState('');
   const [mobileTab, setMobileTab] = useState('office');
   const [followingPlayer, setFollowingPlayer] = useState<string | null>(null);
   const [explorerMode, setExplorerMode] = useState(false);
   const [spotlightViewDismissed, setSpotlightViewDismissed] = useState(false);
-  const [viewMode, setViewMode] = useState<'game' | 'simple'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('autoswarm:view-mode') as 'game' | 'simple') ?? 'game';
-    }
-    return 'game';
-  });
+  const [viewMode, setViewMode] = useLocalStorageState<'game' | 'simple'>(
+    'autoswarm:view-mode',
+    'game',
+    {
+      parse: (raw) => (raw === 'simple' ? 'simple' : 'game'),
+    },
+  );
 
   const handleToggleViewMode = useCallback(() => {
-    setViewMode((prev) => {
-      const next = prev === 'game' ? 'simple' : 'game';
-      try { localStorage.setItem('autoswarm:view-mode', next); } catch { /* noop */ }
-      return next;
-    });
-  }, []);
+    setViewMode((prev) => (prev === 'game' ? 'simple' : 'game'));
+  }, [setViewMode]);
 
   const handleApprovalOpen = useCallback(
     (agentId: string) => {
@@ -472,37 +486,30 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     }
   }, [colyseusConnected, companionType, sendCompanion]);
 
-  // Listen for desk info events from game
+  // Consolidated PhaserGame loader: one dynamic import wires up the event bus
+  // ref (for emit-side bridges) and ALL gameEventBus listeners. This replaces
+  // 5 separate `import('@/game/PhaserGame').then(...)` calls that each
+  // raced against component cleanup independently. The handler bodies only
+  // call setState for component-local UI state and never close over hook
+  // outputs that change frequently, so binding once on mount is safe — when
+  // the slices they update change, React re-renders without rebinding.
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    import('@/game/PhaserGame').then((mod) => {
-      cleanup = mod.gameEventBus.on('open_desk_info', (detail: unknown) => {
-        const event = detail as { title: string; assignedAgentId: string };
-        setDeskInfo({ assignedAgentId: event.assignedAgentId, title: event.title });
-      });
-    });
-    return () => cleanup?.();
-  }, []);
-
-  // Listen for whiteboard open events from game
-  useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    import('@/game/PhaserGame').then((mod) => {
-      cleanup = mod.gameEventBus.on('open_whiteboard', () => {
-        setWhiteboardOpen(true);
-        setDashboardOpen(false);
-        setDispatchPanelOpen(false);
-        setApprovalPanelOpen(false);
-      });
-    });
-    return () => cleanup?.();
-  }, []);
-
-  // Listen for follow/explorer mode events from game
-  useEffect(() => {
+    let mounted = true;
     const cleanups: Array<() => void> = [];
     import('@/game/PhaserGame').then((mod) => {
+      if (!mounted) return;
+      gameEventBusRef.current = mod.gameEventBus;
       cleanups.push(
+        mod.gameEventBus.on('open_desk_info', (detail: unknown) => {
+          const event = detail as { title: string; assignedAgentId: string };
+          setDeskInfo({ assignedAgentId: event.assignedAgentId, title: event.title });
+        }),
+        mod.gameEventBus.on('open_whiteboard', () => {
+          setWhiteboardOpen(true);
+          setDashboardOpen(false);
+          setDispatchPanelOpen(false);
+          setApprovalPanelOpen(false);
+        }),
         mod.gameEventBus.on('follow-status', (detail: unknown) => {
           const { following, name } = detail as { following: boolean; name: string };
           setFollowingPlayer(following ? name : null);
@@ -510,29 +517,19 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
         mod.gameEventBus.on('explorer-mode', (detail: unknown) => {
           setExplorerMode(detail as boolean);
         }),
-      );
-    });
-    return () => cleanups.forEach((c) => c());
-  }, []);
-
-  // Listen for megaphone and room transition events
-  useEffect(() => {
-    const cleanups: Array<() => void> = [];
-    import('@/game/PhaserGame').then((mod) => {
-      cleanups.push(
         mod.gameEventBus.on('room_transition', (detail: unknown) => {
           const { roomId } = detail as { roomId: string };
           setCurrentRoom(roomId);
-          // Update URL for map loading
           const url = new URL(window.location.href);
           url.searchParams.set('map', roomId);
           window.history.replaceState({}, '', url.toString());
         }),
       );
     });
-    // Listen for megaphone broadcasts from Colyseus
-    // This is done in the useColyseus onMessage handler
-    return () => cleanups.forEach((c) => c());
+    return () => {
+      mounted = false;
+      cleanups.forEach((c) => c());
+    };
   }, []);
 
   return (
@@ -714,9 +711,9 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
             onClose={() => setAvatarEditorOpen(false)}
             companionType={companionType}
             onCompanionChange={(type) => {
-              setCompanionType(type);
+              // Setter writes to both React state and localStorage atomically.
+              setCompanionType(type as CompanionType);
               sendCompanion(type);
-              try { localStorage.setItem('autoswarm:companion-type', type); } catch { /* noop */ }
             }}
           />
 

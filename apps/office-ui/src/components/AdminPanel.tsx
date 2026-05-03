@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { CloseButton } from '@autoswarm/ui';
 import { apiFetch } from '@/lib/api';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useToast } from '@/hooks/useToast';
+import { logger } from '@/lib/logger';
 
 interface ConnectedUser {
   session_id: string;
@@ -23,6 +27,7 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
   const [users, setUsers] = useState<ConnectedUser[]>([]);
   const [motd, setMotd] = useState('');
   const [loading, setLoading] = useState(false);
+  const { addToast } = useToast();
 
   const fetchUsers = useCallback(async () => {
     if (!isAdmin) return;
@@ -30,11 +35,17 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
       const resp = await apiFetch('/api/v1/admin/users');
       if (resp.ok) {
         setUsers(await resp.json());
+      } else {
+        // Non-2xx is surfaced — admin opening the panel deserves to know
+        // when their session lacks the role or the API is down.
+        logger.warn('AdminPanel: /admin/users returned', resp.status);
+        addToast(`Failed to load users (HTTP ${resp.status})`, 'error');
       }
-    } catch {
-      // Silently ignore — admin features are best-effort
+    } catch (err) {
+      logger.error('AdminPanel: fetchUsers failed', err);
+      addToast('Failed to load users — check connection', 'error');
     }
-  }, [isAdmin]);
+  }, [isAdmin, addToast]);
 
   useEffect(() => {
     if (isOpen && isAdmin) {
@@ -46,50 +57,75 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
     async (sessionId: string) => {
       setLoading(true);
       try {
-        await apiFetch('/api/v1/admin/kick', {
+        const resp = await apiFetch('/api/v1/admin/kick', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId }),
         });
-        // Refresh list
-        await fetchUsers();
-      } catch {
-        // ignore
+        if (resp.ok) {
+          addToast('User kicked', 'success');
+          await fetchUsers();
+        } else {
+          logger.warn('AdminPanel: kick returned', resp.status);
+          addToast(`Kick failed (HTTP ${resp.status})`, 'error');
+        }
+      } catch (err) {
+        logger.error('AdminPanel: kick failed', err);
+        addToast('Kick failed — check connection', 'error');
       } finally {
         setLoading(false);
       }
     },
-    [fetchUsers]
+    [fetchUsers, addToast]
   );
 
   const handleMotdUpdate = useCallback(async () => {
     setLoading(true);
     try {
-      await apiFetch('/api/v1/admin/room-config', {
+      const resp = await apiFetch('/api/v1/admin/room-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ motd }),
       });
-    } catch {
-      // ignore
+      if (resp.ok) {
+        addToast('MOTD updated', 'success');
+      } else {
+        logger.warn('AdminPanel: room-config returned', resp.status);
+        addToast(`MOTD update failed (HTTP ${resp.status})`, 'error');
+      }
+    } catch (err) {
+      logger.error('AdminPanel: handleMotdUpdate failed', err);
+      addToast('MOTD update failed — check connection', 'error');
     } finally {
       setLoading(false);
     }
-  }, [motd]);
+  }, [motd, addToast]);
+
+  // ESC to close
+  useEffect(() => {
+    if (!isOpen || !isAdmin) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isAdmin, onClose]);
+
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isOpen && isAdmin);
 
   if (!isOpen || !isAdmin) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-full max-w-80 sm:w-80 retro-panel z-modal animate-slide-in-right flex flex-col">
+    <div
+      ref={focusTrapRef}
+      className="fixed right-0 top-0 h-full w-full max-w-80 sm:w-80 retro-panel z-modal animate-slide-in-right flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="admin-panel-title"
+    >
       <div className="flex items-center justify-between p-3 border-b border-slate-700">
-        <h2 className="text-retro-base font-bold text-slate-200">Admin</h2>
-        <button
-          onClick={onClose}
-          className="text-slate-400 hover:text-slate-200"
-          aria-label="Close admin panel"
-        >
-          [X]
-        </button>
+        <h2 id="admin-panel-title" className="text-retro-base font-bold text-slate-200">Admin</h2>
+        <CloseButton onClick={onClose} label="Close admin panel" shortcut="ESC" className="touch-target" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
@@ -110,7 +146,8 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
                 <button
                   onClick={() => handleKick(u.session_id)}
                   disabled={loading}
-                  className="pxa-btn text-retro-xs px-2 py-0.5 bg-red-900/50 hover:bg-red-800/50"
+                  className="pxa-btn touch-target text-retro-xs px-2 py-0.5 bg-red-900/50 hover:bg-red-800/50"
+                  aria-label={`Kick ${u.name}`}
                 >
                   Kick
                 </button>

@@ -1,3 +1,7 @@
+// CONVENTION: camelCase fields. Domain shape used by React + Phaser; the
+// avatar config is persisted to localStorage and sent to Colyseus as a
+// JSON string, so there is no Python wire-shape to mirror here.
+
 /** Avatar customization configuration. */
 export interface AvatarConfig {
   /** Skin tone index (0-3) */

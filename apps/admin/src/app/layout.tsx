@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import { JanuaProvider } from '@janua/nextjs-sdk';
 import { PostHogProvider } from '@/components/PostHogProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import './globals.css';
 
 const inter = Inter({
@@ -28,7 +29,7 @@ export default function RootLayout({
             <JanuaProvider
               config={{ baseURL: process.env.NEXT_PUBLIC_JANUA_ISSUER_URL ?? '' }}
             >
-              {children}
+              <ErrorBoundary>{children}</ErrorBoundary>
             </JanuaProvider>
           </PostHogProvider>
         </Suspense>

@@ -49,7 +49,7 @@ class TestSchedulesRouter:
     def test_create_schedule_returns_201(self, test_client, _mock_db):
         from datetime import datetime
 
-        from nexus_api.models.schedule import Schedule
+        from nexus_api.models import Schedule
 
         fake_schedule = MagicMock(spec=Schedule)
         fake_schedule.id = "sched-abc"

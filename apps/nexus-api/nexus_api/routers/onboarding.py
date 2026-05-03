@@ -30,6 +30,7 @@ cycle for existing users.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -40,8 +41,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_non_guest
+from ..config import get_settings
 from ..database import get_db
-from ..models import ConsentLedger, TenantConfig
+from ..models import ConsentLedger, TenantConfig, TenantIdentity
 from .events import emit_event_db
 
 logger = logging.getLogger(__name__)
@@ -173,6 +175,47 @@ class VoiceModePreview(BaseModel):
     clause_version: str
 
 
+class TenantIdentityResponse(BaseModel):
+    """Server-resolved outbound identity for a tenant.
+
+    Returned by ``GET /onboarding/tenant-identity``. Used by the email
+    tools to populate the ``From:`` header without trusting any
+    LLM-supplied kwargs (which would be a prompt-injection vector for
+    sender spoofing within the tenant's verified Resend domain).
+
+    Fields are nullable individually so the tool can detect partial
+    configuration (e.g. brand_name set but no primary contact email
+    resolved yet) and fail-closed on the missing piece. ``agent_slug``
+    is intentionally NOT returned here — agent slugs are resolved per
+    call from a server-controlled allow-list, never from the LLM.
+    """
+
+    user_email: str | None = Field(
+        default=None,
+        description=(
+            "Primary outbound mailbox for the tenant (drives From: in "
+            "user_direct/dyad modes and Reply-To across all modes). "
+            "Sourced from tenant_identities.primary_contact_email."
+        ),
+    )
+    user_name: str | None = Field(
+        default=None,
+        description=(
+            "Display name for the From: header. Sourced from "
+            "tenant_configs.brand_name with fallback to "
+            "tenant_identities.legal_name."
+        ),
+    )
+    org_name: str | None = Field(
+        default=None,
+        description=(
+            "Organization legal name for the agent_identified signature "
+            "block. Sourced from tenant_identities.legal_name with "
+            "fallback to tenant_configs.razon_social or brand_name."
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -187,6 +230,18 @@ def _get_client_ip(request: Request) -> str:
     return client.host if client else "unknown"
 
 
+def _signing_secret() -> bytes:
+    """Return the HMAC signing secret as bytes.
+
+    Read from ``Settings.consent_ledger_signing_secret`` on every call so
+    operators rotating the secret pick it up after a settings reload
+    without restarting the process. ``Settings`` already refuses the
+    ``dev-default-CHANGE-ME`` sentinel in production via
+    ``_validate_config``.
+    """
+    return get_settings().consent_ledger_signing_secret.encode("utf-8")
+
+
 def compute_signature(
     *,
     org_id: str,
@@ -196,14 +251,22 @@ def compute_signature(
     typed_confirmation: str,
     created_at: datetime,
 ) -> str:
-    """SHA-256 integrity digest over the ledger row's identifying fields.
+    """HMAC-SHA256 integrity digest over the ledger row's identifying fields.
 
-    Not a cryptographic signature in the PKI sense — a tamper-evidence
-    hash. Any mutation of the row's fields will desync from this digest,
-    detectable by replaying the computation at audit time.
+    Uses HMAC with a server-only secret (``CONSENT_LEDGER_SIGNING_SECRET``)
+    so an adversary with INSERT access on the ledger table cannot forge
+    rows that pass ``verify_signature`` — they would need the secret
+    held in the application process.
 
-    Exported (not underscore-prefixed) so auditors can import it to
-    re-verify ledger rows offline.
+    The output is structurally identical to a plain SHA-256 hex digest
+    (64 lowercase hex chars), so the ``consent_ledger.signature_sha256``
+    column shape is unchanged. Rows signed under a previous secret (or
+    under the pre-HMAC plain SHA-256 algorithm) will fail verification
+    at audit time, which is the desired behaviour at the migration
+    boundary.
+
+    Exported (not underscore-prefixed) so auditors holding the secret
+    can import this function to re-verify ledger rows offline.
     """
     payload = "|".join(
         [
@@ -215,19 +278,22 @@ def compute_signature(
             created_at.isoformat(),
         ]
     )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return hmac.new(_signing_secret(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def verify_signature(entry: ConsentLedger) -> bool:
-    """Recompute the SHA-256 digest and compare to the stored value.
+    """Recompute the HMAC-SHA256 digest and compare to the stored value.
 
     Returns True iff the stored digest matches a fresh computation over
-    the row's current fields. False means the row has been tampered
-    with (or the signing algorithm has moved to a new version).
+    the row's current fields under the currently configured signing
+    secret. False means either: (a) the row has been tampered with,
+    (b) the signing secret has rotated, or (c) the row predates the
+    HMAC migration. All three cases warrant audit attention.
 
     Normalizes ``created_at`` the same way the ingest path does
     (microseconds zeroed, UTC) so the round-trip through the DB does
-    not cause a false-negative.
+    not cause a false-negative. Uses ``hmac.compare_digest`` for
+    constant-time comparison to neutralize timing oracles.
     """
     created_at = entry.created_at
     if created_at.tzinfo is None:
@@ -241,7 +307,7 @@ def verify_signature(entry: ConsentLedger) -> bool:
         typed_confirmation=entry.typed_confirmation,
         created_at=created_at,
     )
-    return expected == entry.signature_sha256
+    return hmac.compare_digest(expected, entry.signature_sha256)
 
 
 # Back-compat alias — keeps the internal call-site signature stable.
@@ -393,6 +459,73 @@ async def voice_mode_preview(mode: str) -> VoiceModePreview:
         heads_up=clause["heads_up"],
         clause_body=clause["clause_body"],
         clause_version=CLAUSE_VERSION,
+    )
+
+
+@router.get(
+    "/onboarding/tenant-identity",
+    response_model=TenantIdentityResponse,
+)
+async def tenant_identity(
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> TenantIdentityResponse:
+    """Return the server-controlled outbound identity for the caller's tenant.
+
+    Used by ``SendEmailTool`` and ``SendMarketingEmailTool`` to populate
+    the ``From:`` header without trusting LLM-supplied kwargs. The LLM
+    has no input on what address goes into the From header — sender
+    identity is exclusively a server concern, sourced from the tenant's
+    own configuration.
+
+    Returns 403 for the unscoped ``platform`` org (worker tokens calling
+    without ``X-Selva-Tenant-Org``). Returns 404 when the tenant has no
+    ``tenant_configs`` row at all (i.e. truly unprovisioned). Returns
+    200 with nullable fields when the tenant exists but has not yet
+    populated the relevant fields — callers are expected to fail-closed
+    on missing fields rather than substituting LLM-supplied defaults.
+    """
+    org_id = user.get("org_id")
+    if not org_id or org_id == "platform":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="tenant identity requires org-scoped auth (X-Selva-Tenant-Org header)",
+        )
+
+    config_row = await db.execute(
+        select(TenantConfig).where(TenantConfig.org_id == org_id)
+    )
+    config = config_row.scalar_one_or_none()
+    if config is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="tenant identity not configured",
+        )
+
+    # Resolve cross-service identity (legal_name + primary_contact_email)
+    # via the tenant_identities map. canonical_id == janua_org_id ==
+    # tenant_configs.org_id by convention (see migration 0024 design).
+    identity_row = await db.execute(
+        select(TenantIdentity).where(TenantIdentity.canonical_id == org_id)
+    )
+    identity = identity_row.scalar_one_or_none()
+
+    user_email = identity.primary_contact_email if identity else None
+    legal_name = identity.legal_name if identity else None
+
+    # Display name for From: header. Prefer brand_name (white-label),
+    # then legal_name, then razon_social. None of these are
+    # LLM-controllable.
+    user_name = config.brand_name or legal_name or config.razon_social
+    # Org name for the agent_identified signature block. Prefer the
+    # legal name (matches the consent ledger), fall back to fiscal name
+    # then brand.
+    org_name = legal_name or config.razon_social or config.brand_name
+
+    return TenantIdentityResponse(
+        user_email=user_email,
+        user_name=user_name,
+        org_name=org_name,
     )
 
 

@@ -41,10 +41,10 @@ export const ApprovalModal: FC<ApprovalModalProps> = ({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Overlay className="fixed inset-0 z-modal-backdrop bg-black/70 backdrop-blur-sm" />
         <Dialog.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
+            'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2',
             'w-full max-w-xl',
             'bg-slate-900 text-slate-100',
             'shadow-[0_0_0_3px_#000,_0_0_0_5px_#6366f1,_inset_0_0_0_1px_rgba(255,255,255,0.1)]',

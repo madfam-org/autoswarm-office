@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     max_concurrent_tasks: int = 3
     worktree_stale_hours: int = 24
     approval_timeout: int = 300
+    # Redis XREAD block timeout (ms). Tuned to balance shutdown
+    # responsiveness vs Redis round-trips when the stream is idle.
+    redis_block_timeout_ms: int = 5000
+    # Per-event emit timeout (seconds) used by the synchronous fallback
+    # path in event_emitter._fire when an instrumented LangGraph node
+    # emits its node.entered/exited/error events from a sync context.
+    event_emit_timeout_seconds: int = 3
 
     # -- Learning / Memory ----------------------------------------------------
     memory_persist_dir: str = "/tmp/autoswarm-memory"

@@ -503,6 +503,12 @@ def dispatch_billing(state: SalesState) -> SalesState:
         import uuid
 
         child_task_id = str(uuid.uuid4())
+        # Pull org_id off graph state so the dispatch posts under the
+        # owning tenant's scope (not the platform default).
+        _state_org_id = state.get("org_id")
+        state_org_id: str | None = (
+            _state_org_id if isinstance(_state_org_id, str) and _state_org_id else None
+        )
         _run_async(
             fire_and_forget_request(
                 "POST",
@@ -521,7 +527,7 @@ def dispatch_billing(state: SalesState) -> SalesState:
                         "customer_email": state.get("customer_email"),
                     },
                 },
-                headers=get_worker_auth_headers(),
+                headers=get_worker_auth_headers(org_id=state_org_id),
                 timeout=5.0,
             )
         )

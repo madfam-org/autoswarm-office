@@ -77,7 +77,8 @@ class TestCreateEvent:
             token_count=150,
             error_message=None,
             request_id="req-abc-123",
-            org_id="acme-corp",
+            # org_id deliberately omitted: server derives it from the
+            # authenticated caller.
         )
         resp = await client.post("/api/v1/events/", json=payload, headers=auth_headers)
         assert resp.status_code == 201
@@ -137,13 +138,24 @@ class TestCreateEvent:
         assert len(found) == 1
         assert found[0]["task_id"] is None
 
-    async def test_create_event_org_id_defaults_to_default(
+    async def test_create_event_org_id_derived_from_caller(
         self, client: httpx.AsyncClient, auth_headers: dict[str, str]
     ) -> None:
-        """When org_id is omitted it defaults to 'default'."""
+        """org_id is derived server-side from the authenticated caller.
+
+        With dev-bypass the caller resolves to org_id="dev-org" -- callers
+        cannot override this via the request body (the field is no longer
+        accepted on CreateEventRequest).
+        """
         resp = await client.post(
             "/api/v1/events/",
-            json={"event_type": "test_evt", "event_category": "test_cat"},
+            json={
+                "event_type": "test_evt",
+                "event_category": "test_cat",
+                # Attempting to inject a different org_id is silently ignored
+                # because the field is not on the schema; if pydantic strict
+                # mode is on it would 422 -- either way is safe.
+            },
             headers=auth_headers,
         )
         assert resp.status_code == 201
@@ -152,7 +164,7 @@ class TestCreateEvent:
         events = await client.get("/api/v1/events/", headers=auth_headers)
         found = [e for e in events.json() if e["id"] == event_id]
         assert len(found) == 1
-        assert found[0]["org_id"] == "default"
+        assert found[0]["org_id"] == "dev-org"
 
 
 # ==========================================================================
@@ -374,3 +386,159 @@ class TestTaskTimeline:
         task_id = str(uuid.uuid4())
         resp = await client.get(f"/api/v1/events/tasks/{task_id}/timeline")
         assert resp.status_code in (401, 403)
+
+
+# ============================================================================
+# Tenant-scoping regression tests (commit f35f1b1, wave 3B-B).
+#
+# Pre-fix: GET /events and GET /events/tasks/{id}/timeline did NOT scope
+# their queries by org_id, so any authed user (including guests) could
+# read any tenant's observability stream. CreateEventRequest accepted
+# org_id from the body.
+#
+# Post-fix: both endpoints depend on get_tenant + .where(org_id == tenant);
+# the body schema no longer declares org_id.
+# ============================================================================
+
+
+def _seed_event_for_org(org_id: str, db_session, **overrides) -> str:
+    """Insert a TaskEvent directly with a chosen org_id (bypasses auth)."""
+    from nexus_api.models import TaskEvent
+
+    ev = TaskEvent(
+        event_type=overrides.get("event_type", "test_evt"),
+        event_category=overrides.get("event_category", "test_cat"),
+        org_id=org_id,
+    )
+    db_session.add(ev)
+    return str(ev)
+
+
+@pytest.mark.asyncio
+class TestEventsTenantScoping:
+    async def test_get_events_filters_by_caller_org(
+        self,
+        client: httpx.AsyncClient,
+        auth_headers: dict[str, str],
+        db_session,
+    ) -> None:
+        """Events from another tenant MUST NOT appear in the caller's GET.
+
+        Seeds two events: one owned by ``dev-org`` (the dev-bypass
+        caller's tenant) and one owned by ``other-tenant``. The GET
+        response must contain only the dev-org event.
+        """
+        from nexus_api.models import TaskEvent
+
+        # Seed an event in dev-org (caller's tenant).
+        own_ev = TaskEvent(
+            event_type="own_event",
+            event_category="lifecycle",
+            org_id="dev-org",
+        )
+        db_session.add(own_ev)
+        # Seed an event in a foreign tenant.
+        foreign_ev = TaskEvent(
+            event_type="foreign_event",
+            event_category="lifecycle",
+            org_id="other-tenant",
+        )
+        db_session.add(foreign_ev)
+        await db_session.commit()
+
+        resp = await client.get("/api/v1/events/", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        types = {e["event_type"] for e in data}
+        assert "own_event" in types
+        assert "foreign_event" not in types, (
+            "Cross-tenant event leaked into GET /events response — "
+            "tenant scoping has regressed."
+        )
+
+    async def test_get_timeline_filters_by_caller_org(
+        self,
+        client: httpx.AsyncClient,
+        auth_headers: dict[str, str],
+        db_session,
+    ) -> None:
+        """A task whose events live in another tenant returns an empty timeline.
+
+        The endpoint deliberately returns an empty timeline (not 404)
+        for unknown/foreign task IDs to avoid leaking the existence of
+        cross-tenant task IDs. We assert the cross-tenant events are
+        NOT included even when they share the same task_id.
+        """
+        import uuid as _uuid
+
+        from nexus_api.models import TaskEvent
+
+        task_id = _uuid.uuid4()
+        # Both events share the same task_id but live in different tenants.
+        db_session.add(
+            TaskEvent(
+                task_id=task_id,
+                event_type="own_node",
+                event_category="lifecycle",
+                org_id="dev-org",
+                duration_ms=10,
+                token_count=5,
+            )
+        )
+        db_session.add(
+            TaskEvent(
+                task_id=task_id,
+                event_type="foreign_node",
+                event_category="lifecycle",
+                org_id="other-tenant",
+                duration_ms=999,
+                token_count=999,
+            )
+        )
+        await db_session.commit()
+
+        resp = await client.get(
+            f"/api/v1/events/tasks/{task_id}/timeline",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        types = {e["event_type"] for e in body["events"]}
+        assert "own_node" in types
+        assert "foreign_node" not in types
+        # Aggregates must reflect only the caller's tenant rows.
+        assert body["total_duration_ms"] == 10
+        assert body["total_tokens"] == 5
+
+    async def test_create_event_uses_caller_org_not_body(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Body-injected ``org_id`` MUST be ignored.
+
+        Pydantic 2 default behaviour drops unknown fields silently,
+        but we test the END-TO-END outcome: the persisted row has the
+        caller's org_id, not the smuggled value. This protects against
+        a future schema change to ``extra="allow"`` that would silently
+        re-open the cross-tenant write hole.
+        """
+        resp = await client.post(
+            "/api/v1/events/",
+            json={
+                "event_type": "tenant_iso_evt",
+                "event_category": "test_cat",
+                # Hostile field — must be ignored.
+                "org_id": "victim-org-9999",
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        event_id = resp.json()["id"]
+
+        # GET back as dev-org caller — the row must be visible
+        # (proving it was written under dev-org, not victim-org).
+        listing = await client.get("/api/v1/events/", headers=auth_headers)
+        assert listing.status_code == 200
+        found = [e for e in listing.json() if e["id"] == event_id]
+        assert len(found) == 1
+        assert found[0]["org_id"] == "dev-org"
+        assert found[0]["org_id"] != "victim-org-9999"

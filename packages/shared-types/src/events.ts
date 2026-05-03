@@ -1,3 +1,9 @@
+// CONVENTION: snake_case fields. These types mirror the wire shape of
+// the Python API exactly — the runtime client receives them as-is from
+// JSON and consumes the same field names. Do NOT camelCase here; keep
+// the field names byte-identical to the FastAPI response schemas in
+// `apps/nexus-api/nexus_api/routers/events.py` and `metrics.py`.
+
 /** Event categories for the observability system. */
 export type EventCategory =
   | 'task'

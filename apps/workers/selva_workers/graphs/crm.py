@@ -60,6 +60,7 @@ class CRMState(BaseGraphState, TypedDict, total=False):
     crm_action: str | None
     contact_email: str
     contact_name: str
+    contact_id: str | None
     product_interest: str
     lead_score: int | None
     playbook: dict | None
@@ -89,6 +90,7 @@ def fetch_context(state: CRMState) -> CRMState:
         "recipient": recipient,
         "action": crm_action,
     }
+    contact_id: str | None = None
 
     # Try Phyne-CRM adapter for real data.
     try:
@@ -101,7 +103,8 @@ def fetch_context(state: CRMState) -> CRMState:
 
             adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
             profile = _run_async(adapter.get_unified_profile(recipient))
-            activities = _run_async(adapter.list_activities("contact", profile.contact.id))
+            contact_id = profile.contact.id
+            activities = _run_async(adapter.list_activities("contact", contact_id))
             context_data["contact_history"] = [
                 {"date": a.due_date or "", "type": a.type, "subject": a.title} for a in activities
             ]
@@ -129,6 +132,7 @@ def fetch_context(state: CRMState) -> CRMState:
         "messages": [*messages, context_message],
         "recipient": recipient,
         "crm_action": crm_action,
+        "contact_id": contact_id,
         "status": "fetching_context",
     }
 
@@ -334,7 +338,8 @@ def send(state: CRMState) -> CRMState:
 
         phyne_url = os.environ.get("PHYNE_CRM_URL")
         phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
-        if phyne_url:
+        contact_uuid = state.get("contact_id")
+        if phyne_url and contact_uuid:
             from madfam_inference.adapters.crm import PhyneCRMAdapter
 
             adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
@@ -345,10 +350,16 @@ def send(state: CRMState) -> CRMState:
                     title=f"AutoSwarm: {crm_action} to {recipient}",
                     description=draft[:500],
                     entity_type="contact",
-                    entity_id=recipient,
+                    entity_id=contact_uuid,
                 )
             )
             send_result["phyne_activity_id"] = activity.id
+        elif phyne_url and not contact_uuid:
+            logger.debug(
+                "Phyne-CRM activity logging skipped: no contact_id resolved for %s "
+                "(cold outreach or unresolved profile)",
+                recipient,
+            )
     except Exception:
         logger.debug("Phyne-CRM activity logging skipped (unavailable)")
 
@@ -391,6 +402,7 @@ def send(state: CRMState) -> CRMState:
                     body_html=draft_content,
                     utm_campaign=effective_utm,
                     lead_id=lead_id,
+                    org_id=state.get("org_id"),
                 )
             )
             send_result["email_id"] = (

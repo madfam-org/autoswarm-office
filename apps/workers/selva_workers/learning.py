@@ -174,10 +174,16 @@ async def update_agent_performance(
     status: str,
     duration_seconds: float | None = None,
     was_approval_denied: bool = False,
+    org_id: str | None = None,
 ) -> None:
     """Fire-and-forget PATCH to /api/v1/agents/{agent_id}/stats.
 
     Follows the same pattern as task_status.py.
+
+    Args:
+        org_id: Target tenant org_id for the X-Selva-Tenant-Org header
+            so nexus-api routes the worker token to the correct tenant
+            scope. Agent rows are tenant-scoped — callers SHOULD pass it.
     """
     if agent_id == "unknown":
         return
@@ -208,7 +214,7 @@ async def update_agent_performance(
             "PATCH",
             url,
             json=body,
-            headers=get_worker_auth_headers(),
+            headers=get_worker_auth_headers(org_id=org_id),
             timeout=5.0,
         )
         if not success:

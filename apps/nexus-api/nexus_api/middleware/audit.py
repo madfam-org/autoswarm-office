@@ -66,7 +66,10 @@ def _extract_user_id(request: Request) -> str:
             payload = json.loads(base64.urlsafe_b64decode(payload_b64))
             return payload.get("sub", "anonymous")
         except Exception:
-            pass
+            logger.debug(
+                "Failed to extract user_id from Bearer token for audit log",
+                exc_info=True,
+            )
 
     return "anonymous"
 

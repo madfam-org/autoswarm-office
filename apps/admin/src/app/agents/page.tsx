@@ -8,9 +8,7 @@ import type {
   Department,
 } from '@autoswarm/shared-types';
 import { Button } from '@autoswarm/ui';
-
-const NEXUS_API_URL =
-  process.env.NEXT_PUBLIC_NEXUS_API_URL ?? 'http://localhost:4300';
+import { apiFetch } from '@/lib/api';
 
 const ROLE_COLORS: Record<AgentRole, string> = {
   planner: 'bg-violet-800 text-violet-200',
@@ -45,8 +43,8 @@ export default function AgentsPage() {
   const fetchData = useCallback(async () => {
     try {
       const [agentsRes, depsRes] = await Promise.all([
-        fetch(`${NEXUS_API_URL}/api/v1/agents`),
-        fetch(`${NEXUS_API_URL}/api/v1/departments`),
+        apiFetch('/api/v1/agents'),
+        apiFetch('/api/v1/departments'),
       ]);
 
       if (agentsRes.ok) {
@@ -68,7 +66,7 @@ export default function AgentsPage() {
 
   const handleDelete = async (agentId: string) => {
     try {
-      const res = await fetch(`${NEXUS_API_URL}/api/v1/agents/${agentId}`, {
+      const res = await apiFetch(`/api/v1/agents/${agentId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -84,11 +82,10 @@ export default function AgentsPage() {
 
   const handleReassign = async (agentId: string, departmentId: string) => {
     try {
-      const res = await fetch(
-        `${NEXUS_API_URL}/api/v1/agents/${agentId}/department`,
+      const res = await apiFetch(
+        `/api/v1/agents/${agentId}/department`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ departmentId }),
         },
       );

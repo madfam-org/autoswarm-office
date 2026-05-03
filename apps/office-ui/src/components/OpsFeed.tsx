@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type FC } from 'react';
+import { CloseButton } from '@autoswarm/ui';
 import { useEventStream } from '@/hooks/useEventStream';
 import type { EventCategory, TaskEvent } from '@autoswarm/shared-types';
+import { formatHMS } from '@/lib/format-time';
 
 /**
  * Pull a human-readable snippet out of an LLM event's payload.
@@ -81,15 +83,6 @@ function formatDuration(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatTime(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  } catch {
-    return '';
-  }
-}
-
 const EventCard: FC<{ event: TaskEvent }> = ({ event }) => {
   const [expanded, setExpanded] = useState(false);
   const borderColor = CATEGORY_COLORS[event.event_category as EventCategory] ?? 'border-l-slate-500';
@@ -105,7 +98,7 @@ const EventCard: FC<{ event: TaskEvent }> = ({ event }) => {
         <span className={`font-bold ${isError ? 'text-red-400' : 'text-slate-200'}`}>
           {event.event_type}
         </span>
-        <span className="text-slate-600">{formatTime(event.created_at)}</span>
+        <span className="text-slate-600">{formatHMS(event.created_at)}</span>
       </div>
 
       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[7px]">
@@ -173,7 +166,7 @@ export const OpsFeed: FC<OpsFeedProps> = ({ open, onClose }) => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[19] bg-black/20 animate-fade-in"
+        className="fixed inset-0 z-backdrop-below-hud bg-black/20 animate-fade-in"
         onClick={onClose}
       />
 
@@ -190,13 +183,7 @@ export const OpsFeed: FC<OpsFeedProps> = ({ open, onClose }) => {
             </h2>
             <div className="flex items-center gap-2">
               <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-red-400'}`} />
-              <button
-                onClick={onClose}
-                className="font-mono text-[10px] text-slate-500 hover:text-white"
-                aria-label="Close ops feed"
-              >
-                X
-              </button>
+              <CloseButton onClick={onClose} label="Close ops feed" shortcut="ESC" />
             </div>
           </div>
 

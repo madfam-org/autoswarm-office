@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type FC } from 'react';
 import type { MeetingNotes, MeetingNotesStatus } from '@/hooks/useMeetingNotes';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface MeetingNotesPanelProps {
   open: boolean;
@@ -55,26 +56,29 @@ export const MeetingNotesPanel: FC<MeetingNotesPanelProps> = ({
     });
   };
 
+  const focusTrapRef = useFocusTrap<HTMLElement>(open);
+
   if (!open) return null;
 
   return (
     <aside
+      ref={focusTrapRef}
       className={`fixed right-0 top-0 z-modal h-full w-full max-w-96 transform transition-transform duration-300 sm:w-96 ${
         visible ? 'translate-x-0' : 'translate-x-full'
       }`}
-      aria-label="Meeting notes panel"
+      aria-labelledby="meeting-notes-title"
       role="dialog"
       aria-modal="true"
     >
       <div className="flex h-full flex-col bg-slate-900/95 backdrop-blur-sm pixel-border-accent">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-          <h2 className="pixel-text text-[10px] uppercase tracking-wider text-indigo-400">
+          <h2 id="meeting-notes-title" className="pixel-text text-[10px] uppercase tracking-wider text-indigo-400">
             Meeting Notes
           </h2>
           <button
             onClick={onClose}
-            className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+            className="touch-target rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-200"
             aria-label="Close meeting notes"
           >
             ESC

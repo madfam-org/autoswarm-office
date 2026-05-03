@@ -35,7 +35,8 @@ __pycache__/
 Thumbs.db
 
 # Runtime SQLite databases
-autoswarm_state.db
+*.db
+*.sqlite3
 
 # Coverage
 coverage/
@@ -72,5 +73,4 @@ apps/gateway/data/
 # Python virtual envs used by test harnesses
 .venv-test/
 
-# Local dev selva state DB
-selva_state.db
+.claude/

@@ -2,6 +2,7 @@
 
 import { type FC, useRef, useEffect, useCallback, useState } from 'react';
 import type { WhiteboardStroke, WhiteboardTool } from '@/hooks/useWhiteboard';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface WhiteboardPanelProps {
   open: boolean;
@@ -113,21 +114,25 @@ export const WhiteboardPanel: FC<WhiteboardPanelProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(open);
+
   if (!open) return null;
 
   return (
     <div
+      ref={focusTrapRef}
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/70"
       role="dialog"
-      aria-label="Whiteboard"
+      aria-modal="true"
+      aria-labelledby="whiteboard-title"
     >
       <div className="retro-panel pixel-border-accent bg-slate-900/95 p-4 flex flex-col gap-3 max-w-[900px] w-full mx-4 animate-pop-in">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-retro-lg text-indigo-300 font-bold">Whiteboard</h2>
+          <h2 id="whiteboard-title" className="text-retro-lg text-indigo-300 font-bold">Whiteboard</h2>
           <button
             onClick={onClose}
-            className="retro-btn rounded bg-slate-700 px-2 py-1 text-xs text-slate-300"
+            className="retro-btn touch-target rounded bg-slate-700 px-2 py-1 text-xs text-slate-300"
             aria-label="Close whiteboard"
           >
             ESC

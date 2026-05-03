@@ -6,3 +6,4 @@ export * from './avatar';
 export * from './sprite-data';
 export * from './workflow';
 export * from './events';
+export * from './world';

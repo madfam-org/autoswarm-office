@@ -6,10 +6,13 @@ import logging
 import os
 import tempfile
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_non_guest
+from ..database import get_db
+from ..tenant import TenantContext, get_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,7 @@ class VoiceDispatchResponse(BaseModel):
     text: str
     graph_type: str
     status: str
+    task_id: str
 
 
 # -- Endpoints -----------------------------------------------------------------
@@ -92,23 +96,38 @@ async def transcribe_audio(
 @router.post("/dispatch", response_model=VoiceDispatchResponse)
 async def voice_dispatch(
     body: VoiceDispatchRequest,
+    request: Request,
     user: dict = Depends(require_non_guest),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> VoiceDispatchResponse:
     """Create a SwarmTask from transcribed voice input.
 
     This endpoint accepts text (typically from a prior ``/transcribe`` call)
     and dispatches it as a new task via the swarms subsystem.
     """
-    # TODO: wire into swarms.dispatch_task when full integration is ready.
-    # For now, return confirmation so the frontend can proceed.
+    from .swarms import DispatchRequest, dispatch_task
+
     logger.info(
         "Voice dispatch: graph_type=%s, text_len=%d, user=%s",
         body.graph_type,
         len(body.text),
         user.get("sub"),
     )
+
+    dispatch_body = DispatchRequest(
+        description=body.text,
+        graph_type=body.graph_type,
+    )
+    task = await dispatch_task(
+        body=dispatch_body,
+        request=request,
+        db=db,
+        tenant=tenant,
+    )
     return VoiceDispatchResponse(
         text=body.text,
         graph_type=body.graph_type,
-        status="dispatched",
+        status=task.status,
+        task_id=task.id,
     )

@@ -260,6 +260,23 @@ def implement(state: CodingState) -> CodingState:
             exc_info=True,
         )
 
+    # Guard: if LLM was available but call_llm raised mid-loop (or any other
+    # path left code_output unset), do NOT fall through to a silent placeholder
+    # write — that would report success despite producing nothing usable.
+    # The conditional edge `_route_after_implement` short-circuits to END on
+    # status == "error"; downstream nodes (push_gate) also check for it.
+    if code_output is None and llm_available:
+        error_msg = AIMessage(
+            content="LLM call failed after retries; aborting implement node.",
+        )
+        return {
+            **state,
+            "messages": [*messages, error_msg],
+            "status": "error",
+            "result": {"error": "LLM call failed after retries"},
+            "iteration": iteration,
+        }
+
     # Write files to worktree from LLM output or placeholder.
     files_written = _write_files_to_worktree(
         worktree_path,

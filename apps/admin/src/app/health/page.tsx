@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-const NEXUS_API_URL =
-  process.env.NEXT_PUBLIC_NEXUS_API_URL ?? 'http://localhost:4300';
+import { apiFetch } from '@/lib/api';
 
 interface HealthCheck {
   component: string;
@@ -35,7 +33,7 @@ export default function HealthPage() {
 
   const fetchHealth = useCallback(async () => {
     try {
-      const res = await fetch(`${NEXUS_API_URL}/api/v1/health/detail`);
+      const res = await apiFetch('/api/v1/health/detail');
       if (res.ok) {
         setHealth(await res.json());
       } else {

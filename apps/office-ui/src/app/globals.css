@@ -322,6 +322,15 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* WCAG 2.5.5 — minimum tap target on touch devices.
+   Only applied on coarse pointers so desktop layout is unchanged. */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* Compact panels on small screens */
 @media (max-width: 640px) {
   .retro-panel {

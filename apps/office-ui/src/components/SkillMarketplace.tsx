@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type FC } from 'react';
+import { CloseButton } from '@autoswarm/ui';
 import { gameEventBus } from '@/game/PhaserGame';
 import { EVENT_CHAT_FOCUS } from '@/lib/constants';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -473,13 +474,7 @@ export const SkillMarketplace: FC<SkillMarketplaceProps> = ({ open, onClose }) =
             </select>
 
             {/* Close button */}
-            <button
-              onClick={onClose}
-              className="rounded bg-slate-800 px-2 py-1 font-mono text-[9px] text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
-              aria-label="Close marketplace"
-            >
-              [X]
-            </button>
+            <CloseButton onClick={onClose} label="Close marketplace" shortcut="ESC" />
           </div>
         </div>
 

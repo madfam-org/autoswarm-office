@@ -1,3 +1,7 @@
+// CONVENTION: camelCase fields. Domain shape used by React; the Dhanam
+// billing API responses are converted at the fetch boundary in
+// `apps/office-ui/src/lib/api.ts`.
+
 export interface ComputeTokenBucket {
   dailyLimit: number;
   used: number;

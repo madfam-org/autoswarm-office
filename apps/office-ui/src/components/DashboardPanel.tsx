@@ -3,6 +3,7 @@
 import { useState, useEffect, type FC } from 'react';
 import type { Department, Agent, TaskBoardItem, TaskTimeline } from '@autoswarm/shared-types';
 import { useTaskBoard } from '@/hooks/useTaskBoard';
+import { formatHMS } from '@/lib/format-time';
 
 interface DashboardPanelProps {
   open: boolean;
@@ -72,7 +73,7 @@ const TaskTimelineView: FC<{
           }}
         >
           <span className="text-slate-500 w-14 shrink-0">
-            {new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {formatHMS(ev.created_at)}
           </span>
           <span className={ev.event_type.includes('error') ? 'text-red-400' : 'text-slate-300'}>
             {ev.event_type}
@@ -169,7 +170,7 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
       {/* Backdrop overlay when open */}
       {open && (
         <div
-          className="fixed inset-0 z-[19] bg-black/20 animate-fade-in"
+          className="fixed inset-0 z-backdrop-below-hud bg-black/20 animate-fade-in"
           onClick={onToggle}
         />
       )}
@@ -192,7 +193,8 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
               {onOpenMarketplace && (
                 <button
                   onClick={onOpenMarketplace}
-                  className="rounded bg-purple-600 px-2 py-1 font-mono text-[8px] text-white hover:bg-purple-500 transition-colors"
+                  className="touch-target rounded bg-purple-600 px-2 py-1 font-mono text-[8px] text-white hover:bg-purple-500 transition-colors"
+                  aria-label="Open skill marketplace"
                 >
                   Skills
                 </button>
@@ -200,7 +202,8 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
               {onOpenMapEditor && (
                 <button
                   onClick={onOpenMapEditor}
-                  className="rounded bg-teal-600 px-2 py-1 font-mono text-[8px] text-white hover:bg-teal-500 transition-colors"
+                  className="touch-target rounded bg-teal-600 px-2 py-1 font-mono text-[8px] text-white hover:bg-teal-500 transition-colors"
+                  aria-label="Open map editor"
                 >
                   Map Editor
                 </button>
@@ -208,7 +211,8 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
               {onNewTask && (
                 <button
                   onClick={onNewTask}
-                  className="rounded bg-indigo-600 px-2 py-1 font-mono text-[8px] text-white hover:bg-indigo-500 transition-colors"
+                  className="touch-target rounded bg-indigo-600 px-2 py-1 font-mono text-[8px] text-white hover:bg-indigo-500 transition-colors"
+                  aria-label="Dispatch new task"
                 >
                   + New Task
                 </button>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, type FC } from 'react';
+import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
+import { CloseButton } from '@autoswarm/ui';
 import type { ApprovalRequest, ActionCategory } from '@autoswarm/shared-types';
 import { gameEventBus } from '@/game/PhaserGame';
 import { EVENT_CHAT_FOCUS } from '@/lib/constants';
@@ -8,6 +9,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useToast } from '@/hooks/useToast';
 import { DiffViewer } from './DiffViewer';
 import { extractAffectedFiles, splitDiffByFile } from '@/lib/diffPaths';
+import { timeAgo } from '@/lib/format-time';
 
 const ACTION_TAGS: Record<ActionCategory, string> = {
   file_read: '[R]',
@@ -34,19 +36,6 @@ const URGENCY_STYLES: Record<string, string> = {
   high: 'text-orange-300 bg-orange-900/40',
   critical: 'text-red-300 bg-red-900/40 animate-pulse',
 };
-
-function timeAgo(isoString: string): string {
-  const seconds = Math.floor(
-    (Date.now() - new Date(isoString).getTime()) / 1000,
-  );
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 interface ApprovalPanelProps {
   open: boolean;
@@ -137,12 +126,19 @@ export const ApprovalPanel: FC<ApprovalPanelProps> = ({
     [feedbackMap, onDeny, addToast],
   );
 
-  const sortedApprovals = [...pendingApprovals].sort((a, b) => {
-    const urgencyDiff =
-      (URGENCY_ORDER[a.urgency] ?? 3) - (URGENCY_ORDER[b.urgency] ?? 3);
-    if (urgencyDiff !== 0) return urgencyDiff;
-    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-  });
+  // Memoised so typing in the feedback textarea (which causes ApprovalPanel to
+  // re-render on every keystroke via setFeedbackMap) does not re-sort the
+  // approvals array. Recomputes only when pendingApprovals changes.
+  const sortedApprovals = useMemo(
+    () =>
+      [...pendingApprovals].sort((a, b) => {
+        const urgencyDiff =
+          (URGENCY_ORDER[a.urgency] ?? 3) - (URGENCY_ORDER[b.urgency] ?? 3);
+        if (urgencyDiff !== 0) return urgencyDiff;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }),
+    [pendingApprovals],
+  );
 
   if (!open) return null;
 
@@ -170,13 +166,7 @@ export const ApprovalPanel: FC<ApprovalPanelProps> = ({
               aria-label={connected ? 'Connected' : 'Disconnected'}
             />
           </div>
-          <button
-            onClick={onClose}
-            className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-200"
-            aria-label="Close approval panel"
-          >
-            ESC
-          </button>
+          <CloseButton onClick={onClose} label="Close approval panel" shortcut="ESC" />
         </div>
 
         {/* Content */}

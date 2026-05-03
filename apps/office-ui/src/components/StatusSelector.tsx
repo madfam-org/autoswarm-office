@@ -35,31 +35,40 @@ export const StatusSelector: FC<StatusSelectorProps> = ({ currentStatus, onStatu
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="retro-panel flex items-center gap-2 px-3 py-1.5 font-mono text-[8px] cursor-pointer hover:bg-slate-700/50 transition-colors"
+        className="retro-panel touch-target flex items-center gap-2 px-3 py-1.5 font-mono text-[8px] cursor-pointer hover:bg-slate-700/50 transition-colors"
         aria-label={`Status: ${current.label}. Click to change.`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
-        <span className={`inline-block h-2 w-2 rounded-full ${current.dot}`} />
+        <span className={`inline-block h-2 w-2 rounded-full ${current.dot}`} aria-hidden="true" />
         <span className={current.color}>{current.label}</span>
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-modal retro-panel py-1 min-w-[100px] animate-fade-in">
+        <ul
+          className="absolute left-0 top-full mt-1 z-modal retro-panel py-1 min-w-[100px] animate-fade-in"
+          role="listbox"
+          aria-label="Player status"
+        >
           {STATUS_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => {
-                onStatusChange(opt.value);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center gap-2 px-3 py-1.5 text-[8px] font-mono hover:bg-slate-700/50 transition-colors ${
-                opt.value === currentStatus ? 'bg-slate-700/30' : ''
-              }`}
-            >
-              <span className={`inline-block h-2 w-2 rounded-full ${opt.dot}`} />
-              <span className={opt.color}>{opt.label}</span>
-            </button>
+            <li key={opt.value} role="none">
+              <button
+                onClick={() => {
+                  onStatusChange(opt.value);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-[8px] font-mono hover:bg-slate-700/50 transition-colors ${
+                  opt.value === currentStatus ? 'bg-slate-700/30' : ''
+                }`}
+                role="option"
+                aria-selected={opt.value === currentStatus}
+              >
+                <span className={`inline-block h-2 w-2 rounded-full ${opt.dot}`} aria-hidden="true" />
+                <span className={opt.color}>{opt.label}</span>
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

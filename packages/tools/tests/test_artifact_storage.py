@@ -44,8 +44,13 @@ async def test_retrieve_returns_content(storage: LocalFSStorage) -> None:
 
 @pytest.mark.asyncio()
 async def test_retrieve_missing_raises(storage: LocalFSStorage) -> None:
+    # Use a well-formed path under _base that has no content. Post-v2.2.x,
+    # absolute paths outside _base raise PermissionError instead of FileNotFoundError
+    # (see test_artifact_path_containment.py for that boundary).
+    missing_hash = "0" * 64
+    relative_path = f"00/00/{missing_hash}"
     with pytest.raises(FileNotFoundError):
-        await storage.retrieve("/nonexistent/path")
+        await storage.retrieve(relative_path)
 
 
 @pytest.mark.asyncio()
@@ -61,7 +66,10 @@ async def test_delete_removes_file(storage: LocalFSStorage) -> None:
 
 @pytest.mark.asyncio()
 async def test_delete_nonexistent_returns_false(storage: LocalFSStorage) -> None:
-    deleted = await storage.delete("/nonexistent/path")
+    # Same containment-boundary note as test_retrieve_missing_raises.
+    missing_hash = "0" * 64
+    relative_path = f"00/00/{missing_hash}"
+    deleted = await storage.delete(relative_path)
     assert deleted is False
 
 

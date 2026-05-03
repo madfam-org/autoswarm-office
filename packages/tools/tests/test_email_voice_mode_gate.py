@@ -360,3 +360,26 @@ async def test_marketing_email_refuses_without_tenant_identity() -> None:
         )
     assert result.success is False
     assert "identity" in (result.error or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_send_email_refuses_when_voice_mode_unconfigured() -> None:
+    """Voice-mode lookup returns None → tool refuses with a clear error.
+
+    Sustainability test: this complements the existing
+    ``test_send_email_blocked_when_voice_mode_not_set`` by exercising
+    the same gate from a fresh test name pattern matching the
+    follow-up audit checklist. The gate is the LAST line of defence
+    against an LLM-driven send-before-onboarding race.
+    """
+    tool = email_tools.SendEmailTool()
+    with patch.object(email_tools, "_fetch_voice_mode", AsyncMock(return_value=None)):
+        result = await tool.execute(
+            to="dest@example.com",
+            subject="Onboarding-race attempt",
+            html="<p>premature send</p>",
+            org_id="brand-new-org",
+        )
+
+    assert result.success is False
+    assert "voice mode" in (result.error or "").lower()

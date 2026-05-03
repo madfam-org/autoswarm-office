@@ -5,6 +5,108 @@
 - **Pricing source-of-truth**: `internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md`. Selva tiers (Tulana v0.1 recommended, MXN/hr): Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255. Confidence: **medium** — only product with a Tulana v0.1 SKU live. The MXN/hr tier numbers are not yet codified in any local seed script — pricing flows from the Tulana decision doc into Dhanam's billing catalog at runtime. Adjacent ecosystem bundles (Founder/Operator/Flywheel, USD/mo) are seeded in `apps/office-ui/src/app/bundles/page.tsx:60-117`.
 - **PMF measurement**: per RFC 0013, NPS + Sean Ellis + retention via `@madfam/pmf-widget` → Tulana `/v1/pmf/*` endpoints. Composite PMF Score informs price moves + sunset decisions.
 
+## Security Posture (v2.2.x — post-remediation)
+
+Quick-reference for new contributors. Each bullet group is an invariant the
+v2.2.x remediation enforces — break one and you break a tenancy/safety
+boundary. Followups (12 unhardened webhook handlers, Postgres RLS rollout,
+Colyseus 0.17 migration, Stripe webhook handler, tenant onboarding UI for
+`outbound_*` columns) are tracked in ROADMAP.md.
+
+- **Worker → API auth**: every worker call sends `X-Selva-Tenant-Org: <org_id>`
+  alongside the `Authorization: Bearer <WORKER_API_TOKEN>` header. The header
+  is the sole source of org scope for worker-authenticated requests — there
+  is no `"madfam-default"` fallback anymore. Missing header resolves to
+  `org_id="platform"` (MADFAM-only). Use the helper, never hand-craft headers:
+
+  ```python
+  headers = get_worker_auth_headers(org_id=task.org_id)
+  ```
+
+  Reader: `apps/nexus-api/nexus_api/auth.py:136-160`. Writer:
+  `apps/workers/selva_workers/auth.py`.
+
+- **Tenant scoping invariants** (REST + WS):
+  - REST endpoints that mutate (`POST /api/v1/chat/messages`,
+    `POST /api/v1/events`, `POST /api/v1/approvals/...`) MUST derive
+    `org_id` from `Depends(get_current_user)` or `Depends(get_tenant)` and
+    MUST reject any `org_id` supplied in the request body. Read endpoints
+    scope queries by the JWT-derived `org_id`.
+  - WebSocket endpoints accept `?token=<jwt>` as a query param (browsers
+    cannot set custom headers on `WebSocket` upgrade). Workers connect with
+    both `?token=<worker-jwt>` and `?org_id=<uuid>` because the
+    `X-Selva-Tenant-Org` header is stripped during the WS handshake.
+
+- **Outbound email lockdown**: `SendEmailTool` and `SendMarketingEmailTool`
+  no longer accept `user_email`, `user_name`, or `agent_slug` from the LLM.
+  The From: header is server-derived from `tenant_configs.brand_name` and
+  `tenant_identities.primary_contact_email`, fetched via
+  `_fetch_tenant_identity(org_id)` → `GET /api/v1/onboarding/tenant-identity`.
+  The only LLM-controllable identity field is `agent_role`, constrained to
+  the server-side allow-list `{sales, support, growth, ops, research}`
+  (see `_AGENT_ROLE_ALLOWLIST` in `email_tools.py`). Any other value raises
+  `ValueError` before send. `SendNotificationTool` with `channel="email"`
+  delegates to `SendEmailTool.execute()` so it inherits the same voice-mode,
+  consent, sanitization, and identity gates — never call `Resend` directly
+  from a tool.
+
+- **Webhook signature verification (fail-closed)**: `_verify_hmac` returns
+  `False` on empty/missing secret. Each handler MUST check the result and
+  return `503` when the secret env var is unset and `401` when the
+  signature does not match. Three handlers fully hardened in v2.2.x
+  (Discord, WhatsApp, generic). DO NOT skip the check just because the
+  secret is empty in your local env — that is the regression we just fixed.
+  Remaining 12 handlers tracked in ROADMAP.md.
+
+- **Consent ledger integrity**: `signature_sha256` is now
+  `hmac.new(CONSENT_LEDGER_SIGNING_SECRET, payload, sha256).hexdigest()`,
+  not plain SHA-256. Append-only is enforced at the database level by
+  migration 0018 (REVOKE UPDATE/DELETE on `autoswarm_app`). Verify the
+  invariant at runtime with `GET /api/v1/health/consent-ledger-grants` —
+  returns `{invariant_holds, can_insert, can_update, can_delete}`. Old
+  rows signed with plain SHA-256 (pre-v2.2.x) intentionally fail HMAC
+  verification; that is the audit boundary, do not "fix" it by re-signing.
+
+- **Artifact storage containment**: `LocalFSStorage._resolve_safe(path)`
+  rejects any path that resolves outside `_base` (path traversal /
+  symlink escape). `RetrieveArtifactTool` validates the content-hash
+  shape `^[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}$` upfront, before
+  touching the filesystem. Never bypass either check — they are the
+  only thing between a malicious tool argument and arbitrary file read.
+
+- **Outbound HTTP (SSRF + DNS-rebinding)**: any tool that takes an
+  attacker-controllable URL MUST go through
+  `selva_tools.builtins.http_tools._build_safe_request_kwargs`. It
+  resolves the URL once via `socket.getaddrinfo`, rejects private/loopback
+  IPs, then connects by IP with the original Host header preserved and
+  SNI hostname overridden so TLS verification still works. Pair with
+  `httpx.AsyncClient(trust_env=False)` to neutralize the `HTTP_PROXY`
+  env var as an exfil vector. Calling `httpx` directly with a
+  user-supplied URL is a security regression.
+
+- **New env vars** (v2.2.x):
+  - `WORKER_API_TOKEN` — Settings refuses the literal `dev-bypass` when
+    `ENVIRONMENT=production`.
+  - `CONSENT_LEDGER_SIGNING_SECRET` — Settings refuses
+    `dev-default-CHANGE-ME` in production.
+  - `COLYSEUS_SERVICE_TOKEN` — when unset, chat persistence (Colyseus
+    → nexus-api) skips silently rather than 401-looping.
+  - `events_ws_rate_limit` / `events_ws_rate_window_seconds`
+    (default 30 / 60.0).
+  - `approvals_ws_rate_limit` / `approvals_ws_rate_window_seconds`
+    (default 30 / 60.0).
+  - `dlq_recent_limit` (default 10) — caps payload size of
+    `/api/v1/health/dlq-stats`.
+  - Worker-side: `redis_block_timeout_ms` (default 5000),
+    `event_emit_timeout_seconds` (default 3).
+
+- **Cross-language single-source-of-truth**: `OFFICE_BOUNDS` and
+  `WORLD_*` constants live in `packages/shared-types/src/world.ts` —
+  consumed by both Colyseus (TS) and any Python service that needs
+  them via the generated bindings. Dhanam tier limits live in
+  `apps/nexus-api/nexus_api/billing_tiers.py` (`TIER_DAILY_TASK_LIMIT`).
+  Do not duplicate.
+
 ## Deployment Pipeline (dev → staging → prod)
 
 autoswarm-office is the **Phase 4** target for the 3-tier pipeline
@@ -161,6 +263,13 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - `apps/office-ui/src/game/constants.ts` -- Centralized game-layer constants
 - `apps/office-ui/src/lib/constants.ts` -- Shared UI-layer constants (event keys, reconnect delays)
 - `apps/office-ui/src/lib/logger.ts` -- Dev-only logging wrapper (suppressed in production)
+- `apps/nexus-api/nexus_api/routers/onboarding.py:tenant_identity` -- `GET /api/v1/onboarding/tenant-identity` returning the server-derived outbound identity (brand_name + primary_contact_email) for the email From: lockdown
+- `apps/nexus-api/nexus_api/routers/health.py:consent_ledger_grants` -- `GET /api/v1/health/consent-ledger-grants` runtime audit of the migration-0018 REVOKE; returns `{invariant_holds, can_insert, can_update, can_delete}`
+- `apps/nexus-api/nexus_api/billing_tiers.py` -- single source of truth for Dhanam tier limits (`TIER_DAILY_TASK_LIMIT`)
+- `packages/shared-types/src/world.ts` -- single source of truth for world dimensions (`OFFICE_BOUNDS`, `WORLD_*`)
+- `packages/tools/src/selva_tools/builtins/email_tools.py` -- `_AGENT_ROLE_ALLOWLIST`, `_fetch_tenant_identity()`, voice-mode + consent gates
+- `packages/tools/src/selva_tools/builtins/http_tools.py` -- `_build_safe_request_kwargs` (SSRF + DNS-rebinding hardening)
+- `packages/tools/src/selva_tools/storage/local.py:_resolve_safe` -- artifact path containment
 
 ## Outbound Voice Mode + Consent Ledger (v2.2.0)
 
@@ -1134,6 +1243,24 @@ skill composes these four tools into a pre-submission gate.
   (configurable via `csp_extra_sources` setting), `Permissions-Policy` allowing
   camera/mic for own origin (WebRTC), and standard security headers. CSP
   `connect-src` auto-includes CORS origins and `ws:/wss:`.
+- **X-Selva-Tenant-Org header pattern** (v2.2.x): worker JWTs do not carry an
+  `org_id` claim — they are issued once per worker, not per tenant. Every
+  worker → API call therefore sends `X-Selva-Tenant-Org: <task.org_id>` to
+  scope the call to the tenant whose task it is currently processing.
+  `auth.py` reads the header in the dependency that resolves
+  `current_user.org_id`. Missing header resolves to `org_id="platform"`
+  (MADFAM-only audience). The hardcoded `"madfam-default"` fallback that
+  pre-dated this pattern is gone — use
+  `get_worker_auth_headers(org_id=...)` so the header always travels with
+  the bearer. WebSocket upgrades strip custom headers, so workers
+  additionally pass `?org_id=<uuid>` on the WS query string.
+- **`agent_role` allow-list pattern** (`email_tools.py:_AGENT_ROLE_ALLOWLIST`):
+  the only LLM-controllable identity field on outbound email is
+  `agent_role`, constrained to `{sales, support, growth, ops, research}`.
+  Any other value raises `ValueError` before send. This is the template
+  for any future tool that lets the LLM choose a category-style argument:
+  define a tuple/frozenset at module scope, validate at the top of
+  `execute()`, raise on miss. Never trust the LLM to stay on the script.
 - **CSRF middleware** (`nexus_api/middleware/csrf.py`): double-submit cookie
   pattern. Bearer-authenticated requests skip CSRF validation (Bearer tokens
   are inherently CSRF-safe). Webhook endpoints (`/api/v1/gateway/`,

@@ -30,6 +30,7 @@ cycle for existing users.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -40,6 +41,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_non_guest
+from ..config import get_settings
 from ..database import get_db
 from ..models import ConsentLedger, TenantConfig
 from .events import emit_event_db
@@ -187,6 +189,18 @@ def _get_client_ip(request: Request) -> str:
     return client.host if client else "unknown"
 
 
+def _signing_secret() -> bytes:
+    """Return the HMAC signing secret as bytes.
+
+    Read from ``Settings.consent_ledger_signing_secret`` on every call so
+    operators rotating the secret pick it up after a settings reload
+    without restarting the process. ``Settings`` already refuses the
+    ``dev-default-CHANGE-ME`` sentinel in production via
+    ``_validate_config``.
+    """
+    return get_settings().consent_ledger_signing_secret.encode("utf-8")
+
+
 def compute_signature(
     *,
     org_id: str,
@@ -196,14 +210,22 @@ def compute_signature(
     typed_confirmation: str,
     created_at: datetime,
 ) -> str:
-    """SHA-256 integrity digest over the ledger row's identifying fields.
+    """HMAC-SHA256 integrity digest over the ledger row's identifying fields.
 
-    Not a cryptographic signature in the PKI sense — a tamper-evidence
-    hash. Any mutation of the row's fields will desync from this digest,
-    detectable by replaying the computation at audit time.
+    Uses HMAC with a server-only secret (``CONSENT_LEDGER_SIGNING_SECRET``)
+    so an adversary with INSERT access on the ledger table cannot forge
+    rows that pass ``verify_signature`` — they would need the secret
+    held in the application process.
 
-    Exported (not underscore-prefixed) so auditors can import it to
-    re-verify ledger rows offline.
+    The output is structurally identical to a plain SHA-256 hex digest
+    (64 lowercase hex chars), so the ``consent_ledger.signature_sha256``
+    column shape is unchanged. Rows signed under a previous secret (or
+    under the pre-HMAC plain SHA-256 algorithm) will fail verification
+    at audit time, which is the desired behaviour at the migration
+    boundary.
+
+    Exported (not underscore-prefixed) so auditors holding the secret
+    can import this function to re-verify ledger rows offline.
     """
     payload = "|".join(
         [
@@ -215,19 +237,22 @@ def compute_signature(
             created_at.isoformat(),
         ]
     )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return hmac.new(_signing_secret(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def verify_signature(entry: ConsentLedger) -> bool:
-    """Recompute the SHA-256 digest and compare to the stored value.
+    """Recompute the HMAC-SHA256 digest and compare to the stored value.
 
     Returns True iff the stored digest matches a fresh computation over
-    the row's current fields. False means the row has been tampered
-    with (or the signing algorithm has moved to a new version).
+    the row's current fields under the currently configured signing
+    secret. False means either: (a) the row has been tampered with,
+    (b) the signing secret has rotated, or (c) the row predates the
+    HMAC migration. All three cases warrant audit attention.
 
     Normalizes ``created_at`` the same way the ingest path does
     (microseconds zeroed, UTC) so the round-trip through the DB does
-    not cause a false-negative.
+    not cause a false-negative. Uses ``hmac.compare_digest`` for
+    constant-time comparison to neutralize timing oracles.
     """
     created_at = entry.created_at
     if created_at.tzinfo is None:
@@ -241,7 +266,7 @@ def verify_signature(entry: ConsentLedger) -> bool:
         typed_confirmation=entry.typed_confirmation,
         created_at=created_at,
     )
-    return expected == entry.signature_sha256
+    return hmac.compare_digest(expected, entry.signature_sha256)
 
 
 # Back-compat alias — keeps the internal call-site signature stable.

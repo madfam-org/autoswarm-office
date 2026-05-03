@@ -3,12 +3,32 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import Any
 
 from ..base import BaseTool, ToolResult
 from ..storage import LocalFSStorage
 
 _storage = LocalFSStorage()
+
+
+# Content-addressable layout per LocalFSStorage: <hash[0:2]>/<hash[2:4]>/<hash>
+# where <hash> is a SHA-256 hex digest (64 hex chars). Match either the
+# relative layout, or an absolute path whose final 3 segments follow the
+# same shape (this is what ``SaveArtifactTool`` returns to callers).
+_HASH_PATH_RE = re.compile(r"(?:^|/)[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}$")
+
+
+def _is_valid_artifact_path(path: str) -> bool:
+    """Reject anything that doesn't look like a content-addressable artifact path."""
+    if not path:
+        return False
+    if "\x00" in path:
+        return False
+    # Reject home expansion and parent traversal regardless of position.
+    if path.startswith("~") or ".." in path.split("/"):
+        return False
+    return bool(_HASH_PATH_RE.search(path))
 
 
 class SaveArtifactTool(BaseTool):
@@ -36,6 +56,9 @@ class SaveArtifactTool(BaseTool):
         content_type = kwargs.get("content_type", "text/plain")
 
         content_bytes = content.encode("utf-8")
+        # Storage path is hash-derived from the caller-supplied content.
+        # No caller-supplied path component is honored here, so this tool is
+        # not vulnerable to path-traversal in the same way as retrieve/delete.
         content_hash = hashlib.sha256(content_bytes).hexdigest()
 
         path = await _storage.save(content_bytes, content_hash)
@@ -86,14 +109,26 @@ class RetrieveArtifactTool(BaseTool):
                     error=f"No artifact found with hash: {content_hash}",
                 )
 
+        # Defense-in-depth: reject any path that doesn't look like a
+        # content-addressable artifact path before calling storage. The
+        # storage layer ALSO enforces base-directory containment.
+        assert path is not None  # narrowed by the checks above
+        if not _is_valid_artifact_path(path):
+            return ToolResult(
+                success=False,
+                error="Invalid artifact path; expected content-addressable layout",
+            )
+
         try:
-            data = await _storage.retrieve(path)  # type: ignore[arg-type]
+            data = await _storage.retrieve(path)
             return ToolResult(
                 output=data.decode("utf-8", errors="replace"),
                 data={"size_bytes": len(data), "path": path},
             )
         except FileNotFoundError:
             return ToolResult(success=False, error=f"Artifact not found: {path}")
+        except PermissionError as exc:
+            return ToolResult(success=False, error=str(exc))
 
 
 class ListArtifactsTool(BaseTool):

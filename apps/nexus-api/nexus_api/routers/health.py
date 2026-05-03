@@ -4,21 +4,29 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Any
 
 import httpx
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from selva_redis_pool import get_redis_pool
 
 from ..config import get_settings
-from ..database import async_session_factory
+from ..database import async_session_factory, get_db
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
 _settings = get_settings()
+
+# Application role name whose privileges on `consent_ledger` we expect to
+# enforce the append-only invariant. Migration 0018 REVOKEs UPDATE/DELETE
+# from this role. Configurable via env in case a deployment uses a
+# different app role name.
+_CONSENT_LEDGER_APP_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE", "autoswarm_app")
 
 
 @router.get("/health")
@@ -213,3 +221,79 @@ async def dlq_stats() -> dict[str, object]:
         result["error"] = str(exc)
 
     return result
+
+
+@router.get("/consent-ledger-grants")
+async def consent_ledger_grants(
+    response: Response,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Verify the append-only invariant on `consent_ledger` is enforced at the DB level.
+
+    Migration 0018 REVOKEs UPDATE/DELETE on `consent_ledger` from the
+    application role (default ``autoswarm_app``). This endpoint exposes
+    a runtime check so a re-applied migration, manual ``GRANT ALL``, or
+    a superuser-mode test seed that silently re-mutates the grants will
+    surface in monitoring.
+
+    Open endpoint (no auth) — matches the rest of `/health`. The role
+    name is not echoed in the response to avoid disclosing internal
+    config; it is logged when the invariant fails for ops triage.
+
+    Returns 503 when the invariant does not hold.
+    """
+    role = _CONSENT_LEDGER_APP_ROLE
+    body: dict[str, Any] = {
+        "invariant_holds": False,
+        "can_insert": None,
+        "can_update": None,
+        "can_delete": None,
+    }
+
+    try:
+        result = await db.execute(
+            text(
+                """
+                SELECT
+                    has_table_privilege(:role, 'consent_ledger', 'INSERT') AS can_insert,
+                    has_table_privilege(:role, 'consent_ledger', 'UPDATE') AS can_update,
+                    has_table_privilege(:role, 'consent_ledger', 'DELETE') AS can_delete
+                """
+            ),
+            {"role": role},
+        )
+        row = result.one()
+    except Exception as exc:
+        # Most common case: SQLite test DB or PostgreSQL role doesn't
+        # exist (dev setups). Surface as degraded rather than crashing.
+        logger.warning(
+            "Consent ledger grant probe failed (role=%s): %s", role, exc
+        )
+        body["error"] = "grant_probe_unavailable"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return body
+
+    can_insert = bool(row.can_insert)
+    can_update = bool(row.can_update)
+    can_delete = bool(row.can_delete)
+
+    invariant_holds = can_insert and not can_update and not can_delete
+
+    body["invariant_holds"] = invariant_holds
+    body["can_insert"] = can_insert
+    body["can_update"] = can_update
+    body["can_delete"] = can_delete
+
+    if not invariant_holds:
+        # Log role name for ops; do not return it in the body.
+        logger.error(
+            "Consent ledger append-only invariant VIOLATED -- "
+            "role=%s INSERT=%s UPDATE=%s DELETE=%s",
+            role,
+            can_insert,
+            can_update,
+            can_delete,
+        )
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return body

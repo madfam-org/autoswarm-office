@@ -43,6 +43,15 @@ def _validate_webhook_url(url: str) -> str:
 
     Returns the cleaned URL on success, or raises HTTPException(400) with a
     descriptive reason on failure.
+
+    NOTE: This validator only resolves the hostname *once* at admission time.
+    The actual HTTP fetch happens later inside ``run_acp_workflow_task`` (a
+    Celery task), which re-resolves the hostname. A malicious DNS server can
+    therefore return a public IP at admission and a private IP at fetch time
+    (DNS rebinding). Mitigations belong in the Celery task itself --
+    pin-to-IP-with-SNI-override (see ``http_tools._resolve_safe_url``) is the
+    full fix. Tracked separately; do not rely on this function alone for
+    end-to-end SSRF protection of dispatched URLs.
     """
     if len(url) > 2048:
         raise HTTPException(
@@ -79,9 +88,19 @@ def _validate_webhook_url(url: str) -> str:
 
 
 def _verify_hmac(body: bytes, signature: str, secret: str) -> bool:
-    """Constant-time HMAC-SHA256 verification for incoming webhook payloads."""
+    """Constant-time HMAC-SHA256 verification for incoming webhook payloads.
+
+    SECURITY: Refuses verification when the secret is empty. An unconfigured
+    secret env var is a misconfiguration, not a license to accept arbitrary
+    unauthenticated POSTs from the public internet. Operators MUST set the
+    corresponding webhook secret env var (see RUNBOOK / handler docstrings).
+    """
     if not secret:
-        return True  # Secret not configured — allow (warn in RUNBOOK to always set)
+        logger.error(
+            "HMAC verification attempted with empty secret -- rejecting. "
+            "Set the corresponding webhook secret env var to enable this endpoint."
+        )
+        return False
     expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature.removeprefix("sha256="))
 
@@ -154,15 +173,22 @@ async def discord_webhook(
     Validates HMAC-SHA256 signature and handles:
     - ``/status``: returns recent swarm transcript hits from EdgeMemoryDB.
     - ``/initiate_acp <url>``: same trigger as Telegram.
+
+    Requires ``DISCORD_WEBHOOK_SECRET`` env var. Endpoint refuses requests
+    when the secret is unset (no fail-open).
     """
     settings = get_settings()
     body = await request.body()
 
-    if settings.discord_webhook_secret:
-        if not x_signature_256:
-            raise HTTPException(status_code=401, detail="Missing X-Signature-256 header")
-        if not _verify_hmac(body, x_signature_256, settings.discord_webhook_secret):
-            raise HTTPException(status_code=401, detail="Invalid Discord webhook signature")
+    if not settings.discord_webhook_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Discord webhook secret not configured -- endpoint disabled",
+        )
+    if not x_signature_256:
+        raise HTTPException(status_code=401, detail="Missing X-Signature-256 header")
+    if not _verify_hmac(body, x_signature_256, settings.discord_webhook_secret):
+        raise HTTPException(status_code=401, detail="Invalid Discord webhook signature")
 
     payload = json.loads(body)
     content = payload.get("content", "").strip()
@@ -347,14 +373,20 @@ async def whatsapp_inbound(request: Request) -> dict[str, Any]:
     """
     Receive inbound WhatsApp messages via Meta Cloud API webhook.
     Validates X-Hub-Signature-256 and routes /acp commands.
+
+    Requires ``WHATSAPP_ACCESS_TOKEN`` env var (used as the HMAC secret).
+    Endpoint refuses requests when the secret is unset.
     """
     settings = get_settings()
     body = await request.body()
     sig = request.headers.get("X-Hub-Signature-256", "")
 
-    if settings.whatsapp_access_token and not _verify_hmac(
-        body, sig, settings.whatsapp_access_token
-    ):
+    if not settings.whatsapp_access_token:
+        raise HTTPException(
+            status_code=503,
+            detail="WhatsApp access token not configured -- endpoint disabled",
+        )
+    if not _verify_hmac(body, sig, settings.whatsapp_access_token):
         raise HTTPException(status_code=401, detail="Invalid WhatsApp webhook signature")
 
     try:
@@ -772,12 +804,24 @@ async def generic_webhook(
     request: Request,
     x_webhook_signature: str = None,
 ) -> dict[str, Any]:
-    """Generic HMAC-signed webhook. channel_id used for routing/logging."""
+    """Generic HMAC-signed webhook. channel_id used for routing/logging.
+
+    Requires ``AUTOSWARM_WEBHOOK_SECRET`` env var. Endpoint refuses requests
+    when the secret is unset OR when the X-Webhook-Signature header is missing
+    (no fail-open).
+    """
     body = await request.body()
     from ..config import get_settings as _get_settings
 
     secret = _get_settings().autoswarm_webhook_secret
-    if secret and x_webhook_signature and not _verify_hmac(body, x_webhook_signature, secret):
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Generic webhook secret not configured -- endpoint disabled",
+        )
+    if not x_webhook_signature:
+        raise HTTPException(status_code=401, detail="Missing X-Webhook-Signature header")
+    if not _verify_hmac(body, x_webhook_signature, secret):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
     try:
         import json as _j

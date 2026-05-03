@@ -12,9 +12,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import get_current_user
+from ..auth import get_current_user, verify_jwt
+from ..config import get_settings
 from ..database import async_session_factory, get_db
 from ..models import TaskEvent
+from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter, event_manager
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,10 @@ class CreateEventRequest(BaseModel):
     token_count: int | None = None
     error_message: str | None = None
     request_id: str | None = None
-    org_id: str = "default"
+    # NOTE: org_id is NOT accepted from the request body. It is derived
+    # server-side from the authenticated caller (JWT claim or worker token
+    # X-Selva-Tenant-Org header) so a tenant cannot write events into another
+    # tenant's observability stream.
 
 
 class TaskEventResponse(BaseModel):
@@ -116,8 +121,14 @@ async def create_event(
 ) -> dict[str, str]:
     """Create a new task event.
 
-    Requires Bearer token authentication (worker token or JWT).
+    Requires Bearer token authentication (worker token or JWT). The event's
+    ``org_id`` is derived server-side from the authenticated caller -- callers
+    cannot specify a target ``org_id`` in the body. Workers declare their
+    tenant via the ``X-Selva-Tenant-Org`` header (resolved by ``auth.py``).
+
+    Broadcasts only to WebSocket clients in the same tenant.
     """
+    org_id = user.get("org_id") or "default"
     event = TaskEvent(
         task_id=_safe_uuid(body.task_id),
         agent_id=_safe_uuid(body.agent_id),
@@ -132,15 +143,17 @@ async def create_event(
         token_count=body.token_count,
         error_message=body.error_message,
         request_id=body.request_id,
-        org_id=body.org_id,
+        org_id=org_id,
     )
     db.add(event)
     await db.flush()
     await db.refresh(event)
 
-    # Broadcast to WebSocket clients
+    # Broadcast to WebSocket clients in the same tenant only.
     response = _event_to_response(event)
-    await event_manager.broadcast({"type": "task_event", "payload": response.model_dump()})
+    await event_manager.broadcast_to_org(
+        org_id, {"type": "task_event", "payload": response.model_dump()}
+    )
 
     return {"id": str(event.id)}
 
@@ -148,7 +161,6 @@ async def create_event(
 @router.get(
     "/",
     response_model=list[TaskEventResponse],
-    dependencies=[Depends(get_current_user)],
 )
 async def list_events(
     task_id: str | None = Query(default=None),
@@ -160,9 +172,14 @@ async def list_events(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> list[TaskEventResponse]:
-    """List events with optional filters, newest first."""
-    query = select(TaskEvent).order_by(TaskEvent.created_at.desc())
+    """List events with optional filters, newest first. Tenant-scoped."""
+    query = (
+        select(TaskEvent)
+        .where(TaskEvent.org_id == tenant.org_id)
+        .order_by(TaskEvent.created_at.desc())
+    )
 
     if task_id:
         uid = _safe_uuid(task_id)
@@ -198,28 +215,43 @@ async def list_events(
 @router.get(
     "/tasks/{task_id}/timeline",
     response_model=TimelineResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def get_task_timeline(
     task_id: str,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> TimelineResponse:
-    """Full execution timeline for a single task."""
+    """Full execution timeline for a single task. Tenant-scoped.
+
+    Returns only events with ``org_id == tenant.org_id``. A task that
+    belongs to another tenant (or does not exist at all) yields an empty
+    timeline rather than 404 -- this matches the response shape callers
+    expect for newly-dispatched tasks before any events have landed,
+    while still preventing cross-tenant data leak.
+    """
     uid = _safe_uuid(task_id)
     if not uid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid UUID")
 
     result = await db.execute(
-        select(TaskEvent).where(TaskEvent.task_id == uid).order_by(TaskEvent.created_at.asc())
+        select(TaskEvent)
+        .where(
+            TaskEvent.task_id == uid,
+            TaskEvent.org_id == tenant.org_id,
+        )
+        .order_by(TaskEvent.created_at.asc())
     )
     events = result.scalars().all()
 
-    # Aggregate duration and tokens
+    # Aggregate duration and tokens (also tenant-scoped, defense in depth)
     agg = await db.execute(
         select(
             func.sum(TaskEvent.duration_ms),
             func.sum(TaskEvent.token_count),
-        ).where(TaskEvent.task_id == uid)
+        ).where(
+            TaskEvent.task_id == uid,
+            TaskEvent.org_id == tenant.org_id,
+        )
     )
     row = agg.one()
     total_duration = row[0]
@@ -234,21 +266,72 @@ async def get_task_timeline(
 
 
 @router.websocket("/ws")
-async def events_websocket(websocket: WebSocket) -> None:
-    """Real-time event stream over WebSocket.
+async def events_websocket(
+    websocket: WebSocket,
+    token: str | None = Query(default=None),  # noqa: B008
+) -> None:
+    """Real-time event stream over WebSocket. Tenant-scoped.
 
-    On connect: sends last 50 events as ``event_batch``.
+    Authentication: the JWT (or worker shared-secret token) MUST be passed
+    as the ``?token=...`` query parameter. The connection is rejected before
+    any state is sent if the token is missing or invalid.
+
+    Tenant scoping: the initial 50-event batch is filtered by the caller's
+    ``org_id`` (from JWT). Relayed events are also filtered per-tenant via
+    ``broadcast_to_org`` on the server side.
+
+    Worker-token streams must additionally pass ``?org_id=<tenant>`` to
+    declare the tenant scope (the WS upgrade does not carry our custom
+    ``X-Selva-Tenant-Org`` header).
+
+    On connect: sends last 50 events for the tenant as ``event_batch``.
     Then relays new events from the ``autoswarm:events`` Redis channel.
-    Same pattern as ``/api/v1/approvals/ws``.
     """
-    client_id = websocket.query_params.get("client_id", str(uuid.uuid4()))
-    await event_manager.connect(websocket, client_id)
+    if not token:
+        await websocket.close(code=4401, reason="missing token")
+        return
 
-    # Send initial batch
+    settings = get_settings()
+    org_id: str
+    sub: str
+    try:
+        if (
+            settings.worker_api_token
+            and settings.worker_api_token != "dev-bypass"
+            and token == settings.worker_api_token
+        ):
+            tenant_org = (websocket.query_params.get("org_id") or "").strip()
+            if not tenant_org:
+                await websocket.close(code=4401, reason="missing tenant scope for worker token")
+                return
+            org_id = tenant_org
+            sub = "service:worker"
+        elif settings.environment == "development" and settings.dev_auth_bypass:
+            org_id = "dev-org"
+            sub = "dev-user-00000000"
+        else:
+            payload = await verify_jwt(token, settings)
+            org_id = payload.get("org_id") or "default"
+            sub = payload.get("sub") or "anonymous"
+    except HTTPException:
+        await websocket.close(code=4401, reason="invalid token")
+        return
+    except Exception:
+        logger.warning("Events WS auth failed", exc_info=True)
+        await websocket.close(code=4401, reason="auth failure")
+        return
+
+    client_id = websocket.query_params.get("client_id") or f"{sub}-{uuid.uuid4()}"
+    await event_manager.connect(websocket, client_id, org_id=org_id)
+
+    # Send initial batch (tenant-scoped).
     try:
         async with async_session_factory() as session:
             result = await session.execute(
-                select(TaskEvent).order_by(TaskEvent.created_at.desc()).limit(50)
+                select(TaskEvent)
+                .where(TaskEvent.org_id == org_id)
+                .order_by(TaskEvent.created_at.desc())
+                .limit(50)
             )
             recent = result.scalars().all()
             batch = [_event_to_response(e).model_dump() for e in reversed(recent)]
@@ -279,13 +362,20 @@ async def emit_event_db(
     event_category: str,
     task_id: uuid.UUID | None = None,
     agent_id: uuid.UUID | None = None,
+    org_id: str | None = None,
     **kwargs: Any,
 ) -> None:
     """Insert a TaskEvent directly (for server-side emission without HTTP).
 
     Fire-and-forget: exceptions are logged but never raised.
+
+    Callers SHOULD pass ``org_id`` so the event is broadcast to the right
+    tenant's WS clients. When omitted the column default (``"default"``) is
+    used and the broadcast is org-scoped to "default".
     """
     try:
+        if org_id is not None:
+            kwargs["org_id"] = org_id
         event = TaskEvent(
             task_id=task_id,
             agent_id=agent_id,
@@ -298,6 +388,8 @@ async def emit_event_db(
         await db.refresh(event)
 
         response = _event_to_response(event)
-        await event_manager.broadcast({"type": "task_event", "payload": response.model_dump()})
+        await event_manager.broadcast_to_org(
+            event.org_id, {"type": "task_event", "payload": response.model_dump()}
+        )
     except Exception:
         logger.warning("Failed to emit DB event %s", event_type, exc_info=True)

@@ -1,7 +1,8 @@
 """Chat history API for persistent message storage.
 
-Messages are written by the Colyseus server (fire-and-forget POST) and
-read by clients to restore chat history on reconnection.
+Messages are written by the Colyseus server (fire-and-forget POST, authenticated
+with the worker shared-secret token + ``X-Selva-Tenant-Org`` header) and read
+by clients to restore chat history on reconnection.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth import get_current_user
 from ..database import get_db
 from ..models import ChatMessage
 from ..tenant import TenantContext, get_tenant
@@ -29,7 +31,9 @@ class ChatMessageCreate(BaseModel):
     sender_name: str = Field(..., min_length=1, max_length=255)
     content: str = Field(..., min_length=1, max_length=500)
     is_system: bool = False
-    org_id: str = Field(default="default", max_length=255)
+    # NOTE: org_id is NOT accepted from the request body. It is derived from
+    # the authenticated caller (JWT claim or worker token X-Selva-Tenant-Org
+    # header) to prevent cross-tenant chat-history poisoning.
 
 
 class ChatMessageResponse(BaseModel):
@@ -68,6 +72,8 @@ async def get_chat_history(
     Pagination: use ``limit`` and ``offset`` for standard pagination, or pass
     ``before`` with the ``created_at`` of the oldest message in your current
     batch to fetch the next page (cursor-based).
+
+    Tenant-scoped: only messages with ``org_id == tenant.org_id`` are returned.
     """
     base_query = select(ChatMessage).where(
         ChatMessage.room_id == room_id,
@@ -108,15 +114,25 @@ async def get_chat_history(
 async def create_chat_message(
     body: ChatMessageCreate,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    user: dict = Depends(get_current_user),  # noqa: B008
 ) -> dict[str, str]:
-    """Persist a chat message (called by Colyseus, fire-and-forget)."""
+    """Persist a chat message.
+
+    Requires Bearer-token authentication. The persisted message's ``org_id``
+    is derived server-side from the authenticated caller (``user['org_id']``)
+    -- the request body does not carry an ``org_id`` field.
+
+    Called by Colyseus (fire-and-forget) using the worker shared-secret token
+    plus the ``X-Selva-Tenant-Org`` header to declare the tenant scope.
+    """
+    org_id = user.get("org_id") or "default"
     msg = ChatMessage(
         room_id=body.room_id,
         sender_session_id=body.sender_session_id,
         sender_name=body.sender_name,
         content=body.content,
         is_system=body.is_system,
-        org_id=body.org_id,
+        org_id=org_id,
     )
     db.add(msg)
     await db.flush()

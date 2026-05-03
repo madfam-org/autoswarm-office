@@ -7,7 +7,7 @@ import {
 } from "../schema/OfficeState";
 import { handleMovement } from "../handlers/movement";
 import { handleInteraction, handleApproval } from "../handlers/interaction";
-import { handleChat, addSystemMessage } from "../handlers/chat";
+import { handleChat, addSystemMessage, type ChatAuthContext } from "../handlers/chat";
 import { handleEmote } from "../handlers/emotes";
 import { handleAvatar } from "../handlers/avatar";
 import { handleStatus, handleMusicStatus, handleMeetingTitle } from "../handlers/status";
@@ -172,6 +172,29 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
   }
 
   /**
+   * Build the auth context for fire-and-forget chat-persistence calls
+   * to nexus-api. The org_id is taken from the joining client's verified
+   * Janua claims (when available); the room-level fallback is "default".
+   *
+   * Returns undefined when no service token is available -- the chat
+   * handler will then skip persistence rather than POST anonymously.
+   */
+  private getChatAuth(client?: Client): ChatAuthContext | undefined {
+    const token = this.getServiceToken();
+    if (!token) {
+      return undefined;
+    }
+    let orgId = "default";
+    if (client) {
+      const auth = client.auth as AuthResult | undefined;
+      if (auth?.orgId) {
+        orgId = auth.orgId;
+      }
+    }
+    return { serviceToken: token, orgId };
+  }
+
+  /**
    * Register a message handler that is subject to per-session throttling.
    * If the session exceeds the rate limit the handler is skipped and a
    * ``rate_limited`` message is sent back to the client instead.
@@ -267,7 +290,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     });
 
     this.throttledMessage("chat", (client: Client, message: ChatMessage) => {
-      handleChat(this.state, client, message);
+      handleChat(this.state, client, message, "office", this.getChatAuth(client));
     });
 
     this.throttledMessage("emote", (client: Client, message: EmoteMessage) => {
@@ -428,7 +451,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
         });
     }
 
-    addSystemMessage(this.state, `${playerName} joined`);
+    addSystemMessage(this.state, `${playerName} joined`, "office", this.getChatAuth(client));
     this.broadcast("player_joined", {
       sessionId: client.sessionId,
       name: playerName,
@@ -460,7 +483,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
       this.broadcast(type, payload)
     );
 
-    addSystemMessage(this.state, `${name} left`);
+    addSystemMessage(this.state, `${name} left`, "office", this.getChatAuth(client));
     this.broadcast("player_left", { sessionId: client.sessionId });
   }
 
@@ -665,7 +688,9 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
         this.state.pendingApprovalCount += 1;
         addSystemMessage(
           this.state,
-          `Agent ${agent.name} is waiting for approval`
+          `Agent ${agent.name} is waiting for approval`,
+          "office",
+          this.getChatAuth()
         );
       }
     };

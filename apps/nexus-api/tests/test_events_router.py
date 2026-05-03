@@ -77,7 +77,8 @@ class TestCreateEvent:
             token_count=150,
             error_message=None,
             request_id="req-abc-123",
-            org_id="acme-corp",
+            # org_id deliberately omitted: server derives it from the
+            # authenticated caller.
         )
         resp = await client.post("/api/v1/events/", json=payload, headers=auth_headers)
         assert resp.status_code == 201
@@ -137,13 +138,24 @@ class TestCreateEvent:
         assert len(found) == 1
         assert found[0]["task_id"] is None
 
-    async def test_create_event_org_id_defaults_to_default(
+    async def test_create_event_org_id_derived_from_caller(
         self, client: httpx.AsyncClient, auth_headers: dict[str, str]
     ) -> None:
-        """When org_id is omitted it defaults to 'default'."""
+        """org_id is derived server-side from the authenticated caller.
+
+        With dev-bypass the caller resolves to org_id="dev-org" -- callers
+        cannot override this via the request body (the field is no longer
+        accepted on CreateEventRequest).
+        """
         resp = await client.post(
             "/api/v1/events/",
-            json={"event_type": "test_evt", "event_category": "test_cat"},
+            json={
+                "event_type": "test_evt",
+                "event_category": "test_cat",
+                # Attempting to inject a different org_id is silently ignored
+                # because the field is not on the schema; if pydantic strict
+                # mode is on it would 422 -- either way is safe.
+            },
             headers=auth_headers,
         )
         assert resp.status_code == 201
@@ -152,7 +164,7 @@ class TestCreateEvent:
         events = await client.get("/api/v1/events/", headers=auth_headers)
         found = [e for e in events.json() if e["id"] == event_id]
         assert len(found) == 1
-        assert found[0]["org_id"] == "default"
+        assert found[0]["org_id"] == "dev-org"
 
 
 # ==========================================================================

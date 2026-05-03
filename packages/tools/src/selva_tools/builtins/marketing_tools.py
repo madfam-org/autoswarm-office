@@ -13,33 +13,98 @@ import httpx
 from ..base import BaseTool, ToolResult
 from ._email_signatures import build_identity
 from ._spf_check import check_alignment
-from .email_tools import _fetch_voice_mode
+from .email_tools import _fetch_tenant_identity, _fetch_voice_mode, _resolve_agent_identity
 
 logger = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
-# HTML sanitisation — strip dangerous tags/attributes without external deps
-_UNSAFE_TAGS_RE = re.compile(
-    r"<\s*(script|iframe|object|embed|form|input|button|style|link|meta|base)"
-    r"[^>]*>.*?</\s*\1\s*>",
-    re.IGNORECASE | re.DOTALL,
-)
-_UNSAFE_VOID_TAGS_RE = re.compile(
-    r"<\s*(script|iframe|object|embed|input|link|meta|base)[^>]*/?\s*>",
-    re.IGNORECASE,
-)
-_UNSAFE_ATTRS_RE = re.compile(r"\s(on\w+)\s*=\s*\"[^\"]*\"", re.IGNORECASE)
-_UNSAFE_URLS_RE = re.compile(r'href\s*=\s*"(javascript:|data:)[^"]*"', re.IGNORECASE)
+# HTML sanitisation — allow-list parser via bleach.
+#
+# Rationale: the prior regex-based stripper was bypassable through
+# nested tags (``<scr<script>ipt>`` survived the SCRIPT regex with
+# fragments leaking through), single-quoted attributes
+# (``<a onclick='alert(1)'>`` matched only double-quoted ``on*``),
+# entity-encoded payloads (``&#x6A;avascript:``), and SVG containers
+# carrying ``href="javascript:..."`` on non-anchor elements. ``bleach``
+# uses html5lib to parse the document and emits only allow-listed tags
+# / attributes / URL schemes. Anything else is dropped wholesale.
+_ALLOWED_TAGS = [
+    "a", "b", "br", "div", "em", "i", "img", "li", "ol", "p",
+    "span", "strong", "table", "tbody", "td", "th", "thead", "tr",
+    "ul", "h1", "h2", "h3", "h4", "blockquote", "hr", "pre", "code",
+]
+_ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title", "target", "rel"],
+    "img": ["src", "alt", "width", "height"],
+    # Inline styles + class/id are allow-listed broadly to keep the
+    # MADFAM template rendering correctly; bleach scrubs each style
+    # declaration through its CSS sanitiser. Without this every
+    # ``style="..."`` would be stripped and the email template would
+    # lose its layout.
+    "*": ["style", "class", "id"],
+}
+_ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
 
 
 def _sanitize_email_html(html: str) -> str:
-    """Strip unsafe HTML tags, event handlers, and dangerous URL schemes."""
-    html = _UNSAFE_TAGS_RE.sub("", html)
-    html = _UNSAFE_VOID_TAGS_RE.sub("", html)
-    html = _UNSAFE_ATTRS_RE.sub("", html)
-    html = _UNSAFE_URLS_RE.sub('href="#"', html)
-    return html
+    """Allow-list HTML sanitiser backed by bleach (html5lib parser).
+
+    Drops every tag, attribute, and URL scheme not in the allow-lists
+    above. Closes the regex bypass classes (nested tags, single-quoted
+    attributes, SVG-wrapped javascript: URLs, entity-encoded payloads).
+
+    Inline ``style`` attributes are scrubbed via tinycss2's
+    ``CSSSanitizer`` (an optional bleach extra) so a tenant's email
+    template can keep its inline styles for Outlook/Gmail compatibility
+    without letting an LLM-injected
+    ``style="background:url(javascript:...)"`` declaration through.
+
+    ``strip=True`` removes disallowed tags entirely rather than escaping
+    them — escaped <script> tags would render as visible HTML in the
+    recipient's mail client, which is harmless but ugly. We prefer the
+    silent drop because marketing email content is generated, not
+    user-authored, so an LLM emitting <script> almost always reflects a
+    failed prompt rather than legitimate intent.
+    """
+    import bleach
+
+    css_sanitizer = None
+    try:
+        # Optional dep — bleach[css] pulls in tinycss2. Without it,
+        # ``style`` attributes pass through unscanned (still safer than
+        # the prior regex stripper, which dropped them entirely on
+        # quoted-mismatch corner cases) but we strongly prefer the
+        # scrubbed path.
+        from bleach.css_sanitizer import CSSSanitizer
+
+        css_sanitizer = CSSSanitizer(
+            allowed_css_properties=[
+                "background", "background-color", "border", "border-radius",
+                "color", "display", "font-family", "font-size", "font-weight",
+                "height", "letter-spacing", "line-height", "margin",
+                "margin-top", "margin-bottom", "margin-left", "margin-right",
+                "max-width", "min-width", "overflow", "padding",
+                "padding-top", "padding-bottom", "padding-left",
+                "padding-right", "text-align", "text-decoration",
+                "vertical-align", "width",
+            ],
+        )
+    except ImportError:
+        logger.warning(
+            "bleach.css_sanitizer unavailable — install bleach[css] for "
+            "inline-style scrubbing on outbound marketing email."
+        )
+
+    return bleach.clean(
+        html,
+        tags=_ALLOWED_TAGS,
+        attributes=_ALLOWED_ATTRIBUTES,
+        protocols=_ALLOWED_PROTOCOLS,
+        strip=True,
+        css_sanitizer=css_sanitizer,
+    )
+
 
 
 def _inject_utm(url: str, campaign: str = "", source: str = "selva", medium: str = "email") -> str:
@@ -144,6 +209,14 @@ class SendMarketingEmailTool(BaseTool):
     )
 
     def parameters_schema(self) -> dict[str, Any]:
+        # NOTE: ``user_email``, ``user_name``, ``agent_slug``,
+        # ``agent_display_name``, ``org_name`` are intentionally NOT in
+        # the schema. They are server-resolved per call from the
+        # tenant's outbound-identity record so a prompt-injected LLM
+        # cannot spoof the From: header within the tenant's verified
+        # Resend domain. ``reply_to`` is also dropped — replies always
+        # route back to the resolved user_email (Wave 3B-A consent
+        # ledger ties the legal voice mode to that mailbox).
         return {
             "type": "object",
             "properties": {
@@ -158,17 +231,20 @@ class SendMarketingEmailTool(BaseTool):
                     "description": "UTM campaign name for attribution tracking",
                     "default": "agent_outreach",
                 },
-                "reply_to": {
+                "org_id": {
                     "type": "string",
-                    "description": "Reply-to address",
-                    "default": "",
+                    "description": "Tenant org_id for voice-mode + identity lookup",
                 },
-                "org_id": {"type": "string"},
-                "user_name": {"type": "string"},
-                "user_email": {"type": "string"},
-                "agent_slug": {"type": "string"},
-                "agent_display_name": {"type": "string"},
-                "org_name": {"type": "string"},
+                "agent_role": {
+                    "type": "string",
+                    "description": (
+                        "Constrained role label for agent_identified mode "
+                        "only. Allowed values: sales, support, growth, "
+                        "ops, research. Ignored in user_direct + dyad "
+                        "modes. Unknown values fall back to 'support'."
+                    ),
+                    "enum": ["sales", "support", "growth", "ops", "research"],
+                },
                 "lead_id": {
                     "type": "string",
                     "description": (
@@ -178,7 +254,7 @@ class SendMarketingEmailTool(BaseTool):
                     ),
                 },
             },
-            "required": ["to_email", "subject", "body_html", "org_id", "user_email"],
+            "required": ["to_email", "subject", "body_html", "org_id"],
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -186,13 +262,8 @@ class SendMarketingEmailTool(BaseTool):
         subject = kwargs.get("subject", "")
         body_html = kwargs.get("body_html", "")
         utm_campaign = kwargs.get("utm_campaign", "agent_outreach")
-        reply_to = kwargs.get("reply_to", "")
         org_id = kwargs.get("org_id", "")
-        user_name = kwargs.get("user_name", "")
-        user_email = kwargs.get("user_email", "")
-        agent_slug = kwargs.get("agent_slug")
-        agent_display_name = kwargs.get("agent_display_name")
-        org_name = kwargs.get("org_name", "")
+        agent_role = kwargs.get("agent_role")
 
         if not to_email or not subject:
             return ToolResult(success=False, error="to_email and subject are required")
@@ -200,8 +271,6 @@ class SendMarketingEmailTool(BaseTool):
             return ToolResult(success=False, error=f"Invalid email format: {to_email[:20]}...")
         if not org_id:
             return ToolResult(success=False, error="org_id is required for voice-mode gate")
-        if not user_email or not _EMAIL_RE.match(user_email):
-            return ToolResult(success=False, error="valid user_email required")
 
         # -- Voice-mode gate -------------------------------------------------
         voice_mode = await _fetch_voice_mode(org_id)
@@ -213,6 +282,35 @@ class SendMarketingEmailTool(BaseTool):
                     "before sending marketing email."
                 ),
             )
+
+        # -- Identity gate: server-resolve From-header inputs. Refuse
+        # the send if the tenant has no configured identity rather
+        # than substituting LLM-supplied defaults — that substitution
+        # is the spoofing vector this lockdown closes.
+        identity_data = await _fetch_tenant_identity(org_id)
+        if identity_data is None:
+            return ToolResult(
+                success=False,
+                error=(
+                    "Tenant outbound identity not configured. "
+                    "Cannot resolve From: header — refusing send."
+                ),
+            )
+        user_email = (identity_data.get("user_email") or "").strip()
+        user_name = (identity_data.get("user_name") or "").strip()
+        org_name = (identity_data.get("org_name") or "").strip()
+
+        if voice_mode in ("user_direct", "dyad_selva_plus_user") and (
+            not user_email or not _EMAIL_RE.match(user_email)
+        ):
+            return ToolResult(
+                success=False,
+                error=(
+                    "Tenant outbound mailbox missing or malformed. "
+                    "Configure tenant_identities.primary_contact_email."
+                ),
+            )
+
         if voice_mode == "agent_identified":
             alignment = check_alignment("selva.town")
             if not alignment.aligned:
@@ -223,6 +321,10 @@ class SendMarketingEmailTool(BaseTool):
                         f"alignment {alignment.status} — {alignment.reason}"
                     ),
                 )
+
+        # Resolve agent slug + display from the server-side allow-list.
+        agent_slug, agent_display_name = _resolve_agent_identity(agent_role)
+
         selva_from = os.environ.get("EMAIL_FROM_SELVA", "hola@selva.town")
         try:
             identity = build_identity(
@@ -237,6 +339,11 @@ class SendMarketingEmailTool(BaseTool):
         except ValueError as exc:
             return ToolResult(success=False, error=str(exc))
         from_addr = identity.from_address
+        # Reply-To is server-controlled: always route back to the
+        # tenant's resolved user_email when the voice mode involves
+        # the user identity. agent_identified replies stay on the
+        # agent slug (Resend will route via the selva.town domain).
+        reply_to = user_email if voice_mode in ("user_direct", "dyad_selva_plus_user") else ""
 
         api_key = os.environ.get("RESEND_API_KEY")
         if not api_key:

@@ -402,6 +402,7 @@ def send(state: CRMState) -> CRMState:
                     body_html=draft_content,
                     utm_campaign=effective_utm,
                     lead_id=lead_id,
+                    org_id=state.get("org_id"),
                 )
             )
             send_result["email_id"] = (

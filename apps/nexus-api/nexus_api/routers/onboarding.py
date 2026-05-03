@@ -43,7 +43,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user, require_non_guest
 from ..config import get_settings
 from ..database import get_db
-from ..models import ConsentLedger, TenantConfig
+from ..models import ConsentLedger, TenantConfig, TenantIdentity
 from .events import emit_event_db
 
 logger = logging.getLogger(__name__)
@@ -173,6 +173,47 @@ class VoiceModePreview(BaseModel):
     heads_up: str
     clause_body: str
     clause_version: str
+
+
+class TenantIdentityResponse(BaseModel):
+    """Server-resolved outbound identity for a tenant.
+
+    Returned by ``GET /onboarding/tenant-identity``. Used by the email
+    tools to populate the ``From:`` header without trusting any
+    LLM-supplied kwargs (which would be a prompt-injection vector for
+    sender spoofing within the tenant's verified Resend domain).
+
+    Fields are nullable individually so the tool can detect partial
+    configuration (e.g. brand_name set but no primary contact email
+    resolved yet) and fail-closed on the missing piece. ``agent_slug``
+    is intentionally NOT returned here — agent slugs are resolved per
+    call from a server-controlled allow-list, never from the LLM.
+    """
+
+    user_email: str | None = Field(
+        default=None,
+        description=(
+            "Primary outbound mailbox for the tenant (drives From: in "
+            "user_direct/dyad modes and Reply-To across all modes). "
+            "Sourced from tenant_identities.primary_contact_email."
+        ),
+    )
+    user_name: str | None = Field(
+        default=None,
+        description=(
+            "Display name for the From: header. Sourced from "
+            "tenant_configs.brand_name with fallback to "
+            "tenant_identities.legal_name."
+        ),
+    )
+    org_name: str | None = Field(
+        default=None,
+        description=(
+            "Organization legal name for the agent_identified signature "
+            "block. Sourced from tenant_identities.legal_name with "
+            "fallback to tenant_configs.razon_social or brand_name."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +459,73 @@ async def voice_mode_preview(mode: str) -> VoiceModePreview:
         heads_up=clause["heads_up"],
         clause_body=clause["clause_body"],
         clause_version=CLAUSE_VERSION,
+    )
+
+
+@router.get(
+    "/onboarding/tenant-identity",
+    response_model=TenantIdentityResponse,
+)
+async def tenant_identity(
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> TenantIdentityResponse:
+    """Return the server-controlled outbound identity for the caller's tenant.
+
+    Used by ``SendEmailTool`` and ``SendMarketingEmailTool`` to populate
+    the ``From:`` header without trusting LLM-supplied kwargs. The LLM
+    has no input on what address goes into the From header — sender
+    identity is exclusively a server concern, sourced from the tenant's
+    own configuration.
+
+    Returns 403 for the unscoped ``platform`` org (worker tokens calling
+    without ``X-Selva-Tenant-Org``). Returns 404 when the tenant has no
+    ``tenant_configs`` row at all (i.e. truly unprovisioned). Returns
+    200 with nullable fields when the tenant exists but has not yet
+    populated the relevant fields — callers are expected to fail-closed
+    on missing fields rather than substituting LLM-supplied defaults.
+    """
+    org_id = user.get("org_id")
+    if not org_id or org_id == "platform":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="tenant identity requires org-scoped auth (X-Selva-Tenant-Org header)",
+        )
+
+    config_row = await db.execute(
+        select(TenantConfig).where(TenantConfig.org_id == org_id)
+    )
+    config = config_row.scalar_one_or_none()
+    if config is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="tenant identity not configured",
+        )
+
+    # Resolve cross-service identity (legal_name + primary_contact_email)
+    # via the tenant_identities map. canonical_id == janua_org_id ==
+    # tenant_configs.org_id by convention (see migration 0024 design).
+    identity_row = await db.execute(
+        select(TenantIdentity).where(TenantIdentity.canonical_id == org_id)
+    )
+    identity = identity_row.scalar_one_or_none()
+
+    user_email = identity.primary_contact_email if identity else None
+    legal_name = identity.legal_name if identity else None
+
+    # Display name for From: header. Prefer brand_name (white-label),
+    # then legal_name, then razon_social. None of these are
+    # LLM-controllable.
+    user_name = config.brand_name or legal_name or config.razon_social
+    # Org name for the agent_identified signature block. Prefer the
+    # legal name (matches the consent ledger), fall back to fiscal name
+    # then brand.
+    org_name = legal_name or config.razon_social or config.brand_name
+
+    return TenantIdentityResponse(
+        user_email=user_email,
+        user_name=user_name,
+        org_name=org_name,
     )
 
 

@@ -19,18 +19,43 @@ class SendNotificationTool(BaseTool):
     description = "Send a notification via email, webhook, or log"
 
     def parameters_schema(self) -> dict[str, Any]:
+        # Email channel is a thin delegate to ``SendEmailTool`` so the
+        # voice-mode gate, consent ledger linkage, and server-resolved
+        # From: header all apply uniformly. The LLM cannot bypass any
+        # of those by picking ``send_notification`` instead of
+        # ``send_email``. ``org_id`` is therefore required when the
+        # caller selects channel=email; ``webhook_url`` and the log
+        # channel keep their original surface.
         return {
             "type": "object",
             "properties": {
                 "message": {"type": "string", "description": "Notification message"},
                 "channel": {
                     "type": "string",
-                    "description": "Channel type (log, webhook, email)",
+                    "description": (
+                        "Channel type. ``email`` delegates to send_email "
+                        "(voice-mode gated). ``webhook`` posts JSON to "
+                        "``webhook_url``. ``log`` is a noop logger."
+                    ),
+                    "enum": ["log", "webhook", "email"],
                     "default": "log",
                 },
-                "recipient": {"type": "string", "default": ""},
-                "subject": {"type": "string", "default": "AutoSwarm Notification"},
+                "recipient": {
+                    "type": "string",
+                    "description": "Recipient email address (required for channel=email).",
+                    "default": "",
+                },
+                "subject": {"type": "string", "default": "Selva Notification"},
                 "webhook_url": {"type": "string", "default": ""},
+                "org_id": {
+                    "type": "string",
+                    "description": (
+                        "Tenant org_id. REQUIRED when channel=email so "
+                        "the delegated send_email call can resolve the "
+                        "voice mode + outbound identity."
+                    ),
+                    "default": "",
+                },
             },
             "required": ["message"],
         }
@@ -39,11 +64,19 @@ class SendNotificationTool(BaseTool):
         message = kwargs.get("message", "")
         channel = kwargs.get("channel", "log")
         recipient = kwargs.get("recipient", "")
-        subject = kwargs.get("subject", "AutoSwarm Notification")
+        subject = kwargs.get("subject", "Selva Notification")
         webhook_url = kwargs.get("webhook_url", "")
+        org_id = kwargs.get("org_id", "")
+        agent_role = kwargs.get("agent_role")
 
         if channel == "email":
-            return await self._send_email(recipient, subject, message)
+            return await self._send_email(
+                recipient=recipient,
+                subject=subject,
+                message=message,
+                org_id=org_id,
+                agent_role=agent_role,
+            )
         elif channel == "webhook":
             return await self._send_webhook(webhook_url, message)
         else:
@@ -53,31 +86,56 @@ class SendNotificationTool(BaseTool):
                 data={"channel": "log", "recipient": recipient, "message": message},
             )
 
-    async def _send_email(self, to: str, subject: str, body: str) -> ToolResult:
-        api_key = os.environ.get("RESEND_API_KEY")
-        from_addr = os.environ.get("EMAIL_FROM", "AutoSwarm <noreply@selva.town>")
+    async def _send_email(
+        self,
+        *,
+        recipient: str,
+        subject: str,
+        message: str,
+        org_id: str,
+        agent_role: str | None = None,
+    ) -> ToolResult:
+        """Delegate the email channel to ``SendEmailTool``.
 
-        if not api_key:
-            logger.warning("RESEND_API_KEY not configured — email logged only")
-            return ToolResult(output="Email skipped (no API key)", data={"sent": False})
+        This guarantees one — and only one — outbound email gate. The
+        previous in-tool Resend call duplicated none of the protections
+        in ``SendEmailTool`` (voice-mode lookup, consent-ledger linkage,
+        server-resolved From: header, agent-slug allow-list, SPF/DKIM/
+        DMARC alignment for ``agent_identified``). An LLM that chose
+        ``send_notification`` over ``send_email`` was effectively a free
+        bypass of every Wave 3B-A control. Delegating here closes that
+        bypass without adding a parallel implementation that could drift
+        out of sync.
 
-        if not to:
-            return ToolResult(output="Email skipped (no recipient)", data={"sent": False})
-
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={"from": from_addr, "to": [to], "subject": subject, "html": body},
+        ``org_id`` is required for the delegate to resolve voice mode +
+        identity; we refuse early when missing rather than letting the
+        delegate produce a less-specific error.
+        """
+        if not recipient:
+            return ToolResult(
+                success=False,
+                error="email channel requires 'recipient'",
+            )
+        if not org_id:
+            return ToolResult(
+                success=False,
+                error=(
+                    "email channel requires 'org_id' so the voice-mode "
+                    "gate + tenant identity lookup can resolve."
+                ),
             )
 
-        if resp.status_code in (200, 201):
-            email_id = resp.json().get("id", "unknown")
-            logger.info("Email sent to=%s id=%s", to, email_id)
-            return ToolResult(output=f"Email sent to {to}", data={"sent": True, "id": email_id})
+        # Late import — keeps the module import graph free of a cycle
+        # if email_tools ever needs to reference communication tools.
+        from .email_tools import SendEmailTool
 
-        logger.error("Email failed: %s %s", resp.status_code, resp.text[:200])
-        return ToolResult(output=f"Email failed: {resp.status_code}", data={"sent": False})
+        return await SendEmailTool().execute(
+            to=recipient,
+            subject=subject,
+            html=message,
+            org_id=org_id,
+            agent_role=agent_role,
+        )
 
     async def _send_webhook(self, url: str, message: str) -> ToolResult:
         target = url or os.environ.get("NOTIFICATION_WEBHOOK_URL", "")

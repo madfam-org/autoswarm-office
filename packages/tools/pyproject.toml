@@ -14,6 +14,13 @@ dependencies = [
   # the risk of rolling our own auth + TLS cert handling outweighs the
   # weight savings. Revisit in Sprint 3 when Vault lands.
   "kubernetes>=31.0.0",
+  # HTML sanitiser for outbound marketing email bodies. Replaces the
+  # regex-based stripper which is bypassable via nested tags
+  # (``<scr<script>ipt>``), single-quoted attributes, SVG-embedded
+  # ``href="javascript:..."``, and entity encoding. ``bleach`` uses an
+  # allow-list parser (html5lib under the hood) so unknown tags and
+  # attributes are dropped wholesale, not pattern-matched.
+  "bleach[css]>=6.0",
 ]
 
 [project.optional-dependencies]

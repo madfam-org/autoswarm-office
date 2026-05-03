@@ -11,7 +11,9 @@ DEV_ORG = "dev-org"
 
 @pytest.mark.asyncio
 class TestChatMessages:
-    async def test_create_message(self, client: httpx.AsyncClient) -> None:
+    async def test_create_message(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         resp = await client.post(
             "/api/v1/chat/messages",
             json={
@@ -20,11 +22,14 @@ class TestChatMessages:
                 "sender_name": "Alice",
                 "content": "Hello world",
             },
+            headers=auth_headers,
         )
         assert resp.status_code == 201
         assert resp.json()["status"] == "created"
 
-    async def test_create_system_message(self, client: httpx.AsyncClient) -> None:
+    async def test_create_system_message(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         resp = await client.post(
             "/api/v1/chat/messages",
             json={
@@ -34,10 +39,13 @@ class TestChatMessages:
                 "content": "Player joined",
                 "is_system": True,
             },
+            headers=auth_headers,
         )
         assert resp.status_code == 201
 
-    async def test_empty_content_422(self, client: httpx.AsyncClient) -> None:
+    async def test_empty_content_422(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         resp = await client.post(
             "/api/v1/chat/messages",
             json={
@@ -46,6 +54,7 @@ class TestChatMessages:
                 "sender_name": "Alice",
                 "content": "",
             },
+            headers=auth_headers,
         )
         assert resp.status_code == 422
 
@@ -74,8 +83,8 @@ class TestChatHistory:
                     "sender_session_id": f"sess-{i}",
                     "sender_name": f"User{i}",
                     "content": f"Message {i}",
-                    "org_id": DEV_ORG,
                 },
+                headers=auth_headers,
             )
             assert r.status_code == 201
 
@@ -101,8 +110,8 @@ class TestChatHistory:
                     "sender_session_id": "s",
                     "sender_name": "Bot",
                     "content": f"Msg {i}",
-                    "org_id": DEV_ORG,
                 },
+                headers=auth_headers,
             )
 
         resp = await client.get(
@@ -123,8 +132,8 @@ class TestChatHistory:
                 "sender_session_id": "s",
                 "sender_name": "Bot",
                 "content": "In room A",
-                "org_id": DEV_ORG,
             },
+            headers=auth_headers,
         )
         await client.post(
             "/api/v1/chat/messages",
@@ -133,8 +142,8 @@ class TestChatHistory:
                 "sender_session_id": "s",
                 "sender_name": "Bot",
                 "content": "In room B",
-                "org_id": DEV_ORG,
             },
+            headers=auth_headers,
         )
 
         resp = await client.get(

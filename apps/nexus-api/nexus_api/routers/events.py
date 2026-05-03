@@ -24,19 +24,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["events"])
 
 # -- Module-internal constants -------------------------------------------------
-# WebSocket rate limit for per-client inbound messages on /events/ws.
-# Defended against accidental client-side message floods (e.g. ping loops).
-_EVENTS_RATE_LIMIT_MAX: int = 30
-_EVENTS_RATE_LIMIT_WINDOW_S: float = 60.0
-
 # How many recent TaskEvents are sent in the initial batch when a client
 # connects to /events/ws. Larger values delay first paint of the OpsFeed
 # panel; smaller values force the UI to make a follow-up REST call.
+# Tightly coupled to the UI's pagination, so kept module-local rather
+# than promoted to Settings.
 _EVENTS_INITIAL_BATCH_SIZE: int = 50
 
+# WebSocket rate limit values come from Settings
+# (events_ws_rate_limit / events_ws_rate_window_seconds) so ops can
+# tune per-client flood guards without a code change.
+_settings = get_settings()
 _ws_rate_limiter = MessageRateLimiter(
-    max_messages=_EVENTS_RATE_LIMIT_MAX,
-    window_seconds=_EVENTS_RATE_LIMIT_WINDOW_S,
+    max_messages=_settings.events_ws_rate_limit,
+    window_seconds=_settings.events_ws_rate_window_seconds,
 )
 
 

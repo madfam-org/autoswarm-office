@@ -90,9 +90,6 @@ _AGENT_CACHE_MAXSIZE: int = 256
 # Seconds in one hour — used both as a multiplier (stale_hours → seconds)
 # and as the periodic worktree-cleanup interval.
 _SECONDS_PER_HOUR: int = 3600
-# Redis XREAD block timeout (milliseconds). Tuned to balance shutdown
-# responsiveness against Redis round-trips when the stream is idle.
-_REDIS_BLOCK_TIMEOUT_MS: int = 5000
 
 # Agent skill cache: avoids HTTP GET per task (Phase 4.2)
 _skill_cache: TTLCache[str, list[str]] = TTLCache(
@@ -909,7 +906,7 @@ async def main() -> None:
             try:
                 messages = await consumer.read(
                     count=settings.max_concurrent_tasks,
-                    block=_REDIS_BLOCK_TIMEOUT_MS,
+                    block=settings.redis_block_timeout_ms,
                 )
                 if not messages:
                     continue

@@ -28,15 +28,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["approvals"])
 
-# -- Module-internal constants -------------------------------------------------
-# WebSocket rate limit for per-client inbound messages on /approvals/ws.
-# Mirrors the events.py limit (same UI usage pattern).
-_APPROVALS_RATE_LIMIT_MAX: int = 30
-_APPROVALS_RATE_LIMIT_WINDOW_S: float = 60.0
-
+# WebSocket rate limit values come from Settings
+# (approvals_ws_rate_limit / approvals_ws_rate_window_seconds) so ops
+# can tune per-client flood guards without a code change. Mirrors the
+# /events/ws limit defaults (same UI usage pattern) but split so they
+# can be tuned independently.
+_settings_for_ws = get_settings()
 _ws_rate_limiter = MessageRateLimiter(
-    max_messages=_APPROVALS_RATE_LIMIT_MAX,
-    window_seconds=_APPROVALS_RATE_LIMIT_WINDOW_S,
+    max_messages=_settings_for_ws.approvals_ws_rate_limit,
+    window_seconds=_settings_for_ws.approvals_ws_rate_window_seconds,
 )
 
 

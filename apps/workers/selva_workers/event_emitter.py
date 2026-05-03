@@ -18,14 +18,6 @@ logger = logging.getLogger(__name__)
 
 EVENTS_CHANNEL = "autoswarm:events"
 
-# -- Module-internal constants -------------------------------------------------
-# Per-event emit timeout (seconds) used by the synchronous fallback path
-# (`_fire`) when an instrumented LangGraph node emits its node.entered /
-# node.exited / node.error events from a sync context. The fire-and-forget
-# nature means we'd rather drop the event than block the node — keep
-# this value tight.
-_EVENT_EMIT_TIMEOUT_S: int = 3
-
 
 async def emit_event(
     nexus_url: str,
@@ -131,10 +123,12 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
         org_id_arg = state_org_id if state_org_id else "default"
         node_name = fn.__name__
 
-        # Resolve nexus_url lazily
+        # Resolve settings lazily (nexus_url + event-emit timeout).
         from .config import get_settings
 
-        nexus_url = get_settings().nexus_api_url
+        _settings = get_settings()
+        nexus_url = _settings.nexus_api_url
+        emit_timeout_s = _settings.event_emit_timeout_seconds
 
         def _fire(coro):  # type: ignore[no-untyped-def]
             """Run an async coroutine fire-and-forget from sync context."""
@@ -148,7 +142,7 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
                 max_workers=1,
             ) as pool:
                 with contextlib.suppress(Exception):
-                    pool.submit(asyncio.run, coro).result(timeout=_EVENT_EMIT_TIMEOUT_S)
+                    pool.submit(asyncio.run, coro).result(timeout=emit_timeout_s)
 
         _fire(
             emit_event(

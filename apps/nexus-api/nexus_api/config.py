@@ -134,6 +134,22 @@ class Settings(BaseSettings):
     csp_extra_sources: str = ""
     log_format: str = "json"
 
+    # -- WebSocket message-flood guards ---------------------------------------
+    # Per-client inbound message limits on long-lived WS connections.
+    # /events/ws and /approvals/ws share the same defaults (the OpsFeed
+    # and approval queue UIs have similar interaction patterns) but are
+    # split so they can be tuned independently.
+    events_ws_rate_limit: int = 30
+    events_ws_rate_window_seconds: float = 60.0
+    approvals_ws_rate_limit: int = 30
+    approvals_ws_rate_window_seconds: float = 60.0
+
+    # -- Health endpoint dashboard sizing -------------------------------------
+    # How many recent DLQ entries `/api/v1/health/dlq-stats` returns.
+    # Bumped here when an ops dashboard wants a deeper history without a
+    # code change.
+    dlq_recent_limit: int = 10
+
     # HMAC signing secret for the consent_ledger row digests. Required in
     # production — the literal sentinel ``dev-default-CHANGE-ME`` is
     # rejected by ``_validate_config`` outside the development environment.

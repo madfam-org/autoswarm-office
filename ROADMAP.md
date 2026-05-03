@@ -66,10 +66,10 @@ foundationally one-line dangerous if left undone.
   hands the URL to a Celery worker that re-resolves DNS. Pass resolved
   IP into the task signature; route the actual fetch through
   `_build_safe_request_kwargs` from `selva_tools.builtins.http_tools`.
-- **`@colyseus/core` 0.17 migration** — `OfficeRoom.ts` is written for
-  0.15.x; the dependency is pinned at 0.17.42. `Room<TState>` is now
-  `Room<TOptions>` and `onLeave(client, consented: boolean)` is now
-  `(client, code?: number)`. Library API is well-documented; mechanical.
+- ~~**`@colyseus/core` 0.17 migration**~~ — DONE. `Room<{ state: OfficeStateSchema }>`
+  metadata-object pattern + `onLeave(client, code?: number)` signature.
+  Local `RoomOptions` interface renamed to `OfficeJoinOptions` to avoid
+  collision with the colyseus base type. 166/166 colyseus tests pass.
 - **Office-ui WebSocket clients add `?token=`** — events + approvals WS
   endpoints now require `?token=<jwt>` (and `?org_id=` for worker-token
   callers) per the new auth in commit f35f1b1. Frontend connect URLs

@@ -47,13 +47,18 @@ class InterruptHandler:
     )
     default_timeout: int = 300
     auth_headers: dict[str, str] = field(default_factory=dict)
+    # Target tenant org_id for nexus-api auth resolution. Threaded through
+    # the X-Selva-Tenant-Org header so approval requests post under the
+    # correct tenant scope. When None, calls fall back to platform scope
+    # (incorrect for tenant-owned approval rows — callers should set this).
+    org_id: str | None = None
     client: httpx.AsyncClient = field(init=False)
 
     def __post_init__(self) -> None:
         if not self.auth_headers:
             from .auth import get_worker_auth_headers
 
-            self.auth_headers = get_worker_auth_headers()
+            self.auth_headers = get_worker_auth_headers(org_id=self.org_id)
         self.client = httpx.AsyncClient(timeout=30.0, headers=self.auth_headers)
 
     async def create_approval_request(

@@ -71,14 +71,18 @@ async def emit_event(
     if org_id != "default":
         body["org_id"] = org_id
 
-    # POST to nexus-api (with retry and circuit breaker)
+    # POST to nexus-api (with retry and circuit breaker).
+    # Pass org_id through the X-Selva-Tenant-Org header so nexus-api
+    # auth.py resolves the worker token to the correct tenant scope
+    # (instead of the hardcoded platform default).
     from .auth import get_worker_auth_headers
 
+    auth_org_id = org_id if org_id and org_id != "default" else None
     await fire_and_forget_request(
         "POST",
         f"{nexus_url}/api/v1/events/",
         json=body,
-        headers=get_worker_auth_headers(),
+        headers=get_worker_auth_headers(org_id=auth_org_id),
         timeout=2.0,
     )
 
@@ -100,8 +104,8 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
     """Decorator that emits node.entered / node.exited / node.error events.
 
     Wraps a synchronous LangGraph node function. Measures duration via
-    ``time.monotonic()``. Extracts ``task_id`` and ``agent_id`` from the
-    state dict passed as the first argument.
+    ``time.monotonic()``. Extracts ``task_id``, ``agent_id``, and
+    ``org_id`` from the state dict passed as the first argument.
     """
 
     @functools.wraps(fn)
@@ -112,6 +116,11 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
         task_id = state.get("task_id", "unknown") if isinstance(state, dict) else "unknown"
         agent_id = state.get("agent_id", "unknown") if isinstance(state, dict) else "unknown"
         graph_type = state.get("graph_type") if isinstance(state, dict) else None
+        # Pull org_id off the state so events post under the correct
+        # tenant scope (every graph node already has it threaded in via
+        # __main__.process_task's initial_state).
+        state_org_id = state.get("org_id", "") if isinstance(state, dict) else ""
+        org_id_arg = state_org_id if state_org_id else "default"
         node_name = fn.__name__
 
         # Resolve nexus_url lazily
@@ -142,6 +151,7 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
                 agent_id=agent_id,
                 node_id=node_name,
                 graph_type=graph_type,
+                org_id=org_id_arg,
             )
         )
 
@@ -160,6 +170,7 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
                     node_id=node_name,
                     graph_type=graph_type,
                     duration_ms=elapsed,
+                    org_id=org_id_arg,
                 )
             )
 
@@ -178,6 +189,7 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
                     graph_type=graph_type,
                     duration_ms=elapsed,
                     error_message=str(exc)[:500],
+                    org_id=org_id_arg,
                 )
             )
 

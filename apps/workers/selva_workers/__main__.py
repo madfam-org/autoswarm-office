@@ -193,8 +193,15 @@ async def _publish_agent_status(
         logger.warning("Failed to publish agent status for %s", agent_id)
 
 
-async def _fetch_agent_skills(nexus_url: str, agent_id: str) -> list[str]:
-    """GET /api/v1/agents/{agent_id} and return effective_skills (cached)."""
+async def _fetch_agent_skills(
+    nexus_url: str, agent_id: str, org_id: str | None = None
+) -> list[str]:
+    """GET /api/v1/agents/{agent_id} and return effective_skills (cached).
+
+    org_id is threaded into the X-Selva-Tenant-Org header so nexus-api
+    resolves the worker token to the correct tenant. Without it, the
+    call resolves to platform scope and may fail tenant-scoped reads.
+    """
     if agent_id == "unknown":
         return []
 
@@ -209,7 +216,7 @@ async def _fetch_agent_skills(nexus_url: str, agent_id: str) -> list[str]:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(
                 f"{nexus_url}/api/v1/agents/{agent_id}",
-                headers=get_worker_auth_headers(),
+                headers=get_worker_auth_headers(org_id=org_id),
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -274,8 +281,15 @@ async def process_task(task_data: dict) -> None:
     skill_ids: list[str] = []
     agent_system_prompt = ""
     locale = task_data.get("payload", {}).get("locale", "en") if task_data.get("payload") else "en"
+    # Resolve target tenant org_id early so all worker-to-API calls
+    # below can present X-Selva-Tenant-Org. The audience resolution
+    # below uses the same value.
+    payload_for_audience = task_data.get("payload", {}) or {}
+    task_org_id = task_data.get("org_id") or payload_for_audience.get("org_id") or ""
     try:
-        skill_ids = await _fetch_agent_skills(settings.nexus_api_url, agent_id)
+        skill_ids = await _fetch_agent_skills(
+            settings.nexus_api_url, agent_id, org_id=task_org_id or None
+        )
         if skill_ids:
             from selva_skills import get_skill_registry
 
@@ -295,14 +309,12 @@ async def process_task(task_data: dict) -> None:
     if locale != "en" and "locale" not in workflow_variables:
         workflow_variables["locale"] = locale
 
-    # Resolve swarm audience from the task's org_id. Platform org (per
-    # PLATFORM_ORG_ID env) gets Audience.PLATFORM and can see all tools
-    # + platform skills; every other tenant gets Audience.TENANT and
-    # only sees the filtered registry. We cast the selva_permissions
-    # enum to the selva_tools enum so ``enforce_audience()`` in the
-    # tool layer matches by identity.
-    payload_for_audience = task_data.get("payload", {}) or {}
-    task_org_id = task_data.get("org_id") or payload_for_audience.get("org_id") or ""
+    # Resolve swarm audience from the (already-derived) task_org_id.
+    # Platform org (per PLATFORM_ORG_ID env) gets Audience.PLATFORM and
+    # can see all tools + platform skills; every other tenant gets
+    # Audience.TENANT and only sees the filtered registry. We cast the
+    # selva_permissions enum to the selva_tools enum so
+    # ``enforce_audience()`` in the tool layer matches by identity.
     task_audience = ToolAudience(resolve_audience(task_org_id).value)
 
     initial_state: dict = {
@@ -421,6 +433,7 @@ async def process_task(task_data: dict) -> None:
         nexus_api_url=settings.nexus_api_url,
         redis_url=settings.redis_url,
         default_timeout=settings.approval_timeout,
+        org_id=task_org_id or None,
     )
 
     # Set repo_path in initial state for coding graphs.
@@ -443,6 +456,7 @@ async def process_task(task_data: dict) -> None:
                 "failed",
                 {"error": error_msg},
                 error_message=error_msg,
+                org_id=task_org_id or None,
             )
             await _publish_agent_status(agent_id, "error", current_node_id="")
             return
@@ -460,6 +474,7 @@ async def process_task(task_data: dict) -> None:
         task_id,
         "running",
         started_at=datetime.now(UTC).isoformat(),
+        org_id=task_org_id or None,
     )
     await _emit_event(
         settings.nexus_api_url,
@@ -469,6 +484,7 @@ async def process_task(task_data: dict) -> None:
         agent_id=agent_id,
         graph_type=graph_type,
         request_id=request_id,
+        org_id=task_org_id or "default",
     )
 
     try:
@@ -504,6 +520,7 @@ async def process_task(task_data: dict) -> None:
             task_id,
             api_status,
             result.get("result"),
+            org_id=task_org_id or None,
         )
         await _emit_event(
             settings.nexus_api_url,
@@ -513,6 +530,7 @@ async def process_task(task_data: dict) -> None:
             agent_id=agent_id,
             graph_type=graph_type,
             request_id=request_id,
+            org_id=task_org_id or "default",
         )
         # -- Learning hooks (fire-and-forget) ------------------------------------
         _duration = time.monotonic() - _task_start
@@ -537,6 +555,7 @@ async def process_task(task_data: dict) -> None:
                 agent_id,
                 graph_status,
                 duration_seconds=_duration,
+                org_id=task_org_id or None,
             )
             await update_bandit_reward(agent_id, 1.0 if api_status == "completed" else 0.2)
 
@@ -550,6 +569,7 @@ async def process_task(task_data: dict) -> None:
             "failed",
             {"error": f"Timed out after {timeout}s"},
             error_message=f"Timed out after {timeout}s",
+            org_id=task_org_id or None,
         )
         await _emit_event(
             settings.nexus_api_url,
@@ -560,6 +580,7 @@ async def process_task(task_data: dict) -> None:
             graph_type=graph_type,
             error_message=f"Timed out after {timeout}s",
             request_id=request_id,
+            org_id=task_org_id or "default",
         )
         # -- Learning hooks (fire-and-forget) --------------------------------
         with contextlib.suppress(Exception):
@@ -593,6 +614,7 @@ async def process_task(task_data: dict) -> None:
                 agent_id,
                 "failed",
                 duration_seconds=_duration,
+                org_id=task_org_id or None,
             )
             await update_bandit_reward(agent_id, 0.0)
 
@@ -605,6 +627,7 @@ async def process_task(task_data: dict) -> None:
             "failed",
             {"error": str(exc)},
             error_message=str(exc),
+            org_id=task_org_id or None,
         )
         await _emit_event(
             settings.nexus_api_url,
@@ -615,6 +638,7 @@ async def process_task(task_data: dict) -> None:
             graph_type=graph_type,
             error_message=str(exc)[:500],
             request_id=request_id,
+            org_id=task_org_id or "default",
         )
         # -- Learning hooks (fire-and-forget) --------------------------------
         with contextlib.suppress(Exception):
@@ -648,6 +672,7 @@ async def process_task(task_data: dict) -> None:
                 agent_id,
                 "failed",
                 duration_seconds=_duration,
+                org_id=task_org_id or None,
             )
             await update_bandit_reward(agent_id, 0.0)
 

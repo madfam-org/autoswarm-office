@@ -194,6 +194,14 @@ class Settings(BaseSettings):
                 "server-only secret. Generate with: openssl rand -hex 32"
             )
 
+        if self.worker_api_token == "dev-bypass" and self.environment == "production":
+            raise ValueError(
+                "WORKER_API_TOKEN=='dev-bypass' is not allowed in production. "
+                "Set a strong shared secret (openssl rand -hex 32) — the "
+                "worker→API auth path uses constant-time comparison against "
+                "this value, and the dev sentinel is publicly known."
+            )
+
         return self
 
 

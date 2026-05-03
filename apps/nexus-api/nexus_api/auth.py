@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 import httpx
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
@@ -109,6 +109,7 @@ async def verify_jwt(token: str, settings: Settings | None = None) -> dict[str, 
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
@@ -116,8 +117,14 @@ async def get_current_user(
 
     Returns a user dict containing at minimum ``sub``, ``roles``, and
     ``org_id`` from the JWT claims.
+
+    For worker/gateway shared-secret tokens, the target tenant org_id
+    MUST be declared via the ``X-Selva-Tenant-Org`` request header.
+    Calls without that header resolve to ``org_id="platform"`` and the
+    receiving endpoint is expected to enforce the ``service`` role.
     """
     if settings.environment == "development" and settings.dev_auth_bypass:
+        org_id_var.set("dev-org")
         return {
             "sub": "dev-user-00000000",
             "roles": ["admin", "tactician", "enterprise-cleanroom"],
@@ -138,11 +145,20 @@ async def get_current_user(
         and settings.worker_api_token != "dev-bypass"
         and credentials.credentials == settings.worker_api_token
     ):
+        # Worker token holders MUST declare their target tenant via header.
+        # Falls back to "platform" only for cross-tenant maintenance ops
+        # (those endpoints check for the "service" role explicitly).
+        tenant_org = request.headers.get("X-Selva-Tenant-Org", "").strip()
+        if not tenant_org:
+            # Platform-scoped service call (e.g. /metrics, audit-log writers).
+            # The endpoint itself must verify "service" role for safety.
+            tenant_org = "platform"
+        org_id_var.set(tenant_org)
         return {
             "sub": "service:worker",
             "roles": ["service", "worker"],
-            "org_id": "madfam-default",
-            "email": "worker@autoswarm.internal",
+            "org_id": tenant_org,
+            "email": "worker@selva.internal",
         }
 
     payload = await verify_jwt(credentials.credentials, settings)

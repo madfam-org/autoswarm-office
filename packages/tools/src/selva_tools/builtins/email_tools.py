@@ -27,8 +27,10 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 async def _fetch_voice_mode(org_id: str) -> str | None:
     """Fetch the tenant's outbound voice mode from nexus-api.
 
-    Workers authenticate with ``WORKER_API_TOKEN``. Returns ``None`` on
-    any error so the caller fails closed (refuses the send rather than
+    Workers authenticate with ``WORKER_API_TOKEN`` and declare the target
+    tenant via the ``X-Selva-Tenant-Org`` header so nexus-api ``auth.py``
+    populates ``user["org_id"]`` correctly. Returns ``None`` on any
+    error so the caller fails closed (refuses the send rather than
     silently defaulting).
     """
     base_url = os.environ.get("NEXUS_API_URL", "http://localhost:4300")
@@ -39,7 +41,7 @@ async def _fetch_voice_mode(org_id: str) -> str | None:
                 f"{base_url.rstrip('/')}/api/v1/onboarding/status",
                 headers={
                     "Authorization": f"Bearer {token}",
-                    "X-Org-Id": org_id,
+                    "X-Selva-Tenant-Org": org_id,
                 },
             )
             if resp.status_code == 200:

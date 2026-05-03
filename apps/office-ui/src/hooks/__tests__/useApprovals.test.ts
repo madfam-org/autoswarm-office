@@ -87,12 +87,20 @@ describe('useApprovals', () => {
     MockWebSocket.reset();
     vi.stubGlobal('WebSocket', MockWebSocket);
     vi.stubGlobal('fetch', vi.fn());
+    // Per the v2.2.x security pass, the WS hook reads the JWT from the
+    // janua-session cookie and skips the connection when absent. Tests
+    // assume an authenticated session — set a fake JWT cookie here.
+    Object.defineProperty(document, 'cookie', {
+      writable: true,
+      value: 'janua-session=fake.jwt.token',
+    });
     vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+    Object.defineProperty(document, 'cookie', { writable: true, value: '' });
   });
 
   // -----------------------------------------------------------------------
@@ -104,6 +112,25 @@ describe('useApprovals', () => {
 
     expect(result.current.pendingApprovals).toEqual([]);
     expect(result.current.connected).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
+  // v2.2.x WebSocket auth (commit b72399e + Phase 1 ?token= follow-up)
+  // -----------------------------------------------------------------------
+
+  it('skips WebSocket connection when no janua-session cookie is present', () => {
+    // Override the beforeEach cookie stub to simulate an unauthenticated session.
+    Object.defineProperty(document, 'cookie', { writable: true, value: '' });
+    renderHook(() => useApprovals());
+    expect(MockWebSocket.instances.length).toBe(0);
+  });
+
+  it('appends JWT token query param to WS URL when session cookie present', () => {
+    renderHook(() => useApprovals());
+    const ws = MockWebSocket.last;
+    expect(ws).toBeDefined();
+    expect(ws.url).toContain('?token=');
+    expect(ws.url).toContain('fake.jwt.token');
   });
 
   it('sets connected=true when WebSocket fires onopen', () => {

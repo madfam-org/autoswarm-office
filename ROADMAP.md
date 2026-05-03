@@ -70,15 +70,18 @@ foundationally one-line dangerous if left undone.
   metadata-object pattern + `onLeave(client, code?: number)` signature.
   Local `RoomOptions` interface renamed to `OfficeJoinOptions` to avoid
   collision with the colyseus base type. 166/166 colyseus tests pass.
-- **Office-ui WebSocket clients add `?token=`** — events + approvals WS
-  endpoints now require `?token=<jwt>` (and `?org_id=` for worker-token
-  callers) per the new auth in commit f35f1b1. Frontend connect URLs
-  need updating before the WS auth lands in prod or the office-ui
-  feed will be silent.
-- **Stripe webhook handler** — even if it just verifies signature and
-  returns 200, scaffold the contract with `stripe.Webhook.construct_event`
-  (uses constant-time signing internally) and ≤300s timestamp tolerance.
-  Add to test coverage now even if endpoint is stubbed.
+- ~~**Office-ui WebSocket clients add `?token=`**~~ — DONE.
+  `useEventStream` and `useApprovals` now read the JWT from
+  `getSessionToken()` and append `?token=<jwt>` to the WS URL.
+  Connection is gracefully skipped when no token is available
+  (unauthenticated path or demo mode). 2 new tests pin the contract.
+- ~~**Stripe webhook handler**~~ — DONE. Scaffold at
+  `/api/v1/stripe/webhook` verifies signatures via
+  `stripe.Webhook.construct_event` with 300s replay-tolerance.
+  Fail-closed on missing `STRIPE_WEBHOOK_SECRET` (503).
+  Settings validator refuses empty secret when
+  `FEATURE_STRIPE_MXN_LIVE=true` in production. Per-event handlers
+  TBD per Phase 2 as each event type becomes operationally relevant.
 - **Production secrets provisioned** — `WORKER_API_TOKEN`,
   `CONSENT_LEDGER_SIGNING_SECRET`, `COLYSEUS_SERVICE_TOKEN` all need
   strong values in staging + prod. Settings validators now refuse

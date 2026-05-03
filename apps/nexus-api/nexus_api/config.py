@@ -164,6 +164,14 @@ class Settings(BaseSettings):
     # matching the pattern of other optional external-provider tokens.
     nexus_probe_token: str = ""
 
+    # -- Stripe webhook (Phase 1 scaffold) ------------------------------------
+    # Required when ``feature_stripe_mxn_live`` is true (see
+    # _validate_config below). Empty default means the webhook endpoint
+    # responds 503 — same fail-closed pattern as the gateway providers.
+    # Secret is the Stripe Dashboard webhook signing secret (whsec_...).
+    stripe_webhook_secret: str = ""
+    feature_stripe_mxn_live: bool = False
+
     model_config = {
         "env_file": (str(_PROJECT_ROOT / ".env"), ".env"),
         "env_file_encoding": "utf-8",
@@ -216,6 +224,17 @@ class Settings(BaseSettings):
                 "Set a strong shared secret (openssl rand -hex 32) — the "
                 "worker→API auth path uses constant-time comparison against "
                 "this value, and the dev sentinel is publicly known."
+            )
+
+        if (
+            self.feature_stripe_mxn_live
+            and not self.stripe_webhook_secret
+            and self.environment == "production"
+        ):
+            raise ValueError(
+                "STRIPE_WEBHOOK_SECRET is required when FEATURE_STRIPE_MXN_LIVE "
+                "is true in production. Get it from Stripe Dashboard → "
+                "Developers → Webhooks → reveal signing secret (whsec_...)."
             )
 
         return self

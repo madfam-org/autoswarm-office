@@ -54,6 +54,7 @@ from .routers import (
     schedules,
     skills,
     skills_hub,
+    stripe_webhooks,
     swarms,
     tenant_identities,
     tenants,
@@ -205,6 +206,10 @@ def create_app() -> FastAPI:
     # Autonomous operations (Swarm Manifesto)
     app.include_router(playbooks.router, prefix="/api/v1")
     app.include_router(crm_webhooks.router, prefix="/api/v1")
+    # Stripe webhook (Phase 1 scaffold) — signature verification today;
+    # per-event handlers land in follow-up PRs as each event becomes
+    # operationally relevant per ROADMAP Phase 2.
+    app.include_router(stripe_webhooks.router, prefix="/api/v1")
     # Revenue-loop probe (A.7): bearer-auth'd + public /latest-run endpoint.
     app.include_router(probe.router, prefix="/api/v1/probe")
     # HITL Confidence (Sprint 1 observe-only) — decisions ledger + dashboard

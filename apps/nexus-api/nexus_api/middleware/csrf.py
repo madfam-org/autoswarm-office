@@ -17,6 +17,7 @@ _EXEMPT_PREFIXES = (
     "/api/v1/health/",
     "/api/v1/swarms/tasks/",
     "/api/v1/a2a/",
+    "/api/v1/stripe/",  # Stripe webhook — signed via stripe-signature header
     "/v1/",
 )
 

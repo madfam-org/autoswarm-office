@@ -23,7 +23,21 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["events"])
 
-_ws_rate_limiter = MessageRateLimiter(max_messages=30, window_seconds=60.0)
+# -- Module-internal constants -------------------------------------------------
+# WebSocket rate limit for per-client inbound messages on /events/ws.
+# Defended against accidental client-side message floods (e.g. ping loops).
+_EVENTS_RATE_LIMIT_MAX: int = 30
+_EVENTS_RATE_LIMIT_WINDOW_S: float = 60.0
+
+# How many recent TaskEvents are sent in the initial batch when a client
+# connects to /events/ws. Larger values delay first paint of the OpsFeed
+# panel; smaller values force the UI to make a follow-up REST call.
+_EVENTS_INITIAL_BATCH_SIZE: int = 50
+
+_ws_rate_limiter = MessageRateLimiter(
+    max_messages=_EVENTS_RATE_LIMIT_MAX,
+    window_seconds=_EVENTS_RATE_LIMIT_WINDOW_S,
+)
 
 
 # -- Request / Response schemas -----------------------------------------------
@@ -284,8 +298,9 @@ async def events_websocket(
     declare the tenant scope (the WS upgrade does not carry our custom
     ``X-Selva-Tenant-Org`` header).
 
-    On connect: sends last 50 events for the tenant as ``event_batch``.
-    Then relays new events from the ``autoswarm:events`` Redis channel.
+    On connect: sends last ``_EVENTS_INITIAL_BATCH_SIZE`` events for the
+    tenant as ``event_batch``. Then relays new events from the
+    ``autoswarm:events`` Redis channel.
     """
     if not token:
         await websocket.close(code=4401, reason="missing token")
@@ -331,7 +346,7 @@ async def events_websocket(
                 select(TaskEvent)
                 .where(TaskEvent.org_id == org_id)
                 .order_by(TaskEvent.created_at.desc())
-                .limit(50)
+                .limit(_EVENTS_INITIAL_BATCH_SIZE)
             )
             recent = result.scalars().all()
             batch = [_event_to_response(e).model_dump() for e in reversed(recent)]

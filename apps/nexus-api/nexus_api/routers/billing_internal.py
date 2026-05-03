@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from selva_redis_pool import get_redis_pool
 
+from ..billing_tiers import get_daily_limit
 from ..config import get_settings
 from ..database import get_db
 from ..models import ComputeTokenLedger
@@ -78,7 +79,10 @@ async def check_budget(
 ) -> BudgetResponse:
     """Check whether an org has remaining compute token budget for today."""
     org_id = body.get("org_id", "default")
-    daily_limit = 1000  # Default; production reads from Redis tier cache
+    # Default to the "starter" tier limit when no Redis cache entry
+    # exists yet (org has no Dhanam subscription / billing webhook
+    # hasn't fired). Source-of-truth: ``nexus_api.billing_tiers``.
+    daily_limit = get_daily_limit(None)
 
     # Look up cached tier limit from Redis
     try:

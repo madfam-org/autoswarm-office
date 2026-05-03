@@ -18,6 +18,14 @@ logger = logging.getLogger(__name__)
 
 EVENTS_CHANNEL = "autoswarm:events"
 
+# -- Module-internal constants -------------------------------------------------
+# Per-event emit timeout (seconds) used by the synchronous fallback path
+# (`_fire`) when an instrumented LangGraph node emits its node.entered /
+# node.exited / node.error events from a sync context. The fire-and-forget
+# nature means we'd rather drop the event than block the node — keep
+# this value tight.
+_EVENT_EMIT_TIMEOUT_S: int = 3
+
 
 async def emit_event(
     nexus_url: str,
@@ -140,7 +148,7 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
                 max_workers=1,
             ) as pool:
                 with contextlib.suppress(Exception):
-                    pool.submit(asyncio.run, coro).result(timeout=3)
+                    pool.submit(asyncio.run, coro).result(timeout=_EVENT_EMIT_TIMEOUT_S)
 
         _fire(
             emit_event(

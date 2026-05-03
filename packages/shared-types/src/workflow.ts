@@ -1,3 +1,8 @@
+// CONVENTION: snake_case fields. These types mirror the wire shape of
+// the Python workflow API (`packages/workflows/src/autoswarm_workflows/
+// schema.py`) and are consumed as-is by the React workflow editor +
+// the YAML serializer round-trip. Do NOT camelCase here.
+
 /**
  * TypeScript equivalents of the Python workflow schema
  * (packages/workflows/src/autoswarm_workflows/schema.py).

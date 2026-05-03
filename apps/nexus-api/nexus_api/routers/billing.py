@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from selva_redis_pool import get_redis_pool
 
 from ..auth import get_current_user
+from ..billing_tiers import DEFAULT_TIER, get_daily_limit
 from ..config import get_settings
 from ..database import get_db
 from ..models import ComputeTokenLedger
@@ -173,14 +174,12 @@ async def dhanam_webhook(request: Request) -> dict[str, str]:
 
     # Handle subscription tier changes by caching the daily limit in Redis.
     if event_type == "subscription.updated":
-        tier = payload.get("data", {}).get("tier", "starter")
+        tier = payload.get("data", {}).get("tier", DEFAULT_TIER)
         org_id = payload.get("data", {}).get("org_id", "default")
-        tier_limits = {
-            "starter": 1000,
-            "professional": 5000,
-            "enterprise": 25000,
-        }
-        daily_limit = tier_limits.get(tier, 1000)
+        # Tier slug → daily compute-token budget. Single source of truth
+        # lives in nexus_api.billing_tiers (also imported by swarms.py
+        # and billing_internal.py).
+        daily_limit = get_daily_limit(tier)
         try:
             pool = get_redis_pool(url=settings.redis_url)
             await pool.execute_with_retry(

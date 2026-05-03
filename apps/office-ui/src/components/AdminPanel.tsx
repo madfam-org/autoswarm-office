@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { CloseButton } from '@autoswarm/ui';
 import { apiFetch } from '@/lib/api';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useToast } from '@/hooks/useToast';
+import { logger } from '@/lib/logger';
 
 interface ConnectedUser {
   session_id: string;
@@ -25,6 +27,7 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
   const [users, setUsers] = useState<ConnectedUser[]>([]);
   const [motd, setMotd] = useState('');
   const [loading, setLoading] = useState(false);
+  const { addToast } = useToast();
 
   const fetchUsers = useCallback(async () => {
     if (!isAdmin) return;
@@ -32,11 +35,17 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
       const resp = await apiFetch('/api/v1/admin/users');
       if (resp.ok) {
         setUsers(await resp.json());
+      } else {
+        // Non-2xx is surfaced — admin opening the panel deserves to know
+        // when their session lacks the role or the API is down.
+        logger.warn('AdminPanel: /admin/users returned', resp.status);
+        addToast(`Failed to load users (HTTP ${resp.status})`, 'error');
       }
-    } catch {
-      // Silently ignore — admin features are best-effort
+    } catch (err) {
+      logger.error('AdminPanel: fetchUsers failed', err);
+      addToast('Failed to load users — check connection', 'error');
     }
-  }, [isAdmin]);
+  }, [isAdmin, addToast]);
 
   useEffect(() => {
     if (isOpen && isAdmin) {
@@ -48,36 +57,49 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
     async (sessionId: string) => {
       setLoading(true);
       try {
-        await apiFetch('/api/v1/admin/kick', {
+        const resp = await apiFetch('/api/v1/admin/kick', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId }),
         });
-        // Refresh list
-        await fetchUsers();
-      } catch {
-        // ignore
+        if (resp.ok) {
+          addToast('User kicked', 'success');
+          await fetchUsers();
+        } else {
+          logger.warn('AdminPanel: kick returned', resp.status);
+          addToast(`Kick failed (HTTP ${resp.status})`, 'error');
+        }
+      } catch (err) {
+        logger.error('AdminPanel: kick failed', err);
+        addToast('Kick failed — check connection', 'error');
       } finally {
         setLoading(false);
       }
     },
-    [fetchUsers]
+    [fetchUsers, addToast]
   );
 
   const handleMotdUpdate = useCallback(async () => {
     setLoading(true);
     try {
-      await apiFetch('/api/v1/admin/room-config', {
+      const resp = await apiFetch('/api/v1/admin/room-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ motd }),
       });
-    } catch {
-      // ignore
+      if (resp.ok) {
+        addToast('MOTD updated', 'success');
+      } else {
+        logger.warn('AdminPanel: room-config returned', resp.status);
+        addToast(`MOTD update failed (HTTP ${resp.status})`, 'error');
+      }
+    } catch (err) {
+      logger.error('AdminPanel: handleMotdUpdate failed', err);
+      addToast('MOTD update failed — check connection', 'error');
     } finally {
       setLoading(false);
     }
-  }, [motd]);
+  }, [motd, addToast]);
 
   // ESC to close
   useEffect(() => {

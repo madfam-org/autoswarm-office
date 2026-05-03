@@ -1,3 +1,8 @@
+// CONVENTION: camelCase fields. Domain shape used by React; the Python
+// approval API is converted at the fetch boundary in
+// `apps/office-ui/src/lib/api.ts` (e.g. `action_category` →
+// `actionCategory`). Keep this aligned with that converter.
+
 export type PermissionLevel = 'allow' | 'ask' | 'deny';
 
 export type ActionCategory =

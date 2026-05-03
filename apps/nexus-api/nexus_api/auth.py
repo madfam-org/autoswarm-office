@@ -26,6 +26,10 @@ _bearer_scheme = HTTPBearer()
 _jwks_cache: dict[str, Any] | None = None
 _jwks_cache_time: float | None = None
 _JWKS_TTL_SECONDS = 3600.0
+# httpx timeout for the JWKS well-known fetch. Janua usually responds in
+# <100ms; the generous 10s window protects against cold-start CDN misses
+# without blocking the whole verify path on a hung issuer.
+_JWKS_FETCH_TIMEOUT_S: float = 10.0
 
 
 async def _fetch_jwks(issuer_url: str) -> dict[str, Any]:
@@ -47,7 +51,7 @@ async def _fetch_jwks(issuer_url: str) -> dict[str, Any]:
         return _jwks_cache
 
     jwks_url = f"{issuer_url.rstrip('/')}/.well-known/jwks.json"
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=_JWKS_FETCH_TIMEOUT_S) as client:
         response = await client.get(jwks_url)
         response.raise_for_status()
         _jwks_cache = response.json()

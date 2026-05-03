@@ -80,10 +80,28 @@ checkpointer = create_checkpointer()
 
 _shutdown = asyncio.Event()
 
+# -- Module-internal constants -------------------------------------------------
+# TTL (seconds) for the agent skill / role caches. Short-lived because
+# per-agent skill changes from the API need to propagate within ~1 min.
+_AGENT_CACHE_TTL_S: int = 60
+# Capacity for the per-process agent caches. Sized for one orchestrator
+# pod plus headroom; bump alongside agent count if eviction warnings appear.
+_AGENT_CACHE_MAXSIZE: int = 256
+# Seconds in one hour — used both as a multiplier (stale_hours → seconds)
+# and as the periodic worktree-cleanup interval.
+_SECONDS_PER_HOUR: int = 3600
+# Redis XREAD block timeout (milliseconds). Tuned to balance shutdown
+# responsiveness against Redis round-trips when the stream is idle.
+_REDIS_BLOCK_TIMEOUT_MS: int = 5000
+
 # Agent skill cache: avoids HTTP GET per task (Phase 4.2)
-_skill_cache: TTLCache[str, list[str]] = TTLCache(maxsize=256, ttl=60)
+_skill_cache: TTLCache[str, list[str]] = TTLCache(
+    maxsize=_AGENT_CACHE_MAXSIZE, ttl=_AGENT_CACHE_TTL_S
+)
 # Agent role cache: populated alongside skills for learning hooks
-_role_cache: TTLCache[str, str] = TTLCache(maxsize=256, ttl=60)
+_role_cache: TTLCache[str, str] = TTLCache(
+    maxsize=_AGENT_CACHE_MAXSIZE, ttl=_AGENT_CACHE_TTL_S
+)
 
 
 def _handle_signal(sig: signal.Signals) -> None:
@@ -761,7 +779,7 @@ async def _cleanup_stale_worktrees(repo_base: str, stale_hours: int = 24) -> int
     if not base.exists():
         return 0
 
-    cutoff = time.time() - (stale_hours * 3600)
+    cutoff = time.time() - (stale_hours * _SECONDS_PER_HOUR)
     removed = 0
 
     for worktree_root in base.glob("*/_worktrees"):
@@ -787,7 +805,7 @@ async def _cleanup_stale_worktrees(repo_base: str, stale_hours: int = 24) -> int
 async def _periodic_cleanup(repo_base: str, stale_hours: int) -> None:
     """Run _cleanup_stale_worktrees periodically."""
     while not _shutdown.is_set():
-        await asyncio.sleep(3600)  # Every hour
+        await asyncio.sleep(_SECONDS_PER_HOUR)  # Every hour
         if _shutdown.is_set():
             break
         try:
@@ -891,7 +909,7 @@ async def main() -> None:
             try:
                 messages = await consumer.read(
                     count=settings.max_concurrent_tasks,
-                    block=5000,
+                    block=_REDIS_BLOCK_TIMEOUT_MS,
                 )
                 if not messages:
                     continue

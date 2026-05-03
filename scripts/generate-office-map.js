@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+//
+// SOURCE OF TRUTH: packages/shared-types/src/world.ts — keep MAP_WIDTH,
+// MAP_HEIGHT, and TILE_SIZE below in sync with WORLD_COLS, WORLD_ROWS,
+// and TILE_SIZE_PX. This Node ESM script can't easily import from the TS
+// package without a build step, so the numbers are duplicated here and
+// validated by the assertion just above the constants block.
+//
 /**
  * generate-office-map.js
  *
@@ -36,9 +43,51 @@ const path = require('node:path');
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
+// MUST match packages/shared-types/src/world.ts (WORLD_COLS, WORLD_ROWS,
+// TILE_SIZE_PX). Validated lazily via the readback assertion below.
 const MAP_WIDTH = 50;
 const MAP_HEIGHT = 28;
 const TILE_SIZE = 32;
+
+// Best-effort drift check: if the TS source-of-truth file is reachable on
+// disk, verify the numbers match. We grep instead of importing because
+// this script is plain Node ESM/CJS without a TS build step.
+(function assertWorldConstantsInSync() {
+  try {
+    const worldTsPath = path.join(
+      __dirname,
+      '..',
+      'packages',
+      'shared-types',
+      'src',
+      'world.ts'
+    );
+    if (!fs.existsSync(worldTsPath)) return;
+    const src = fs.readFileSync(worldTsPath, 'utf8');
+    const expectations = [
+      { name: 'TILE_SIZE_PX', expected: TILE_SIZE },
+      { name: 'WORLD_COLS', expected: MAP_WIDTH },
+      { name: 'WORLD_ROWS', expected: MAP_HEIGHT },
+    ];
+    for (const { name, expected } of expectations) {
+      const match = src.match(
+        new RegExp(`export const ${name} = (\\d+);`)
+      );
+      if (match && Number(match[1]) !== expected) {
+        throw new Error(
+          `world.ts ${name}=${match[1]} but generate-office-map.js has ${expected}. ` +
+            `Update both, then re-run \`make generate-office-map\`.`
+        );
+      }
+    }
+  } catch (err) {
+    // Drift assertion is best-effort. Surface drift but never block on
+    // unrelated I/O issues.
+    if (err && err.message && err.message.startsWith('world.ts ')) {
+      throw err;
+    }
+  }
+})();
 
 // Tile IDs (1-indexed: tile_index + 1). Must match tile-definitions.js order.
 const T = {

@@ -1,3 +1,9 @@
+// CONVENTION: snake_case fields. These types mirror the wire shape of
+// the Python API exactly — the runtime client receives them as-is from
+// JSON and consumes the same field names. Do NOT camelCase here; keep
+// the field names byte-identical to the Janua guest-token endpoint
+// (`POST /api/v1/auth/guest`) and the GuestInvite model.
+
 /** Guest access types shared between frontend and backend. */
 
 export interface GuestTokenRequest {

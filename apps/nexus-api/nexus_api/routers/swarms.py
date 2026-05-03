@@ -14,12 +14,14 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from selva_orchestrator import ComputeTokenManager
 from selva_permissions import Audience as PermissionAudience
 from selva_permissions import is_audience_enforcement_enabled, resolve_audience
 from selva_redis_pool import get_redis_pool
 from selva_skills import SkillAudience, get_skill_registry
 
 from ..auth import get_current_user, require_non_demo, require_non_guest
+from ..billing_tiers import get_daily_limit
 from ..config import get_settings
 from ..database import get_db
 from ..models import Agent, ComputeTokenLedger, SwarmTask, TaskEvent, TenantConfig, Workflow
@@ -34,6 +36,19 @@ _dispatch_limiter = MessageRateLimiter(
     max_messages=_settings.dispatch_rate_limit,
     window_seconds=float(_settings.dispatch_rate_window),
 )
+
+# -- Module-internal constants -------------------------------------------------
+# Cost (in compute tokens) of dispatching one swarm task. Sourced from the
+# canonical ``ComputeTokenManager.COST_TABLE`` in selva_orchestrator so the
+# value lives in exactly one place. Falls back to a hardcoded default if
+# the orchestrator package ever drops the entry (defensive — also lets us
+# load this module before the orchestrator is initialised).
+_DISPATCH_COMPUTE_TOKEN_COST: int = ComputeTokenManager.COST_TABLE.get("dispatch_task", 10)
+
+# Page size for the kanban-style task board endpoint. Bounded so the
+# server-side query plus payload serialisation stays within the request
+# timeout for orgs with high task volume.
+_TASK_BOARD_PAGE_SIZE: int = 100
 
 
 async def require_dispatch_rate_limit(
@@ -339,7 +354,7 @@ async def dispatch_task(
             )
 
     # -- Compute token budget check -------------------------------------------
-    dispatch_cost = 10  # matches ComputeTokenManager.COST_TABLE["dispatch_task"]
+    dispatch_cost = _DISPATCH_COMPUTE_TOKEN_COST
 
     # Check remaining budget before dispatching.
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -350,7 +365,11 @@ async def dispatch_task(
         )
     )
     used: int = budget_result.scalar_one()
-    daily_limit = 1000  # Default; production reads from Redis tier cache
+    # Default tier limit when no Dhanam-cached entry exists in Redis.
+    # billing_internal.check_budget consults the cache; this branch is
+    # the fast path that keeps dispatch latency low. Source-of-truth:
+    # ``nexus_api.billing_tiers``.
+    daily_limit = get_daily_limit(None)
     if used + dispatch_cost > daily_limit:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -509,12 +528,12 @@ async def get_task_board(
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> TaskBoardResponse:
     """Return tasks grouped by status column with aggregated event data."""
-    # Fetch recent tasks (last 100)
+    # Fetch recent tasks (last N — see _TASK_BOARD_PAGE_SIZE).
     result = await db.execute(
         select(SwarmTask)
         .where(SwarmTask.org_id == tenant.org_id)
         .order_by(SwarmTask.created_at.desc())
-        .limit(100)
+        .limit(_TASK_BOARD_PAGE_SIZE)
     )
     tasks = result.scalars().all()
 

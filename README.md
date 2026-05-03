@@ -97,6 +97,8 @@ selva-office/
 
 ## Port Assignments
 
+> See [docs/PORTS.md](docs/PORTS.md) for canonical port assignments.
+
 | Port | Service |
 |------|---------|
 | 4300 | Nexus API |

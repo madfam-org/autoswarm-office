@@ -486,37 +486,30 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     }
   }, [colyseusConnected, companionType, sendCompanion]);
 
-  // Listen for desk info events from game
+  // Consolidated PhaserGame loader: one dynamic import wires up the event bus
+  // ref (for emit-side bridges) and ALL gameEventBus listeners. This replaces
+  // 5 separate `import('@/game/PhaserGame').then(...)` calls that each
+  // raced against component cleanup independently. The handler bodies only
+  // call setState for component-local UI state and never close over hook
+  // outputs that change frequently, so binding once on mount is safe — when
+  // the slices they update change, React re-renders without rebinding.
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    import('@/game/PhaserGame').then((mod) => {
-      cleanup = mod.gameEventBus.on('open_desk_info', (detail: unknown) => {
-        const event = detail as { title: string; assignedAgentId: string };
-        setDeskInfo({ assignedAgentId: event.assignedAgentId, title: event.title });
-      });
-    });
-    return () => cleanup?.();
-  }, []);
-
-  // Listen for whiteboard open events from game
-  useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    import('@/game/PhaserGame').then((mod) => {
-      cleanup = mod.gameEventBus.on('open_whiteboard', () => {
-        setWhiteboardOpen(true);
-        setDashboardOpen(false);
-        setDispatchPanelOpen(false);
-        setApprovalPanelOpen(false);
-      });
-    });
-    return () => cleanup?.();
-  }, []);
-
-  // Listen for follow/explorer mode events from game
-  useEffect(() => {
+    let mounted = true;
     const cleanups: Array<() => void> = [];
     import('@/game/PhaserGame').then((mod) => {
+      if (!mounted) return;
+      gameEventBusRef.current = mod.gameEventBus;
       cleanups.push(
+        mod.gameEventBus.on('open_desk_info', (detail: unknown) => {
+          const event = detail as { title: string; assignedAgentId: string };
+          setDeskInfo({ assignedAgentId: event.assignedAgentId, title: event.title });
+        }),
+        mod.gameEventBus.on('open_whiteboard', () => {
+          setWhiteboardOpen(true);
+          setDashboardOpen(false);
+          setDispatchPanelOpen(false);
+          setApprovalPanelOpen(false);
+        }),
         mod.gameEventBus.on('follow-status', (detail: unknown) => {
           const { following, name } = detail as { following: boolean; name: string };
           setFollowingPlayer(following ? name : null);
@@ -524,29 +517,19 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
         mod.gameEventBus.on('explorer-mode', (detail: unknown) => {
           setExplorerMode(detail as boolean);
         }),
-      );
-    });
-    return () => cleanups.forEach((c) => c());
-  }, []);
-
-  // Listen for megaphone and room transition events
-  useEffect(() => {
-    const cleanups: Array<() => void> = [];
-    import('@/game/PhaserGame').then((mod) => {
-      cleanups.push(
         mod.gameEventBus.on('room_transition', (detail: unknown) => {
           const { roomId } = detail as { roomId: string };
           setCurrentRoom(roomId);
-          // Update URL for map loading
           const url = new URL(window.location.href);
           url.searchParams.set('map', roomId);
           window.history.replaceState({}, '', url.toString());
         }),
       );
     });
-    // Listen for megaphone broadcasts from Colyseus
-    // This is done in the useColyseus onMessage handler
-    return () => cleanups.forEach((c) => c());
+    return () => {
+      mounted = false;
+      cleanups.forEach((c) => c());
+    };
   }, []);
 
   return (
@@ -728,9 +711,9 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
             onClose={() => setAvatarEditorOpen(false)}
             companionType={companionType}
             onCompanionChange={(type) => {
-              setCompanionType(type);
+              // Setter writes to both React state and localStorage atomically.
+              setCompanionType(type as CompanionType);
               sendCompanion(type);
-              try { localStorage.setItem('autoswarm:companion-type', type); } catch { /* noop */ }
             }}
           />
 

@@ -555,6 +555,8 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 
 ## Port Assignments
 
+> See [docs/PORTS.md](docs/PORTS.md) for canonical port assignments.
+
 | Port | Service | Notes |
 |------|---------|-------|
 | 4300 | nexus-api | Central API |

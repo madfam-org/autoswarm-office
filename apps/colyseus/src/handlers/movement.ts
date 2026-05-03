@@ -1,4 +1,5 @@
 import { Client } from "@colyseus/core";
+import { OFFICE_BOUNDS } from "@autoswarm/shared-types";
 import { OfficeStateSchema, AgentSchema } from "../schema/OfficeState";
 
 interface Bounds {
@@ -18,12 +19,8 @@ interface ProximityResult {
   distance: number;
 }
 
-const OFFICE_BOUNDS: Bounds = {
-  minX: 0,
-  minY: 0,
-  maxX: 1600,
-  maxY: 896,
-};
+// World bounds are sourced from packages/shared-types/src/world.ts so the
+// Colyseus server, Phaser scene, and .tmj map generator stay in lockstep.
 
 const DEFAULT_PROXIMITY_THRESHOLD = 64;
 

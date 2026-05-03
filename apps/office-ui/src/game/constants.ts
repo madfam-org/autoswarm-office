@@ -5,10 +5,23 @@
  * so every module references a single source of truth.
  */
 
+import {
+  TILE_SIZE_PX,
+  WORLD_COLS as SHARED_WORLD_COLS,
+  WORLD_ROWS as SHARED_WORLD_ROWS,
+} from '@autoswarm/shared-types';
+
 // === Layout ===
-export const TILE_SIZE = 32;
-export const WORLD_COLS = 50;
-export const WORLD_ROWS = 28;
+// World dimensions are owned by packages/shared-types/src/world.ts (the
+// canonical source). The local re-exports below keep existing import paths
+// (`./constants`) working for game-layer modules; do not redefine the
+// numeric literals here.
+/** @deprecated Re-exported from `@autoswarm/shared-types` (see world.ts). */
+export const TILE_SIZE = TILE_SIZE_PX;
+/** @deprecated Re-exported from `@autoswarm/shared-types` (see world.ts). */
+export const WORLD_COLS = SHARED_WORLD_COLS;
+/** @deprecated Re-exported from `@autoswarm/shared-types` (see world.ts). */
+export const WORLD_ROWS = SHARED_WORLD_ROWS;
 
 // === Movement & Interaction ===
 export const TACTICIAN_SPEED = 200;       // px/s player movement

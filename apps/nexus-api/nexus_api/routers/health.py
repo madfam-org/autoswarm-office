@@ -28,6 +28,11 @@ _settings = get_settings()
 # different app role name.
 _CONSENT_LEDGER_APP_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE", "autoswarm_app")
 
+# How many most-recent DLQ entries the /dlq-stats endpoint returns. Bounded
+# so the JSON response stays small; ops dashboards can paginate via
+# repeated calls if a deeper history is ever needed.
+_DLQ_RECENT_LIMIT: int = 10
+
 
 @router.get("/health")
 async def health() -> dict[str, str]:
@@ -208,9 +213,11 @@ async def dlq_stats() -> dict[str, object]:
             logger.debug("Failed to fetch DLQ depth", exc_info=True)
             result["depth"] = 0
 
-        # Return the 10 most recent DLQ entries.
+        # Return the N most recent DLQ entries (see _DLQ_RECENT_LIMIT).
         try:
-            entries = await client.xrevrange("autoswarm:task-dlq", count=10)
+            entries = await client.xrevrange(
+                "autoswarm:task-dlq", count=_DLQ_RECENT_LIMIT
+            )
             result["recent"] = [{"id": eid, "data": data} for eid, data in entries]
         except Exception:
             logger.debug("Failed to fetch recent DLQ entries", exc_info=True)

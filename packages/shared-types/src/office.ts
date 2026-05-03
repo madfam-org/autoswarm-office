@@ -1,3 +1,9 @@
+// CONVENTION: camelCase fields. These types are the domain shape used
+// inside React + Phaser code; wire payloads (snake_case from the Python
+// API) are converted at the fetch boundary in
+// `apps/office-ui/src/lib/api.ts`. The Colyseus state schemas in
+// `apps/colyseus/src/schema/` mirror these names.
+
 import type { Agent } from './agent';
 
 export interface Department {

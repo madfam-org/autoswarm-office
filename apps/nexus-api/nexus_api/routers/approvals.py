@@ -28,7 +28,16 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["approvals"])
 
-_ws_rate_limiter = MessageRateLimiter(max_messages=30, window_seconds=60.0)
+# -- Module-internal constants -------------------------------------------------
+# WebSocket rate limit for per-client inbound messages on /approvals/ws.
+# Mirrors the events.py limit (same UI usage pattern).
+_APPROVALS_RATE_LIMIT_MAX: int = 30
+_APPROVALS_RATE_LIMIT_WINDOW_S: float = 60.0
+
+_ws_rate_limiter = MessageRateLimiter(
+    max_messages=_APPROVALS_RATE_LIMIT_MAX,
+    window_seconds=_APPROVALS_RATE_LIMIT_WINDOW_S,
+)
 
 
 # -- Request / Response schemas -----------------------------------------------

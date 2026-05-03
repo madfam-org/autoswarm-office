@@ -19,6 +19,8 @@ Selva Office (repo `selva-office`, formerly `autoswarm-office`) is MADFAM's AI i
 
 ### Deployed services
 
+> See [docs/PORTS.md](docs/PORTS.md) for canonical port assignments.
+
 | Service | Public domain | Container port |
 |---|---|---|
 | `selva-nexus-api` | api.selva.town | 8000 |

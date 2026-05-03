@@ -12,6 +12,16 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+# -- Module-internal constants -------------------------------------------------
+# Circuit breaker tuning. These match the docstrings in CLAUDE.md
+# ("5 failures → 30s cooldown"). Module-level rather than ops-tunable
+# Settings because the values are tightly coupled to the worker's HTTP
+# retry budget (3 attempts × 0.5s backoff base) — changing them in
+# isolation tends to mask bugs rather than fix them.
+_CB_THRESHOLD: int = 5
+_CB_WINDOW_S: float = 30.0
+_CB_COOLDOWN_S: float = 30.0
+
 # Module-level circuit breaker state, keyed by URL prefix (scheme://host:port).
 # Thread-safety: Workers run in a single-threaded asyncio event loop.  Dict
 # get/set operations are GIL-atomic under CPython, and the check-then-act
@@ -27,9 +37,9 @@ class _CircuitBreaker:
 
     def __init__(
         self,
-        threshold: int = 5,
-        window: float = 30.0,
-        cooldown: float = 30.0,
+        threshold: int = _CB_THRESHOLD,
+        window: float = _CB_WINDOW_S,
+        cooldown: float = _CB_COOLDOWN_S,
     ) -> None:
         self._failures: deque[float] = deque()
         self._open_until: float = 0.0

@@ -539,7 +539,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     const token = this.getServiceToken();
     // Build a slug->colyseus-dept map for matching API departments to state.
     const slugToDept = new Map<string, { stateKey: string; dept: DepartmentSchema }>();
-    this.state.departments.forEach((dept, key) => {
+    this.state.departments.forEach((dept: DepartmentSchema, key: string) => {
       slugToDept.set(dept.slug, { stateKey: key, dept });
     });
 
@@ -650,7 +650,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
 
   private rebuildAgentIndex(): void {
     this.agentIndex.clear();
-    this.state.departments.forEach((dept, deptId) => {
+    this.state.departments.forEach((dept: DepartmentSchema, deptId: string) => {
       for (let i = 0; i < dept.agents.length; i++) {
         const agent = dept.agents.at(i);
         if (agent) {
@@ -707,7 +707,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
 
     // Fallback: linear scan (index may be stale)
     let found = false;
-    this.state.departments.forEach((dept) => {
+    this.state.departments.forEach((dept: DepartmentSchema) => {
       if (found) return;
       for (let i = 0; i < dept.agents.length; i++) {
         const agent = dept.agents.at(i);

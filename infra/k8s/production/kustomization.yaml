@@ -30,3 +30,43 @@ resources:
 commonLabels:
   app.kubernetes.io/part-of: autoswarm-office
   app.kubernetes.io/managed-by: kustomize
+
+# Image digest pins per RFC 0017 + 2026-05-03 ecosystem-health audit
+# (Kyverno fail-closed mutable-tag policy). Each deployment manifest
+# (admin.yaml, colyseus.yaml, gateway.yaml, nexus-api.yaml, office-ui.yaml)
+# still references `:latest` inline; kustomize rewrites these to
+# digest-pinned references at build time. Workers is already pinned
+# inline in workers.yaml (sha256:5f6ad2ed…) and is excluded here.
+#
+# Digests sourced from the most recent successful Build job logs in
+# `.github/workflows/deploy.yml` runs (the `pushing manifest for
+# <image>:latest@sha256:…` line). One per image:
+#
+#   nexus-api : run 24940442724 / 2026-04-25T20:54Z (commit fdd5a85)
+#   office-ui : run 24480880306 / 2026-04-15T22:09Z
+#   colyseus  : run 24879593455 / 2026-04-24T08:18Z
+#   admin     : run 24616588100 / 2026-04-18T23:48Z
+#   gateway   : run 22935418424 / 2026-03-11T03:33Z
+#
+# Older gateway/office-ui digests reflect change-detection skipping
+# their builds for unrelated commits — these are still the most-recently
+# pushed `:latest` content for those images. ArgoCD will roll the
+# pods to the explicitly pinned digest on next sync; this may or may
+# not match the currently-running content. That's the desired
+# forward state — explicit > whatever-`:latest`-resolved-to-this-morning.
+images:
+  - name: ghcr.io/madfam-org/autoswarm-nexus-api
+    newName: ghcr.io/madfam-org/autoswarm-nexus-api
+    digest: sha256:b644bf7d766b8b54266eb9ec42a24e3d52458079329c679a490abd1d961d48ae
+  - name: ghcr.io/madfam-org/autoswarm-office-ui
+    newName: ghcr.io/madfam-org/autoswarm-office-ui
+    digest: sha256:57e77bac2ab49d84427afe101feb64c7841bb2a902680ec7b690e94a695a4acb
+  - name: ghcr.io/madfam-org/autoswarm-colyseus
+    newName: ghcr.io/madfam-org/autoswarm-colyseus
+    digest: sha256:14675b3ec8a414ebbca5c28332caaf37c6c0936cea3b94bd91aba30d391e6e5e
+  - name: ghcr.io/madfam-org/autoswarm-admin
+    newName: ghcr.io/madfam-org/autoswarm-admin
+    digest: sha256:f1898f32fa197c3e68253a723a907477ff209c1c99490a04b2a8886846a66920
+  - name: ghcr.io/madfam-org/autoswarm-gateway
+    newName: ghcr.io/madfam-org/autoswarm-gateway
+    digest: sha256:bfdfbcb33f6dc9d624f5f863eaeb915d987f87e6a809898788dabda355f8cd6a

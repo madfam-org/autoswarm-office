@@ -86,7 +86,10 @@ interface StatusMessage {
   status: string;
 }
 
-interface RoomOptions {
+// Client-supplied join payload. Renamed from `RoomOptions` to avoid collision
+// with `@colyseus/core`'s `RoomOptions` (which is the room metadata type for
+// declaring state/client types — see `Room<{ state: OfficeStateSchema }>` below).
+interface OfficeJoinOptions {
   nexusApiUrl?: string;
   name?: string;
   token?: string;
@@ -148,7 +151,12 @@ const DEFAULT_DEPARTMENTS: Array<{
   },
 ];
 
-export class OfficeRoom extends Room<OfficeStateSchema> {
+// @colyseus/core 0.17.x: the Room generic is a metadata object declaring
+// the room's state/client/metadata types (see RoomOptions in @colyseus/core).
+// State is also assigned explicitly via `setState(new OfficeStateSchema())`
+// in onCreate (kept below for explicit ordering with the seed-departments path).
+export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
+
   private nexusApiUrl: string = process.env.NEXUS_API_URL ?? "http://localhost:4300";
   private stopProximityLoop: (() => void) | null = null;
   private agentIndex = new Map<string, { deptId: string; agentIndex: number }>();
@@ -216,7 +224,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
    * Authenticate the client before allowing them to join.
    * Verifies the JWT from Janua. Returns auth data stored on `client.auth`.
    */
-  async onAuth(_client: Client, options: RoomOptions): Promise<AuthResult> {
+  async onAuth(_client: Client, options: OfficeJoinOptions): Promise<AuthResult> {
     return verifyToken(options.token, { name: options.name });
   }
 
@@ -233,7 +241,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     return false;
   }
 
-  onCreate(options: RoomOptions): void {
+  onCreate(options: OfficeJoinOptions): void {
     logger.info("Room created");
 
     this.setState(new OfficeStateSchema());
@@ -415,7 +423,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     );
   }
 
-  onJoin(client: Client, options?: RoomOptions & { name?: string }): void {
+  onJoin(client: Client, options?: OfficeJoinOptions & { name?: string }): void {
     const auth = client.auth as AuthResult | undefined;
     const isGuest = auth?.isGuest ?? false;
     const isDemoClient = auth?.isDemo ?? false;
@@ -465,9 +473,14 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     }
   }
 
-  onLeave(client: Client, consented: boolean): void {
+  // @colyseus/core 0.17.x changed second arg from `consented: boolean` to
+  // `code?: number` (the WebSocket close code). Code 1000 = normal close;
+  // codes outside 1000-1999 indicate abnormal closure. The cleanup logic
+  // below runs unconditionally — disconnect always means clean up — which
+  // matches the prior consented=true path.
+  override onLeave(client: Client, code?: number): void {
     logger.info(
-      { sessionId: client.sessionId, consented },
+      { sessionId: client.sessionId, closeCode: code },
       "Client left"
     );
 

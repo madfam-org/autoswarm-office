@@ -7,9 +7,7 @@ import type {
   PermissionMatrix,
 } from '@autoswarm/shared-types';
 import { Button } from '@autoswarm/ui';
-
-const NEXUS_API_URL =
-  process.env.NEXT_PUBLIC_NEXUS_API_URL ?? 'http://localhost:4300';
+import { apiFetch } from '@/lib/api';
 
 const ACTION_CATEGORIES: { key: ActionCategory; label: string; description: string }[] = [
   { key: 'file_read', label: 'File Read', description: 'Read files from the filesystem' },
@@ -66,7 +64,7 @@ export default function PermissionsPage() {
 
   const fetchMatrix = useCallback(async () => {
     try {
-      const res = await fetch(`${NEXUS_API_URL}/api/v1/permissions/matrix`);
+      const res = await apiFetch('/api/v1/permissions/matrix');
       if (res.ok) {
         const data: PermissionMatrix = await res.json();
         setMatrix(data);
@@ -101,9 +99,8 @@ export default function PermissionsPage() {
     setSaveSuccess(false);
 
     try {
-      const res = await fetch(`${NEXUS_API_URL}/api/v1/permissions/matrix`, {
+      const res = await apiFetch('/api/v1/permissions/matrix', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(matrix),
       });
 

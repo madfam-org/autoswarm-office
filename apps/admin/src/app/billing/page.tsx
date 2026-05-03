@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@autoswarm/ui';
-
-const NEXUS_API_URL =
-  process.env.NEXT_PUBLIC_NEXUS_API_URL ?? 'http://localhost:4300';
+import { apiFetch } from '@/lib/api';
 
 interface BillingStatus {
   tier: string;
@@ -26,8 +24,8 @@ export default function BillingPage() {
   const fetchData = useCallback(async () => {
     try {
       const [statusRes, tokensRes] = await Promise.all([
-        fetch(`${NEXUS_API_URL}/api/v1/billing/status`),
-        fetch(`${NEXUS_API_URL}/api/v1/billing/tokens`),
+        apiFetch('/api/v1/billing/status'),
+        apiFetch('/api/v1/billing/tokens'),
       ]);
 
       if (statusRes.ok) {

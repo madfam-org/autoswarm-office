@@ -112,7 +112,7 @@ const AGENT_ROLES = ['planner', 'coder', 'reviewer', 'researcher', 'crm', 'suppo
 
 export class OfficeScene extends Phaser.Scene {
   private gamepadManager!: GamepadManager;
-  private tactician!: Phaser.GameObjects.Sprite;
+  private tactician: Phaser.GameObjects.Sprite | undefined;
   private tacticianLabel!: Phaser.GameObjects.Text;
   private agentSprites: Map<string, AgentSprite> = new Map();
   private remotePlayers: Map<string, RemotePlayerSprite> = new Map();
@@ -221,7 +221,7 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     // Set up interactable manager after tactician is created
-    this.interactableManager = new InteractableManager(this, this.tactician);
+    this.interactableManager = new InteractableManager(this, this.tactician!);
     if (this._pendingTilemap) {
       this.interactableManager.loadFromTilemap(this._pendingTilemap);
       this.loadMapScripts(this._pendingTilemap);
@@ -705,6 +705,9 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   update(): void {
+    // Hot-path null safety: tactician may be undefined if loadTiledMap()
+    // failed before createTactician() ran, or after shutdown() cleared it.
+    if (!this.tactician) return;
     this.gamepadManager.poll();
     const input = this.gamepadManager.getInput();
 
@@ -1067,6 +1070,9 @@ export class OfficeScene extends Phaser.Scene {
     // Clean up companion sprites
     this.companionSprites.forEach((rect) => rect.destroy());
     this.companionSprites.clear();
+    // Clear tactician reference so update() short-circuits if a frame fires
+    // after shutdown but before the scene is fully torn down.
+    this.tactician = undefined;
   }
 
   private createAnimations(): void {
@@ -1294,6 +1300,7 @@ export class OfficeScene extends Phaser.Scene {
       if (this.gamepadManager.isFocused() || this.helpOverlay.visible) return;
       // Only left click
       if (pointer.button !== 0) return;
+      if (!this.tactician) return;
 
       const worldX = pointer.worldX;
       const worldY = pointer.worldY;
@@ -1403,7 +1410,7 @@ export class OfficeScene extends Phaser.Scene {
     this.reconcileRemotePlayers(state.players ?? []);
 
     // Reconcile local player companion
-    if (state.players && this.localSessionId) {
+    if (state.players && this.localSessionId && this.tactician) {
       const localPlayer = state.players.find((p: Player) => p.sessionId === this.localSessionId);
       if (localPlayer) {
         this.reconcileCompanionSprite(
@@ -1958,6 +1965,7 @@ export class OfficeScene extends Phaser.Scene {
     let targetY: number;
 
     if (sessionId === this.localSessionId) {
+      if (!this.tactician) return;
       targetX = this.tactician.x;
       targetY = this.tactician.y;
     } else {
@@ -2009,16 +2017,18 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private handleProximityInteraction(action: 'approve' | 'inspect'): void {
+    if (!this.tactician) return;
     // Find the nearest agent with a pending approval within proximity
     let nearestAgentId: string | null = null;
     let nearestDist = PROXIMITY_THRESHOLD;
+    const tactician = this.tactician;
 
     this.agentSprites.forEach((agentSprite) => {
       if (!agentSprite.hasPendingApproval) return;
 
       const dist = Phaser.Math.Distance.Between(
-        this.tactician.x,
-        this.tactician.y,
+        tactician.x,
+        tactician.y,
         agentSprite.sprite.x,
         agentSprite.sprite.y,
       );
@@ -2056,12 +2066,14 @@ export class OfficeScene extends Phaser.Scene {
       return;
     }
 
+    if (!this.tactician) return;
+    const tactician = this.tactician;
     // Find nearest remote player
     let nearestId: string | null = null;
     let nearestDist = Infinity;
     this.remotePlayers.forEach((remote, sessionId) => {
       const dist = Phaser.Math.Distance.Between(
-        this.tactician.x, this.tactician.y,
+        tactician.x, tactician.y,
         remote.sprite.x, remote.sprite.y,
       );
       if (dist < nearestDist) {
@@ -2103,7 +2115,9 @@ export class OfficeScene extends Phaser.Scene {
   private cancelFollow(): void {
     this.followTarget = null;
     this.cameras.main.stopFollow();
-    this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    if (this.tactician) {
+      this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    }
     if (this.followLabel) {
       this.followLabel.destroy();
       this.followLabel = null;
@@ -2142,7 +2156,9 @@ export class OfficeScene extends Phaser.Scene {
   private exitExplorerMode(): void {
     this.explorerMode = false;
     this.cameras.main.setZoom(this.explorerPrevZoom);
-    this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    if (this.tactician) {
+      this.cameras.main.startFollow(this.tactician, true, 0.08, 0.08);
+    }
     gameEventBus.emit('explorer-mode', false);
   }
 }

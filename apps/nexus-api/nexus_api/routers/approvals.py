@@ -281,7 +281,10 @@ async def approve_request(
             },
         )
     except Exception:
-        pass
+        logging.getLogger(__name__).debug(
+            "Failed to emit PostHog selva_approval_responded (approved) event",
+            exc_info=True,
+        )
 
     return result
 
@@ -320,7 +323,10 @@ async def deny_request(
             },
         )
     except Exception:
-        pass
+        logging.getLogger(__name__).debug(
+            "Failed to emit PostHog selva_approval_responded (denied) event",
+            exc_info=True,
+        )
 
     return result
 

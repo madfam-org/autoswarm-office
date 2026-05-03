@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 import structlog.contextvars
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+
+logger = logging.getLogger(__name__)
 
 
 def _get_current_span_context() -> str | None:
@@ -25,7 +28,7 @@ def _get_current_span_context() -> str | None:
                 f"-{ctx.trace_flags:02x}"
             )
     except ImportError:
-        pass
+        logger.debug("OpenTelemetry not installed; skipping traceparent propagation")
     return None
 
 

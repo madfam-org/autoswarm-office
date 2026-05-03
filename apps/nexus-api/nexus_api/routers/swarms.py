@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from selva_permissions import Audience as PermissionAudience
@@ -307,13 +308,17 @@ async def dispatch_task(
                 )
     except HTTPException:
         raise
-    except Exception:
-        logging.getLogger(__name__).debug(
-            "Tenant limit check failed; proceeding without enforcement",
+    except SQLAlchemyError:
+        logging.getLogger(__name__).warning(
+            "Tenant limit check failed due to DB error; refusing dispatch",
             exc_info=True,
         )
-        # Rollback the failed transaction so subsequent queries work
+        # Rollback the failed transaction so the session is reusable.
         await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="transient db error during quota check",
+        ) from None
 
     # -- Compute token budget enforcement (Dhanam subscription tier) ----------
     if tenant_config and tenant_config.dhanam_space_id:
@@ -408,7 +413,10 @@ async def dispatch_task(
                         task_msg_data["playbook"] = pb
                         break
         except Exception:
-            pass
+            logging.getLogger(__name__).debug(
+                "Failed to resolve autonomous playbook for trigger_event",
+                exc_info=True,
+            )
         task_msg = json.dumps(task_msg_data)
         await pool.execute_with_retry("xadd", "autoswarm:task-stream", {"data": task_msg})
     except Exception:
@@ -450,7 +458,10 @@ async def dispatch_task(
             },
         )
     except Exception:
-        pass
+        logging.getLogger(__name__).debug(
+            "Failed to emit PostHog selva_task_dispatched event",
+            exc_info=True,
+        )
 
     return _task_to_response(task)
 
@@ -537,13 +548,17 @@ async def get_task_board(
     agent_names: dict[str, str] = {}
     if all_agent_ids:
         for aid in all_agent_ids:
+            # NOTE: ``uuid.UUID(aid)`` raises ``ValueError`` on malformed IDs,
+            # and ``db.execute(...)`` can raise ``SQLAlchemyError`` (not a
+            # ``ValueError`` subclass). ``Exception`` is the smallest common
+            # ancestor that catches both — name-resolution is best-effort.
             try:
                 uid = uuid.UUID(aid)
                 agent_result = await db.execute(select(Agent).where(Agent.id == uid))
                 agent = agent_result.scalar_one_or_none()
                 if agent:
                     agent_names[aid] = agent.name
-            except (ValueError, Exception):
+            except Exception:
                 logging.getLogger(__name__).debug(
                     "Failed to resolve agent name for %s",
                     aid,

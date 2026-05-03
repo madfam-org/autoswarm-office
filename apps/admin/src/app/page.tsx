@@ -7,9 +7,7 @@ import type {
   ComputeTokenBucket,
   Department,
 } from '@autoswarm/shared-types';
-
-const NEXUS_API_URL =
-  process.env.NEXT_PUBLIC_NEXUS_API_URL ?? 'http://localhost:4300';
+import { apiFetch } from '@/lib/api';
 
 interface SystemOverview {
   totalAgents: number;
@@ -41,10 +39,10 @@ export default function AdminDashboard() {
       try {
         const [agentsRes, depsRes, approvalsRes, tokensRes] = await Promise.all(
           [
-            fetch(`${NEXUS_API_URL}/api/v1/agents`),
-            fetch(`${NEXUS_API_URL}/api/v1/departments`),
-            fetch(`${NEXUS_API_URL}/api/v1/approvals/pending`),
-            fetch(`${NEXUS_API_URL}/api/v1/billing/tokens`),
+            apiFetch('/api/v1/agents'),
+            apiFetch('/api/v1/departments'),
+            apiFetch('/api/v1/approvals/pending'),
+            apiFetch('/api/v1/billing/tokens'),
           ],
         );
 

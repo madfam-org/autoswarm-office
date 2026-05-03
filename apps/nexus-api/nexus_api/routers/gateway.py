@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import ipaddress
+import json
 import logging
 import socket
 import urllib.parse
@@ -113,7 +115,7 @@ async def telegram_webhook(
         ):
             raise HTTPException(status_code=401, detail="Invalid Telegram secret token")
 
-    payload = await request.json() if not body else __import__("json").loads(body)
+    payload = await request.json() if not body else json.loads(body)
     message = payload.get("message", {})
     text = message.get("text", "").strip()
     chat_id = message.get("chat", {}).get("id", "unknown")
@@ -162,7 +164,7 @@ async def discord_webhook(
         if not _verify_hmac(body, x_signature_256, settings.discord_webhook_secret):
             raise HTTPException(status_code=401, detail="Invalid Discord webhook signature")
 
-    payload = __import__("json").loads(body)
+    payload = json.loads(body)
     content = payload.get("content", "").strip()
 
     if content.startswith("/status"):
@@ -243,7 +245,7 @@ async def slack_webhook(
         command = str(form.get("command", ""))
         user_name = str(form.get("user_name", "unknown"))
     except Exception:
-        payload = __import__("json").loads(body)
+        payload = json.loads(body)
         text = payload.get("text", "")
         command = payload.get("command", "")
         user_name = payload.get("user_name", "unknown")
@@ -539,13 +541,11 @@ async def sms_inbound(
             url = str(request.url)
             params = "".join(f"{k}{v[0]}" for k, v in sorted(form_data.items()))
             sig_base = (url + params).encode()
-            _b64 = __import__("base64")
-            _hl = __import__("hashlib")
-            expected = _b64.b64encode(
+            expected = base64.b64encode(
                 hmac.new(
                     settings.twilio_auth_token.encode(),
                     sig_base,
-                    _hl.sha1,
+                    hashlib.sha1,
                 ).digest()
             ).decode()
             if not hmac.compare_digest(expected, x_twilio_signature or ""):

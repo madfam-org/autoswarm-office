@@ -11,8 +11,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
-import redis.asyncio as aioredis
 from pydantic import BaseModel
+
+from selva_redis_pool import get_redis_pool
 
 from .graphs.base import BaseGraphState
 
@@ -111,10 +112,11 @@ class InterruptHandler:
         This is the preferred path -- no polling, instant notification.
         """
         channel_name = f"autoswarm:approval:{request_id}"
-        redis_client = aioredis.from_url(self.redis_url, decode_responses=True)
+        pool = get_redis_pool(url=self.redis_url)
+        redis_client = await pool.client()
+        pubsub = redis_client.pubsub()
 
         try:
-            pubsub = redis_client.pubsub()
             await pubsub.subscribe(channel_name)
 
             async def _get_message() -> ApprovalResponse:
@@ -137,7 +139,7 @@ class InterruptHandler:
             return result
         finally:
             await pubsub.unsubscribe(channel_name)
-            await redis_client.aclose()
+            await pubsub.close()
 
     async def _wait_via_polling(
         self, request_id: str, timeout: int, poll_interval: float

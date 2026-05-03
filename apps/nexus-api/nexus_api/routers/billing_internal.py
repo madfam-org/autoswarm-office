@@ -18,6 +18,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from selva_redis_pool import get_redis_pool
+
 from ..config import get_settings
 from ..database import get_db
 from ..models import ComputeTokenLedger
@@ -80,14 +82,11 @@ async def check_budget(
 
     # Look up cached tier limit from Redis
     try:
-        import redis.asyncio as aioredis
-
         settings = get_settings()
-        redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
-        cached = await redis_client.get(f"autoswarm:tier:{org_id}")
-        await redis_client.aclose()
+        pool = get_redis_pool(url=settings.redis_url)
+        cached = await pool.execute_with_retry("get", f"autoswarm:tier:{org_id}")
         if cached:
-            daily_limit = int(cached)
+            daily_limit = int(cached)  # type: ignore[call-overload]
     except Exception:
         logger.debug("Failed to fetch cached tier limit from Redis", exc_info=True)
 

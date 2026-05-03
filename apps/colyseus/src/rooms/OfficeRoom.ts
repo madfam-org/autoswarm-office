@@ -86,7 +86,18 @@ interface StatusMessage {
   status: string;
 }
 
-interface RoomOptions {
+/**
+ * Options dispatched into the room — supplied either by the matchmaker
+ * (`server.define("office", OfficeRoom, { nexusApiUrl })`) or by the
+ * joining client (`client.joinOrCreate("office", { token, name, orgId })`).
+ *
+ * Note: this is intentionally NOT the `RoomOptions` type from
+ * `@colyseus/core` — that type (in 0.17) is the SHAPE used as the `Room<T>`
+ * generic to declare `state`, `metadata`, and `client` types. Custom
+ * dispatch payloads are passed through `any` by `onCreate` / `onJoin` /
+ * `onAuth` and are typed at the call site.
+ */
+interface OfficeRoomDispatchOptions {
   nexusApiUrl?: string;
   name?: string;
   token?: string;
@@ -148,7 +159,7 @@ const DEFAULT_DEPARTMENTS: Array<{
   },
 ];
 
-export class OfficeRoom extends Room<OfficeStateSchema> {
+export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
   private nexusApiUrl: string = process.env.NEXUS_API_URL ?? "http://localhost:4300";
   private stopProximityLoop: (() => void) | null = null;
   private agentIndex = new Map<string, { deptId: string; agentIndex: number }>();
@@ -216,7 +227,10 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
    * Authenticate the client before allowing them to join.
    * Verifies the JWT from Janua. Returns auth data stored on `client.auth`.
    */
-  async onAuth(_client: Client, options: RoomOptions): Promise<AuthResult> {
+  override async onAuth(
+    _client: Client,
+    options: OfficeRoomDispatchOptions,
+  ): Promise<AuthResult> {
     return verifyToken(options.token, { name: options.name });
   }
 
@@ -233,9 +247,12 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     return false;
   }
 
-  onCreate(options: RoomOptions): void {
+  override onCreate(options: OfficeRoomDispatchOptions): void {
     logger.info("Room created");
 
+    // 0.17 requires explicit setState() — the 0.15-era auto-instantiation
+    // from the Room generic is gone. The new generic (`{ state: ... }`)
+    // declares the type only; we still own construction.
     this.setState(new OfficeStateSchema());
 
     this.nexusApiUrl =
@@ -415,7 +432,10 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     );
   }
 
-  onJoin(client: Client, options?: RoomOptions & { name?: string }): void {
+  override onJoin(
+    client: Client,
+    options?: OfficeRoomDispatchOptions & { name?: string },
+  ): void {
     const auth = client.auth as AuthResult | undefined;
     const isGuest = auth?.isGuest ?? false;
     const isDemoClient = auth?.isDemo ?? false;
@@ -465,10 +485,14 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     }
   }
 
-  onLeave(client: Client, consented: boolean): void {
+  override onLeave(client: Client, code?: number): void {
+    // 0.17: second arg is the WebSocket close code (RFC 6455), not the
+    // 0.15-era `consented: boolean`. The previous handler did not branch
+    // on `consented` — cleanup ran on every leave — so semantics are
+    // preserved by ignoring the value beyond logging it for diagnostics.
     logger.info(
-      { sessionId: client.sessionId, consented },
-      "Client left"
+      { sessionId: client.sessionId, closeCode: code },
+      "Client left",
     );
 
     const player = this.state.players.get(client.sessionId);
@@ -487,7 +511,7 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     this.broadcast("player_left", { sessionId: client.sessionId });
   }
 
-  onDispose(): void {
+  override onDispose(): void {
     logger.info("Room disposed");
     if (this.demoSimulator) {
       this.demoSimulator.stop();

@@ -1,4 +1,4 @@
-# autoswarm-office — Ecosystem Context
+# selva-office — Ecosystem Context
 
 > **Selva — gamified multi-agent business orchestration + OpenAI-compatible LLM inference routing.**
 
@@ -11,7 +11,7 @@ embedded below.
 
 ## 1. What this repo is
 
-Autoswarm Office (branded externally as **Selva**) is MADFAM's AI inference + agent orchestration platform. Two roles: (1) **inference proxy** — OpenAI-compatible `/v1` endpoint (`nexus-api`) that every ecosystem service routes its LLM calls through; (2) **agent platform** — LangGraph workers + Colyseus real-time state + 2D Phaser office UI for drafting agents, assigning them to departments, and approving their actions via a gamepad. Target domain: `selva.town`.
+Selva Office (repo `selva-office`, formerly `autoswarm-office`) is MADFAM's AI inference + agent orchestration platform. Two roles: (1) **inference proxy** — OpenAI-compatible `/v1` endpoint (`nexus-api`) that every ecosystem service routes its LLM calls through; (2) **agent platform** — LangGraph workers + Colyseus real-time state + 2D Phaser office UI for drafting agents, assigning them to departments, and approving their actions via a gamepad. Target domain: `selva.town`.
 
 **Pillar**: Intelligence / Agents + LLM routing
 **Type**: platform
@@ -21,14 +21,15 @@ Autoswarm Office (branded externally as **Selva**) is MADFAM's AI inference + ag
 
 | Service | Public domain | Container port |
 |---|---|---|
-| `autoswarm-nexus-api` | agents-api.madfam.io | 8000 |
-| `autoswarm-office-ui` | agents.madfam.io | 3000 |
-| `autoswarm-admin` | agents-admin.madfam.io | 3001 |
-| `autoswarm-colyseus` | agents-ws.madfam.io | 2567 |
-| `autoswarm-gateway` | (background) | — |
-| `autoswarm-workers` | (langgraph worker) | — |
+| `selva-nexus-api` | api.selva.town | 8000 |
+| `selva-office-ui` | app.selva.town | 3000 |
+| `selva-admin` | admin.selva.town | 3001 |
+| `selva-colyseus` | ws.selva.town | 2567 |
+| `selva-gateway` | gw.selva.town (health/metrics) | 4304 |
+| `selva-workers` | (langgraph worker, internal) | 4305 |
 
-**Kubernetes namespace**: `autoswarm-office`
+**Kubernetes namespace**: `autoswarm` (production) / `autoswarm-staging` (staging) — namespace
+names are retained from the legacy `autoswarm-office` rebrand and are not user-visible.
 **Cluster**: bare-metal k3s on Hetzner (see topology section below).
 
 ### Upstream dependencies (this repo consumes)
@@ -68,7 +69,7 @@ below is embedded here so this document stands alone.
 | **Enclii** | `madfam-org/enclii` | PaaS control plane — all deploys go through this |
 | **Janua** | `madfam-org/janua` | OIDC/OAuth 2.0 provider — RS256 JWKS at `auth.madfam.io/.well-known/jwks.json` |
 | **Dhanam** | `madfam-org/dhanam` | Billing + payment gateways (Stripe, Mercado Pago, SPEI, etc.) |
-| **Selva** | `madfam-org/autoswarm-office` | LLM inference routing + agent orchestration |
+| **Selva** | `madfam-org/selva-office` | LLM inference routing + agent orchestration |
 | **Karafiel** | `madfam-org/karafiel` | Operational compliance — CFDI, NOM-151, e.firma, SAT-adjacent. Owns legal-ops / contract templates |
 | **Tezca** | `madfam-org/tezca` | Mexican law oracle (informational only — feeds Karafiel) |
 | **Cotiza** | `madfam-org/digifab-quoting` | MADFAM's quoting engine (fabrication + services) |
@@ -86,8 +87,8 @@ below is embedded here so this document stands alone.
 - **Billing**: credit metering + entitlements flow through Dhanam. See
   `madfam-org/dhanam` for the meter/entitlement/invoice APIs.
 - **Inference**: every LLM call should route through Selva
-  (`autoswarm-office`) at `/v1` (OpenAI-compatible). Do not talk directly
-  to OpenAI / Anthropic from service code.
+  (`selva-office`, served at `api.selva.town/v1`, OpenAI-compatible). Do not
+  talk directly to OpenAI / Anthropic from service code.
 - **CORS**: explicit allowlist per service. Wildcards are banned
   (audit 2026-04-23 H2/H5/H6).
 - **Images**: `@sha256:`-pinned in every manifest. Kyverno fail-closes on
@@ -151,21 +152,21 @@ Env vars: `ENCLII_API_URL` (default `https://api.enclii.dev`),
 `ENCLII_TOKEN` (alternative to interactive login),
 `ENCLII_PROJECT`, `ENCLII_ENV`.
 
-### Day-to-day for autoswarm-nexus-api
+### Day-to-day for selva-nexus-api
 
-The commands below default to `autoswarm-nexus-api` — the primary service name for
+The commands below default to `selva-nexus-api` — the primary service name for
 this repo as registered in Switchyard. For any other service in the
 ecosystem, swap the name.
 
 ```bash
 # Status + where the pods are running
 enclii ps --wide
-enclii ps autoswarm-nexus-api --env production
+enclii ps selva-nexus-api --env production
 
 # Logs (tail, filter, history)
-enclii logs autoswarm-nexus-api -f                          # live tail
-enclii logs autoswarm-nexus-api --since 1h --level error    # last hour, errors only
-enclii logs autoswarm-nexus-api --env staging -f
+enclii logs selva-nexus-api -f                          # live tail
+enclii logs selva-nexus-api --since 1h --level error    # last hour, errors only
+enclii logs selva-nexus-api --env staging -f
 
 # Deploy (preview, staging, production)
 enclii deploy --env preview                       # from current branch
@@ -173,28 +174,28 @@ enclii deploy --env staging
 enclii deploy --env production --strategy canary --canary-percent 10
 
 # Rollback
-enclii rollback autoswarm-nexus-api                         # previous release
-enclii rollback autoswarm-nexus-api --to-revision 5
+enclii rollback selva-nexus-api                         # previous release
+enclii rollback selva-nexus-api --to-revision 5
 
 # Releases + history
-enclii releases autoswarm-nexus-api                          # list builds
-enclii releases autoswarm-nexus-api --latest --output json
+enclii releases selva-nexus-api                          # list builds
+enclii releases selva-nexus-api --latest --output json
 
 # Secrets (routed through Lockbox → Vault → ESO → K8s)
-enclii secrets list autoswarm-nexus-api
-enclii secrets set MY_KEY=value --service autoswarm-nexus-api --secret
-enclii secrets rm MY_KEY --service autoswarm-nexus-api
+enclii secrets list selva-nexus-api
+enclii secrets set MY_KEY=value --service selva-nexus-api --secret
+enclii secrets rm MY_KEY --service selva-nexus-api
 
 # Domains, tunnel routes, DNS
-enclii domains list autoswarm-nexus-api
-enclii domains add autoswarm-nexus-api my.example.com       # auto-provisions tunnel route + DNS
+enclii domains list selva-nexus-api
+enclii domains add selva-nexus-api my.example.com       # auto-provisions tunnel route + DNS
 
 # Scheduled jobs (cron + one-off)
 enclii jobs list
 enclii jobs run <job-name>                         # trigger one-off
 
 # Routing (ingress + TLS)
-enclii junctions list autoswarm-nexus-api
+enclii junctions list selva-nexus-api
 
 # Serverless (scale-to-zero functions)
 enclii functions list

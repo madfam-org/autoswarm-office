@@ -1,26 +1,32 @@
-# Selva Office (AutoSwarm) — Product Roadmap
+# Selva Office — Product Roadmap
 
 > **Selva** is the autonomous virtual office product by **Innovaciones MADFAM SAS de CV**.
 > It runs at `selva.town` and integrates with the full MADFAM ecosystem.
+> _The legacy "AutoSwarm Office" name is retained only inside historical migration
+> identifiers and a few infra namespaces. The product, repo, and brand are Selva._
 
 ---
 
-## Current Status: v2.0.0 — Enterprise Mexican Market MVP ✅
+## Current Status: v2.2.0 — Outbound Voice Mode + Consent Ledger ✅
 
-| Metric | Value |
-|--------|-------|
-| API routes | 139 |
-| Built-in tools | 74 |
-| Workflow graphs | 12 (coding, research, crm, deployment, puppeteer, meeting, project, billing, accounting, sales, intelligence, custom) |
-| Ecosystem adapters | 6 (Karafiel, Dhanam, PhyneCRM, Tezca, Crawler, A2A) |
-| Skills (en + es-MX) | 17 |
-| Alembic migrations | 16 (0000–0015) |
-| TS tests | 817+ passing |
-| Enterprise tests | 308+ |
-| Python lint | 0 errors |
-| Messaging gateways | 18 channels |
-| Solarpunk visual phases | 4/4 complete |
-| PWA installable | Yes |
+> Supersedes the v2.0.0 "Enterprise Mexican Market MVP" milestone. v2.1.1 added
+> autonomous-pipeline security hardening; v2.2.0 added the three-mode voice/consent
+> system + append-only consent ledger.
+
+| Metric | Value | Source |
+|--------|-------|--------|
+| Built-in tools | 240 (`selva_tools/builtins/`) | `grep -rE "^class [A-Z][A-Za-z]+Tool" packages/tools/src/selva_tools/builtins/` |
+| Workflow graphs | 12 (accounting, billing, coding, crm, deployment, intelligence, meeting, operations, project, puppeteer, research, sales) | `apps/workers/selva_workers/graphs/*.py` |
+| Ecosystem adapters | 6 (Karafiel, Dhanam, PhyneCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
+| Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
+| Alembic migrations | 25 (0000–0018 + Wave 2 chain) | `apps/nexus-api/alembic/versions/*.py` |
+| Test files | 794 (pytest + vitest + playwright) | `find apps packages tests -name "test_*.py" -o -name "*.test.ts" -o -name "*.spec.ts"` |
+| Python lint | 0 errors | `uv run ruff check .` |
+| Messaging gateways | 18 channels | `packages/tools/src/selva_tools/gateways/` |
+| Solarpunk visual phases | 4/4 complete | — |
+| PWA installable | Yes | — |
+| Tool/skill audience boundary | Platform vs Tenant (shadow mode) | `packages/permissions/src/selva_permissions/audience.py` |
+| Outbound voice modes | 3 (`user_direct`, `dyad_selva_plus_user`, `agent_identified`) + ledger | `packages/tools/src/selva_tools/builtins/email.py` |
 
 ---
 
@@ -274,9 +280,9 @@ Selva seats at $149-499/mo as the autonomous AI workforce:
 ```
 MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 │
-├── 🏢 Selva Office (autoswarm-office/) — THIS PRODUCT
+├── 🏢 Selva Office (selva-office/) — THIS PRODUCT
 │   ├── selva.town — Virtual office + AI agent swarm
-│   ├── 74 built-in tools, 12 graphs, 6 adapters, 18 gateways, A2A protocol
+│   ├── 240 built-in tools, 12 graphs, 6 adapters, 18 gateways, A2A protocol
 │   └── Solarpunk UI, PWA, LiveKit SFU, es-MX locale, multi-tenant
 │
 ├── 🔐 Janua (janua/) — Authentication & SSO
@@ -423,7 +429,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 - `[x]` Ecosystem inference centralized (Fortuna, Yantra4D, PhyneCRM → Selva proxy)
 - `[x]` Service resource registry (8 external accounts tracked)
 - `[x]` Email delivery verified (Resend Pro, madfam.io domain)
-- `[x]` 6 autoswarm pods healthy (nexus-api, workers, gateway, colyseus, office-ui, admin)
+- `[x]` 6 selva pods healthy (nexus-api, workers, gateway, colyseus, office-ui, admin)
 - `[x]` ArgoCD synced to latest commit
 - `[x]` Dev-bypass rejected in production auth
 - `[ ]` Anthropic API credit balance > $0

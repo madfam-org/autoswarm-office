@@ -2,7 +2,7 @@
 
 ## Pricing & PMF Anchoring
 
-- **Pricing source-of-truth**: `internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md`. Selva tiers (Tulana v0.1 recommended, MXN/hr): Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255. Confidence: **medium** — only product with a Tulana v0.1 SKU live (see `scripts/seed-mvp.py:188-197`).
+- **Pricing source-of-truth**: `internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md`. Selva tiers (Tulana v0.1 recommended, MXN/hr): Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255. Confidence: **medium** — only product with a Tulana v0.1 SKU live. The MXN/hr tier numbers are not yet codified in any local seed script — pricing flows from the Tulana decision doc into Dhanam's billing catalog at runtime. Adjacent ecosystem bundles (Founder/Operator/Flywheel, USD/mo) are seeded in `apps/office-ui/src/app/bundles/page.tsx:60-117`.
 - **PMF measurement**: per RFC 0013, NPS + Sean Ellis + retention via `@madfam/pmf-widget` → Tulana `/v1/pmf/*` endpoints. Composite PMF Score informs price moves + sunset decisions.
 
 ## Deployment Pipeline (dev → staging → prod)
@@ -120,16 +120,16 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - `apps/office-ui/src/app/demo/page.tsx` -- Demo page (public, sandbox mode)
 - `apps/office-ui/src/components/OfficeExperience.tsx` -- Shared office experience component
 - `apps/colyseus/src/demo/DemoSimulator.ts` -- Demo agent simulation engine
-- `apps/workers/autoswarm_workers/__main__.py` -- Worker process entry (task status lifecycle)
-- `apps/workers/autoswarm_workers/task_status.py` -- Fire-and-forget task PATCH to nexus-api
-- `apps/workers/autoswarm_workers/auth.py` -- Centralized worker-to-API auth headers
-- `apps/workers/autoswarm_workers/prompts.py` -- Repo-context-aware LLM system prompts
-- `apps/workers/autoswarm_workers/learning.py` -- Post-task learning (experience, reflexion, bandit, stats)
-- `apps/workers/autoswarm_workers/event_emitter.py` -- Fire-and-forget event POST + Redis PUBLISH
+- `apps/workers/selva_workers/__main__.py` -- Worker process entry (task status lifecycle)
+- `apps/workers/selva_workers/task_status.py` -- Fire-and-forget task PATCH to nexus-api
+- `apps/workers/selva_workers/auth.py` -- Centralized worker-to-API auth headers
+- `apps/workers/selva_workers/prompts.py` -- Repo-context-aware LLM system prompts
+- `apps/workers/selva_workers/learning.py` -- Post-task learning (experience, reflexion, bandit, stats)
+- `apps/workers/selva_workers/event_emitter.py` -- Fire-and-forget event POST + Redis PUBLISH
 - `apps/nexus-api/nexus_api/routers/events.py` -- Events REST API + WebSocket stream
 - `apps/nexus-api/nexus_api/routers/metrics.py` -- Ops metrics dashboard aggregation API
-- `apps/workers/autoswarm_workers/graphs/coding.py` -- Coding graph (plan/implement/test/review/push)
-- `apps/workers/autoswarm_workers/graphs/base.py` -- Shared graph state, permission checks
+- `apps/workers/selva_workers/graphs/coding.py` -- Coding graph (plan/implement/test/review/push)
+- `apps/workers/selva_workers/graphs/base.py` -- Shared graph state, permission checks
 - `packages/orchestrator/src/orchestrator.py` -- Swarm orchestration engine
 - `packages/permissions/src/matrix.py` -- HITL permission matrix
 - `packages/permissions/src/engine.py` -- Permission evaluation engine
@@ -141,21 +141,21 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - `apps/nexus-api/nexus_api/routers/chat.py` -- Chat history persistence API
 - `apps/nexus-api/nexus_api/routers/admin.py` -- Admin controls (kick, room config)
 - `apps/colyseus/src/handlers/teleport.ts` -- Player teleport handler
-- `packages/workflows/src/autoswarm_workflows/compiler.py` -- YAML-to-LangGraph compiler
-- `packages/workflows/src/autoswarm_workflows/schema.py` -- Workflow definition models
-- `packages/tools/src/selva_tools/registry.py` -- Tool registry (263 built-in tools; see `builtins/__init__.py:get_builtin_tools`)
-- `packages/memory/src/autoswarm_memory/store.py` -- Per-agent FAISS memory store
-- `packages/tools/src/autoswarm_tools/storage/local.py` -- Content-addressable artifact storage
-- `packages/tools/src/autoswarm_tools/builtins/artifact.py` -- Artifact management tools (save/retrieve/list)
-- `packages/workflows/src/autoswarm_workflows/nodes/batch.py` -- Batch processing node handler
-- `packages/tools/src/autoswarm_tools/builtins/image_analysis.py` -- Image analysis tool (multimodal)
+- `packages/workflows/src/selva_workflows/compiler.py` -- YAML-to-LangGraph compiler
+- `packages/workflows/src/selva_workflows/schema.py` -- Workflow definition models
+- `packages/tools/src/selva_tools/registry.py` -- Tool registry (240 built-in tools; see `builtins/__init__.py:get_builtin_tools`)
+- `packages/memory/src/selva_memory/store.py` -- Per-agent FAISS memory store
+- `packages/tools/src/selva_tools/storage/local.py` -- Content-addressable artifact storage
+- `packages/tools/src/selva_tools/builtins/artifact.py` -- Artifact management tools (save/retrieve/list)
+- `packages/workflows/src/selva_workflows/nodes/batch.py` -- Batch processing node handler
+- `packages/tools/src/selva_tools/builtins/image_analysis.py` -- Image analysis tool (multimodal)
 - `apps/nexus-api/nexus_api/routers/marketplace.py` -- Skill marketplace CRUD API
-- `packages/sdk/autoswarm_sdk/client.py` -- Python SDK async/sync clients
-- `packages/orchestrator/autoswarm_orchestrator/bandit.py` -- Thompson Sampling agent selection
-- `packages/orchestrator/autoswarm_orchestrator/puppeteer.py` -- RL orchestrator
-- `apps/workers/autoswarm_workers/graphs/puppeteer.py` -- Puppeteer graph (decompose/assign/execute/aggregate/feedback)
-- `apps/workers/autoswarm_workers/graphs/meeting.py` -- Meeting notes graph (transcribe/summarize/extract/save)
-- `packages/calendar/autoswarm_calendar/` -- Google/Microsoft calendar adapters
+- `packages/sdk/selva_sdk/client.py` -- Python SDK async/sync clients
+- `packages/orchestrator/selva_orchestrator/bandit.py` -- Thompson Sampling agent selection
+- `packages/orchestrator/selva_orchestrator/puppeteer.py` -- RL orchestrator
+- `apps/workers/selva_workers/graphs/puppeteer.py` -- Puppeteer graph (decompose/assign/execute/aggregate/feedback)
+- `apps/workers/selva_workers/graphs/meeting.py` -- Meeting notes graph (transcribe/summarize/extract/save)
+- `packages/calendar/selva_calendar/` -- Google/Microsoft calendar adapters
 - `apps/nexus-api/nexus_api/routers/maps.py` -- Map CRUD API
 - `apps/nexus-api/nexus_api/routers/calendar.py` -- Calendar connection API
 - `apps/office-ui/src/game/constants.ts` -- Centralized game-layer constants
@@ -380,7 +380,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
   Voice API: `POST /api/v1/voice/transcribe` (audio upload → text),
   `POST /api/v1/voice/dispatch` (text → SwarmTask). Meeting graph
   `transcribe()` node tries STT tool first, falls back to LLM.
-  Tool count: 40 built-in tools.
+  Tool count: 40 built-in tools (at v0.7.0).
 - **LiveKit SFU Scaling**: Hybrid P2P/SFU proximity video. When player
   count exceeds `LIVEKIT_THRESHOLD` (default 5), server sends `mode: "sfu"`
   in proximity messages and LiveKit credentials on join. Client auto-switches
@@ -409,9 +409,9 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 ## Codebase Stability (v0.5.2)
 
 - **Skills Package Fix**: Resolved dual-path collision — `pyproject.toml`
-  `where=["src"]` was hiding the real `autoswarm_skills/` root package.
+  `where=["src"]` was hiding the real `selva_skills/` root package.
   Moved `hub.py`, `refiner.py`, `skill_md.py` from `src/` into root
-  package. Deleted conflicting `src/autoswarm_skills/registry.py`.
+  package. Deleted conflicting `src/selva_skills/registry.py`.
 - **Worker Settings**: Added missing `environment: str = "development"`
   field to worker `Settings` class. Validator `_validate_production_safety`
   was crashing with `AttributeError` on every instantiation.
@@ -671,8 +671,9 @@ block pattern (see any existing platform module for template).
   by the orchestrator package and tracked in the `compute_token_ledger` table.
   Use the billing router at `apps/nexus-api/src/routers/billing.py`.
 
-- **Enclii** handles deployment. The `.enclii.yml` defines all three services.
-  The `deploy-enclii.yml` GitHub Actions workflow builds images and notifies Enclii.
+- **Enclii** handles deployment. `enclii.yaml` (repo root) defines all six
+  services (nexus-api, office-ui, admin, colyseus, gateway, workers).
+  The `.github/workflows/deploy.yml` pipeline builds images and notifies Enclii.
 
 - Read sibling repo `llms-full.txt` files for full API surfaces of Janua, Dhanam,
   and Enclii.
@@ -740,8 +741,9 @@ The `packages/skills/` package implements the AgentSkills standard.
 ### Tool Registry (`packages/tools`)
 - **BaseTool** ABC with `name`, `description`, `parameters_schema()`, `async execute()`.
 - `ToolRegistry` singleton: 23 built-in tools across 8 categories (file ops, code
-  exec, git, web, data, communication, environment, artifacts). `get_specs(tool_names)` returns
-  OpenAI function-calling format.
+  exec, git, web, data, communication, environment, artifacts) at the time this
+  section was written. `get_specs(tool_names)` returns OpenAI function-calling
+  format.
 - **MCP Client** (`mcp/client.py`): `McpToolAdapter` wraps remote MCP tools as
   BaseTool instances. Stdio and HTTP transports. `discover_mcp_tools(transport)`
   auto-registers.
@@ -817,7 +819,7 @@ skill composes these four tools into a pre-submission gate.
 ### Phase 5: Advanced Features
 
 #### Artifact Management (5.1)
-- **Storage**: `packages/tools/src/autoswarm_tools/storage/` — `ArtifactStorage` ABC +
+- **Storage**: `packages/tools/src/selva_tools/storage/` — `ArtifactStorage` ABC +
   `LocalFSStorage` (content-addressable SHA-256 dedup, layout `<hash[:2]>/<hash[2:4]>/<hash>`).
   `ARTIFACT_STORAGE_PATH` env var or `/tmp/autoswarm-artifacts` default.
 - **Tools**: `SaveArtifactTool`, `RetrieveArtifactTool`, `ListArtifactsTool` in
@@ -853,7 +855,7 @@ skill composes these four tools into a pre-submission gate.
   updated (deepinfra cheapest, anthropic highest quality).
 - **ImageAnalysisTool**: `builtins/image_analysis.py` — constructs multimodal
   messages with image + prompt, returns `requires_inference: True` for worker dispatch.
-- **Tool count**: 24 built-in tools (was 23).
+- **Tool count**: 24 built-in tools (was 23, at v0.5.x).
 
 #### Skill Marketplace (5.4)
 - **DB**: `SkillMarketplaceEntry` and `SkillRating` models in `models.py`.
@@ -1079,7 +1081,7 @@ skill composes these four tools into a pre-submission gate.
 - **PR creation after push**: `_create_pr_after_push()` in `coding.py` calls
   `GitTool.create_pr()` (which invokes `gh pr create`) after a successful push.
   Fire-and-forget — failures are logged, never raised.
-- **Deployment graph**: `apps/workers/autoswarm_workers/graphs/deployment.py`
+- **Deployment graph**: `apps/workers/selva_workers/graphs/deployment.py`
   implements `validate → deploy_gate (interrupt) → deploy → monitor → END`.
   Uses `DeployTool` and `DeployStatusTool` from `packages/tools`.
 - **Enclii webhook**: `POST /api/v1/gateway/enclii` receives deployment events
@@ -1153,7 +1155,7 @@ skill composes these four tools into a pre-submission gate.
 - **Playwright E2E**: `tests/e2e/` with login, dispatch, and approval specs.
   Run with `make test-e2e` (requires `npx playwright install chromium`).
 - Worker graph nodes (`plan`, `implement`, `review`) use `call_llm()` from
-  `autoswarm_workers.inference` with a `ModelRouter` that auto-discovers providers
+  `selva_workers.inference` with a `ModelRouter` that auto-discovers providers
   from env vars. Graphs fall back to static logic when no LLM is configured.
 - The permission matrix is evaluated by `packages/permissions/src/engine.py` before
   every tool invocation in the worker.
@@ -1628,7 +1630,7 @@ skill composes these four tools into a pre-submission gate.
   agent_id, event_type, event_category, node_id, graph_type, payload,
   duration_ms, provider, model, token_count, error_message, request_id,
   org_id, created_at. Migration `0011`.
-- **Event emitter** (`apps/workers/autoswarm_workers/event_emitter.py`):
+- **Event emitter** (`apps/workers/selva_workers/event_emitter.py`):
   `emit_event()` — fire-and-forget POST to `/api/v1/events` + Redis PUBLISH
   to `autoswarm:events`. 2s HTTP timeout. Follows `task_status.py` pattern.
   `@instrumented_node` decorator wraps graph nodes to emit `node.entered`,

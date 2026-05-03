@@ -72,7 +72,7 @@ kubectl run alembic-migrate \
 
 # Verify:
 kubectl exec -n autoswarm deploy/autoswarm-nexus-api -- \
-  python -c "from nexus_api.models.schedule import Schedule; print('Schedule table OK')"
+  python -c "from nexus_api.models import Schedule; print('Schedule table OK')"
 ```
 
 ---
@@ -273,7 +273,7 @@ kubectl exec -n autoswarm deploy/autoswarm-celery -it -- \
 
 # 2. Schedules table exists
 kubectl exec -n autoswarm deploy/autoswarm-nexus-api -it -- \
-  python -c "from nexus_api.models.schedule import Schedule; print('OK')"
+  python -c "from nexus_api.models import Schedule; print('OK')"
 
 # 3. Trigger an ACP run → confirm a skill file appears within 60s
 curl -X POST https://api.autoswarm.yourdomain.com/api/v1/acp/initiate \

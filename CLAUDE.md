@@ -10,8 +10,8 @@
 Quick-reference for new contributors. Each bullet group is an invariant the
 v2.2.x remediation enforces — break one and you break a tenancy/safety
 boundary. Followups (12 unhardened webhook handlers, Postgres RLS rollout,
-Colyseus 0.17 migration, Stripe webhook handler, tenant onboarding UI for
-`outbound_*` columns) are tracked in ROADMAP.md.
+Stripe webhook handler, tenant onboarding UI for `outbound_*` columns) are
+tracked in ROADMAP.md.
 
 - **Worker → API auth**: every worker call sends `X-Selva-Tenant-Org: <org_id>`
   alongside the `Authorization: Bearer <WORKER_API_TOKEN>` header. The header
@@ -1293,6 +1293,21 @@ skill composes these four tools into a pre-submission gate.
   Without this, ES2022+ class field semantics override `@type` decorator
   getter/setters, causing `encodeAll()` to emit 0 bytes and clients to receive
   empty state. This is a hard requirement for `@colyseus/schema` decorators.
+- **Colyseus 0.17 Room API** (`@colyseus/core@0.17.42`): the `Room<T>` generic
+  is a SHAPE — `{ state: TState, metadata?: TMeta, client?: TClient }` — not
+  the state schema directly. `OfficeRoom` declares
+  `extends Room<{ state: OfficeStateSchema }>` and explicitly calls
+  `this.setState(new OfficeStateSchema())` in `onCreate()` (the 0.15-era
+  auto-instantiation from the type param is gone). `onLeave(client, code?:
+  number)` receives the WebSocket close code (RFC 6455), not the 0.15-era
+  `consented: boolean` — branch on `code === 1000` if you ever need a
+  "clean disconnect" approximation. Custom dispatch payloads (the
+  `{ token, name, orgId, nexusApiUrl }` we pass to `joinOrCreate` /
+  `server.define`) are NOT part of the `RoomOptions` generic — they flow
+  through `any` on `onCreate` / `onJoin` / `onAuth` and are typed at the
+  call site (see `OfficeRoomDispatchOptions`). Use the `override` keyword
+  on every lifecycle method — TypeScript catches signature drift the next
+  time the library bumps.
 - **WebSocket payload**: `WebSocketTransport` is configured with
   `maxPayload: 1024 * 1024` (1 MB) because the default ws limit is too small
   when state includes 12+ agents.

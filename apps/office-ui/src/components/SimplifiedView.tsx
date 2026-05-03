@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type FC } from 'react';
 import type { Department, Agent, ApprovalRequest, ChatMessage } from '@autoswarm/shared-types';
+import { formatHM } from '@/lib/format-time';
 
 const STATUS_COLORS: Record<string, string> = {
   idle: 'bg-slate-400',
@@ -33,11 +34,6 @@ function StatusDot({ status }: { status: string }) {
       aria-label={STATUS_LABELS[status] ?? status}
     />
   );
-}
-
-function formatTime(timestamp: number): string {
-  const d = new Date(timestamp);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 interface SimplifiedViewProps {
@@ -314,7 +310,7 @@ export const SimplifiedView: FC<SimplifiedViewProps> = ({
                       ) : (
                         <>
                           <span className="text-[8px] text-slate-600">
-                            {formatTime(msg.timestamp)}
+                            {formatHM(msg.timestamp)}
                           </span>{' '}
                           <span className="font-semibold text-emerald-400">
                             {msg.senderName}

@@ -67,12 +67,31 @@ const config: Config = {
           accent: 'var(--pixelact-accent, #818cf8)',
         },
       },
+      // Z-index design system:
+      //  - backdrop-below-hud (19): panel backdrops that sit *below* the HUD
+      //    chrome (DashboardPanel, OpsFeed sliding panels). Click-to-close
+      //    layer; must not occlude the HUD toggle buttons.
+      //  - hud (20): top-level HUD chrome and persistent in-canvas overlays.
+      //  - video (30): proximity-video bubbles (above HUD, below dialogs).
+      //  - backdrop (40): full-screen dim backdrop for non-modal overlays
+      //    (CoWebsitePanel sliding iframe, SkillMarketplace).
+      //  - modal-backdrop (49): dim backdrop that pairs with `modal`.
+      //  - modal (50): centered modal dialogs (MetricsDashboard, ApprovalModal,
+      //    AvatarEditor) and right-side drawers behaving as dialogs
+      //    (ApprovalPanel, CalendarPanel, AdminPanel, TaskDispatchPanel).
+      //  - toast (60): transient notifications. Must remain above all modals
+      //    so action feedback is never hidden behind dialogs.
+      //  - banner (70): demo/system banner. Sits above toast intentionally;
+      //    Toast offsets itself when this banner is active so they coexist.
       zIndex: {
+        'backdrop-below-hud': '19',
         hud: '20',
         video: '30',
         backdrop: '40',
+        'modal-backdrop': '49',
         modal: '50',
         toast: '60',
+        banner: '70',
       },
       boxShadow: {
         pixel:

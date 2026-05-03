@@ -5,6 +5,9 @@ import { AgentRoster } from '@/components/landing/AgentRoster';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { EcosystemLinks } from '@/components/landing/EcosystemLinks';
 import { Footer } from '@/components/landing/Footer';
+import { getSiteConfig } from '@/lib/site-config';
+
+const { marketingUrl } = getSiteConfig();
 
 export const metadata: Metadata = {
   title: 'Selva — Your AI Workforce, Alive in a Virtual Office',
@@ -14,7 +17,7 @@ export const metadata: Metadata = {
     title: 'Selva — Your AI Workforce, Alive in a Virtual Office',
     description:
       'Meet your AI team. 10 specialized agents working in a living virtual office with you in full control.',
-    url: 'https://selva.town',
+    url: marketingUrl,
     siteName: 'Selva',
     type: 'website',
   },

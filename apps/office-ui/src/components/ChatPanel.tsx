@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ChatMessage } from '@autoswarm/shared-types';
 import { gameEventBus } from '@/game/PhaserGame';
 import { EVENT_CHAT_FOCUS } from '@/lib/constants';
+import { formatHM } from '@/lib/format-time';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -11,11 +12,6 @@ interface ChatPanelProps {
   localSessionId: string;
   forceCollapsed?: boolean;
   onExpand?: () => void;
-}
-
-function formatTime(timestamp: number): string {
-  const d = new Date(timestamp);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 export function ChatPanel({ messages, onSend, localSessionId, forceCollapsed, onExpand }: ChatPanelProps) {
@@ -122,7 +118,7 @@ export function ChatPanel({ messages, onSend, localSessionId, forceCollapsed, on
               >
                 <span className="text-slate-600 not-italic">--</span>
                 <span>{msg.content}</span>
-                <span className="text-[7px] text-slate-600 not-italic">{formatTime(msg.timestamp)}</span>
+                <span className="text-[7px] text-slate-600 not-italic">{formatHM(msg.timestamp)}</span>
               </div>
             );
           }
@@ -137,7 +133,7 @@ export function ChatPanel({ messages, onSend, localSessionId, forceCollapsed, on
                   <span className={`font-semibold text-[9px] ${isLocal ? 'text-indigo-400' : 'text-emerald-400'}`}>
                     {msg.senderName}
                   </span>
-                  <span className="text-slate-600 text-[8px]">{formatTime(msg.timestamp)}</span>
+                  <span className="text-slate-600 text-[8px]">{formatHM(msg.timestamp)}</span>
                 </div>
                 <span className="text-slate-300">{msg.content}</span>
               </div>

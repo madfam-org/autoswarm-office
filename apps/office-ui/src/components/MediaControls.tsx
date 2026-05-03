@@ -74,45 +74,51 @@ export function MediaControls({
   if (!visible) return null;
 
   return (
-    <div className="absolute top-28 left-4 z-video flex gap-2">
+    <div className="absolute top-28 left-4 z-video flex gap-2" role="toolbar" aria-label="Media controls">
       <button
         onClick={onToggleAudio}
-        className={`rounded px-2 py-1 text-xs font-mono transition-colors ${
+        className={`touch-target rounded px-2 py-1 text-xs font-mono transition-colors ${
           audioEnabled
             ? 'bg-slate-700/80 text-green-400 hover:bg-slate-600'
             : 'bg-red-900/80 text-red-300 hover:bg-red-800'
         }`}
         title={audioEnabled ? 'Mute (M)' : 'Unmute (M)'}
         aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+        aria-pressed={!audioEnabled}
       >
-        {audioEnabled ? 'MIC ON' : 'MIC OFF'}
+        <span aria-hidden="true">{audioEnabled ? 'MIC ON' : 'MIC OFF'}</span>
+        <span className="sr-only">Microphone is {audioEnabled ? 'on' : 'off'}</span>
       </button>
 
       <button
         onClick={onToggleVideo}
-        className={`rounded px-2 py-1 text-xs font-mono transition-colors ${
+        className={`touch-target rounded px-2 py-1 text-xs font-mono transition-colors ${
           videoEnabled
             ? 'bg-slate-700/80 text-green-400 hover:bg-slate-600'
             : 'bg-red-900/80 text-red-300 hover:bg-red-800'
         }`}
         title={videoEnabled ? 'Camera Off (V)' : 'Camera On (V)'}
         aria-label={videoEnabled ? 'Turn camera off' : 'Turn camera on'}
+        aria-pressed={!videoEnabled}
       >
-        {videoEnabled ? 'CAM ON' : 'CAM OFF'}
+        <span aria-hidden="true">{videoEnabled ? 'CAM ON' : 'CAM OFF'}</span>
+        <span className="sr-only">Camera is {videoEnabled ? 'on' : 'off'}</span>
       </button>
 
       {onToggleScreenShare && (
         <button
           onClick={onToggleScreenShare}
-          className={`rounded px-2 py-1 text-xs font-mono transition-colors ${
+          className={`touch-target rounded px-2 py-1 text-xs font-mono transition-colors ${
             screenSharing
               ? 'bg-indigo-900/80 text-indigo-300 hover:bg-indigo-800'
               : 'bg-slate-700/80 text-slate-400 hover:bg-slate-600'
           }`}
           title={screenSharing ? 'Stop Sharing (S)' : 'Share Screen (S)'}
           aria-label={screenSharing ? 'Stop screen sharing' : 'Start screen sharing'}
+          aria-pressed={!!screenSharing}
         >
-          {screenSharing ? 'SHARING' : 'SCREEN'}
+          <span aria-hidden="true">{screenSharing ? 'SHARING' : 'SCREEN'}</span>
+          <span className="sr-only">Screen sharing is {screenSharing ? 'on' : 'off'}</span>
         </button>
       )}
 
@@ -122,7 +128,7 @@ export function MediaControls({
           onChange={(e) =>
             onScreenShareQualityChange(e.target.value as ScreenShareQuality)
           }
-          className="rounded bg-slate-700/80 px-1 py-1 text-xs font-mono text-slate-300 transition-colors hover:bg-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="touch-target rounded bg-slate-700/80 px-1 py-1 text-xs font-mono text-slate-300 transition-colors hover:bg-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           title="Screen share quality"
           aria-label="Screen share quality preset"
         >
@@ -135,30 +141,34 @@ export function MediaControls({
       {onToggleLockBubble && (
         <button
           onClick={onToggleLockBubble}
-          className={`rounded px-2 py-1 text-xs font-mono transition-colors ${
+          className={`touch-target rounded px-2 py-1 text-xs font-mono transition-colors ${
             bubbleLocked
               ? 'bg-amber-900/80 text-amber-300 hover:bg-amber-800'
               : 'bg-slate-700/80 text-slate-400 hover:bg-slate-600'
           }`}
           title={bubbleLocked ? 'Unlock Bubble (L)' : 'Lock Bubble (L)'}
           aria-label={bubbleLocked ? 'Unlock proximity bubble' : 'Lock proximity bubble'}
+          aria-pressed={!!bubbleLocked}
         >
-          {bubbleLocked ? 'LOCKED' : 'LOCK'}
+          <span aria-hidden="true">{bubbleLocked ? 'LOCKED' : 'LOCK'}</span>
+          <span className="sr-only">Proximity bubble is {bubbleLocked ? 'locked' : 'unlocked'}</span>
         </button>
       )}
 
       {onToggleNoiseSuppression && (
         <button
           onClick={onToggleNoiseSuppression}
-          className={`rounded px-2 py-1 text-xs font-mono transition-colors ${
+          className={`touch-target rounded px-2 py-1 text-xs font-mono transition-colors ${
             noiseSuppression
               ? 'bg-emerald-900/80 text-emerald-300 hover:bg-emerald-800'
               : 'bg-slate-700/80 text-slate-400 hover:bg-slate-600'
           }`}
           title={noiseSuppression ? 'Disable Noise Suppression (N)' : 'Enable Noise Suppression (N)'}
           aria-label={noiseSuppression ? 'Disable noise suppression' : 'Enable noise suppression'}
+          aria-pressed={!!noiseSuppression}
         >
-          {noiseSuppression ? 'DENOISE ON' : 'DENOISE'}
+          <span aria-hidden="true">{noiseSuppression ? 'DENOISE ON' : 'DENOISE'}</span>
+          <span className="sr-only">Noise suppression is {noiseSuppression ? 'on' : 'off'}</span>
         </button>
       )}
     </div>

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { CloseButton } from '@autoswarm/ui';
 import { apiFetch } from '@/lib/api';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface ConnectedUser {
   session_id: string;
@@ -77,19 +79,31 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
     }
   }, [motd]);
 
+  // ESC to close
+  useEffect(() => {
+    if (!isOpen || !isAdmin) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isAdmin, onClose]);
+
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isOpen && isAdmin);
+
   if (!isOpen || !isAdmin) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-full max-w-80 sm:w-80 retro-panel z-modal animate-slide-in-right flex flex-col">
+    <div
+      ref={focusTrapRef}
+      className="fixed right-0 top-0 h-full w-full max-w-80 sm:w-80 retro-panel z-modal animate-slide-in-right flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="admin-panel-title"
+    >
       <div className="flex items-center justify-between p-3 border-b border-slate-700">
-        <h2 className="text-retro-base font-bold text-slate-200">Admin</h2>
-        <button
-          onClick={onClose}
-          className="text-slate-400 hover:text-slate-200"
-          aria-label="Close admin panel"
-        >
-          [X]
-        </button>
+        <h2 id="admin-panel-title" className="text-retro-base font-bold text-slate-200">Admin</h2>
+        <CloseButton onClick={onClose} label="Close admin panel" shortcut="ESC" className="touch-target" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
@@ -110,7 +124,8 @@ export function AdminPanel({ isOpen, onClose, isAdmin }: AdminPanelProps) {
                 <button
                   onClick={() => handleKick(u.session_id)}
                   disabled={loading}
-                  className="pxa-btn text-retro-xs px-2 py-0.5 bg-red-900/50 hover:bg-red-800/50"
+                  className="pxa-btn touch-target text-retro-xs px-2 py-0.5 bg-red-900/50 hover:bg-red-800/50"
+                  aria-label={`Kick ${u.name}`}
                 >
                   Kick
                 </button>

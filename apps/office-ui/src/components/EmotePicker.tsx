@@ -69,8 +69,11 @@ export function EmotePicker({ onEmote }: EmotePickerProps) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="absolute bottom-4 right-4 z-hud rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 retro-btn hover:bg-slate-700"
+        className="absolute bottom-4 right-4 z-hud touch-target rounded bg-slate-800/90 px-3 py-1 text-xs text-slate-300 retro-btn hover:bg-slate-700"
         title="Emotes [R]"
+        aria-label="Open emotes menu"
+        aria-haspopup="menu"
+        aria-expanded={false}
       >
         Emotes [R]
       </button>
@@ -78,12 +81,16 @@ export function EmotePicker({ onEmote }: EmotePickerProps) {
   }
 
   return (
-    <div className="absolute bottom-4 right-4 z-hud rounded border border-slate-700 bg-slate-900/95 p-3 shadow-lg animate-pop-in">
+    <div
+      className="absolute bottom-4 right-4 z-hud rounded border border-slate-700 bg-slate-900/95 p-3 shadow-lg animate-pop-in"
+      role="menu"
+      aria-label="Emotes"
+    >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-400">EMOTES</span>
         <button
           onClick={() => setOpen(false)}
-          className="text-xs text-slate-500 hover:text-slate-300"
+          className="touch-target text-xs text-slate-500 hover:text-slate-300"
           aria-label="Close emotes"
         >
           Esc
@@ -94,13 +101,14 @@ export function EmotePicker({ onEmote }: EmotePickerProps) {
           <button
             key={emote.type}
             onClick={() => handleEmote(emote.type)}
-            className="flex flex-col items-center gap-0.5 rounded p-2 text-center hover:bg-slate-800 hover:scale-110 active:scale-95 transition-transform animate-fade-in-up"
+            className="touch-target flex flex-col items-center gap-0.5 rounded p-2 text-center hover:bg-slate-800 hover:scale-110 active:scale-95 transition-transform animate-fade-in-up"
             style={{ animationDelay: `${i * 30}ms` }}
             title={`${emote.label} [${i + 1}]`}
             aria-label={`${emote.label} - Press ${i + 1}`}
+            role="menuitem"
           >
-            <span className="text-xl">{emote.icon}</span>
-            <span className="text-[8px] text-slate-500">{i + 1}</span>
+            <span className="text-xl" aria-hidden="true">{emote.icon}</span>
+            <span className="text-[8px] text-slate-500" aria-hidden="true">{i + 1}</span>
           </button>
         ))}
       </div>

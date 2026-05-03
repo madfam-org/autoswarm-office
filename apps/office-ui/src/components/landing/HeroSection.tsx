@@ -1,6 +1,7 @@
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.selva.town';
+import { getSiteConfig } from '@/lib/site-config';
 
 export function HeroSection() {
+  const { appUrl } = getSiteConfig();
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 text-center">
       {/* Animated background grid — solarpunk green */}
@@ -72,14 +73,14 @@ export function HeroSection() {
       {/* CTAs */}
       <div className="flex flex-wrap items-center justify-center gap-4">
         <a
-          href={`${APP_URL}/demo`}
+          href={`${appUrl}/demo`}
           className="retro-btn pixel-border-accent group relative rounded bg-gradient-to-r from-emerald-600 to-emerald-500 px-10 py-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-emerald-400 hover:shadow-emerald-800/40"
         >
           Try the Live Demo
           <span className="ml-2 inline-block transition-transform group-hover:translate-x-1">&rarr;</span>
         </a>
         <a
-          href={APP_URL}
+          href={appUrl}
           className="retro-btn rounded border border-slate-600 px-10 py-4 text-sm font-medium text-slate-300 transition-colors hover:border-emerald-500 hover:text-white"
         >
           Sign In

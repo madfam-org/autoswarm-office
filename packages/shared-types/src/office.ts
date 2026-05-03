@@ -23,6 +23,13 @@ export interface TacticianPosition {
   direction: 'up' | 'down' | 'left' | 'right';
 }
 
+/**
+ * Companion sprite a player can attach to their avatar. Empty string means
+ * no companion. The literal list MUST stay in sync with the server-side
+ * whitelist in `apps/colyseus/src/handlers/companion.ts`.
+ */
+export type CompanionType = '' | 'cat' | 'dog' | 'robot' | 'dragon' | 'parrot';
+
 export interface Player {
   sessionId: string;
   name: string;
@@ -31,7 +38,7 @@ export interface Player {
   direction: 'up' | 'down' | 'left' | 'right';
   avatarConfig?: string;
   playerStatus?: 'online' | 'away' | 'busy' | 'dnd';
-  companionType?: '' | 'cat' | 'dog' | 'robot' | 'dragon' | 'parrot';
+  companionType?: CompanionType;
   /** Free-text mood/music status. Server enforces max 50 characters. */
   musicStatus?: string;
 }

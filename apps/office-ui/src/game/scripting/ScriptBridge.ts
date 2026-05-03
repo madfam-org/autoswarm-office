@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameEventBus } from '../PhaserGame';
 import { buildScriptAPISource } from './ScriptAPI';
 import type { ScriptCommand } from './ScriptAPI';
+import { logger } from '@/lib/logger';
 
 const ALLOWED_COMMANDS = new Set([
   'chat.sendMessage',
@@ -9,6 +10,7 @@ const ALLOWED_COMMANDS = new Set([
   'player.moveTo',
   'ui.openPopup',
   'ui.openCoWebsite',
+  'script.error',
 ]);
 
 /**
@@ -68,9 +70,17 @@ export class ScriptBridge {
     const data = event.data as Record<string, unknown>;
     if (!data || data.__autoswarm !== true) return;
 
-    const cmd = data as unknown as ScriptCommand & { __autoswarm: boolean };
-    if (!ALLOWED_COMMANDS.has(cmd.type)) return;
+    const type = data.type as string | undefined;
+    if (!type || !ALLOWED_COMMANDS.has(type)) return;
 
+    if (type === 'script.error') {
+      // Errors are forwarded by the iframe API stub; surface them only in
+      // dev so end users don't see noisy console output for buggy maps.
+      logger.warn('[AS Script]', data.message);
+      return;
+    }
+
+    const cmd = data as unknown as ScriptCommand & { __autoswarm: boolean };
     switch (cmd.type) {
       case 'chat.sendMessage':
         gameEventBus.emit('script-chat', cmd.content);

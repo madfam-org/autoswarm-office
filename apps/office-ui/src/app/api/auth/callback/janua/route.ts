@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { logger } from '@/lib/logger';
 
 const JANUA_ISSUER = process.env.NEXT_PUBLIC_JANUA_ISSUER_URL || 'https://auth.madfam.io';
 const CLIENT_ID = process.env.NEXT_PUBLIC_JANUA_CLIENT_ID || 'autoswarm-office';
@@ -60,13 +61,13 @@ export async function GET(request: Request) {
 
     if (!tokenRes.ok) {
       const body = await tokenRes.text();
-      console.error('Token exchange failed:', tokenRes.status, body);
+      logger.error('Token exchange failed:', tokenRes.status, body);
       return NextResponse.redirect(`${origin}/login?sso_error=${encodeURIComponent('Token exchange failed')}`);
     }
 
     tokenData = await tokenRes.json();
   } catch (err) {
-    console.error('Token exchange error:', err);
+    logger.error('Token exchange error:', err);
     return NextResponse.redirect(`${origin}/login?sso_error=${encodeURIComponent('Auth server unreachable')}`);
   }
 

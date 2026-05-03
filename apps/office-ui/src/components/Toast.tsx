@@ -1,7 +1,9 @@
 'use client';
 
 import { type ReactNode } from 'react';
+import { CloseButton } from '@autoswarm/ui';
 import { ToastContext, useToastState, type Toast as ToastType } from '@/hooks/useToast';
+import { useDemoMode } from '@/hooks/useDemoMode';
 
 const SEVERITY_STYLES: Record<ToastType['severity'], string> = {
   success: 'border-emerald-500 bg-emerald-900/90 text-emerald-200',
@@ -35,10 +37,19 @@ function ToastContainer({
   toasts: ToastType[];
   onRemove: (id: string) => void;
 }) {
+  // DemoBanner sits at top:0 with z-banner; without offset the Toast container
+  // (top-4 + z-toast) renders behind the banner and is invisible in demo mode.
+  // The banner is roughly 28px tall (py-1.5 + 9px text); top-12 (48px) clears it
+  // with breathing room on both desktop and mobile (banner does not change
+  // height between breakpoints — content wraps within the same row).
+  const { isDemo } = useDemoMode();
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none" aria-live="polite">
+    <div
+      className={`fixed right-4 ${isDemo ? 'top-12' : 'top-4'} z-toast flex flex-col gap-2 pointer-events-none`}
+      aria-live="polite"
+    >
       {toasts.map((toast) => (
         <div
           key={toast.id}
@@ -49,13 +60,11 @@ function ToastContainer({
             {SEVERITY_ICONS[toast.severity].symbol}
           </span>
           <span className="flex-1">{toast.message}</span>
-          <button
+          <CloseButton
             onClick={() => onRemove(toast.id)}
+            label="Dismiss"
             className="ml-2 opacity-60 hover:opacity-100"
-            aria-label="Dismiss"
-          >
-            x
-          </button>
+          />
         </div>
       ))}
     </div>

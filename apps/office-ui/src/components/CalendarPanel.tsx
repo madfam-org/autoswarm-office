@@ -6,6 +6,7 @@ import { gameEventBus } from '@/game/PhaserGame';
 import { EVENT_CHAT_FOCUS } from '@/lib/constants';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useToast } from '@/hooks/useToast';
+import { formatHM } from '@/lib/format-time';
 
 interface CalendarPanelProps {
   open: boolean;
@@ -22,15 +23,6 @@ interface CalendarPanelProps {
   ) => Promise<boolean>;
   onDisconnect: () => Promise<boolean>;
   onRefresh: () => Promise<void>;
-}
-
-function formatEventTime(isoString: string): string {
-  try {
-    const dt = new Date(isoString);
-    return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return isoString;
-  }
 }
 
 export const CalendarPanel: FC<CalendarPanelProps> = ({
@@ -184,7 +176,7 @@ export const CalendarPanel: FC<CalendarPanelProps> = ({
                       <p className="font-mono text-[8px] text-slate-400 mt-0.5">
                         {event.is_all_day
                           ? 'All day'
-                          : `${formatEventTime(event.start)} - ${formatEventTime(event.end)}`}
+                          : `${formatHM(event.start)} - ${formatHM(event.end)}`}
                       </p>
                       {event.organizer && (
                         <p className="font-mono text-[7px] text-slate-500 mt-0.5">

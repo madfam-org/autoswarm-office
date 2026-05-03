@@ -21,6 +21,7 @@ import { MediaControls } from '@/components/MediaControls';
 import { RecordingControls } from '@/components/RecordingControls';
 import { MeetingNotesPanel } from '@/components/MeetingNotesPanel';
 import { DemoBanner } from '@/components/DemoBanner';
+import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { useApprovals } from '@/hooks/useApprovals';
 import { useTaskDispatch } from '@/hooks/useTaskDispatch';
 import { useCalendar } from '@/hooks/useCalendar';
@@ -48,7 +49,7 @@ import { MetricsDashboard } from '@/components/MetricsDashboard';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { ApprovalModal } from '@autoswarm/ui';
 import type { CoWebsiteEvent, PopupEvent } from '@/game/PhaserGame';
-import type { ApprovalRequest, AvatarConfig } from '@autoswarm/shared-types';
+import type { ApprovalRequest, AvatarConfig, CompanionType } from '@autoswarm/shared-types';
 import { getSessionUser } from '@/lib/api';
 
 const WorkflowEditor = dynamic(
@@ -82,13 +83,11 @@ export interface OfficeExperienceProps {
 export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const isDemo = mode === 'demo';
 
-  // Lazy-load gameEventBus ref to bridge emote events to Phaser
+  // Lazy-load gameEventBus ref to bridge emote events to Phaser. The actual
+  // import + listener wiring is consolidated into one useEffect lower in this
+  // component (search for "consolidated PhaserGame loader") to avoid 5
+  // separate dynamic imports racing on cleanup.
   const gameEventBusRef = useRef<{ emit: (event: string, detail: unknown) => void } | null>(null);
-  useEffect(() => {
-    import('@/game/PhaserGame').then((mod) => {
-      gameEventBusRef.current = mod.gameEventBus;
-    });
-  }, []);
 
   const handlePlayerEmote = useCallback((event: PlayerEmoteEvent) => {
     gameEventBusRef.current?.emit('player-emote', event);
@@ -226,10 +225,20 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     reset: resetMeetingNotes,
   } = useMeetingNotes();
 
-  // Wire up the refs now that all hooks are initialized
-  proximityUpdateRef.current = videoHandleProximity;
-  webrtcSignalRef.current = videoHandleSignal;
-  spotlightActiveRef.current = spotlightHandleActive;
+  // Wire up the refs in an effect (not during render) so React's concurrent
+  // mode does not desync them when a render is interrupted and replayed.
+  // Assigning during the render body would bind the ref to the in-flight
+  // closures even if React throws away the render, leaving callers with
+  // stale handlers.
+  useEffect(() => {
+    proximityUpdateRef.current = videoHandleProximity;
+  });
+  useEffect(() => {
+    webrtcSignalRef.current = videoHandleSignal;
+  });
+  useEffect(() => {
+    spotlightActiveRef.current = spotlightHandleActive;
+  });
   const {
     pendingApprovals,
     approve,
@@ -284,31 +293,36 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const [megaphoneActive, setMegaphoneActive] = useState(false);
   const [megaphoneSpeaker, setMegaphoneSpeaker] = useState<string | null>(null);
   const [currentRoom, setCurrentRoom] = useState('office');
-  const [companionType, setCompanionType] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try { return localStorage.getItem('autoswarm:companion-type') ?? ''; } catch { return ''; }
-    }
-    return '';
-  });
+  // Persisted via useLocalStorageState — hydration-safe. The hook returns the
+  // default during SSR + first client render, then reads localStorage in a
+  // post-mount effect, avoiding the `useState(() => localStorage.getItem(...))`
+  // hydration mismatch.
+  const [companionType, setCompanionType] = useLocalStorageState<CompanionType>(
+    'autoswarm:companion-type',
+    '',
+    {
+      parse: (raw) => {
+        const allowed: CompanionType[] = ['', 'cat', 'dog', 'robot', 'dragon', 'parrot'];
+        return allowed.includes(raw as CompanionType) ? (raw as CompanionType) : '';
+      },
+    },
+  );
   const [musicStatus, setMusicStatus] = useState('');
   const [mobileTab, setMobileTab] = useState('office');
   const [followingPlayer, setFollowingPlayer] = useState<string | null>(null);
   const [explorerMode, setExplorerMode] = useState(false);
   const [spotlightViewDismissed, setSpotlightViewDismissed] = useState(false);
-  const [viewMode, setViewMode] = useState<'game' | 'simple'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('autoswarm:view-mode') as 'game' | 'simple') ?? 'game';
-    }
-    return 'game';
-  });
+  const [viewMode, setViewMode] = useLocalStorageState<'game' | 'simple'>(
+    'autoswarm:view-mode',
+    'game',
+    {
+      parse: (raw) => (raw === 'simple' ? 'simple' : 'game'),
+    },
+  );
 
   const handleToggleViewMode = useCallback(() => {
-    setViewMode((prev) => {
-      const next = prev === 'game' ? 'simple' : 'game';
-      try { localStorage.setItem('autoswarm:view-mode', next); } catch { /* noop */ }
-      return next;
-    });
-  }, []);
+    setViewMode((prev) => (prev === 'game' ? 'simple' : 'game'));
+  }, [setViewMode]);
 
   const handleApprovalOpen = useCallback(
     (agentId: string) => {

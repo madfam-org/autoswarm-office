@@ -69,7 +69,17 @@ export function buildScriptAPISource(): string {
     }
     if (callbacks) {
       for (var i = 0; i < callbacks.length; i++) {
-        try { callbacks[i](); } catch(e) { console.error('[AS Script]', e); }
+        try {
+          callbacks[i]();
+        } catch (e) {
+          // Forward script-author errors to the parent so the host's
+          // dev-only logger can surface them; raw console.* would leak
+          // into production browser consoles for end users.
+          parent.postMessage(
+            { __autoswarm: true, type: 'script.error', message: String(e) },
+            '*'
+          );
+        }
       }
     }
   });

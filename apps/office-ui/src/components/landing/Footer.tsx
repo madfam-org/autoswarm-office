@@ -1,12 +1,6 @@
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.selva.town';
-const YEAR = new Date().getFullYear();
+import { getSiteConfig } from '@/lib/site-config';
 
-const LINKS = [
-  { label: 'Office App', href: APP_URL },
-  { label: 'Demo', href: `${APP_URL}/demo` },
-  { label: 'API Docs', href: `${APP_URL}/api/v1/docs` },
-  { label: 'GitHub', href: 'https://github.com/madfam-org' },
-];
+const YEAR = new Date().getFullYear();
 
 const ECOSYSTEM_LINKS = [
   { label: 'PhyneCRM', href: 'https://crm.madfam.io' },
@@ -15,6 +9,13 @@ const ECOSYSTEM_LINKS = [
 ];
 
 export function Footer() {
+  const { appUrl } = getSiteConfig();
+  const links = [
+    { label: 'Office App', href: appUrl },
+    { label: 'Demo', href: `${appUrl}/demo` },
+    { label: 'API Docs', href: `${appUrl}/api/v1/docs` },
+    { label: 'GitHub', href: 'https://github.com/madfam-org' },
+  ];
   return (
     <footer className="border-t border-slate-800/60 px-4 py-10">
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-6 sm:flex-row">
@@ -40,7 +41,7 @@ export function Footer() {
         {/* Center: nav links */}
         <nav aria-label="Footer navigation">
           <ul className="flex flex-wrap items-center justify-center gap-6">
-            {LINKS.map((link) => (
+            {links.map((link) => (
               <li key={link.label}>
                 <a
                   href={link.href}

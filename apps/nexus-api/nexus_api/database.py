@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from functools import lru_cache
 
 from sqlalchemy import text
@@ -97,6 +98,69 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with factory() as session:
         try:
             await _set_session_org_id(session)
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def tenant_session(org_id: str) -> AsyncGenerator[AsyncSession, None]:
+    """Open an async session scoped to ``org_id`` for non-FastAPI call sites.
+
+    Use this anywhere code needs a database session OUTSIDE the
+    request-response flow that ``get_db`` covers — WebSocket handlers,
+    A2A dispatch helpers, audit-middleware fire-and-forget writes,
+    Celery tasks, etc. Without this helper such call sites use
+    ``async_session_factory()`` directly, which leaves
+    ``app.current_org_id`` unset (the request-flow ``ContextVar`` is
+    out of scope or never bound), so the Phase 1 permissive RLS escape
+    hatch (``IS NULL OR = ''``) is what makes their queries succeed
+    today.
+
+    The Phase 1.5 audit (``docs/RLS_PHASE_1_5_AUDIT.md`` §2.E) catalogues
+    five concrete sites where this matters. After the strict-mode
+    migration drops the permissive branch from the policy, every one
+    of those sites breaks unless it's switched to this helper.
+
+    Behaviour:
+        - On Postgres: opens a session, executes
+          ``set_config('app.current_org_id', org_id, true)``, yields,
+          commits on success / rolls back on exception. Mirrors
+          ``get_db`` exactly except the ``org_id`` source is an
+          explicit argument instead of the request ``ContextVar``.
+        - On SQLite (test paths): opens a session, no-ops the
+          set_config call (SQLite doesn't have it), yields. RLS is a
+          Postgres-only concept anyway.
+
+    Args:
+        org_id: The tenant whose data this session is allowed to see.
+            Pass the literal string ``"platform"`` for MADFAM-internal
+            cross-tenant queries — that token is honoured by the
+            strict-mode policies as the platform-bypass marker (see
+            §3 of the RLS audit doc). For genuine cross-tenant
+            maintenance ops (e.g. ``reap-stale``), use the
+            ``admin_session()`` helper instead so the BYPASSRLS pool
+            is selected.
+
+    Example:
+        async with tenant_session(org_id="org-abc") as db:
+            event = TaskEvent(org_id="org-abc", event_type=...)
+            db.add(event)
+            # commit happens on context exit
+    """
+    factory = get_session_factory()
+    async with factory() as session:
+        try:
+            bind = session.get_bind()
+            if bind is not None and bind.dialect.name == "postgresql":
+                await session.execute(
+                    text("SELECT set_config('app.current_org_id', :org_id, true)"),
+                    {"org_id": org_id or ""},
+                )
             yield session
             await session.commit()
         except Exception:

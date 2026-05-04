@@ -18,7 +18,7 @@ from selva_redis_pool import get_redis_pool
 from ..approval_notifier import notify_approval_decision
 from ..auth import get_current_user, require_non_guest, verify_jwt
 from ..config import get_settings
-from ..database import async_session_factory, get_db
+from ..database import async_session_factory, get_db, tenant_session
 from ..models import ApprovalRequest, SwarmTask
 from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter, manager
@@ -450,8 +450,11 @@ async def approval_websocket(
     await manager.connect(websocket, client_id, org_id=org_id)
 
     # Send all pending approval requests for this tenant as an initial batch.
+    # tenant_session(org_id) replaces bare async_session_factory() so the
+    # SELECT honours RLS Phase 1.5 strict mode — see RLS_PHASE_1_5_AUDIT.md
+    # §2.E + §2.H.
     try:
-        async with async_session_factory() as session:
+        async with tenant_session(org_id=org_id) as session:
             result = await session.execute(
                 select(ApprovalRequest)
                 .where(
@@ -520,7 +523,11 @@ async def _handle_wave(wave_data: dict[str, Any], *, org_id: str = "default") ->
 
     settings = get_settings()
 
-    async with async_session_factory() as session:
+    # _handle_wave INSERTs new SwarmTask rows on behalf of the wave's
+    # tenant. tenant_session(org_id) ensures the INSERT passes RLS
+    # Phase 1.5 strict-mode policy (which requires
+    # ``app.current_org_id == swarm_tasks.org_id``).
+    async with tenant_session(org_id=org_id) as session:
         pool = get_redis_pool(url=settings.redis_url)
         for event in events[:MAX_TASKS_PER_WAVE]:
             event_type = event.get("type", "")

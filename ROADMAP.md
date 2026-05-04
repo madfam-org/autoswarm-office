@@ -48,13 +48,16 @@ This roadmap sequences the next 6-10 weeks of work to close that gap.
 These are mechanical fixes blocked only by execution time. Each is
 foundationally one-line dangerous if left undone.
 
-- **Postgres RLS rollout** — migration to enable RLS on every tenant
-  table; policies that filter by `current_setting('app.current_org_id')`;
-  `get_db` runs `SET LOCAL app.current_org_id` from the auth context.
-  Closes the entire class of "missed `.where(org_id == tenant.org_id)`"
-  bugs. Today the system relies on every router author remembering it;
-  the events router pre-remediation was a perfect example of why that's
-  brittle.
+- ~~**Postgres RLS rollout**~~ — DONE (Phase 1 layer). Migration 0025
+  enables RLS on 18 tenant-scoped tables with policies that filter by
+  `current_setting('app.current_org_id', true)`. `database._set_session_org_id`
+  sets the variable from the auth context's `org_id_var` ContextVar on
+  every request via `get_db`. Permissive escape hatch (NULL/empty
+  session org → policy permits) covers Alembic / healthchecks / demo
+  paths. SQLite test paths no-op cleanly. Closes the entire class of
+  "missed `.where(org_id == tenant.org_id)`" bugs at the database
+  layer. New Phase 1.5 entry below tightens the escape hatch after
+  production observation.
 - ~~**12 remaining webhook handlers hardened**~~ — DONE for 11 of them
   (Telegram, Slack, Matrix, Mattermost, Twilio SMS, DingTalk, Feishu,
   WeCom, Weixin, BlueBubbles, HomeAssistant) via the new `_require_secret()`
@@ -102,6 +105,25 @@ foundationally one-line dangerous if left undone.
 - **Sentry DSN per service** — `init_sentry()` exists but DSNs are
   missing from `.env.example`; verify it's actually catching errors.
   Add source-map upload for office-ui in CI.
+
+### Phase 1.5 — RLS tightening (after 1-2 weeks of production observation)
+
+- **Audit every code path that runs without `org_id_var` set** — the
+  Phase 1 RLS policies use a permissive escape hatch (NULL/empty
+  session org → policy permits) so Alembic / healthchecks / demo /
+  unauthenticated paths keep working. After observing production
+  query patterns, enumerate every legitimate "no tenant context"
+  path and either: (a) set an explicit context (e.g. "platform" for
+  MADFAM-internal queries), or (b) document each one.
+- **Tighten the policies** — remove the `IS NULL OR = ''` branch and
+  require an explicit session org on every query against a tenant
+  table. Migrations should set `app.current_org_id = 'system'` and
+  the policy should permit `'system'` as the platform-internal
+  bypass.
+- **`FORCE ROW LEVEL SECURITY`** — apply policies to the table owner
+  role too, so a compromised superuser can't bypass via direct SQL.
+  Requires migration scripts to use a non-owner role or explicit
+  `SET ROLE` to a non-bypass role.
 
 ### Phase 2 — mid-leverage, more design (next month)
 

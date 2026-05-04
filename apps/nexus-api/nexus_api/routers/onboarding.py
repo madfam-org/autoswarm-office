@@ -44,6 +44,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user, require_non_guest
 from ..config import get_settings
 from ..database import get_db
+from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import ConsentLedger, TenantConfig, TenantIdentity
 from .events import emit_event_db
 
@@ -756,12 +757,25 @@ async def select_voice_mode(
     request: Request,
     user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> OnboardingStatus:
     """First-run voice-mode selection during onboarding.
 
     Fails with 409 if the tenant has already chosen a mode — use
     PUT /settings/outbound-voice to change it.
+
+    Idempotency: when the caller sends ``Idempotency-Key`` header, a
+    successful first-run selection is cached for 24h scoped by (org_id,
+    POST, /api/v1/onboarding/voice-mode, key). Without this, a network
+    blip on the first call would have the second call hit the 409
+    "already selected" branch (because the first call did persist the
+    consent ledger row + tenant_config update before the response was
+    lost). Only the success path is cached — a 400 (typed-confirmation
+    mismatch) or 409 (already resolved) leaves the cache empty.
     """
+    if idem.is_replay and idem.cached is not None:
+        return OnboardingStatus.model_validate(idem.cached)
+
     org_id = user.get("org_id", "default")
     tenant = await _load_tenant(db, org_id)
 
@@ -782,11 +796,16 @@ async def select_voice_mode(
         is_change=False,
     )
 
-    return OnboardingStatus(
+    response = OnboardingStatus(
         voice_mode=body.mode,
         onboarding_complete=True,
         clause_version=CLAUSE_VERSION,
     )
+
+    # Cache only on success. No-op when Idempotency-Key was absent.
+    await idem.save(response.model_dump(mode="json"))
+
+    return response
 
 
 @router.put(

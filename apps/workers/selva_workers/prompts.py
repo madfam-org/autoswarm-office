@@ -124,7 +124,7 @@ async def build_experience_context(
             persist_dir=settings.memory_persist_dir,
         )
 
-        similar = exp_store.search_similar(task_description, top_k=3, min_score=0.3)
+        similar = await exp_store.search_similar(task_description, top_k=3, min_score=0.3)
         if similar:
             lines: list[str] = []
             for rec in similar:
@@ -139,12 +139,12 @@ async def build_experience_context(
 
         # Agent-specific memories
         mem_manager = get_memory_manager(persist_dir=settings.memory_persist_dir)
-        agent_ctx = mem_manager.get_relevant_context(agent_id, task_description, top_k=3)
+        agent_ctx = await mem_manager.get_relevant_context(agent_id, task_description, top_k=3)
         if agent_ctx:
             sections.append(agent_ctx)
 
         # High-confidence shortcuts
-        shortcuts = exp_store.get_shortcuts(task_description, threshold=0.85)
+        shortcuts = await exp_store.get_shortcuts(task_description, threshold=0.85)
         if shortcuts:
             shortcut_lines = [f"- {s[:200]}" for s in shortcuts]
             sections.append("## Proven Approaches (High Confidence)\n" + "\n".join(shortcut_lines))

@@ -71,7 +71,7 @@ async def record_experience(
             score=score,
             metadata={"graph_type": graph_type, "agent_id": agent_id},
         )
-        experience_store.record(record)
+        await experience_store.record(record)
         logger.debug(
             "Recorded experience for role=%s agent=%s score=%.1f",
             agent_role,
@@ -82,7 +82,7 @@ async def record_experience(
         # Per-agent memory
         memory_manager = get_memory_manager(persist_dir=settings.memory_persist_dir)
         memory_text = f"Task: {task_description[:300]} | Outcome: {outcome}"
-        memory_manager.store_memory(
+        await memory_manager.store_memory(
             agent_id=agent_id,
             text=memory_text,
             metadata={"graph_type": graph_type, "score": score},
@@ -161,7 +161,7 @@ async def generate_reflexion(
             score=0.3,
             metadata={"type": "reflection", "graph_type": graph_type, "agent_id": agent_id},
         )
-        experience_store.record(record)
+        await experience_store.record(record)
         logger.debug("Stored reflexion for agent %s role=%s", agent_id, agent_role)
 
     except Exception:

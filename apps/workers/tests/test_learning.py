@@ -26,8 +26,12 @@ class TestRecordExperience:
 
     @pytest.mark.asyncio
     async def test_completed_task_scores_1_0(self) -> None:
+        # ExperienceStore.record and MemoryManager.store_memory are async — must
+        # use AsyncMock so `await` succeeds against the mock.
         mock_exp_store = MagicMock()
+        mock_exp_store.record = AsyncMock()
         mock_mem_manager = MagicMock()
+        mock_mem_manager.store_memory = AsyncMock()
 
         with (
             patch("selva_workers.config.get_settings", return_value=_mock_settings()),

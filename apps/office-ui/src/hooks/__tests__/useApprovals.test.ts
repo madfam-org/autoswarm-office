@@ -64,17 +64,25 @@ class MockWebSocket {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Wire-shape payload (snake_case) — matches what the server actually
+// dumps from `nexus_api__routers__approvals__ApprovalRequestResponse`
+// and broadcasts on `approval_request` / `approval_resolved` /
+// `approval_batch` WS messages. The hook converts to the camelCase
+// domain shape via `approvalRequestFromWire`.
 function makeApprovalRequest(id: string) {
   return {
     id,
-    agentId: 'agent-1',
-    agentName: 'TestAgent',
-    actionCategory: 'file_read' as const,
-    actionType: 'read',
+    agent_id: 'agent-1',
+    action_category: 'file_read',
+    action_type: 'read',
     payload: {},
+    diff: null,
     reasoning: 'Testing',
-    urgency: 'medium' as const,
-    createdAt: new Date().toISOString(),
+    urgency: 'medium',
+    status: 'pending',
+    feedback: null,
+    created_at: new Date().toISOString(),
+    responded_at: null,
   };
 }
 
@@ -210,9 +218,16 @@ describe('useApprovals', () => {
     expect(result.current.pendingApprovals).toHaveLength(1);
 
     act(() => {
+      // Server broadcasts the resolved record with the same wire shape
+      // (`ApprovalRequestResponse`), not a separate response envelope.
+      // The hook filters by `id`, not by a non-existent `requestId` field.
       ws.simulateMessage({
         type: 'approval_resolved',
-        payload: { requestId: 'req-1', result: 'approved', respondedAt: new Date().toISOString() },
+        payload: {
+          ...makeApprovalRequest('req-1'),
+          status: 'approved',
+          responded_at: new Date().toISOString(),
+        },
       });
     });
 

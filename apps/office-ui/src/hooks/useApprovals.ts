@@ -1,9 +1,59 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { ApprovalRequest, ApprovalResponse } from '@autoswarm/shared-types';
+import type {
+  ActionCategory,
+  ApprovalRequest,
+  WireApprovalAction,
+  WireApprovalRequest,
+} from '@autoswarm/shared-types';
 import { apiFetch, getSessionToken, isDemo } from '@/lib/api';
 import { MAX_RECONNECT_DELAY_MS } from '@/lib/constants';
+
+// ---------------------------------------------------------------------------
+// Wire → domain conversion
+// ---------------------------------------------------------------------------
+//
+// The WS messages `approval_request` and `approval_resolved` carry the
+// snake_case `nexus_api__routers__approvals__ApprovalRequestResponse`
+// schema (see `apps/nexus-api/nexus_api/routers/approvals.py:158` —
+// payload is `_approval_to_response(...).model_dump(mode="json")`).
+// Components (ApprovalPanel, SimplifiedView) consume the camelCase domain
+// `ApprovalRequest`. Convert at the boundary so the cast actually
+// matches the shape on the wire — the previous `as ApprovalRequest` cast
+// silently produced an object whose camelCase getters were all undefined,
+// which the components rendered as blank cells.
+//
+// `agent_name` is not in the wire shape — the domain interface kept it as
+// a UI-only field. We synthesize a short agent label from `agent_id` as a
+// best-effort fallback; the long-term fix is to either join Agent.name
+// server-side in the response model or look it up client-side.
+
+const URGENCY_VALUES = ['low', 'medium', 'high', 'critical'] as const;
+type Urgency = (typeof URGENCY_VALUES)[number];
+
+function normalizeUrgency(raw: string): Urgency {
+  return (URGENCY_VALUES as readonly string[]).includes(raw)
+    ? (raw as Urgency)
+    : 'medium';
+}
+
+function approvalRequestFromWire(wire: WireApprovalRequest): ApprovalRequest {
+  return {
+    id: wire.id,
+    agentId: wire.agent_id,
+    // TODO(types): server doesn't return agent.name; render fallback. Either
+    // join in the response model or look up via /api/v1/agents on the client.
+    agentName: wire.agent_id.slice(0, 8),
+    actionCategory: wire.action_category as ActionCategory,
+    actionType: wire.action_type,
+    payload: wire.payload,
+    diff: wire.diff ?? undefined,
+    reasoning: wire.reasoning,
+    urgency: normalizeUrgency(wire.urgency),
+    createdAt: wire.created_at,
+  };
+}
 
 function resolveWsBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APPROVALS_WS_URL) return process.env.NEXT_PUBLIC_APPROVALS_WS_URL;
@@ -74,7 +124,9 @@ export function useApprovals(): ApprovalsState {
 
           switch (message.type) {
             case 'approval_request': {
-              const request = message.payload as ApprovalRequest;
+              const request = approvalRequestFromWire(
+                message.payload as WireApprovalRequest,
+              );
               setPendingApprovals((prev) => {
                 // Avoid duplicates
                 if (prev.some((a) => a.id === request.id)) return prev;
@@ -84,16 +136,19 @@ export function useApprovals(): ApprovalsState {
             }
 
             case 'approval_resolved': {
-              const response = message.payload as ApprovalResponse;
+              // Server broadcasts the same `ApprovalRequestResponse` shape
+              // (the now-resolved record). Filter by `id`, not the legacy
+              // camelCase `requestId` field that never existed on the wire.
+              const resolved = message.payload as WireApprovalRequest;
               setPendingApprovals((prev) =>
-                prev.filter((a) => a.id !== response.requestId),
+                prev.filter((a) => a.id !== resolved.id),
               );
               break;
             }
 
             case 'approval_batch': {
-              const requests = message.payload as ApprovalRequest[];
-              setPendingApprovals(requests);
+              const wireBatch = message.payload as WireApprovalRequest[];
+              setPendingApprovals(wireBatch.map(approvalRequestFromWire));
               break;
             }
 
@@ -148,7 +203,9 @@ export function useApprovals(): ApprovalsState {
 
   const sendDecision = useCallback(
     async (requestId: string, decision: 'approve' | 'deny', feedback?: string): Promise<boolean> => {
-      const body: Record<string, unknown> = {};
+      // Wire `ApprovalAction` request body — only `feedback` is accepted
+      // (the server derives identity + status from JWT + URL path).
+      const body: WireApprovalAction = {};
       if (feedback !== undefined) {
         body.feedback = feedback;
       }

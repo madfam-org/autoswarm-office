@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { MetricsDashboard } from '@autoswarm/shared-types';
+import type { WireMetricsDashboard } from '@autoswarm/shared-types';
 import { apiFetch } from '@/lib/api';
 
 const POLL_INTERVAL_MS = 30000;
@@ -9,7 +9,12 @@ const POLL_INTERVAL_MS = 30000;
 export type MetricsPeriod = '1h' | '6h' | '24h' | '7d' | '30d';
 
 interface MetricsState {
-  dashboard: MetricsDashboard | null;
+  // Wire shape from /api/v1/metrics/dashboard. The raw generated type
+  // exposes `task_throughput` / `approval_latency` / `cost_breakdown` /
+  // `recent_errors` as loose `dict[str, Any]` (FastAPI returns plain
+  // dicts on the Python side); WireMetricsDashboard intersects those
+  // with narrowed sub-shapes. See generated/helpers.ts for the contract.
+  dashboard: WireMetricsDashboard | null;
   loading: boolean;
   period: MetricsPeriod;
   setPeriod: (p: MetricsPeriod) => void;
@@ -21,7 +26,7 @@ interface MetricsState {
  * Changing the period triggers an immediate refresh.
  */
 export function useMetrics(): MetricsState {
-  const [dashboard, setDashboard] = useState<MetricsDashboard | null>(null);
+  const [dashboard, setDashboard] = useState<WireMetricsDashboard | null>(null);
   const [loading, setLoading] = useState(false);
   const [period, setPeriodState] = useState<MetricsPeriod>('24h');
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -31,7 +36,7 @@ export function useMetrics(): MetricsState {
       setLoading(true);
       const res = await apiFetch(`/api/v1/metrics/dashboard?period=${p}`);
       if (res.ok) {
-        const data = (await res.json()) as MetricsDashboard;
+        const data = (await res.json()) as WireMetricsDashboard;
         setDashboard(data);
       }
     } catch {

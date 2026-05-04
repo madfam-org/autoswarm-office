@@ -394,4 +394,4 @@ def test_agent_slug_allowlist_in_sync_with_email_tools() -> None:
     at send-time — silent breakage."""
     from selva_tools.builtins.email_tools import _AGENT_ROLE_ALLOWLIST
 
-    assert _AGENT_SLUG_ALLOWLIST == frozenset(_AGENT_ROLE_ALLOWLIST.keys())
+    assert frozenset(_AGENT_ROLE_ALLOWLIST.keys()) == _AGENT_SLUG_ALLOWLIST

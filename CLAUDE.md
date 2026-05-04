@@ -287,7 +287,21 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - **Onboarding API**: `GET /api/v1/onboarding/status`,
   `GET /api/v1/onboarding/voice-mode/preview/{mode}`,
   `POST /api/v1/onboarding/voice-mode` (first-run, 409 on second call),
-  `PUT /api/v1/settings/outbound-voice` (change, appends new ledger row).
+  `PUT /api/v1/settings/outbound-voice` (change, appends new ledger row),
+  `GET /api/v1/onboarding/tenant-identity` (server-resolved From: header
+  inputs for the email tools),
+  `PUT /api/v1/onboarding/tenant-identity` (tenant-side update of the
+  outbound identity columns; emits `tenant_identity.updated` to
+  `task_events`).
+- **Outbound identity columns** (migration 0026): `tenant_configs.outbound_user_email`,
+  `outbound_user_name`, `outbound_agent_slug` are first-class
+  tenant-configurable fields. The GET tenant-identity endpoint prefers
+  these over the legacy fallback chain (brand_name → razon_social →
+  tenant_identities) so tenants can configure outbound identity from
+  the office UI at `/settings/outbound-identity` without ops
+  intervention. PUT validates email format + slug allow-list
+  (sales/support/growth/ops/research) and forces `org_id` from the
+  JWT.
 - **Tool enforcement**: `SendEmailTool` and `SendMarketingEmailTool`
   fetch `voice_mode` via nexus-api `/api/v1/onboarding/status` before
   every send and refuse when NULL. `agent_identified` sends additionally

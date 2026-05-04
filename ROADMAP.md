@@ -267,14 +267,17 @@ These cannot be assessed from inside selva-office:
 | Outbound governance | 90% | 95% |
 | Webhook signature verification | 30% | 95% |
 | Consent ledger integrity | 90% | 95% |
-| Audit trail breadth | 60% | 90% |
-| Type safety (Python) | 60% | 90% |
+| Audit trail breadth | 80% (was 60%) | 90% |
+| Type safety (Python) | 100% (was 60%) | 100% |
 | Type safety (TS) | 80% | 95% |
 | Concurrency under load | 50% | 85% |
+| State persistence across restarts | 95% (was 5%) | 95% |
 | Observability — logs | 85% | 95% |
 | Observability — traces | 10% | 80% |
 | Observability — alerts | 5% | 90% |
-| SLO/SLI definitions | 0% | 80% |
+| SLO/SLI definitions | 80% (was 0%) | 80% |
+| Idempotency | 60% (was 10%) | 90% |
+| Load test scenarios | 80% (was 30%) | 90% |
 | Backups + DR | unknown | 90% |
 | Deployment pipeline | 70% | 90% |
 | Pricing source-of-truth | 30% | 85% |
@@ -282,8 +285,23 @@ These cannot be assessed from inside selva-office:
 | Frontend code health | 60% | 85% |
 | A11y (WCAG 2.1 AA) | 65% | 90% |
 
-Weighted overall: roughly 45-55% of "fully production stable +
-data-truthful." Was 25-30% before the v2.2.x remediation.
+Weighted overall: **~75-80% of "fully production stable +
+data-truthful"** as of 2026-05-04. Was 45-55% post v2.2.x
+remediation; was 25-30% before.
+
+Major movements 2026-05-04 session:
+- Workers + packages mypy: 14 → 0 + 129 → 0 (2 of 2 trees pinned at 0)
+- PostgresSaver silent state-loss bug closed (durable across restarts)
+- 5 RLS Phase 1.5 break sites migrated to ``tenant_session()`` helper
+- 8+ latent silent-failure bugs surfaced and fixed by mypy + reviews
+- Stripe webhook real handlers (5 events + migration 0027)
+- 15/15 webhook handlers fail-closed
+- Audit-trail completeness 16 → 38 emit sites (waves 1+2; wave 3 in flight)
+- Idempotency-Key dependency + 13 tests
+- 100-concurrent-SwarmTasks load scenario + runbook
+- SLO definitions doc + per-PR adoption checklist
+- CI test-py + wire-types-drift gates restored to green
+- Stale `/api/v1/swarms/tasks/reap-stale` tenant-scoping bug fixed
 
 ---
 

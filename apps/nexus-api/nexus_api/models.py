@@ -370,6 +370,11 @@ class ScheduledAction(enum.StrEnum):
     ACP_INITIATE = "acp_initiate"
     SKILL_REFINE = "skill_refine"
     MEMORY_COMPACT = "memory_compact"
+    # Outbound public-social post (Reddit MVP; X/LinkedIn parity later).
+    # Schedules carry the playbook id + payload; the worker invokes the
+    # SOCIAL_POST-categorised tool and the playbook's HITL gate fires
+    # the same way as for ad-hoc dispatches.
+    SOCIAL_POST = "social_post"
 
 
 class Schedule(Base):

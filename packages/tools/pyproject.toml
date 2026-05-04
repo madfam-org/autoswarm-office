@@ -25,6 +25,14 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["jsonrpc-base>=2.0"]
+# Reddit posting capability lives in builtins/reddit_tools.py. Optional
+# because (a) most workers do not need it, (b) PRAW pulls in
+# ``prawcore`` and ``websocket-client`` which add ~300KB to the image,
+# and (c) the tool degrades gracefully — when ``praw`` is missing it
+# raises ``ToolNotConfiguredError`` so the operator gets a clear signal.
+# Install via ``pip install selva-tools[reddit]`` in worker images that
+# need outbound social.
+reddit = ["praw>=7.7,<8"]
 
 [build-system]
 requires = ["hatchling"]

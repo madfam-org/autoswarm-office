@@ -38,6 +38,14 @@ class ActionCategory(StrEnum):
     API_CALL = "api_call"
     BILLING_WRITE = "billing_write"
     MARKETING_SEND = "marketing_send"
+    # Outbound social-platform post (Reddit, X/Twitter, LinkedIn). Distinct
+    # from MARKETING_SEND because (a) the audience is public, (b) the
+    # platform's anti-spam rules apply (per-subreddit / per-account rate
+    # limits, mandatory AI-agent disclosure), and (c) revoking is impossible
+    # — a sent email can be unsent in spirit; a Reddit post is forever.
+    # Always HITL-gated by default; per-org overrides via the playbook
+    # system, never via the matrix.
+    SOCIAL_POST = "social_post"
     INFRASTRUCTURE_EXEC = "infrastructure_exec"
     SECRET_MANAGEMENT = "secret_management"
     INFRASTRUCTURE_MONITOR = "infra_monitor"

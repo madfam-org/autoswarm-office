@@ -161,3 +161,47 @@ class PlaybookGuard:
         self.state.tokens_used += token_cost
         self.state.dollars_exposed_cents += financial_cents
         self.state.actions_taken.append(category.value)
+
+
+# ---------------------------------------------------------------------------
+# Built-in playbooks
+# ---------------------------------------------------------------------------
+#
+# Built-ins are PlaybookDefinitions that ship with the package and are
+# always available regardless of org-level configuration. They cover the
+# load-bearing autonomous flows; tenant-specific playbooks layer on top
+# via the org config / runtime registration.
+#
+# IMPORTANT: built-in playbooks intentionally set `require_approval=True`
+# when the action carries irreversible reputational or PII consequences.
+# Reddit posts CANNOT be unsent in any meaningful sense — the platform
+# preserves them via Pushshift and other archives even after deletion —
+# so the playbook's job is to enforce that "build → review → approve →
+# post" is the default path, not "build → post".
+
+
+REDDIT_PROMO_V1 = PlaybookDefinition(
+    id="reddit_promo_v1",
+    name="Reddit Promo (MVP)",
+    trigger_event="manual_dispatch",
+    allowed_actions={ActionCategory.SOCIAL_POST.value},
+    token_budget=20_000,
+    financial_cap_cents=0,  # Posting itself costs nothing; ad-spend is a separate playbook.
+    require_approval=True,  # HITL gate — one approval per post (defence in depth alongside
+                            # subreddit policy disclosure + 30-min Redis rate-limit).
+)
+
+
+BUILTIN_PLAYBOOKS: dict[str, PlaybookDefinition] = {
+    REDDIT_PROMO_V1.id: REDDIT_PROMO_V1,
+}
+
+
+def get_builtin_playbook(playbook_id: str) -> PlaybookDefinition | None:
+    """Return the built-in PlaybookDefinition for ``playbook_id``, or None.
+
+    Tenant-specific overrides (loaded from org config) take precedence
+    over built-ins; this helper is the lookup-of-last-resort the
+    PermissionEngine consults when an unknown playbook id is dispatched.
+    """
+    return BUILTIN_PLAYBOOKS.get(playbook_id)

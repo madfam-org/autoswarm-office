@@ -224,6 +224,69 @@ tool mirrors the Reddit MVP shape and is gated by:
 leaning audience fits Selva (B2B founders/CTOs) and Yantra4D
 (technical maker community) — that's why we ship it before X.
 
+## Outbound Mastodon Posting (operator runbook)
+
+Tenant swarms can submit a status (toot) to a Mastodon instance via the
+`mastodon_post` tool
+(`packages/tools/src/selva_tools/builtins/mastodon_tools.py`). The tool
+mirrors the Reddit pattern's defense-in-depth and adds a few
+fediverse-specific gates:
+
+1. **Per-persona access tokens** — env vars `MASTODON_INSTANCE_URL`
+   (shared) and `MASTODON_ACCESS_TOKEN_<PERSONA_ID>` (per persona,
+   upper-cased + non-alphanumerics replaced with underscores).
+   Missing either raises `ToolNotConfiguredError` (no placeholder
+   ever shipped).
+2. **Per-instance policy ConfigMap** — mounted at
+   `/etc/selva/mastodon_policies.yaml` (sample at
+   `infra/k8s/configmaps/mastodon-policies-default.yaml`). Default
+   for any unlisted instance: `disclosure_required: true`,
+   `allowed_visibilities: ["unlisted"]`, `rate_limit_minutes: 30`.
+3. **Default visibility = `unlisted`** — accessible by URL but absent
+   from the local + federated public timelines. The fediverse social
+   contract is significantly more sensitive to public-timeline promo
+   spam than Reddit's subreddit model. Per-instance policy can pin it
+   stricter; ops must opt-in to `public` per instance after the
+   moderators have approved the bot account.
+4. **Mandatory AI disclosure footer** — appended automatically when
+   the per-instance policy requires it (default: always). Idempotent.
+5. **Per-instance Redis rate-limit** — `selva:mastodon:last_post:{instance}`
+   key with the configured TTL (default 30 min, per-instance override
+   possible — fosstodon.org defaults to 60 min).
+6. **HITL gate via the `mastodon_promo_v1` built-in playbook** —
+   `require_approval=True`, `financial_cap_cents=0`,
+   `token_budget=20_000`.
+
+### Provisioning per-persona Mastodon access tokens
+
+For each persona that will post from a given instance:
+
+1. Sign in to the persona's account on the target instance (e.g.
+   <https://mastodon.social/>).
+2. Navigate to **Settings → Development → New application**.
+3. Set the application name (e.g. `selva-growth-bot`) and grant the
+   `write:statuses` scope. Other scopes are not required for text
+   posts.
+4. Copy the resulting **access token** (NOT the client id / client
+   secret — Mastodon tokens for owned-account use are a single long-
+   lived bearer string).
+5. Store the token in Vault under
+   `mastodon/access_token/<persona_id>`. Selva's Vault → K8s Secret
+   sync materialises it on the worker Deployment as
+   `MASTODON_ACCESS_TOKEN_<PERSONA_ID>` (upper-cased, non-alphanumerics
+   → `_`).
+6. Set `MASTODON_INSTANCE_URL` once per worker Deployment to the home
+   instance's base URL (e.g. `https://mastodon.social`).
+7. `kubectl apply -f infra/k8s/configmaps/mastodon-policies-default.yaml`
+   to ship the policy ConfigMap; mount it on workers + nexus-api at
+   `/etc/selva/mastodon_policies.yaml`. Bump the worker Deployment
+   annotation to force re-roll on policy changes.
+8. Publish a real disclosure page at
+   <https://madfam.io/ai-disclosure> before going live (the footer
+   URL is a placeholder until then; same caveat as the Reddit tool).
+
+`X` (Twitter) and LinkedIn parity tracked separately.
+
 ## Contributing
 
 1. Create a feature branch from `main`.

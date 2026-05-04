@@ -192,15 +192,34 @@ REDDIT_PROMO_V1 = PlaybookDefinition(
 )
 
 
+# Mastodon (fediverse) promo playbook. Same shape as the Reddit MVP —
+# Mastodon's federation model means a published toot is replicated to
+# every following instance and survives local deletion via cached copies
+# elsewhere in the network. Posts are FUNCTIONALLY PERMANENT across the
+# fediverse, so HITL stays on by default — agents draft, humans approve.
+# Defence in depth alongside the per-instance disclosure footer +
+# visibility allow-list (default 'unlisted' to avoid public-timeline
+# spam complaints) + Redis 30-min per-instance rate-limit.
+MASTODON_PROMO_V1 = PlaybookDefinition(
+    id="mastodon_promo_v1",
+    name="Mastodon Promo (MVP)",
+    trigger_event="manual_dispatch",
+    allowed_actions={ActionCategory.SOCIAL_POST.value},
+    token_budget=20_000,
+    financial_cap_cents=0,  # Posting itself costs nothing; ad-spend is a separate playbook.
+    require_approval=True,  # HITL gate — one approval per post.
+)
+
+
 # Bluesky / AT Protocol promo playbook. Same shape as the Reddit MVP —
 # Bluesky's tech-leaning audience fits Selva (B2B founders/CTOs) and
 # Yantra4D (technical maker community); rounds out the v1 social-channel
-# set after Reddit (#149) and Mastodon (in flight). AT Protocol posts
-# are replicated across the network and survive local deletion via cached
-# copies elsewhere, so HITL stays on by default — agents draft, humans
-# approve. Defence in depth alongside the mandatory ~36-char disclosure
-# footer (within Bluesky's 300-char hard limit) + per-persona Redis
-# 30-min rate-limit.
+# set after Reddit (#149) and Mastodon. AT Protocol posts are replicated
+# across the network and survive local deletion via cached copies
+# elsewhere, so HITL stays on by default — agents draft, humans approve.
+# Defence in depth alongside the mandatory ~36-char disclosure footer
+# (within Bluesky's 300-char hard limit) + per-persona Redis 30-min
+# rate-limit.
 BLUESKY_PROMO_V1 = PlaybookDefinition(
     id="bluesky_promo_v1",
     name="Bluesky Promo (MVP)",
@@ -214,6 +233,7 @@ BLUESKY_PROMO_V1 = PlaybookDefinition(
 
 BUILTIN_PLAYBOOKS: dict[str, PlaybookDefinition] = {
     REDDIT_PROMO_V1.id: REDDIT_PROMO_V1,
+    MASTODON_PROMO_V1.id: MASTODON_PROMO_V1,
     BLUESKY_PROMO_V1.id: BLUESKY_PROMO_V1,
 }
 

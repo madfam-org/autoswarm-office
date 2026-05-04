@@ -112,7 +112,7 @@ from .legal import (
 )
 from .loki import get_loki_tools
 from .marketing_tools import SendMarketingEmailTool
-from .reddit_tools import RedditPostTool
+from .mastodon_tools import MastodonPostTool
 from .meeting_scheduler import get_meeting_scheduler_tools
 from .meta_harness import get_meta_harness_tools
 from .npm_registry import get_npm_registry_tools
@@ -133,6 +133,7 @@ from .pricing_intel import (
 from .privacy import DataDeletionTool, PIIClassificationTool, PrivacyNoticeGeneratorTool
 from .product_catalog import ProductCatalogTool
 from .prometheus import get_prometheus_tools
+from .reddit_tools import RedditPostTool
 from .resend_domain import get_resend_domain_tools
 from .selva_office_provisioning import get_selva_office_provisioning_tools
 from .sentry import get_sentry_tools
@@ -305,6 +306,13 @@ def get_builtin_tools() -> list[BaseTool]:
         # MVP; X/LinkedIn parity tracked in ROADMAP. Mandatory disclosure
         # + 30-min rate-limit + HITL gate via reddit_promo_v1 playbook.
         RedditPostTool(),
+        # Public-social outbound (Growth Node — TENANT audience). Mastodon
+        # (fediverse) parity to Reddit. Per-persona access tokens, per-
+        # instance policy ConfigMap, default visibility 'unlisted' to
+        # avoid spamming public timelines, mandatory disclosure footer +
+        # 30-min Redis per-instance rate-limit, HITL gate via
+        # mastodon_promo_v1 playbook.
+        MastodonPostTool(),
         # Phygital tools (Yantra4D Engine Node)
         GenerateParametricModelTool(),
         RunDFMAnalysisTool(),

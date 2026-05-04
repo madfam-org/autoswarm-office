@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mastodon-policies
+  namespace: autoswarm
+  labels:
+    app.kubernetes.io/name: selva
+    app.kubernetes.io/component: mastodon-policy
+  annotations:
+    selva.madfam.io/owner: growth
+    selva.madfam.io/description: |
+      Per-instance posting policy consumed by selva_tools.builtins.mastodon_tools.
+      Mounted on workers + nexus-api at /etc/selva/mastodon_policies.yaml.
+      Conservative defaults: every entry MUST set disclosure_required=true and
+      SHOULD restrict allowed_visibilities to ["unlisted"] unless the instance's
+      moderators have affirmatively opted-in to bot/promo accounts on the public
+      timeline. Mastodon's federation model is significantly more sensitive to
+      timeline-spam complaints than Reddit's subreddit model — visibility is the
+      primary social-contract knob, not flair.
+data:
+  mastodon_policies.yaml: |
+    # Schema:
+    #   policies:
+    #     - instance: <host without scheme, e.g. mastodon.social>
+    #       disclosure_required: <bool>             # default: true
+    #       allowed_visibilities: [<str>, ...]      # subset of
+    #                                               #   public/unlisted/private/direct
+    #                                               # default: ["unlisted"]
+    #       rate_limit_minutes: <int>               # default: 30
+    #       cw_required: <bool>                     # default: false
+    #       max_chars: <int>                        # default: 500
+    #
+    # Loader: packages/tools/src/selva_tools/builtins/mastodon_tools.py:_load_policies
+    # Path override: SELVA_MASTODON_POLICIES_PATH env var (default
+    # /etc/selva/mastodon_policies.yaml).
+    #
+    # Policy authoring rules (for the operator who maintains this file):
+    #   1. NEVER include "public" in allowed_visibilities unless the
+    #      instance moderators have explicitly approved bot accounts. The
+    #      fediverse social contract treats public-timeline promo as
+    #      borderline-spam and the moderator response is fast and
+    #      irreversible (defederation, account suspension).
+    #   2. NEVER set disclosure_required=false. Mastodon admins overwhelmingly
+    #      ban undisclosed AI content; the reputational + access cost of
+    #      being caught is the loss of every account on every instance you
+    #      currently post from.
+    #   3. rate_limit_minutes is per-instance — bump it for known-strict
+    #      instances (FOSS-leaning, e.g. fosstodon.org defaults to 60min).
+    #   4. cw_required=true on instances where the local CW culture is
+    #      strong (most FOSS / academic / activist instances).
+    #   5. Add new entries as growth experiments expand. Keep the list
+    #      short: every instance listed represents an explicit operator
+    #      decision + verified mod opt-in.
+    policies:
+      # General-purpose flagship instance. Largest user base; useful for
+      # broad tech / SaaS reach. Disclosure required, unlisted-only by
+      # default — graduate to public posts only after building reputation.
+      - instance: mastodon.social
+        disclosure_required: true
+        allowed_visibilities: ["unlisted"]
+        rate_limit_minutes: 30
+        cw_required: false
+        max_chars: 500
+
+      # FOSS-leaning instance. Strict CW culture, stricter rate limit.
+      # Strong fit for Selva (B2B AI / agent platform) audience but the
+      # local norms penalise drive-by promo HARD; default to CW-on,
+      # 60-minute rate limit, unlisted-only.
+      - instance: fosstodon.org
+        disclosure_required: true
+        allowed_visibilities: ["unlisted"]
+        rate_limit_minutes: 60
+        cw_required: true
+        max_chars: 500
+
+      # General-purpose instance with relaxed posting culture.
+      # Yantra4D (parametric 3D-printing) audience — #3dprinting +
+      # #parametric tag the relevant communities. Disclosure required,
+      # unlisted-only, standard 30-minute rate limit.
+      - instance: mstdn.io
+        disclosure_required: true
+        allowed_visibilities: ["unlisted"]
+        rate_limit_minutes: 30
+        cw_required: false
+        max_chars: 500

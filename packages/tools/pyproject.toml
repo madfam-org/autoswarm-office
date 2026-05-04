@@ -33,6 +33,15 @@ mcp = ["jsonrpc-base>=2.0"]
 # Install via ``pip install selva-tools[reddit]`` in worker images that
 # need outbound social.
 reddit = ["praw>=7.7,<8"]
+# Mastodon posting capability lives in builtins/mastodon_tools.py.
+# Optional for the same reasons as Reddit — Mastodon.py pulls in
+# ``requests`` (already a transitive dep elsewhere) and
+# ``python-magic`` for media MIME-sniffing, which we don't strictly
+# need for text-only toots but ship anyway. Tool degrades gracefully
+# when the lib is missing (raises ``ToolNotConfiguredError``). Install
+# via ``pip install selva-tools[mastodon]`` in worker images that need
+# fediverse outbound.
+mastodon = ["Mastodon.py>=1.8,<3"]
 
 [build-system]
 requires = ["hatchling"]

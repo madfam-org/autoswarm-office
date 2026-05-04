@@ -53,6 +53,7 @@ from .routers import (
     onboarding,
     playbooks,
     probe,
+    providers,
     schedules,
     skills,
     skills_hub,
@@ -224,6 +225,11 @@ def create_app() -> FastAPI:
     app.include_router(stripe_webhooks.router, prefix="/api/v1")
     # Revenue-loop probe (A.7): bearer-auth'd + public /latest-run endpoint.
     app.include_router(probe.router, prefix="/api/v1/probe")
+    # LLM provider balance probe — admin endpoint surfacing cached balances
+    # so ops doesn't have to log into the Anthropic console manually to
+    # discover we're at $0. Closes the visibility gap left by the
+    # 2026-04-16 incident.
+    app.include_router(providers.router, prefix="/api/v1")
     # HITL Confidence (Sprint 1 observe-only) — decisions ledger + dashboard
     app.include_router(hitl_confidence.router, prefix="/api/v1")
 

@@ -1051,3 +1051,73 @@ class TenantIdentity(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
+
+
+# ---------------------------------------------------------------------------
+# A2A external callers (migration 0029)
+# ---------------------------------------------------------------------------
+
+
+class ExternalA2ACaller(Base):
+    """First-class tenant model for inbound A2A protocol peers.
+
+    Today the A2A bridge in ``main.py`` funnels every peer through the
+    synthetic ``org_id="a2a-external"`` org. That synthetic org has
+    no quota, no consent ledger entry, no per-caller billing
+    attribution, and no revocation primitive. See
+    ``docs/rfcs/0018-a2a-external-tenant-model.md`` for the full
+    problem statement and migration path.
+
+    This model is the schema scaffold for Phase A. The bridge in
+    ``main.py`` is **not** migrated to use it yet — that lands in
+    a follow-up PR (Phase C in the RFC) gated by the
+    ``A2A_PER_CALLER_TENANT`` env flag.
+
+    Identity: ``agent_card_url`` is the natural key (UNIQUE). The
+    derived org_id is ``a2a:<sha256(agent_card_url)[:16]>`` —
+    deterministic, namespaced, doesn't leak the URL into every
+    ``swarm_tasks.org_id`` cell.
+
+    Auth: ``public_key`` holds a PEM-encoded key for verifying the
+    peer's per-request signed JWT (RFC §5 Option B). NULL until the
+    peer registers a key during the DNS-verified registration step.
+
+    Quota: ``daily_task_limit`` is a per-caller cap that overrides
+    the tier default in ``billing_tiers.TIER_DAILY_TASK_LIMIT`` when
+    set. The tier slug ``"external_a2a"`` will be added to that
+    dict in the cutover PR.
+
+    Revocation: setting ``status='revoked'`` is the single-caller
+    kill switch. Suspended (temporary) vs revoked (permanent) is a
+    soft distinction — both block dispatch.
+    """
+
+    __tablename__ = "external_a2a_callers"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    agent_card_url: Mapped[str] = mapped_column(
+        String(2048), nullable=False, unique=True, index=True
+    )
+    # PEM-encoded; TEXT (unbounded) so future key rotation to a
+    # longer algorithm doesn't require an ALTER COLUMN.
+    public_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # CHECK constraint at the DB level (see migration 0029) pins
+    # values to {'active', 'suspended', 'revoked'}. The app layer
+    # also validates but defence-in-depth.
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="active", index=True
+    )
+    subscription_tier: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="external_a2a"
+    )
+    daily_task_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # The MADFAM user_sub who approved this caller during registration.
+    # NULL for the legacy/seed row inserted by ops.
+    owner_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -4,14 +4,25 @@
 > It runs at `selva.town` and integrates with the full MADFAM ecosystem.
 > _The legacy "AutoSwarm Office" name is retained only inside historical migration
 > identifiers and a few infra namespaces. The product, repo, and brand are Selva._
+>
+> **Need to know what's blocked on a human decision right now?** See
+> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) — 12 priority-
+> ordered items, each with what / why / owner / unblocks / cross-refs.
 
 ---
 
-## Current Status: v2.2.0 — Outbound Voice Mode + Consent Ledger ✅
+## Current Status: v2.3.0 — Production-truthfulness sprint ✅
 
-> Supersedes the v2.0.0 "Enterprise Mexican Market MVP" milestone. v2.1.1 added
-> autonomous-pipeline security hardening; v2.2.0 added the three-mode voice/consent
-> system + append-only consent ledger.
+> Supersedes v2.2.0 "Outbound Voice Mode + Consent Ledger". 28 PRs in
+> 24h on 2026-05-04 closed every in-repo Phase 1, Phase 2, and Phase 3
+> item that didn't require an operator decision. Workers + packages
+> mypy 0; audit-trail emit on all 37 mutation sites; RLS strict mode +
+> `tenant_session()` + `admin_session()` helpers; Idempotency-Key on
+> 10 mutation endpoints; secret rotation script + per-period
+> consent-ledger key tracking; W3C trace context propagation;
+> Prometheus rules + Grafana dashboard for SLOs; 5 architecture RFCs
+> landed (#0017, #0018, #0019, #0020, #0021). See
+> [CHANGELOG.md `[2.3.0]`](CHANGELOG.md) for the full list.
 
 | Metric | Value | Source |
 |--------|-------|--------|

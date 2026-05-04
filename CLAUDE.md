@@ -1,5 +1,12 @@
 # CLAUDE.md -- AutoSwarm Office
 
+> **Picking this back up after a break?** Start with
+> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) for the
+> 12 currently-blocked operator items (Tier-ordered) + the
+> recommended reading order at the bottom. After that, the
+> ["Patterns Added in v2.3.0"](#patterns-added-in-v230-operator-must-know)
+> section below is the most current operator/contributor reference.
+
 ## Pricing & PMF Anchoring
 
 - **Pricing source-of-truth**: `infra/pricing/selva-tiers.json` (canonical, schema-validated against `infra/pricing/schema.json`). Derived from `internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md` (the human-readable upstream). Selva tiers (Tulana v0.1, MXN/hr): Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255 — confidence **medium**. Dhanam subscription daily limits (starter=1000, professional=5000, enterprise=25000) ship in the same JSON. The Python loader is `apps/nexus-api/nexus_api/billing_tiers.py`; the CI drift gate is `apps/nexus-api/tests/test_pricing_codification.py` (asserts loader + JSON + CLAUDE.md + emergency fallback all agree). Adjacent ecosystem bundles (Founder/Operator/Flywheel, USD/mo) are still in `apps/office-ui/src/app/bundles/page.tsx:60-117` — TS-side codification follow-up tracked in ROADMAP.

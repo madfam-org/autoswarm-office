@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect, type FC } from 'react';
-import type { Department, Agent, TaskBoardItem, TaskTimeline } from '@autoswarm/shared-types';
+import type {
+  Department,
+  Agent,
+  WireTaskBoardItem,
+  WireTaskTimeline,
+} from '@autoswarm/shared-types';
 import { useTaskBoard } from '@/hooks/useTaskBoard';
 import { formatHMS } from '@/lib/format-time';
 
@@ -37,7 +42,7 @@ function formatDuration(ms: number | null | undefined): string {
 }
 
 const TaskTimelineView: FC<{
-  timeline: TaskTimeline;
+  timeline: WireTaskTimeline;
   onClose: () => void;
 }> = ({ timeline, onClose }) => (
   <div className="border-b border-slate-700 px-3 py-2">
@@ -89,7 +94,7 @@ const TaskTimelineView: FC<{
 );
 
 const TaskCard: FC<{
-  task: TaskBoardItem;
+  task: WireTaskBoardItem;
   borderColor: string;
   index: number;
   onSelect: (id: string) => void;

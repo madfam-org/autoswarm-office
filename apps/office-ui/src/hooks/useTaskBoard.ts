@@ -1,15 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { TaskBoardResponse, TaskTimeline } from '@autoswarm/shared-types';
+import type { WireTaskBoardResponse, WireTaskTimeline } from '@autoswarm/shared-types';
 import { apiFetch, isDemo } from '@/lib/api';
 
 const POLL_INTERVAL_MS = 10000;
 
 interface TaskBoardState {
-  board: TaskBoardResponse | null;
+  // Wire shape from /api/v1/swarms/tasks/board (snake_case). Consumers
+  // (DashboardPanel) already read snake_case fields, so no conversion
+  // happens at the boundary — the previous hand-written `TaskBoardResponse`
+  // domain type was already a shadow of the wire shape.
+  board: WireTaskBoardResponse | null;
   loading: boolean;
-  selectedTimeline: TaskTimeline | null;
+  selectedTimeline: WireTaskTimeline | null;
   timelineLoading: boolean;
   selectTask: (taskId: string) => Promise<void>;
   clearSelection: () => void;
@@ -22,9 +26,9 @@ interface TaskBoardState {
  * task timeline loading for the detail view.
  */
 export function useTaskBoard(): TaskBoardState {
-  const [board, setBoard] = useState<TaskBoardResponse | null>(null);
+  const [board, setBoard] = useState<WireTaskBoardResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedTimeline, setSelectedTimeline] = useState<TaskTimeline | null>(null);
+  const [selectedTimeline, setSelectedTimeline] = useState<WireTaskTimeline | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
@@ -33,7 +37,7 @@ export function useTaskBoard(): TaskBoardState {
       setLoading(true);
       const res = await apiFetch('/api/v1/swarms/tasks/board');
       if (res.ok) {
-        const data = (await res.json()) as TaskBoardResponse;
+        const data = (await res.json()) as WireTaskBoardResponse;
         setBoard(data);
       }
     } catch {
@@ -58,7 +62,7 @@ export function useTaskBoard(): TaskBoardState {
     try {
       const res = await apiFetch(`/api/v1/events/tasks/${taskId}/timeline`);
       if (res.ok) {
-        const data = (await res.json()) as TaskTimeline;
+        const data = (await res.json()) as WireTaskTimeline;
         setSelectedTimeline(data);
       }
     } catch {

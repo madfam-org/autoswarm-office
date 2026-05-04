@@ -20,6 +20,7 @@ from selva_calendar import (
 
 from ..auth import get_current_user, require_non_guest
 from ..database import get_db
+from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import CalendarConnection
 from ..tenant import TenantContext, get_tenant
 
@@ -187,11 +188,21 @@ async def connect_calendar(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
     user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> ConnectResponse:
     """Store a calendar connection for the current user.
 
     If a connection already exists it is updated with the new tokens.
+
+    Idempotency: replay-safe via the ``Idempotency-Key`` header. A retry
+    after a network blip should NOT re-store the same OAuth tokens twice
+    (which would emit a duplicate ``calendar.connected`` audit event and
+    potentially trigger downstream re-syncs). The cached response is
+    returned without touching the DB on replay.
     """
+    if idem.is_replay and idem.cached is not None:
+        return ConnectResponse.model_validate(idem.cached)
+
     user_id = user.get("sub", "unknown")
     existing = await _get_user_connection(user_id, tenant.org_id, db)
 
@@ -229,7 +240,9 @@ async def connect_calendar(
         },
     )
 
-    return ConnectResponse(provider=body.provider.value)
+    response = ConnectResponse(provider=body.provider.value)
+    await idem.save(response.model_dump(mode="json"))
+    return response
 
 
 @router.delete(

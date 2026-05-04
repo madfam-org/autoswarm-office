@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { TaskEvent, EventCategory } from '@autoswarm/shared-types';
+import type { EventCategory, WireTaskEvent } from '@autoswarm/shared-types';
 import { apiFetch, getSessionToken, isDemo } from '@/lib/api';
 import { MAX_RECONNECT_DELAY_MS } from '@/lib/constants';
 
@@ -34,7 +34,10 @@ export interface EventFilters {
 }
 
 interface EventStreamState {
-  events: TaskEvent[];
+  // Wire shape from /api/v1/events and the WS event stream (snake_case).
+  // Consumers (OpsFeed) already read snake_case fields; the previous
+  // hand-written `TaskEvent` was a structural shadow of `TaskEventResponse`.
+  events: WireTaskEvent[];
   connected: boolean;
   filters: EventFilters;
   setFilters: (filters: Partial<EventFilters>) => void;
@@ -49,7 +52,7 @@ interface EventStreamState {
  * and provides filtering and pagination.
  */
 export function useEventStream(): EventStreamState {
-  const [allEvents, setAllEvents] = useState<TaskEvent[]>([]);
+  const [allEvents, setAllEvents] = useState<WireTaskEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -89,12 +92,12 @@ export function useEventStream(): EventStreamState {
 
           switch (message.type) {
             case 'event_batch': {
-              const batch = message.payload as TaskEvent[];
+              const batch = message.payload as WireTaskEvent[];
               setAllEvents(batch);
               break;
             }
             case 'task_event': {
-              const taskEvent = message.payload as TaskEvent;
+              const taskEvent = message.payload as WireTaskEvent;
               setAllEvents((prev) => {
                 // Avoid duplicates
                 if (prev.some((e) => e.id === taskEvent.id)) return prev;
@@ -161,7 +164,7 @@ export function useEventStream(): EventStreamState {
       });
       const res = await apiFetch(`/api/v1/events?${params}`);
       if (res.ok) {
-        const older = (await res.json()) as TaskEvent[];
+        const older = (await res.json()) as WireTaskEvent[];
         if (older.length < 50) setHasMore(false);
         setAllEvents((prev) => {
           const ids = new Set(prev.map((e) => e.id));

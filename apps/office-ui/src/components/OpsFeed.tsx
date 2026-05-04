@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FC } from 'react';
 import { CloseButton } from '@autoswarm/ui';
 import { useEventStream } from '@/hooks/useEventStream';
-import type { EventCategory, TaskEvent } from '@autoswarm/shared-types';
+import type { EventCategory, WireTaskEvent } from '@autoswarm/shared-types';
 import { formatHMS } from '@/lib/format-time';
 
 /**
@@ -83,7 +83,7 @@ function formatDuration(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-const EventCard: FC<{ event: TaskEvent }> = ({ event }) => {
+const EventCard: FC<{ event: WireTaskEvent }> = ({ event }) => {
   const [expanded, setExpanded] = useState(false);
   const borderColor = CATEGORY_COLORS[event.event_category as EventCategory] ?? 'border-l-slate-500';
   const isError = event.event_type.includes('error') || event.event_type.includes('failed') || event.event_type.includes('timeout');

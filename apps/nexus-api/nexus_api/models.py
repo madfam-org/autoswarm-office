@@ -444,6 +444,21 @@ class TenantConfig(Base):
     # values to the 3 legal modes.
     voice_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
+    # Outbound identity (migration 0026). First-class columns so tenants
+    # can configure From: header inputs from the office UI without ops
+    # intervention. All nullable — the email lockdown's fallback chain
+    # (brand_name / razon_social / tenant_identities.primary_contact_email)
+    # still applies for tenants who haven't populated these columns.
+    # ``outbound_user_email`` drives the From: address in user_direct +
+    # dyad modes (and Reply-To across all modes). ``outbound_user_name``
+    # is the display name for that address. ``outbound_agent_slug``
+    # constrains agent_identified mode to a specific entry of the
+    # server-side allow-list (sales/support/growth/ops/research). NULL on
+    # any of these means "use the legacy fallback chain", not "block".
+    outbound_user_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    outbound_user_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    outbound_agent_slug: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(

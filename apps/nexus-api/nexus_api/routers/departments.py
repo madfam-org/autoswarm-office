@@ -186,6 +186,26 @@ async def create_department(
     db.add(dept)
     await db.flush()
     await db.refresh(dept)
+
+    # Audit trail: emit an event so the office UI activity feed surfaces
+    # newly created department zones. Late import to avoid circular
+    # import with the events router. ``org_id`` is taken from the JWT-
+    # derived tenant context, never from the request body. Fire-and-
+    # forget — errors swallowed inside ``emit_event_db``.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="department.created",
+        event_category="department",
+        org_id=tenant.org_id,
+        payload={
+            "department_id": str(dept.id),
+            "slug": dept.slug,
+            "max_agents": dept.max_agents,
+        },
+    )
+
     return _dept_to_response(dept)
 
 
@@ -204,15 +224,42 @@ async def update_department(
     dept_id: str,
     body: DepartmentUpdate,
     db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> DepartmentResponse:
     """Update mutable department fields."""
     dept = await _get_dept_or_404(dept_id, db)
 
     update_data = body.model_dump(exclude_unset=True)
+    changed_keys: list[str] = []
     for field_name, value in update_data.items():
+        previous = getattr(dept, field_name, None)
+        if previous != value:
+            changed_keys.append(field_name)
         setattr(dept, field_name, value)
 
     dept.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(dept)
+
+    # Audit trail: only emit when something actually changed (avoid
+    # writing no-op rows). Late import to avoid circular import with
+    # the events router. Payload records IDs + the keys that changed,
+    # not the values themselves (PII risk on ``description`` / ``name``
+    # for tenant data). ``org_id`` comes from the JWT-derived tenant
+    # context, never the body.
+    if changed_keys:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="department.updated",
+            event_category="department",
+            org_id=tenant.org_id,
+            payload={
+                "department_id": str(dept.id),
+                "slug": dept.slug,
+                "changed_keys": sorted(changed_keys),
+            },
+        )
+
     return _dept_to_response(dept)

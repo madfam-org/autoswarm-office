@@ -293,6 +293,32 @@ async def record_decision(
         parent_decision_id=body.parent_decision_id,
         notes=body.notes,
     )
+
+    # Audit trail: emit an event when bucket configuration changes
+    # (tier promotion/demotion is the policy-relevant change). The
+    # ``org_id`` here is the worker-supplied org_id from the request
+    # body — this endpoint is worker-authenticated, so the body field
+    # is the only available signal. We do NOT include payload_hash /
+    # diff_hash / notes (PII risk); only IDs + tier + confidence.
+    # Late import to avoid circular import with the events router.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="hitl_confidence.config_updated",
+        event_category="hitl",
+        agent_id=None,
+        org_id=body.org_id,
+        payload={
+            "decision_id": str(decision.id),
+            "bucket_key": bucket_key,
+            "action_category": body.action_category,
+            "outcome": body.outcome.value,
+            "tier": next_state.tier.value,
+            "confidence": next_state.confidence,
+            "n_observed": next_state.n_observed,
+        },
+    )
     await db.commit()
 
     return RecordDecisionResponse(

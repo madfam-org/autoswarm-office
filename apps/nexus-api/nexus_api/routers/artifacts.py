@@ -173,7 +173,38 @@ async def delete_artifact(
     if not artifact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
 
+    # Capture identifying fields BEFORE delete so the audit payload
+    # records them post-deletion (the row + storage object are gone
+    # after the delete calls below).
+    artifact_id_str = str(artifact.id)
+    task_id_str = str(artifact.task_id) if artifact.task_id else None
+    content_hash = artifact.content_hash
+    size_bytes = artifact.size_bytes
+
     await _storage.delete(artifact.storage_path)
     await db.delete(artifact)
     await db.commit()
+
+    # Audit trail: emit an event so the office UI activity feed surfaces
+    # artifact deletions (this is the only artifact mutation that loses
+    # data — list/download/get are read-only). Late import to avoid
+    # circular import with the events router. ``org_id`` comes from the
+    # JWT-derived tenant context. Payload records IDs + content hash +
+    # size, NOT the artifact name (could be tenant content).
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="artifact.deleted",
+        event_category="artifact",
+        org_id=tenant.org_id,
+        payload={
+            "artifact_id": artifact_id_str,
+            "task_id": task_id_str,
+            "content_hash": content_hash,
+            "size_bytes": size_bytes,
+        },
+    )
+    await db.commit()
+
     return DeleteResponse()

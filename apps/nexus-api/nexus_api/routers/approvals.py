@@ -18,7 +18,7 @@ from selva_redis_pool import get_redis_pool
 from ..approval_notifier import notify_approval_decision
 from ..auth import get_current_user, require_non_guest, verify_jwt
 from ..config import get_settings
-from ..database import async_session_factory, get_db, tenant_session
+from ..database import get_db, tenant_session
 from ..models import ApprovalRequest, SwarmTask
 from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter, manager
@@ -388,6 +388,111 @@ async def deny_request(
         )
 
     return result
+
+
+# Roles allowed to call the cross-tenant bulk-expire endpoint. Mirrors
+# the ``swarms.reap-stale`` access control list: ``service`` and
+# ``worker`` cover automated callers (cron jobs, ops tooling using the
+# worker shared-secret token); ``platform`` and ``admin`` cover human
+# operators. Any other authenticated caller (regular tactician, guest,
+# demo) is rejected with 403.
+_BULK_EXPIRE_ALLOWED_ROLES: frozenset[str] = frozenset(
+    {"service", "worker", "platform", "admin"}
+)
+
+
+class BulkExpireResponse(BaseModel):
+    """Response from the bulk-expire endpoint."""
+
+    expired: int = Field(default=0, description="Number of approvals marked expired")
+
+
+@router.post("/bulk-expire", response_model=BulkExpireResponse)
+async def bulk_expire(
+    older_than_hours: int = Query(default=24, ge=1, le=720),  # noqa: B008
+    user: dict = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> BulkExpireResponse:
+    """Mark long-pending approval requests as ``expired`` (cross-tenant ops).
+
+    Mirrors the ``swarms.reap-stale`` reaper for approvals: any approval
+    that has stayed in ``pending`` for more than ``older_than_hours``
+    (default 24 h) is flipped to ``expired``. Same access-control gate
+    as ``reap-stale`` — only ``service`` / ``worker`` / ``platform`` /
+    ``admin`` roles may invoke it.
+
+    Audit trail: a single ``approval.bulk_expired`` summary event is
+    emitted (NOT one event per row — see PR description) carrying the
+    ``affected_count`` and the list of expired approval IDs. The event
+    is recorded under the caller's JWT-derived ``org_id`` (or
+    ``"platform"`` when the caller is the cross-tenant worker token)
+    rather than each tenant's org_id, because the operation itself is a
+    platform-level sweep.
+    """
+    from datetime import timedelta
+
+    roles = user.get("roles", [])
+    if not any(r in _BULK_EXPIRE_ALLOWED_ROLES for r in roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "bulk-expire is a platform-only endpoint; caller must hold "
+                "service, worker, platform, or admin role"
+            ),
+        )
+
+    cutoff = datetime.now(UTC) - timedelta(hours=older_than_hours)
+    result = await db.execute(
+        select(ApprovalRequest)
+        .where(ApprovalRequest.status == "pending")
+        .where(ApprovalRequest.created_at < cutoff)
+    )
+    stale = result.scalars().all()
+
+    expired_ids: list[str] = []
+    now = datetime.now(UTC)
+    for req in stale:
+        req.status = "expired"
+        req.responded_at = now
+        req.responded_by = "system:bulk-expire"
+        expired_ids.append(str(req.id))
+
+    await db.flush()
+
+    # Audit trail: single summary event per call, NOT one per row.
+    # Late import to avoid circular import with the events router.
+    # ``org_id`` is the caller's JWT-derived org (the cross-tenant
+    # worker token resolves to ``"platform"`` per ``auth.py``).
+    if expired_ids:
+        try:
+            from .events import emit_event_db
+
+            await emit_event_db(
+                db,
+                event_type="approval.bulk_expired",
+                event_category="approval",
+                org_id=user.get("org_id") or "platform",
+                payload={
+                    "affected_count": len(expired_ids),
+                    "ids": expired_ids,
+                    "older_than_hours": older_than_hours,
+                    "actor_sub": user.get("sub", "unknown"),
+                },
+            )
+        except Exception:
+            logger.debug("Failed to emit approval.bulk_expired event", exc_info=True)
+
+    await db.flush()
+
+    if expired_ids:
+        logger.warning(
+            "Bulk-expired %d stale approval(s) older than %dh (caller=%s)",
+            len(expired_ids),
+            older_than_hours,
+            user.get("sub", "unknown"),
+        )
+
+    return BulkExpireResponse(expired=len(expired_ids))
 
 
 @router.websocket("/ws")

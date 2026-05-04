@@ -252,7 +252,7 @@ class AgentROI(BaseModel):
 
 @router.get("/roi")
 async def get_roi_dashboard(
-    period: str = Query("30d", regex="^(1h|6h|24h|7d|30d)$"),
+    period: str = Query("30d", pattern="^(1h|6h|24h|7d|30d)$"),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """ROI dashboard: per-agent revenue vs cost.

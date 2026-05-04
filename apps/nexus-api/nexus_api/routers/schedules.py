@@ -11,7 +11,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import CurrentUser, require_roles
@@ -42,6 +42,8 @@ class ScheduleCreate(BaseModel):
 
 
 class ScheduleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     cron_expr: str
@@ -51,9 +53,6 @@ class ScheduleResponse(BaseModel):
     description: str | None
     created_at: str
     last_run_at: str | None
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------

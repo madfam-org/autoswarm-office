@@ -16,7 +16,7 @@ import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +43,8 @@ router = APIRouter(prefix="/command-approvals", tags=["Command Approvals"])
 
 
 class ApprovalRequestResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     run_id: str
     command: str
@@ -51,9 +53,6 @@ class ApprovalRequestResponse(BaseModel):
     requested_at: str
     resolved_at: str | None
     resolved_by: str | None
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------

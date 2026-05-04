@@ -109,8 +109,10 @@ describe("compileEnemyWaves", () => {
     const githubWave = waves.find((w: EnemyWave) => w.source === "github");
     const crmWave = waves.find((w: EnemyWave) => w.source === "crm");
 
-    expect(githubWave.events).toHaveLength(2);
-    expect(crmWave.events).toHaveLength(1);
+    expect(githubWave).toBeDefined();
+    expect(crmWave).toBeDefined();
+    expect(githubWave!.events).toHaveLength(2);
+    expect(crmWave!.events).toHaveLength(1);
   });
 
   it("marks escalation events as alerts", async () => {

@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -685,16 +685,62 @@ async def update_task_status(
     return _task_to_response(task)
 
 
+# Roles allowed to call the cross-tenant reap-stale endpoint. ``service``
+# and ``worker`` cover automated callers (cron jobs, ops tooling using the
+# worker shared-secret token); ``platform`` and ``admin`` cover human
+# operators. Any other authenticated caller (regular tactician, guest,
+# demo) is rejected with 403.
+_REAP_STALE_ALLOWED_ROLES: frozenset[str] = frozenset(
+    {"service", "worker", "platform", "admin"}
+)
+
+
 @router.post("/tasks/reap-stale")
 async def reap_stale_tasks(
+    user: dict = Depends(get_current_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> dict[str, int]:
-    """Auto-fail queued/pending tasks older than 1 hour.
+    """Auto-fail queued/pending tasks older than 1 hour (cross-tenant ops).
 
-    Called periodically by workers to prevent indefinite queue buildup.
-    No auth required (internal endpoint).
+    This is a platform health endpoint that operators or a cron job call
+    to clean up stuck tasks across **all tenants**. The role gate is the
+    access control: only callers carrying ``service``, ``worker``,
+    ``platform``, or ``admin`` roles may invoke it.
+
+    Tenancy bypass:
+        ``Depends(get_db)`` already set ``app.current_org_id`` to the
+        caller's JWT-derived ``org_id`` (or ``"default"`` for the dev
+        bypass). Because RLS policies on ``swarm_tasks`` filter by that
+        session var, leaving it set would scope the reaper to ONE org
+        and silently skip stale tasks in every other tenant -- the
+        exact bug fixed here (see ``docs/RLS_PHASE_1_5_AUDIT.md`` §2.C).
+
+        We explicitly reset the var to the empty string so the Phase 1
+        permissive policy (``IS NULL OR = '' OR = $org``) returns rows
+        from every tenant. After Phase 1.5 (migration 0027) tightens
+        the policy, this endpoint MUST switch to ``admin_session()``
+        (BYPASSRLS connection pool) -- the audit doc tracks this
+        follow-up.
     """
     from datetime import timedelta
+
+    roles = user.get("roles", [])
+    if not any(r in _REAP_STALE_ALLOWED_ROLES for r in roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "reap-stale is a platform-only endpoint; caller must hold "
+                "service, worker, platform, or admin role"
+            ),
+        )
+
+    # Bypass tenant RLS for this query -- see docstring + audit doc.
+    # ``set_config(..., true)`` is transaction-local (equivalent to
+    # ``SET LOCAL``). Skipped on SQLite (test path) where ``set_config``
+    # does not exist; RLS is a Postgres-only concept anyway.
+    bind = db.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        await db.execute(text("SELECT set_config('app.current_org_id', '', true)"))
 
     cutoff = datetime.now(UTC) - timedelta(hours=1)
     result = await db.execute(
@@ -712,6 +758,10 @@ async def reap_stale_tasks(
     await db.flush()
 
     if stale_tasks:
-        logging.getLogger(__name__).warning("Reaped %d stale task(s)", len(stale_tasks))
+        logging.getLogger(__name__).warning(
+            "Reaped %d stale task(s) across all tenants (caller=%s)",
+            len(stale_tasks),
+            user.get("sub", "unknown"),
+        )
 
     return {"reaped": len(stale_tasks)}

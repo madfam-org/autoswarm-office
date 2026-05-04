@@ -27,8 +27,16 @@ class InferenceProvider(ABC):
         ...
 
     @abstractmethod
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
-        """Stream completion tokens as they arrive."""
+    def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+        """Stream completion tokens as they arrive.
+
+        Implementations are async generators (``async def`` + ``yield``).
+        The abstract is plain ``def`` returning ``AsyncIterator[str]``
+        because async generators ARE iterators (not coroutines that
+        return iterators) — using ``async def`` here would type the
+        callable as ``Coroutine[..., AsyncIterator[str]]`` and break
+        ``async for`` at every call site.
+        """
         ...
 
     @abstractmethod

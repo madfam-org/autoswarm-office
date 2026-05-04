@@ -49,29 +49,50 @@ class AgentNodeHandler:
             if not has_human and task_description:
                 messages.append(HumanMessage(content=task_description))
 
-            # Try LLM call via inference layer
+            # Try LLM call via inference layer.
+            #
+            # call_llm is async and returns a plain str (the assistant's
+            # message content). The previous implementation called it
+            # synchronously with the wrong arg shape and accessed a
+            # nonexistent ``.content`` attribute — broken since written
+            # but masked by the broad except below, which silently fell
+            # through to the static fallback on every workflow run.
             try:
+                import asyncio
+
                 from selva_workers.inference import call_llm, get_model_router
 
                 router = get_model_router()
                 if router is None:
                     raise RuntimeError("No model router available")  # noqa: TRY301
 
-                from madfam_inference import InferenceRequest, RoutingPolicy
+                # Pull out the system message we just inserted at index 0
+                # so it can travel via call_llm's ``system_prompt`` kwarg
+                # rather than as a regular message (some providers reject
+                # in-list system messages on the second turn).
+                system_prompt = ""
+                user_messages = list(messages)
+                if user_messages and isinstance(user_messages[0], SystemMessage):
+                    sys_msg = user_messages.pop(0)
+                    system_prompt = (
+                        sys_msg.content
+                        if isinstance(sys_msg.content, str)
+                        else str(sys_msg.content)
+                    )
 
-                policy = RoutingPolicy()
-                if node.temperature is not None:
-                    policy = RoutingPolicy(temperature=node.temperature)
-
-                request = InferenceRequest(
-                    messages=[{"role": _msg_role(m), "content": m.content} for m in messages],
-                    routing=policy,
-                    model=node.model,
-                    tools=node.tools if node.tools else None,
+                ai_content = asyncio.run(
+                    call_llm(
+                        router,
+                        messages=[
+                            {"role": _msg_role(m), "content": m.content}
+                            for m in user_messages
+                        ],
+                        system_prompt=system_prompt,
+                    )
                 )
+                if not ai_content:
+                    ai_content = "No response from LLM"
 
-                response = call_llm(request)
-                ai_content = response.content if response else "No response from LLM"
                 result_messages = list(state.get("messages", []))
                 result_messages.append(AIMessage(content=ai_content))
 

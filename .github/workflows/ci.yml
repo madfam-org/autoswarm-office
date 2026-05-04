@@ -160,6 +160,42 @@ jobs:
             echo "::notice::workers mypy errors dropped from ${MAX_MYPY_ERRORS} to ${COUNT}. Lower MAX_MYPY_ERRORS in this PR so the ratchet stays tight."
           fi
 
+      - name: Mypy ratchet — packages (no new errors allowed)
+        # History:
+        #   2026-05-04 — wave 5 baseline: 129 → 116. Fixed two latent
+        #     silent-failure bugs surfaced by mypy:
+        #       - madfam_inference.base.InferenceProvider.stream was
+        #         declared ``async def -> AsyncIterator`` but every
+        #         override is an async-generator (async def + yield).
+        #         The mismatch typed call sites as
+        #         ``Coroutine[..., AsyncIterator]`` so ``async for`` in
+        #         ModelRouter.stream broke at type check (and the call
+        #         site happened to never execute because no caller
+        #         streamed). Switched abstract to plain ``def``.
+        #       - workflows/nodes/agent.py was calling call_llm with
+        #         the wrong arg shape (passing a single InferenceRequest
+        #         where call_llm expects router + messages), without
+        #         ``await``, and accessing ``response.content`` on what
+        #         is actually a plain ``str``. Broken since written; the
+        #         broad ``except`` silently fell through to the static
+        #         fallback on every workflow run. Fixed call to the
+        #         correct API + asyncio.run() bridge.
+        run: |
+          set -euo pipefail
+          MAX_MYPY_ERRORS=116
+          OUTPUT="$(uv run mypy packages/ 2>&1 || true)"
+          COUNT="$(printf '%s\n' "$OUTPUT" | grep -E '^packages/' | grep -c 'error:' || echo 0)"
+          echo "mypy errors in packages/: ${COUNT} (ceiling: ${MAX_MYPY_ERRORS})"
+          if [ "${COUNT:-0}" -gt "${MAX_MYPY_ERRORS}" ]; then
+            echo "::error::mypy error count grew (was ≤${MAX_MYPY_ERRORS}, now ${COUNT}). Either fix the new errors or, if you intentionally accept a regression, bump MAX_MYPY_ERRORS in .github/workflows/ci.yml with justification in the PR body."
+            echo "----- packages mypy errors -----"
+            printf '%s\n' "$OUTPUT" | grep -E '^packages/' || true
+            exit 1
+          fi
+          if [ "${COUNT:-0}" -lt "${MAX_MYPY_ERRORS}" ]; then
+            echo "::notice::packages mypy errors dropped from ${MAX_MYPY_ERRORS} to ${COUNT}. Lower MAX_MYPY_ERRORS in this PR so the ratchet stays tight."
+          fi
+
   lint-community-skills:
     name: Lint Community Skills (advisory)
     runs-on: ubuntu-latest

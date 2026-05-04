@@ -324,6 +324,23 @@ jobs:
             --cov-fail-under=75 \
             -q
 
+      - name: workers (task lifecycle + graphs)
+        run: |
+          cd apps/workers
+          uv run pytest \
+            tests/ \
+            --deselect tests/test_permission_wiring.py::TestImplementPermissionCheck::test_implement_proceeds_when_permission_allowed \
+            --cov=selva_workers.task_status \
+            --cov=selva_workers.event_emitter \
+            --cov=selva_workers.interrupt_handler \
+            --cov=selva_workers.learning \
+            --cov=selva_workers.inference \
+            --cov=selva_workers.graphs.coding \
+            --cov=selva_workers.graphs.crm \
+            --cov-report=term-missing \
+            --cov-fail-under=75 \
+            -q
+
   build:
     name: Build
     runs-on: ubuntu-latest

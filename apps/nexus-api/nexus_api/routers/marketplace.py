@@ -294,6 +294,26 @@ async def publish_skill(
     await db.flush()
     await db.refresh(entry)
 
+    # Late import to avoid the events router → marketplace circular risk.
+    # Mirror the pattern in stripe_webhooks.py / approvals.py / swarms.py.
+    # NOTE: payload deliberately omits author/email (PII) — the marketplace
+    # entry row is the system of record for that.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="marketplace.published",
+        event_category="marketplace",
+        org_id=tenant.org_id,
+        payload={
+            "entry_id": str(entry.id),
+            "name": entry.name,
+            "version": entry.version,
+            "category": entry.category,
+        },
+    )
+    await db.flush()
+
     return _entry_to_response(entry)
 
 
@@ -333,6 +353,7 @@ async def rate_skill(
     existing_result = await db.execute(existing_stmt)
     existing_rating = existing_result.scalar_one_or_none()
 
+    is_update = existing_rating is not None
     if existing_rating:
         existing_rating.rating = body.rating
         existing_rating.review = body.review
@@ -350,6 +371,25 @@ async def rate_skill(
         db.add(rating_obj)
         await db.flush()
         await db.refresh(rating_obj)
+
+    # Late import to avoid the events router → marketplace circular risk.
+    # NOTE: payload deliberately omits the review free-text (could contain
+    # PII) and the user_id (caller identity is in the JWT, not the event log).
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="marketplace.rated",
+        event_category="marketplace",
+        org_id=tenant.org_id,
+        payload={
+            "entry_id": entry_id,
+            "rating_id": str(rating_obj.id),
+            "rating": rating_obj.rating,
+            "is_update": is_update,
+        },
+    )
+    await db.flush()
 
     return SkillRatingResponse(
         id=str(rating_obj.id),
@@ -417,6 +457,21 @@ async def install_skill(
     except Exception:
         logger.warning("Failed to refresh skill registry after install", exc_info=True)
 
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="marketplace.installed",
+        event_category="marketplace",
+        org_id=tenant.org_id,
+        payload={
+            "entry_id": entry_id,
+            "skill_name": meta.name,
+            "downloads": entry.downloads,
+        },
+    )
+    await db.flush()
+
     return InstallResponse(
         skill_name=meta.name,
         install_path=str(skill_md_path),
@@ -450,6 +505,31 @@ async def unpublish_skill(
             detail="Only the skill author may unpublish",
         )
 
+    # Capture identifiers BEFORE delete so the event payload survives the
+    # session-level expiration of the deleted ORM object. NEVER include the
+    # author email in the payload — it is PII per the audit-trail contract.
+    entry_id_str = str(entry.id)
+    entry_name = entry.name
+    entry_version = entry.version
+    entry_category = entry.category
+
     await db.delete(entry)
     await db.flush()
+
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="marketplace.deleted",
+        event_category="marketplace",
+        org_id=tenant.org_id,
+        payload={
+            "entry_id": entry_id_str,
+            "name": entry_name,
+            "version": entry_version,
+            "category": entry_category,
+        },
+    )
+    await db.flush()
+
     return DeleteResponse()

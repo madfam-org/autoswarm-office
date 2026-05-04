@@ -170,6 +170,24 @@ async def create_workflow(
     db.add(wf)
     await db.flush()
     await db.refresh(wf)
+
+    # Late import to avoid the events router → workflows circular risk.
+    # Mirror the pattern in stripe_webhooks.py / approvals.py / swarms.py.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="workflow.created",
+        event_category="workflow",
+        org_id=tenant.org_id,
+        payload={
+            "workflow_id": str(wf.id),
+            "name": wf.name,
+            "version": wf.version,
+        },
+    )
+    await db.flush()
+
     return _workflow_to_response(wf)
 
 
@@ -306,9 +324,13 @@ async def update_workflow(
     workflow_id: str,
     body: WorkflowUpdateRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> WorkflowResponse:
     """Update an existing workflow definition."""
     wf = await _get_workflow_or_404(workflow_id, db)
+
+    # Track which fields were updated for the audit-trail payload (no PII).
+    fields_updated: list[str] = []
 
     if body.yaml_content is not None:
         validation = _validate_yaml(body.yaml_content)
@@ -323,15 +345,34 @@ async def update_workflow(
 
         parsed = WorkflowSerializer.from_yaml(body.yaml_content)
         wf.version = parsed.version
+        fields_updated.append("yaml_content")
 
     if body.name is not None:
         wf.name = body.name
+        fields_updated.append("name")
     if body.description is not None:
         wf.description = body.description
+        fields_updated.append("description")
 
     wf.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(wf)
+
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="workflow.updated",
+        event_category="workflow",
+        org_id=tenant.org_id,
+        payload={
+            "workflow_id": str(wf.id),
+            "version": wf.version,
+            "fields_updated": fields_updated,
+        },
+    )
+    await db.flush()
+
     return _workflow_to_response(wf)
 
 
@@ -343,10 +384,31 @@ async def update_workflow(
 async def delete_workflow(
     workflow_id: str,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> None:
     """Delete a workflow definition."""
     wf = await _get_workflow_or_404(workflow_id, db)
+    # Capture identifiers BEFORE delete so the event payload survives the
+    # session-level expiration of the deleted ORM object.
+    wf_id = str(wf.id)
+    wf_name = wf.name
+    wf_version = wf.version
     await db.delete(wf)
+    await db.flush()
+
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="workflow.deleted",
+        event_category="workflow",
+        org_id=tenant.org_id,
+        payload={
+            "workflow_id": wf_id,
+            "name": wf_name,
+            "version": wf_version,
+        },
+    )
     await db.flush()
 
 
@@ -386,6 +448,22 @@ async def import_workflow(
     db.add(wf)
     await db.flush()
     await db.refresh(wf)
+
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="workflow.imported",
+        event_category="workflow",
+        org_id=tenant.org_id,
+        payload={
+            "workflow_id": str(wf.id),
+            "name": wf.name,
+            "version": wf.version,
+        },
+    )
+    await db.flush()
+
     return _workflow_to_response(wf)
 
 

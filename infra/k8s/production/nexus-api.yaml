@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: nexus-api
-          image: ghcr.io/madfam-org/autoswarm-nexus-api:latest
+          image: ghcr.io/madfam-org/autoswarm-nexus-api@sha256:122e8f65c01be96f76b6ade80244bfb228070a5bbfa98c285ebd99a78c285c26
           ports:
             - containerPort: 4300
               protocol: TCP

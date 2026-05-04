@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gateway
-          image: ghcr.io/madfam-org/autoswarm-gateway:latest
+          image: ghcr.io/madfam-org/autoswarm-gateway@sha256:7815f1accd169e765bb4c663ff686aca9a4f73ce2584dd3d420a8a2773b4d06a
           ports:
             - containerPort: 4304
               protocol: TCP

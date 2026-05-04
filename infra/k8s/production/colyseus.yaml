@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: colyseus
-          image: ghcr.io/madfam-org/autoswarm-colyseus:latest
+          image: ghcr.io/madfam-org/autoswarm-colyseus@sha256:78c3e8ccc04431c1cf4e33e707356546ad5b236bc6eefa9af1903a18e919f7e1
           ports:
             - containerPort: 4303
               protocol: TCP

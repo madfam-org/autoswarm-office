@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -28,14 +28,20 @@ class TestBuildExperienceContext:
 
     @pytest.mark.asyncio
     async def test_formats_similar_experiences(self) -> None:
+        # search_similar / get_shortcuts / get_relevant_context are all
+        # awaited inside build_experience_context (PR #108). MagicMock
+        # would resolve `await mock(...)` to a non-iterable MagicMock and
+        # the function silently returns "".
         mock_store = MagicMock()
-        mock_store.search_similar.return_value = [
-            _make_experience_record(0.95, "Built REST endpoint", "status=completed, duration=30s"),
-            _make_experience_record(0.4, "Used GraphQL", "status=failed, error=timeout"),
-        ]
-        mock_store.get_shortcuts.return_value = []
+        mock_store.search_similar = AsyncMock(
+            return_value=[
+                _make_experience_record(0.95, "Built REST endpoint", "status=completed, duration=30s"),
+                _make_experience_record(0.4, "Used GraphQL", "status=failed, error=timeout"),
+            ]
+        )
+        mock_store.get_shortcuts = AsyncMock(return_value=[])
         mock_mem = MagicMock()
-        mock_mem.get_relevant_context.return_value = ""
+        mock_mem.get_relevant_context = AsyncMock(return_value="")
 
         with (
             patch("selva_workers.config.get_settings", return_value=_mock_settings()),
@@ -55,10 +61,10 @@ class TestBuildExperienceContext:
     @pytest.mark.asyncio
     async def test_empty_store_returns_empty_string(self) -> None:
         mock_store = MagicMock()
-        mock_store.search_similar.return_value = []
-        mock_store.get_shortcuts.return_value = []
+        mock_store.search_similar = AsyncMock(return_value=[])
+        mock_store.get_shortcuts = AsyncMock(return_value=[])
         mock_mem = MagicMock()
-        mock_mem.get_relevant_context.return_value = ""
+        mock_mem.get_relevant_context = AsyncMock(return_value="")
 
         with (
             patch("selva_workers.config.get_settings", return_value=_mock_settings()),
@@ -75,10 +81,10 @@ class TestBuildExperienceContext:
     @pytest.mark.asyncio
     async def test_includes_shortcuts(self) -> None:
         mock_store = MagicMock()
-        mock_store.search_similar.return_value = []
-        mock_store.get_shortcuts.return_value = ["Use the batch processing pattern"]
+        mock_store.search_similar = AsyncMock(return_value=[])
+        mock_store.get_shortcuts = AsyncMock(return_value=["Use the batch processing pattern"])
         mock_mem = MagicMock()
-        mock_mem.get_relevant_context.return_value = ""
+        mock_mem.get_relevant_context = AsyncMock(return_value="")
 
         with (
             patch("selva_workers.config.get_settings", return_value=_mock_settings()),
@@ -96,11 +102,11 @@ class TestBuildExperienceContext:
     @pytest.mark.asyncio
     async def test_includes_agent_memories(self) -> None:
         mock_store = MagicMock()
-        mock_store.search_similar.return_value = []
-        mock_store.get_shortcuts.return_value = []
+        mock_store.search_similar = AsyncMock(return_value=[])
+        mock_store.get_shortcuts = AsyncMock(return_value=[])
         mock_mem = MagicMock()
-        mock_mem.get_relevant_context.return_value = (
-            "## Relevant Memories\n- [0.85] Previously handled auth refactoring"
+        mock_mem.get_relevant_context = AsyncMock(
+            return_value="## Relevant Memories\n- [0.85] Previously handled auth refactoring"
         )
 
         with (

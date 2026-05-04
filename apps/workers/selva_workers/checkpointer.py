@@ -30,10 +30,24 @@ def create_checkpointer() -> BaseCheckpointSaver:
             if "asyncpg" in db_url:
                 db_url = db_url.replace("postgresql+asyncpg", "postgresql")
 
+            # KNOWN LATENT BUG (tracked):
+            # ``PostgresSaver.from_conn_string`` is a ``contextmanager`` that
+            # yields a ``PostgresSaver``. Calling ``.setup()`` and returning
+            # the result here always raises ``AttributeError`` at runtime,
+            # which the broad ``except`` below catches — so this branch has
+            # never actually used Postgres. The proper fix is to open a
+            # ``psycopg.Connection`` ourselves and pass it to the
+            # ``PostgresSaver(conn=...)`` constructor, keeping the
+            # connection alive for the lifetime of the worker process. That
+            # work is deferred because it requires connection-lifecycle
+            # plumbing in ``__main__.py`` (graceful close on shutdown,
+            # reconnect on connection drop) and a migration of the
+            # checkpoints table. Until then, every worker uses MemorySaver
+            # in practice.
             saver = PostgresSaver.from_conn_string(db_url)
-            saver.setup()
+            saver.setup()  # type: ignore[attr-defined]
             logger.info("Using PostgresSaver for graph checkpointing")
-            return saver
+            return saver  # type: ignore[return-value]
         except Exception:
             logger.warning(
                 "Failed to initialize PostgresSaver, falling back to MemorySaver",

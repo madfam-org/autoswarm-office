@@ -268,13 +268,17 @@ class TestGenerateCfdi:
     def test_generate_cfdi_with_karafiel(self) -> None:
         import sys
 
+        from madfam_inference.adapters.karafiel import CFDIResult
+
         from selva_workers.graphs.billing import generate_cfdi
 
+        # KarafielAdapter.generate_cfdi returns a CFDIResult pydantic model,
+        # not a dict — billing.py reads result.xml / result.uuid as attrs.
         mock_adapter_instance = MagicMock()
-        mock_adapter_instance.generate_cfdi.return_value = {
-            "xml": "<cfdi>real-xml</cfdi>",
-            "uuid": "real-uuid-1234",
-        }
+        mock_adapter_instance.generate_cfdi.return_value = CFDIResult(
+            xml="<cfdi>real-xml</cfdi>",
+            uuid="real-uuid-1234",
+        )
 
         mock_module = MagicMock()
         mock_module.KarafielAdapter.return_value = mock_adapter_instance
@@ -345,13 +349,17 @@ class TestStampCfdi:
     def test_stamp_cfdi_with_karafiel(self) -> None:
         import sys
 
+        from madfam_inference.adapters.karafiel import StampResult
+
         from selva_workers.graphs.billing import stamp_cfdi
 
+        # Adapter returns StampResult; billing.py normalizes via .model_dump()
+        # so downstream dict access works.
         mock_adapter_instance = MagicMock()
-        mock_adapter_instance.stamp_cfdi.return_value = {
-            "folio_fiscal": "ABC-123-DEF",
-            "fecha_timbrado": "2026-04-14T12:00:00",
-        }
+        mock_adapter_instance.stamp_cfdi.return_value = StampResult(
+            folio_fiscal="ABC-123-DEF",
+            fecha_timbrado="2026-04-14T12:00:00",
+        )
 
         mock_module = MagicMock()
         mock_module.KarafielAdapter.return_value = mock_adapter_instance

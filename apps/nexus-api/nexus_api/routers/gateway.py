@@ -10,7 +10,7 @@ import socket
 import urllib.parse
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request, status
 
 from ..config import get_settings
 from ..memory_store.db import memory_store
@@ -87,6 +87,26 @@ def _validate_webhook_url(url: str) -> str:
     return url
 
 
+def _require_secret(env_name: str, value: str | None) -> None:
+    """Refuse the request with 503 when a webhook secret is unconfigured.
+
+    Use at the top of every handler that authenticates inbound webhooks.
+    Matches the Discord/WhatsApp/generic pattern hardened in v2.2.x: an
+    unset secret is a misconfiguration, not a license to accept arbitrary
+    unauthenticated POSTs.
+    """
+    if not value:
+        logger.error(
+            "%s webhook received but %s is unset; refusing to verify",
+            env_name.removesuffix("_SECRET").removesuffix("_TOKEN").lower(),
+            env_name,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="webhook endpoint not configured",
+        )
+
+
 def _verify_hmac(body: bytes, signature: str, secret: str) -> bool:
     """Constant-time HMAC-SHA256 verification for incoming webhook payloads.
 
@@ -123,16 +143,16 @@ async def telegram_webhook(
     the ``/initiate_acp <url>`` slash command to a Celery ACP task.
     """
     settings = get_settings()
+    _require_secret("TELEGRAM_WEBHOOK_SECRET", settings.telegram_webhook_secret)
     body = await request.body()
 
-    if settings.telegram_webhook_secret:
-        if not x_telegram_bot_api_secret_token:
-            raise HTTPException(status_code=401, detail="Missing Telegram secret token header")
-        if not hmac.compare_digest(
-            settings.telegram_webhook_secret,
-            x_telegram_bot_api_secret_token,
-        ):
-            raise HTTPException(status_code=401, detail="Invalid Telegram secret token")
+    if not x_telegram_bot_api_secret_token:
+        raise HTTPException(status_code=401, detail="Missing Telegram secret token header")
+    if not hmac.compare_digest(
+        settings.telegram_webhook_secret,
+        x_telegram_bot_api_secret_token,
+    ):
+        raise HTTPException(status_code=401, detail="Invalid Telegram secret token")
 
     payload = await request.json() if not body else json.loads(body)
     message = payload.get("message", {})
@@ -240,29 +260,29 @@ async def slack_webhook(
     import time as _time
 
     settings = get_settings()
+    _require_secret("SLACK_SIGNING_SECRET", settings.slack_signing_secret)
     body = await request.body()
 
-    if settings.slack_signing_secret:
-        if not x_slack_signature or not x_slack_request_timestamp:
-            raise HTTPException(status_code=401, detail="Missing Slack signature headers")
+    if not x_slack_signature or not x_slack_request_timestamp:
+        raise HTTPException(status_code=401, detail="Missing Slack signature headers")
 
-        # Replay protection: reject timestamps > 5 minutes old
-        try:
-            ts = int(x_slack_request_timestamp)
-            if abs(_time.time() - ts) > 300:
-                raise HTTPException(status_code=401, detail="Slack request timestamp too old")
-        except ValueError as exc:
-            raise HTTPException(status_code=401, detail="Invalid Slack timestamp") from exc
+    # Replay protection: reject timestamps > 5 minutes old
+    try:
+        ts = int(x_slack_request_timestamp)
+        if abs(_time.time() - ts) > 300:
+            raise HTTPException(status_code=401, detail="Slack request timestamp too old")
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Invalid Slack timestamp") from exc
 
-        sig_base = f"v0:{x_slack_request_timestamp}:{body.decode()}"
-        expected = (
-            "v0="
-            + hmac.new(
-                settings.slack_signing_secret.encode(), sig_base.encode(), hashlib.sha256
-            ).hexdigest()
-        )
-        if not hmac.compare_digest(expected, x_slack_signature):
-            raise HTTPException(status_code=401, detail="Invalid Slack signature")
+    sig_base = f"v0:{x_slack_request_timestamp}:{body.decode()}"
+    expected = (
+        "v0="
+        + hmac.new(
+            settings.slack_signing_secret.encode(), sig_base.encode(), hashlib.sha256
+        ).hexdigest()
+    )
+    if not hmac.compare_digest(expected, x_slack_signature):
+        raise HTTPException(status_code=401, detail="Invalid Slack signature")
 
     # Slack sends form-encoded payloads for slash commands
     try:
@@ -429,8 +449,8 @@ async def matrix_inbound(
     Validates the Authorization: Bearer <token> header.
     """
     settings = get_settings()
-    expected_token = settings.matrix_appservice_token
-    if expected_token and authorization != f"Bearer {expected_token}":
+    _require_secret("MATRIX_APPSERVICE_TOKEN", settings.matrix_appservice_token)
+    if authorization != f"Bearer {settings.matrix_appservice_token}":
         raise HTTPException(status_code=401, detail="Invalid Matrix appservice token")
 
     try:
@@ -476,6 +496,7 @@ async def mattermost_inbound(request: Request) -> dict[str, Any]:
     Validates the shared mattermost_token from the request body.
     """
     settings = get_settings()
+    _require_secret("MATTERMOST_TOKEN", settings.mattermost_token)
     try:
         form = await request.form()
         token = form.get("token", "")
@@ -484,7 +505,7 @@ async def mattermost_inbound(request: Request) -> dict[str, Any]:
     except Exception:
         return {"status": "ignored"}
 
-    if settings.mattermost_token and token != settings.mattermost_token:
+    if not hmac.compare_digest(str(token), settings.mattermost_token):
         raise HTTPException(status_code=401, detail="Invalid Mattermost token")
 
     target_url = text.strip()
@@ -562,30 +583,31 @@ async def sms_inbound(
     Validates the X-Twilio-Signature HMAC and routes commands.
     """
     settings = get_settings()
+    _require_secret("TWILIO_AUTH_TOKEN", settings.twilio_auth_token)
     body = await request.body()
 
-    if settings.twilio_auth_token:
-        try:
-            from urllib.parse import parse_qs
+    try:
+        from urllib.parse import parse_qs
 
-            form_data = parse_qs(body.decode(), keep_blank_values=True)
-            # Twilio signature = HMAC-SHA1 of URL + sorted params
-            url = str(request.url)
-            params = "".join(f"{k}{v[0]}" for k, v in sorted(form_data.items()))
-            sig_base = (url + params).encode()
-            expected = base64.b64encode(
-                hmac.new(
-                    settings.twilio_auth_token.encode(),
-                    sig_base,
-                    hashlib.sha1,
-                ).digest()
-            ).decode()
-            if not hmac.compare_digest(expected, x_twilio_signature or ""):
-                raise HTTPException(status_code=401, detail="Invalid Twilio signature")
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning("Twilio signature check error: %s", exc)
+        form_data = parse_qs(body.decode(), keep_blank_values=True)
+        # Twilio signature = HMAC-SHA1 of URL + sorted params
+        url = str(request.url)
+        params = "".join(f"{k}{v[0]}" for k, v in sorted(form_data.items()))
+        sig_base = (url + params).encode()
+        expected = base64.b64encode(
+            hmac.new(
+                settings.twilio_auth_token.encode(),
+                sig_base,
+                hashlib.sha1,
+            ).digest()
+        ).decode()
+        if not hmac.compare_digest(expected, x_twilio_signature or ""):
+            raise HTTPException(status_code=401, detail="Invalid Twilio signature")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("Twilio signature check error: %s", exc)
+        raise HTTPException(status_code=401, detail="Twilio signature parse failed") from exc
 
     try:
         from urllib.parse import parse_qs
@@ -622,23 +644,21 @@ async def sms_inbound(
 async def dingtalk_webhook(request: Request) -> dict[str, Any]:
     """DingTalk inbound webhook — HMAC-SHA256 validated."""
     settings = get_settings()
+    _require_secret("DINGTALK_APP_SECRET", getattr(settings, "dingtalk_app_secret", None))
     await request.body()
     timestamp = request.headers.get("timestamp", "")
     sign = request.headers.get("sign", "")
-    if getattr(settings, "dingtalk_app_secret", None):
-        import base64 as _b64
-        import hashlib as _hs
 
-        string_to_sign = f"{timestamp}\n{settings.dingtalk_app_secret}"
-        expected = _b64.b64encode(
-            hmac.new(
-                settings.dingtalk_app_secret.encode(),
-                string_to_sign.encode(),
-                _hs.sha256,
-            ).digest()
-        ).decode()
-        if not hmac.compare_digest(expected, sign):
-            raise HTTPException(status_code=401, detail="Invalid DingTalk signature")
+    string_to_sign = f"{timestamp}\n{settings.dingtalk_app_secret}"
+    expected = base64.b64encode(
+        hmac.new(
+            settings.dingtalk_app_secret.encode(),
+            string_to_sign.encode(),
+            hashlib.sha256,
+        ).digest()
+    ).decode()
+    if not hmac.compare_digest(expected, sign):
+        raise HTTPException(status_code=401, detail="Invalid DingTalk signature")
     try:
         data = await request.json()
         text = data.get("text", {}).get("content", "").strip()
@@ -670,17 +690,16 @@ async def feishu_webhook(request: Request) -> dict[str, Any]:
     if data.get("type") == "url_verification":
         return {"challenge": data.get("challenge")}
     settings = get_settings()
+    _require_secret("FEISHU_APP_SECRET", getattr(settings, "feishu_app_secret", None))
     body = await request.body()
-    if getattr(settings, "feishu_app_secret", None):
-        import hashlib as _hs
 
-        ts = request.headers.get("X-Lark-Request-Timestamp", "")
-        nonce = request.headers.get("X-Lark-Request-Nonce", "")
-        sig = request.headers.get("X-Lark-Signature", "")
-        sig_input = f"{ts}{nonce}{settings.feishu_app_secret}{body.decode()}"
-        computed = _hs.sha256(sig_input.encode()).hexdigest()
-        if not hmac.compare_digest(computed, sig):
-            raise HTTPException(status_code=401, detail="Invalid Feishu signature")
+    ts = request.headers.get("X-Lark-Request-Timestamp", "")
+    nonce = request.headers.get("X-Lark-Request-Nonce", "")
+    sig = request.headers.get("X-Lark-Signature", "")
+    sig_input = f"{ts}{nonce}{settings.feishu_app_secret}{body.decode()}"
+    computed = hashlib.sha256(sig_input.encode()).hexdigest()
+    if not hmac.compare_digest(computed, sig):
+        raise HTTPException(status_code=401, detail="Invalid Feishu signature")
     event = data.get("event", {})
     content_str = event.get("message", {}).get("content", "{}")
     try:
@@ -701,10 +720,9 @@ async def feishu_webhook(request: Request) -> dict[str, Any]:
 async def wecom_webhook(request: Request) -> dict[str, Any]:
     """WeCom outgoing webhook — token-validated."""
     settings = get_settings()
+    _require_secret("WECOM_TOKEN", getattr(settings, "wecom_token", None))
     token = request.query_params.get("token", "")
-    if getattr(settings, "wecom_token", None) and not hmac.compare_digest(
-        settings.wecom_token, token
-    ):
+    if not hmac.compare_digest(settings.wecom_token, token):
         raise HTTPException(status_code=401, detail="Invalid WeCom token")
     try:
         data = await request.json()
@@ -733,10 +751,9 @@ async def wecom_callback(request: Request, echostr: str = None) -> Any:
 async def weixin_webhook(request: Request) -> dict[str, Any]:
     """Weixin via WxPusher — appToken validated."""
     settings = get_settings()
+    _require_secret("WEIXIN_APP_TOKEN", getattr(settings, "weixin_app_token", None))
     token = request.query_params.get("appToken", "")
-    if getattr(settings, "weixin_app_token", None) and not hmac.compare_digest(
-        settings.weixin_app_token, token
-    ):
+    if not hmac.compare_digest(settings.weixin_app_token, token):
         raise HTTPException(status_code=401, detail="Invalid Weixin appToken")
     try:
         data = await request.json()
@@ -756,9 +773,9 @@ async def weixin_webhook(request: Request) -> dict[str, Any]:
 async def bluebubbles_webhook(request: Request) -> dict[str, Any]:
     """BlueBubbles iMessage bridge webhook — password validated."""
     settings = get_settings()
+    _require_secret("BLUEBUBBLES_PASSWORD", getattr(settings, "bluebubbles_password", None))
     auth = request.headers.get("Authorization", "")
-    password = getattr(settings, "bluebubbles_password", None)
-    if password and not hmac.compare_digest(f"Basic {password}", auth.strip()):
+    if not hmac.compare_digest(f"Basic {settings.bluebubbles_password}", auth.strip()):
         raise HTTPException(status_code=401, detail="Invalid BlueBubbles password")
     try:
         data = await request.json()
@@ -778,11 +795,10 @@ async def bluebubbles_webhook(request: Request) -> dict[str, Any]:
 async def homeassistant_webhook(request: Request) -> dict[str, Any]:
     """Home Assistant webhook — Bearer long-lived token validated."""
     settings = get_settings()
-    ha_token = getattr(settings, "ha_token", None)
-    if ha_token:
-        bearer = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-        if not hmac.compare_digest(ha_token, bearer):
-            raise HTTPException(status_code=401, detail="Invalid HA token")
+    _require_secret("HA_TOKEN", getattr(settings, "ha_token", None))
+    bearer = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not hmac.compare_digest(settings.ha_token, bearer):
+        raise HTTPException(status_code=401, detail="Invalid HA token")
     try:
         data = await request.json()
         message = data.get("message", "").strip()

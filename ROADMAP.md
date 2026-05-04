@@ -55,17 +55,26 @@ foundationally one-line dangerous if left undone.
   bugs. Today the system relies on every router author remembering it;
   the events router pre-remediation was a perfect example of why that's
   brittle.
-- **12 remaining webhook handlers hardened** — same fail-closed
-  treatment as Discord/WhatsApp/generic in commit e71337c. Telegram,
-  Slack, Mattermost, DingTalk, Feishu, WeCom, Weixin, BlueBubbles,
-  HomeAssistant, Matrix, Twilio SMS, Email-whitelist all share the same
-  `if settings.<secret>: <check>` shape that fails open when secret
-  unset.
-- **Gateway → Celery SSRF gap** — `routers/gateway.py:_validate_webhook_url`
-  resolves the URL at admission, but `run_acp_workflow_task.delay(target_url)`
-  hands the URL to a Celery worker that re-resolves DNS. Pass resolved
-  IP into the task signature; route the actual fetch through
-  `_build_safe_request_kwargs` from `selva_tools.builtins.http_tools`.
+- ~~**12 remaining webhook handlers hardened**~~ — DONE for 11 of them
+  (Telegram, Slack, Matrix, Mattermost, Twilio SMS, DingTalk, Feishu,
+  WeCom, Weixin, BlueBubbles, HomeAssistant) via the new `_require_secret()`
+  helper at the top of each handler. Each now returns 503 on empty
+  secret, mirroring the v2.2.x Discord/WhatsApp/generic pattern. New
+  Settings fields (`dingtalk_app_secret`, `feishu_app_secret`,
+  `wecom_token`, `weixin_app_token`, `bluebubbles_password`, `ha_token`)
+  give those handlers a single source of truth instead of `getattr`
+  fallback. 11 new parameterized regression tests pin the contract.
+  (12th item — `email_inbound` — uses an allow-list pattern, not a
+  shared secret; intentionally left for a separate PR with its own
+  threat model review.)
+- ~~**Gateway → Celery SSRF gap**~~ — DONE (defense-in-depth).
+  `run_acp_workflow_task` now re-validates the target URL at
+  task-start time using the same `_validate_webhook_url` the gateway
+  used at admission. Narrows the DNS-rebinding window from minutes
+  (queue dwell) to seconds (Celery dequeue). The workflow's internal
+  `requests.get` inside `ACPAnalystNode` is still vulnerable to a
+  fast-rebinding attacker — Phase 2 follow-up threads pre-resolved
+  IP through the workflow node's HTTP call sites.
 - ~~**`@colyseus/core` 0.17 migration**~~ — DONE. `Room<{ state: OfficeStateSchema }>`
   metadata-object pattern + `onLeave(client, code?: number)` signature.
   Local `RoomOptions` interface renamed to `OfficeJoinOptions` to avoid

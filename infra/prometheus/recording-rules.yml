@@ -1,0 +1,323 @@
+# Selva Office — Prometheus recording rules
+#
+# These rules pre-compute the Service Level Indicators (SLIs) that back
+# the Service Level Objectives defined in `docs/SLOS.md`. Each group
+# cites the section of SLOS.md it derives from. Recording rules give
+# the alerting layer cheap, low-cardinality time series to evaluate
+# against; without them, every burn-rate alert would re-run the same
+# heavy histogram_quantile() expression on every scrape interval.
+#
+# Naming follows the Prometheus convention `level:metric:operations`
+# (https://prometheus.io/docs/practices/rules/), prefixed `selva:` so
+# nothing collides with cluster-wide rules.
+#
+# ────────────────────────────────────────────────────────────────────
+# Expected source labels (OTel semantic-conventions / standard names)
+# ────────────────────────────────────────────────────────────────────
+#   service           — logical service name (nexus-api, colyseus, …)
+#   http_route        — route template, e.g. "/api/v1/swarms/dispatch"
+#                       (NOT the full URL; cardinality matters)
+#   http_method       — GET / POST / PUT / PATCH / DELETE
+#   http_status_code  — numeric, as a string label
+#   tier              — "1" | "2" | "3" — the SLO tier classification
+#                       (set by an OTel processor or relabel rule, see README)
+#
+# These labels are the OTel semantic-conventions defaults emitted by
+# `opentelemetry-instrumentation-fastapi` / `opentelemetry-instrumentation-asgi`.
+# The `tier` label is added by us via a Prometheus relabel rule (see
+# infra/prometheus/README.md) so that we don't have to repeat the
+# tier-classification logic in every alert expression.
+#
+# These configs become useful AFTER the OTel exporter is wired
+# (Phase 2 item 11 in ROADMAP.md). This PR ships the config; the
+# operator wires the backend.
+
+groups:
+  # ────────────────────────────────────────────────────────────────
+  # SLI: latency — backs SLOS.md §2 (Latency SLOs) and §4 (per-endpoint)
+  # ────────────────────────────────────────────────────────────────
+  - name: selva.sli.latency
+    interval: 30s
+    rules:
+      # p99 latency over a 5-minute rolling window, sliced by route + tier.
+      # The histogram bucket metric is the OTel default for HTTP servers:
+      # `http_server_duration_milliseconds_bucket` (millisecond histogram).
+      # SLOS.md §2 targets are expressed in milliseconds, so no unit conversion.
+      - record: selva:request:latency_p99:5m
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (le, http_route, tier, service) (
+              rate(http_server_duration_milliseconds_bucket[5m])
+            )
+          )
+
+      - record: selva:request:latency_p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, http_route, tier, service) (
+              rate(http_server_duration_milliseconds_bucket[5m])
+            )
+          )
+
+      - record: selva:request:latency_p50:5m
+        expr: |
+          histogram_quantile(
+            0.50,
+            sum by (le, http_route, tier, service) (
+              rate(http_server_duration_milliseconds_bucket[5m])
+            )
+          )
+
+  # ────────────────────────────────────────────────────────────────
+  # SLI: error rate — backs SLOS.md §3 (Availability SLOs) and §5 (Burn rates)
+  # ────────────────────────────────────────────────────────────────
+  #
+  # Definition of "error" per SLOS.md §3:
+  #   - Any HTTP 5xx response
+  #   - Any HTTP 4xx that is NOT in the expected set
+  #     {400, 401, 403, 404, 409, 410, 422, 429}
+  #
+  # Prometheus regex (RE2) does NOT support lookahead, so we cannot
+  # write `4(?!00|01|...)..`. Instead we match all 4xx + 5xx and
+  # subtract the expected-4xx counts. The denominator is total requests
+  # (everything including the expected-4xx set) so that "user error"
+  # 4xx don't artificially deflate availability.
+  #
+  # Numerator pattern (read as "errored"):
+  #   rate(... {http_status_code=~"5..|4.."} )
+  #     - rate(... {http_status_code=~"400|401|403|404|409|410|422|429"} )
+  - name: selva.sli.error_rate
+    interval: 30s
+    rules:
+      # 5-minute window — feeds the short-window arm of fast burn-rate alerts.
+      - record: selva:request:error_rate:5m
+        expr: |
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[5m])
+            )
+          )
+          /
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[5m])
+            )
+          )
+
+      # 30-minute window — short arm of the slow Tier-1 burn-rate alert (6×/6h/30m).
+      - record: selva:request:error_rate:30m
+        expr: |
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[30m])
+            )
+          )
+          /
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[30m])
+            )
+          )
+
+      # 1-hour window — long arm of the fast Tier-1 burn-rate alert (14.4×/1h/5m).
+      - record: selva:request:error_rate:1h
+        expr: |
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[1h])
+            )
+          )
+          /
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[1h])
+            )
+          )
+
+      # 2-hour window — short arm of Tier-2 fast notify alert (3×/1d/2h).
+      - record: selva:request:error_rate:2h
+        expr: |
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[2h])
+            )
+          )
+          /
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[2h])
+            )
+          )
+
+      # 6-hour window — long arm of slow Tier-1 burn-rate alert and short
+      # arm of slow Tier-2 notify alert (1×/3d/6h).
+      - record: selva:request:error_rate:6h
+        expr: |
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[6h])
+            )
+          )
+          /
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[6h])
+            )
+          )
+
+      # 1-day window — long arm of Tier-2 fast notify alert.
+      - record: selva:request:error_rate:1d
+        expr: |
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[1d])
+            )
+          )
+          /
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[1d])
+            )
+          )
+
+      # 3-day window — long arm of Tier-2 slow notify alert.
+      - record: selva:request:error_rate:3d
+        expr: |
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[3d])
+            )
+          )
+          /
+          (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[3d])
+            )
+          )
+
+  # ────────────────────────────────────────────────────────────────
+  # SLI: 30-day rolling availability — backs SLOS.md §3 (Availability targets)
+  # ────────────────────────────────────────────────────────────────
+  #
+  # 30-day rolling availability = 1 - (errors over 30d / total over 30d).
+  # Used by the dashboard's "burn-down" panels to show how much of the
+  # 30-day error budget remains. Computed once per evaluation cycle.
+  - name: selva.sli.availability
+    interval: 1m
+    rules:
+      - record: selva:request:availability:30d
+        expr: |
+          1 - (
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total{
+                http_status_code=~"5..|4..",
+                http_status_code!~"400|401|403|404|409|410|422|429"
+              }[30d])
+            )
+            /
+            sum by (http_route, tier, service) (
+              rate(http_server_requests_total[30d])
+            )
+          )
+
+      # Per-tier rollup: the worst-case (minimum availability) of any
+      # endpoint in the tier. Useful for "is Tier 1 in budget?" question
+      # without picking a single endpoint.
+      - record: selva:tier:availability_worst:30d
+        expr: |
+          min by (tier, service) (
+            selva:request:availability:30d
+          )
+
+  # ────────────────────────────────────────────────────────────────
+  # Task-level SLIs — backs SLOS.md §6 (Task-level SLIs)
+  # ────────────────────────────────────────────────────────────────
+  #
+  # These rely on metrics emitted by the worker / nexus-api derived
+  # from the TaskEvent stream (see CLAUDE.md "Full-Stack Observability").
+  # Expected source metrics:
+  #
+  #   selva_task_completed_total{graph_type, org_id}
+  #   selva_task_failed_total{graph_type, org_id}
+  #   selva_dlq_depth                                  (gauge)
+  #   selva_approval_pending_age_seconds_bucket        (histogram)
+  #
+  # The OTel exporter wave (Phase 2 item 11) will add these via a
+  # Prometheus exposition endpoint at /metrics on each service.
+  - name: selva.sli.task
+    interval: 1m
+    rules:
+      # Per-graph-type task success rate over 7 days. SLOS.md §6 target
+      # is ≥ 95% overall; per-graph-type is informational.
+      - record: selva:task:success_rate:7d
+        expr: |
+          (
+            sum by (graph_type, service) (
+              rate(selva_task_completed_total[7d])
+            )
+          )
+          /
+          (
+            sum by (graph_type, service) (
+              rate(selva_task_completed_total[7d])
+              + rate(selva_task_failed_total[7d])
+            )
+          )
+
+      # Overall (across all graph types) — the figure SLOS.md §6 holds
+      # us to 95% on.
+      - record: selva:task:success_rate_overall:7d
+        expr: |
+          (
+            sum by (service) (
+              rate(selva_task_completed_total[7d])
+            )
+          )
+          /
+          (
+            sum by (service) (
+              rate(selva_task_completed_total[7d])
+              + rate(selva_task_failed_total[7d])
+            )
+          )
+
+      # DLQ depth — direct gauge passthrough as a recording rule so
+      # the alert can reference the canonical SLI name. SLOS.md §6
+      # threshold: < 5 sustained.
+      - record: selva:task:dlq_depth
+        expr: |
+          max by (service) (selva_dlq_depth)
+
+      # p95 age of pending approvals over 1h. SLOS.md §6 threshold:
+      # < 2 hours target, > 4 hours alerts.
+      - record: selva:task:approval_queue_p95_age:1h
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, service) (
+              rate(selva_approval_pending_age_seconds_bucket[1h])
+            )
+          )

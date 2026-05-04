@@ -1,0 +1,191 @@
+# Selva Office — Prometheus alerting rules
+#
+# Multi-window multi-burn-rate alerts per SLOS.md §5 and Google SRE
+# Workbook chapter 5 (https://sre.google/workbook/alerting-on-slos/).
+#
+# ────────────────────────────────────────────────────────────────────
+# Burn-rate math (SLOS.md §5)
+# ────────────────────────────────────────────────────────────────────
+# An "error budget burn rate" of N× means we're consuming the 30-day
+# budget at N times the steady-state pace. Alerting threshold:
+#
+#     error_rate_threshold = (1 - SLO_target) * burn_rate_multiplier
+#
+# Tier 1 (Tier-1 endpoints, 99.9% availability target → budget 0.001):
+#   - Fast page  : 14.4× over 1h  AND 14.4× over 5m   → 0.001 * 14.4 = 0.0144  (1.44% errors)
+#   - Slow page  : 6×    over 6h  AND 6×    over 30m  → 0.001 *  6   = 0.006   (0.6% errors)
+#
+# Tier 2 (Tier-2 endpoints, 99.5% availability target → budget 0.005):
+#   - Fast notify: 3×    over 1d  AND 3×    over 2h   → 0.005 *  3   = 0.015   (1.5% errors)
+#   - Slow notify: 1×    over 3d  AND 1×    over 6h   → 0.005 *  1   = 0.005   (0.5% errors)
+#
+# Each alert requires BOTH the long-window rate AND the short-window
+# rate to exceed the threshold. The long window prevents single-spike
+# false positives; the short window ensures we react quickly to fresh
+# regressions instead of waiting hours for the long window to register.
+#
+# Tier 3 endpoints get no burn-rate alerts (SLOS.md §5: "Tier 3
+# endpoints don't get burn-rate alerts at all"). Site-down detection
+# for those is handled by blackbox-exporter, out of scope here.
+#
+# `for:` durations are kept short (2m for fast, 5m for slow) so the
+# alert reacts to a sustained burn but not a single eval cycle blip.
+
+groups:
+  # ────────────────────────────────────────────────────────────────
+  # Tier 1 — Page on-call (PagerDuty)
+  # SLOS.md §5 "Tier 1 — Page on-call"
+  # ────────────────────────────────────────────────────────────────
+  - name: selva.slo.tier1.burn_rate
+    rules:
+      - alert: SelvaTier1FastBurn
+        expr: |
+          (
+            selva:request:error_rate:1h{tier="1"} > 0.0144
+            and
+            selva:request:error_rate:5m{tier="1"}  > 0.0144
+          )
+        for: 2m
+        labels:
+          severity: page
+          tier: "1"
+          burn_rate: "14.4"
+        annotations:
+          summary: "Tier 1 fast burn: {{ $labels.http_route }} burning 14.4× SLO budget"
+          description: |
+            Tier 1 endpoint {{ $labels.http_route }} on {{ $labels.service }}
+            has error rate > 1.44% over both 1h and 5m windows. At this
+            rate the 30-day error budget (43.2 min) is exhausted in ~2 hours.
+            Investigate immediately.
+          slo: "docs/SLOS.md §3 (99.9% availability) and §5 (Tier 1 fast burn 14.4×)"
+          runbook_url: "https://runbooks.selva.town/slo/tier1-fast-burn"  # TODO operator: replace with real runbook
+
+      - alert: SelvaTier1SlowBurn
+        expr: |
+          (
+            selva:request:error_rate:6h{tier="1"}  > 0.006
+            and
+            selva:request:error_rate:30m{tier="1"} > 0.006
+          )
+        for: 5m
+        labels:
+          severity: page
+          tier: "1"
+          burn_rate: "6"
+        annotations:
+          summary: "Tier 1 slow burn: {{ $labels.http_route }} burning 6× SLO budget"
+          description: |
+            Tier 1 endpoint {{ $labels.http_route }} on {{ $labels.service }}
+            has error rate > 0.6% over both 6h and 30m windows. At this
+            rate the 30-day error budget is exhausted in ~5 hours.
+          slo: "docs/SLOS.md §3 (99.9% availability) and §5 (Tier 1 slow burn 6×)"
+          runbook_url: "https://runbooks.selva.town/slo/tier1-slow-burn"  # TODO operator: replace with real runbook
+
+  # ────────────────────────────────────────────────────────────────
+  # Tier 2 — Notify (Slack #ops, no page)
+  # SLOS.md §5 "Tier 2 — Notify"
+  # ────────────────────────────────────────────────────────────────
+  - name: selva.slo.tier2.burn_rate
+    rules:
+      - alert: SelvaTier2FastBurn
+        expr: |
+          (
+            selva:request:error_rate:1d{tier="2"} > 0.015
+            and
+            selva:request:error_rate:2h{tier="2"} > 0.015
+          )
+        for: 5m
+        labels:
+          severity: notify
+          tier: "2"
+          burn_rate: "3"
+        annotations:
+          summary: "Tier 2 fast burn: {{ $labels.http_route }} burning 3× SLO budget"
+          description: |
+            Tier 2 endpoint {{ $labels.http_route }} on {{ $labels.service }}
+            has error rate > 1.5% over both 1d and 2h windows. The 30-day
+            error budget (3h 36min) will be exhausted in ~10 days at this rate.
+            Surface to #ops; no page.
+          slo: "docs/SLOS.md §3 (99.5% availability) and §5 (Tier 2 fast notify 3×)"
+          runbook_url: "https://runbooks.selva.town/slo/tier2-fast-burn"  # TODO operator: replace with real runbook
+
+      - alert: SelvaTier2SlowBurn
+        expr: |
+          (
+            selva:request:error_rate:3d{tier="2"} > 0.005
+            and
+            selva:request:error_rate:6h{tier="2"} > 0.005
+          )
+        for: 15m
+        labels:
+          severity: notify
+          tier: "2"
+          burn_rate: "1"
+        annotations:
+          summary: "Tier 2 slow burn: {{ $labels.http_route }} on track to exhaust 30d budget"
+          description: |
+            Tier 2 endpoint {{ $labels.http_route }} on {{ $labels.service }}
+            has error rate > 0.5% over both 3d and 6h windows. Budget will
+            be fully consumed in ~30 days at this rate. Address before the
+            budget runs out.
+          slo: "docs/SLOS.md §3 (99.5% availability) and §5 (Tier 2 slow notify 1×)"
+          runbook_url: "https://runbooks.selva.town/slo/tier2-slow-burn"  # TODO operator: replace with real runbook
+
+  # ────────────────────────────────────────────────────────────────
+  # Task-level alerts — SLOS.md §6
+  # ────────────────────────────────────────────────────────────────
+  #
+  # SLOS.md §6 explicitly classifies these:
+  #   - DLQ depth > 5 sustained → Tier 1 page (something is wedging tasks)
+  #   - Approval queue p95 > 4h → Tier 2 notify (humans slow, not outage)
+  #   - Task success rate < 95% over 7d → Tier 1 page (overall workflow regression)
+  - name: selva.slo.task
+    rules:
+      - alert: SelvaDLQDepthHigh
+        expr: selva:task:dlq_depth > 5
+        for: 5m
+        labels:
+          severity: page
+          tier: "1"
+        annotations:
+          summary: "DLQ depth > 5 sustained on {{ $labels.service }}"
+          description: |
+            Task dead-letter queue has held more than 5 messages for 5
+            minutes. Tasks are being permanently rejected after 3 retries.
+            Common causes: schema/code drift, downstream provider outage
+            (Resend, Stripe, Anthropic), missing env vars on workers.
+            Inspect via `GET /api/v1/health/dlq-stats`.
+          slo: "docs/SLOS.md §6 (Task-level SLIs — DLQ depth < 5 sustained)"
+          runbook_url: "https://runbooks.selva.town/slo/dlq-depth"  # TODO operator: replace with real runbook
+
+      - alert: SelvaApprovalQueueP95High
+        expr: selva:task:approval_queue_p95_age:1h > 14400  # 4h in seconds
+        for: 30m
+        labels:
+          severity: notify
+          tier: "2"
+        annotations:
+          summary: "Approval queue p95 > 4h on {{ $labels.service }}"
+          description: |
+            95th-percentile age of pending approvals exceeded 4 hours
+            for 30+ minutes. SLOS.md §6 target is < 2h; >4h triggers
+            this notify. Likely cause: humans slow to respond. Surface
+            to #ops; not an outage.
+          slo: "docs/SLOS.md §6 (Approval queue p95 latency — target < 2h, alert > 4h)"
+          runbook_url: "https://runbooks.selva.town/slo/approval-queue"  # TODO operator: replace with real runbook
+
+      - alert: SelvaTaskSuccessRateLow
+        expr: selva:task:success_rate_overall:7d < 0.95
+        for: 1h
+        labels:
+          severity: page
+          tier: "1"
+        annotations:
+          summary: "Overall task success rate < 95% on {{ $labels.service }}"
+          description: |
+            Overall (across all graph_types) task completion rate over the
+            last 7 days has dropped below the 95% SLO target. Likely a
+            systemic regression in worker logic, LLM provider drift, or
+            tool failure. Per-graph-type breakdown lives on the dashboard.
+          slo: "docs/SLOS.md §6 (Overall task success rate — ≥ 95% over 7 days)"
+          runbook_url: "https://runbooks.selva.town/slo/task-success-rate"  # TODO operator: replace with real runbook

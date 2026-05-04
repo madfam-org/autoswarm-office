@@ -1,0 +1,575 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus datasource for Selva SLO panels",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Selva Office SLO dashboard. Visualizes the SLIs defined in docs/SLOS.md per service tier. Panels cite the SLO section they back. Becomes useful once OTel exporter is wired (Phase 2 item 11) and recording rules in infra/prometheus/recording-rules.yml are loaded.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "icon": "doc",
+      "tags": [],
+      "title": "SLO definitions (SLOS.md)",
+      "tooltip": "Per-tier latency / error / availability targets",
+      "type": "link",
+      "url": "https://github.com/madfam-org/selva-office/blob/main/docs/SLOS.md"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "panels": [],
+      "title": "Tier 1 — User-blocking endpoints (SLOS.md §1, §3 99.9% availability, §4)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Tier 1 latency p50 / p95 / p99 over 5-minute windows. Target lines: p99 < 1500ms (SLOS.md §2). Recording rules: selva:request:latency_p{50,95,99}:5m.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "ms",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 500},
+              {"color": "red", "value": 1500}
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+      "id": 1,
+      "options": {
+        "legend": {"calcs": ["max", "mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p99:5m{tier=\"1\", service=~\"$service\"}",
+          "legendFormat": "p99 — {{http_route}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p95:5m{tier=\"1\", service=~\"$service\"}",
+          "legendFormat": "p95 — {{http_route}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p50:5m{tier=\"1\", service=~\"$service\"}",
+          "legendFormat": "p50 — {{http_route}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Tier 1 — Latency p50 / p95 / p99 (SLOS.md §2; target p99 < 1500ms)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Tier 1 error rate over 5-minute windows. SLOS.md §3 budget = 0.1% (99.9% target). The threshold lines mark the burn-rate alert thresholds (1.44% = fast burn, 0.6% = slow burn). Recording rule: selva:request:error_rate:5m.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "error rate",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 0.006},
+              {"color": "red", "value": 0.0144}
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+      "id": 2,
+      "options": {
+        "legend": {"calcs": ["max", "mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:error_rate:5m{tier=\"1\", service=~\"$service\"}",
+          "legendFormat": "{{http_route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Tier 1 — Error rate (SLOS.md §3; target ≤ 0.001, alert ≥ 0.0144)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 9},
+      "id": 101,
+      "panels": [],
+      "title": "Tier 2 — Feature-degrading endpoints (SLOS.md §1, §3 99.5% availability, §4)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Tier 2 latency p50 / p95 / p99 over 5-minute windows. Target lines: p99 < 3000ms (SLOS.md §2).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "ms",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 1500},
+              {"color": "red", "value": 3000}
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+      "id": 3,
+      "options": {
+        "legend": {"calcs": ["max", "mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p99:5m{tier=\"2\", service=~\"$service\"}",
+          "legendFormat": "p99 — {{http_route}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p95:5m{tier=\"2\", service=~\"$service\"}",
+          "legendFormat": "p95 — {{http_route}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p50:5m{tier=\"2\", service=~\"$service\"}",
+          "legendFormat": "p50 — {{http_route}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Tier 2 — Latency p50 / p95 / p99 (SLOS.md §2; target p99 < 3000ms)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Tier 2 error rate. SLOS.md §3 budget = 0.5% (99.5% target). Threshold lines mark Tier 2 burn-rate alerts: fast notify 1.5%, slow notify 0.5%.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "error rate",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 0.005},
+              {"color": "red", "value": 0.015}
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+      "id": 4,
+      "options": {
+        "legend": {"calcs": ["max", "mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:error_rate:5m{tier=\"2\", service=~\"$service\"}",
+          "legendFormat": "{{http_route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Tier 2 — Error rate (SLOS.md §3; target ≤ 0.005, alert ≥ 0.015)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 18},
+      "id": 102,
+      "panels": [],
+      "title": "Tier 3 — Background / cosmetic endpoints (SLOS.md §1, §3 99.0% availability, §4)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Tier 3 latency p50 / p95 / p99. Tier 3 has no burn-rate alerts (SLOS.md §5); these panels exist for awareness. Target lines: p99 < 10000ms (SLOS.md §2).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "ms",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 5000},
+              {"color": "red", "value": 10000}
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 19},
+      "id": 5,
+      "options": {
+        "legend": {"calcs": ["max", "mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p99:5m{tier=\"3\", service=~\"$service\"}",
+          "legendFormat": "p99 — {{http_route}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p95:5m{tier=\"3\", service=~\"$service\"}",
+          "legendFormat": "p95 — {{http_route}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:latency_p50:5m{tier=\"3\", service=~\"$service\"}",
+          "legendFormat": "p50 — {{http_route}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Tier 3 — Latency p50 / p95 / p99 (SLOS.md §2; target p99 < 10000ms)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Tier 3 error rate. No burn-rate alerts on Tier 3 per SLOS.md §5; site-down detection via blackbox-exporter.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "error rate",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 0.01}
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 19},
+      "id": 6,
+      "options": {
+        "legend": {"calcs": ["max", "mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:request:error_rate:5m{tier=\"3\", service=~\"$service\"}",
+          "legendFormat": "{{http_route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Tier 3 — Error rate (SLOS.md §3; target ≤ 0.01)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 27},
+      "id": 103,
+      "panels": [],
+      "title": "30-day availability burn-down (SLOS.md §3)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Per-tier worst-case 30-day rolling availability. Shows the most-degraded endpoint per tier. Below the threshold = SLO breach. Recording rule: selva:tier:availability_worst:30d.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "max": 1,
+          "min": 0.95,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 0.99},
+              {"color": "yellow", "value": 0.995},
+              {"color": "green", "value": 0.999}
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 28},
+      "id": 7,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:tier:availability_worst:30d{service=~\"$service\"}",
+          "legendFormat": "Tier {{tier}} — {{service}}",
+          "refId": "A"
+        }
+      ],
+      "title": "30-day availability worst-case per tier (SLOS.md §3 — Tier 1 ≥ 99.9%, Tier 2 ≥ 99.5%, Tier 3 ≥ 99.0%)",
+      "type": "bargauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 36},
+      "id": 104,
+      "panels": [],
+      "title": "Task-level SLIs (SLOS.md §6)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Overall task success rate over rolling 7 days. SLOS.md §6 target: ≥ 95%. Below 95% triggers SelvaTaskSuccessRateLow alert. Recording rule: selva:task:success_rate_overall:7d.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "max": 1,
+          "min": 0.85,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 0.9},
+              {"color": "green", "value": 0.95}
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 37},
+      "id": 8,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:task:success_rate_overall:7d{service=~\"$service\"}",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Task success rate 7d (SLOS.md §6; target ≥ 95%)",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "DLQ depth. SLOS.md §6 target: < 5 sustained. > 5 for 5 minutes triggers SelvaDLQDepthHigh page. Recording rule: selva:task:dlq_depth.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 3},
+              {"color": "red", "value": 5}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 37},
+      "id": 9,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:task:dlq_depth{service=~\"$service\"}",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "title": "DLQ depth (SLOS.md §6; alert ≥ 5)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "p95 age of pending approvals over 1h. SLOS.md §6 target: < 2h. > 4h triggers SelvaApprovalQueueP95High notify. Recording rule: selva:task:approval_queue_p95_age:1h.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 7200},
+              {"color": "red", "value": 14400}
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 37},
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "selva:task:approval_queue_p95_age:1h{service=~\"$service\"}",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Approval queue p95 age (SLOS.md §6; target < 2h, alert > 4h)",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["slo", "selva", "observability"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+        "definition": "label_values(http_server_requests_total, service)",
+        "description": "Filter all panels by service. Defaults to All so the dashboard works the moment a single OTel exporter starts emitting.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(http_server_requests_total, service)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Selva Office — SLO Overview",
+  "uid": "selva-slos",
+  "version": 1,
+  "weekStart": ""
+}

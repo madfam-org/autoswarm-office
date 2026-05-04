@@ -48,6 +48,13 @@ EVENT_LEAD_QUALIFIED = "lead.qualified"  # emitted here
 EVENT_PLAYBOOK_SENT = "playbook.sent"  # emitted here
 EVENT_CHECKOUT_COMPLETED = "checkout.completed"  # emitted by dhanam
 EVENT_SUBSCRIPTION_CREATED = "subscription.created"  # emitted by dhanam
+# Public-social outbound (Reddit MVP, X/LinkedIn later). The funnel hop
+# is post → engagement → (optional) lead.captured if the click lands on
+# a tracked CTA. We deliberately use ``post_id`` (not ``lead_id``) as
+# distinct_id at the source-of-truth event because no lead exists yet —
+# Dhanam will alias() once a click converts.
+EVENT_OUTBOUND_POST_CREATED = "outbound_post.created"  # emitted by reddit_tools
+EVENT_OUTBOUND_POST_ENGAGED = "outbound_post.engaged"  # emitted by engagement webhook
 
 
 def extract_lead_id(crm_event_data: dict[str, Any]) -> str:
@@ -157,3 +164,71 @@ def domain_of(email: str) -> str | None:
         return None
     _, _, domain = email.partition("@")
     return domain.lower().strip() or None
+
+
+def emit_outbound_post_created(
+    post_id: str,
+    *,
+    subreddit: str,
+    persona_id: str,
+    disclosure_applied: bool,
+    platform: str = "reddit",
+    extra: dict[str, Any] | None = None,
+) -> None:
+    """Emit ``outbound_post.created`` after a successful public-social post.
+
+    ``distinct_id`` is the platform-issued ``post_id`` — it's the only
+    immutable identifier we have at this stage (no lead exists yet). When
+    a click on the post converts later, Dhanam's ``checkout.completed``
+    handler aliases the engagement chain to the authenticated user_sub.
+
+    The ``disclosure_applied`` flag flows through to dashboards so we
+    can answer "did every post we made carry the AI-disclosure footer?"
+    in a single PostHog query.
+    """
+    if not post_id:
+        logger.debug("emit_outbound_post_created: empty post_id, skipping")
+        return
+    properties: dict[str, Any] = {
+        "post_id": post_id,
+        "subreddit": subreddit,
+        "persona_id": persona_id,
+        "platform": platform,
+        "disclosure_applied": disclosure_applied,
+    }
+    if extra:
+        properties.update(extra)
+    track(post_id, EVENT_OUTBOUND_POST_CREATED, properties)
+
+
+def emit_outbound_post_engaged(
+    post_id: str,
+    *,
+    click_count: int,
+    subscription_id_if_converted: str | None = None,
+    platform: str = "reddit",
+    extra: dict[str, Any] | None = None,
+) -> None:
+    """Emit ``outbound_post.engaged`` when our tracking webhook records
+    user interaction on a previously-emitted ``outbound_post.created``.
+
+    ``subscription_id_if_converted`` is None for the click-only case;
+    populated when the click chain led to a Stripe subscription so the
+    funnel can compute attribution lift per subreddit.
+    """
+    if not post_id:
+        logger.debug("emit_outbound_post_engaged: empty post_id, skipping")
+        return
+    properties: dict[str, Any] = {
+        "post_id": post_id,
+        "click_count": click_count,
+        "platform": platform,
+    }
+    if subscription_id_if_converted:
+        properties["subscription_id"] = subscription_id_if_converted
+        properties["converted"] = True
+    else:
+        properties["converted"] = False
+    if extra:
+        properties.update(extra)
+    track(post_id, EVENT_OUTBOUND_POST_ENGAGED, properties)

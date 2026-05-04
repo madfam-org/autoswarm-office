@@ -107,8 +107,22 @@ def _sanitize_email_html(html: str) -> str:
 
 
 
-def _inject_utm(url: str, campaign: str = "", source: str = "selva", medium: str = "email") -> str:
-    """Inject UTM tracking parameters into a URL for attribution."""
+def _inject_utm(
+    url: str,
+    campaign: str = "",
+    *,
+    source: str = "selva",
+    medium: str = "email",
+) -> str:
+    """Inject UTM tracking parameters into a URL for attribution.
+
+    The ``source`` / ``medium`` kwargs let non-email callers tag posts
+    correctly (Reddit: ``source='reddit'``, ``medium='social'``;
+    Twitter: ``source='twitter'``, ``medium='social'``; etc.). They are
+    keyword-only so the existing positional signature
+    ``_inject_utm(url, campaign)`` keeps working unchanged for the
+    email path. Defaults preserve email-attribution behaviour.
+    """
     if not url:
         return url
     parsed = urlparse(url)

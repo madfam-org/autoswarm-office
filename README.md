@@ -129,6 +129,45 @@ Selva Office is part of the MADFAM platform and integrates with:
 - **Dhanam** -- Billing, subscriptions, and compute token budgets
 - **Enclii** -- Deployment orchestration via ArgoCD (ports 4200-4204)
 
+## Outbound Reddit Posting (operator runbook)
+
+Tenant swarms can submit text posts to a single subreddit via the
+`reddit_post` tool (`packages/tools/src/selva_tools/builtins/reddit_tools.py`).
+The tool is gated by:
+
+1. **Mandatory creds** — env vars `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`,
+   `REDDIT_USER_AGENT`, `REDDIT_REFRESH_TOKEN`. Missing any one raises
+   `ToolNotConfiguredError` (no placeholder ever shipped).
+2. **Per-subreddit policy ConfigMap** — mounted at
+   `/etc/selva/subreddit_policies.yaml` (sample at
+   `infra/k8s/configmaps/subreddit-policies-default.yaml`). Default for
+   any unlisted subreddit: `disclosure_required: true`.
+3. **Mandatory AI disclosure footer** — appended automatically when the
+   per-subreddit policy requires it. Idempotent — agents that
+   pre-stamp the footer are not double-stamped.
+4. **30-min Redis rate-limit per subreddit** — `selva:reddit:last_post:{subreddit}`
+   key with 30-min TTL.
+5. **HITL gate via the `reddit_promo_v1` built-in playbook** —
+   `require_approval=True`, `financial_cap_cents=0`, `token_budget=20_000`.
+
+### Operator provisioning steps
+
+1. Create a Reddit "script-type" OAuth app at
+   <https://www.reddit.com/prefs/apps>.
+2. Use the script-app installed-flow to mint a refresh token (see PRAW
+   docs).
+3. Store the four secrets in Vault, sync to the `autoswarm` namespace
+   K8s Secret used by the worker Deployment.
+4. `kubectl apply -f infra/k8s/configmaps/subreddit-policies-default.yaml`
+   to ship the policy ConfigMap.
+5. Mount the ConfigMap on workers + nexus-api. Bump the worker
+   Deployment annotation to force re-roll on policy changes.
+6. Publish a real disclosure page at <https://madfam.io/ai-disclosure>
+   before going live (the footer URL is a placeholder until then).
+
+`X` (Twitter), LinkedIn, and crossposting are explicitly out of scope
+for this MVP.
+
 ## Contributing
 
 1. Create a feature branch from `main`.

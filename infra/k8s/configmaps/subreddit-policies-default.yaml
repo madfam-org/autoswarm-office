@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: subreddit-policies
+  namespace: autoswarm
+  labels:
+    app.kubernetes.io/name: selva
+    app.kubernetes.io/component: reddit-policy
+  annotations:
+    selva.madfam.io/owner: growth
+    selva.madfam.io/description: |
+      Per-subreddit posting policy consumed by selva_tools.builtins.reddit_tools.
+      Mounted on workers + nexus-api at /etc/selva/subreddit_policies.yaml.
+      Conservative default: every entry MUST set disclosure_required=true unless
+      the subreddit's mod team has affirmatively opted-in to bot accounts.
+data:
+  subreddit_policies.yaml: |
+    # Schema:
+    #   policies:
+    #     - subreddit: <name without r/ prefix>
+    #       disclosure_required: <bool>      # default: true
+    #       min_karma: <int>                 # default: 0
+    #       flair: <optional str>            # default: null (no flair)
+    #
+    # Loader: packages/tools/src/selva_tools/builtins/reddit_tools.py:_load_policies
+    # Path override: SELVA_REDDIT_POLICIES_PATH env var (default
+    # /etc/selva/subreddit_policies.yaml).
+    #
+    # Policy authoring rules (for the operator who maintains this file):
+    #   1. NEVER set disclosure_required=false unless the subreddit mods have
+    #      explicitly approved bot accounts — most subreddits ban undisclosed
+    #      AI content and the reputational cost of being caught is permanent.
+    #   2. min_karma is advisory only at this MVP — we do not yet read the
+    #      authenticated account's karma to enforce.
+    #   3. Add new entries as growth experiments expand. Keep the list short:
+    #      every subreddit listed represents an explicit operator decision.
+    policies:
+      - subreddit: SaaS
+        disclosure_required: true
+        min_karma: 0
+        flair: null
+      - subreddit: Entrepreneur
+        disclosure_required: true
+        min_karma: 0
+        flair: null
+      - subreddit: MexicoFinanciero
+        disclosure_required: true
+        min_karma: 0
+        flair: null

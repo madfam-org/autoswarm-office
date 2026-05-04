@@ -101,6 +101,27 @@ class TestInjectUtm:
         out = marketing_tools._inject_utm("https://x.io")
         assert "utm_campaign=agent_outreach" in out
 
+    def test_kwarg_source_medium_overrides_email_default(self) -> None:
+        """Reddit + other social callers pass source/medium as kwargs to
+        tag posts correctly. Existing email path unaffected."""
+        out = marketing_tools._inject_utm(
+            "https://madfam.io/landing",
+            campaign="reddit_promo",
+            source="reddit",
+            medium="social",
+        )
+        assert "utm_source=reddit" in out
+        assert "utm_medium=social" in out
+        assert "utm_campaign=reddit_promo" in out
+
+    def test_positional_signature_unchanged_for_email_callers(self) -> None:
+        """`_inject_utm(url, campaign)` (positional) keeps working — no
+        existing email caller breaks."""
+        out = marketing_tools._inject_utm("https://x.io/path", "launch")
+        assert "utm_source=selva" in out
+        assert "utm_medium=email" in out
+        assert "utm_campaign=launch" in out
+
 
 # ---------------------------------------------------------------------------
 # _build_madfam_email_html — template wrapper

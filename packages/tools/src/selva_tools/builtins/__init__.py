@@ -112,6 +112,7 @@ from .legal import (
 )
 from .loki import get_loki_tools
 from .marketing_tools import SendMarketingEmailTool
+from .reddit_tools import RedditPostTool
 from .meeting_scheduler import get_meeting_scheduler_tools
 from .meta_harness import get_meta_harness_tools
 from .npm_registry import get_npm_registry_tools
@@ -300,6 +301,10 @@ def get_builtin_tools() -> list[BaseTool]:
         CreateActivityTool(),
         # Marketing tools (Growth Node)
         SendMarketingEmailTool(),
+        # Public-social outbound (Growth Node — TENANT audience). Reddit
+        # MVP; X/LinkedIn parity tracked in ROADMAP. Mandatory disclosure
+        # + 30-min rate-limit + HITL gate via reddit_promo_v1 playbook.
+        RedditPostTool(),
         # Phygital tools (Yantra4D Engine Node)
         GenerateParametricModelTool(),
         RunDFMAnalysisTool(),

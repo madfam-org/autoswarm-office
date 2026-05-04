@@ -1124,20 +1124,6 @@ class TestRunCustomWithStreamingInterrupts:
 
 
 class TestCleanupStaleWorktreesOSError:
-    # NOTE: This test surfaces a real bug. The try/except in
-    # _cleanup_stale_worktrees only wraps wt_dir.stat() (line 789), but
-    # the wt_dir.is_dir() check on line 786 is outside the wrap and also
-    # calls Path.stat() under the hood. An OSError from a stale or
-    # permission-denied worktree dir will crash the cleanup. Flagging as
-    # xfail so the next maintainer can decide whether to widen the
-    # try/except or use Path.exists() (which does swallow OSError).
-    @pytest.mark.xfail(
-        reason=(
-            "_cleanup_stale_worktrees does not catch OSError from "
-            "is_dir() — see line 786 vs 789"
-        ),
-        strict=True,
-    )
     @pytest.mark.asyncio
     async def test_swallows_oserror_on_stat(self, tmp_path) -> None:
         """If stat() raises OSError, the worktree is skipped — not raised."""

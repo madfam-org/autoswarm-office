@@ -350,6 +350,24 @@ jobs:
             --cov-fail-under=75 \
             -q
 
+      - name: workers (task lifecycle + interrupt + graphs)
+        run: |
+          cd apps/workers
+          uv run pytest \
+            tests/test_task_status.py \
+            tests/test_event_emitter.py \
+            tests/test_interrupt_handler.py \
+            tests/test_learning.py \
+            --cov=selva_workers.task_status \
+            --cov=selva_workers.event_emitter \
+            --cov=selva_workers.interrupt_handler \
+            --cov=selva_workers.learning \
+            --cov=selva_workers.graphs.coding \
+            --cov=selva_workers.graphs.crm \
+            --cov-report=term-missing \
+            --cov-fail-under=75 \
+            -q
+
   build:
     name: Build
     runs-on: ubuntu-latest

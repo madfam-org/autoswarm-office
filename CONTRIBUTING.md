@@ -12,6 +12,7 @@ Thank you for your interest in contributing to AutoSwarm Office! This guide cove
 - **PostgreSQL** >= 16 (or use Docker Compose)
 
 macOS:
+
 ```bash
 brew install node pnpm python uv docker
 ```
@@ -117,6 +118,31 @@ pnpm --filter @autoswarm/colyseus test
 3. Keep PRs focused -- one feature or fix per PR
 4. Request review from a maintainer
 5. Address review feedback with new commits (don't force-push)
+
+## Schema codegen (Python ⇄ TypeScript wire types)
+
+`packages/shared-types/src/generated/api.ts` mirrors the nexus-api
+OpenAPI schema. It is auto-generated from the FastAPI app's Pydantic
+models and route signatures and committed to the repo so PR diffs
+show the type impact of every API change.
+
+When you add or change anything that affects the wire shape -- a
+Pydantic model, a route signature, a query parameter, a response
+type -- regenerate the file:
+
+```bash
+pnpm generate-types
+```
+
+Commit the result alongside your Python changes. CI runs the same
+command and `git diff --exit-code`s the generated dir; forgetting
+to regenerate fails the `schema-drift` job and blocks the PR.
+
+The hand-written domain types in `packages/shared-types/src/*.ts`
+(camelCase) and the generated wire types under `generated/api.ts`
+(snake_case) coexist on purpose -- see
+[packages/shared-types/README.md](packages/shared-types/README.md)
+for the conversion convention.
 
 ## Code Style
 

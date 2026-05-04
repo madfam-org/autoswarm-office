@@ -1,0 +1,10673 @@
+/**
+ * AUTO-GENERATED from nexus-api OpenAPI schema. DO NOT EDIT.
+ *
+ * Run `pnpm generate-types` to regenerate. CI (schema-drift.yml)
+ * fails if this file is out of sync with the FastAPI routes.
+ *
+ * These are WIRE TYPES (snake_case, mirror the API). Hand-written
+ * domain types in sibling files (camelCase) are still the source of
+ * truth for React/Phaser; conversion happens at the fetch boundary.
+ */
+
+/* eslint-disable */
+export interface paths {
+    "/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Metrics
+         * @description Endpoint that serves Prometheus metrics.
+         */
+        get: operations["metrics_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Root Health */
+        get: operations["root_health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health
+         * @description Liveness probe -- always returns 200 if the process is running.
+         */
+        get: operations["health_api_v1_health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description Readiness probe -- validates database and Redis connectivity.
+         *
+         *     Returns 200 when all dependencies are reachable, 503 otherwise.
+         */
+        get: operations["ready_api_v1_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health Detail
+         * @description Detailed health check including Colyseus connectivity and pool metrics.
+         */
+        get: operations["health_detail_api_v1_health_detail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/pool-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pool Stats
+         * @description Return database connection pool statistics.
+         */
+        get: operations["pool_stats_api_v1_health_pool_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/queue-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Queue Stats
+         * @description Return Redis task stream and queue statistics.
+         */
+        get: operations["queue_stats_api_v1_health_queue_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/dlq-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dlq Stats
+         * @description Return dead-letter queue statistics and recent entries.
+         */
+        get: operations["dlq_stats_api_v1_health_dlq_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/consent-ledger-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consent Ledger Grants
+         * @description Verify the append-only invariant on `consent_ledger` is enforced at the DB level.
+         *
+         *     Migration 0018 REVOKEs UPDATE/DELETE on `consent_ledger` from the
+         *     application role (default ``autoswarm_app``). This endpoint exposes
+         *     a runtime check so a re-applied migration, manual ``GRANT ALL``, or
+         *     a superuser-mode test seed that silently re-mutates the grants will
+         *     surface in monitoring.
+         *
+         *     Open endpoint (no auth) — matches the rest of `/health`. The role
+         *     name is not echoed in the response to avoid disclosing internal
+         *     config; it is logged when the invariant fails for ops triage.
+         *
+         *     Returns 503 when the invariant does not hold.
+         */
+        get: operations["consent_ledger_grants_api_v1_health_consent_ledger_grants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agents
+         * @description List agents with pagination, optionally filtered by department.
+         */
+        get: operations["list_agents_api_v1_agents__get"];
+        put?: never;
+        /**
+         * Create Agent
+         * @description Draft a new agent.
+         */
+        post: operations["create_agent_api_v1_agents__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{agent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent
+         * @description Retrieve a single agent by ID.
+         */
+        get: operations["get_agent_api_v1_agents__agent_id__get"];
+        /**
+         * Update Agent
+         * @description Update mutable agent fields.
+         */
+        put: operations["update_agent_api_v1_agents__agent_id__put"];
+        post?: never;
+        /**
+         * Delete Agent
+         * @description Remove an agent permanently.
+         */
+        delete: operations["delete_agent_api_v1_agents__agent_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{agent_id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign Agent
+         * @description Assign an agent to a department.
+         */
+        post: operations["assign_agent_api_v1_agents__agent_id__assign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{agent_id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Agent Stats
+         * @description Apply delta increments to agent performance stats.
+         *
+         *     Worker-to-API endpoint — no user auth required (Bearer token only).
+         *     Computes a running average for task duration.
+         */
+        patch: operations["update_agent_stats_api_v1_agents__agent_id__stats_patch"];
+        trace?: never;
+    };
+    "/api/v1/departments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Departments
+         * @description List all departments with pagination.
+         */
+        get: operations["list_departments_api_v1_departments__get"];
+        put?: never;
+        /**
+         * Create Department
+         * @description Create a new department.
+         */
+        post: operations["create_department_api_v1_departments__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/departments/{dept_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Department
+         * @description Retrieve a department with its agents.
+         */
+        get: operations["get_department_api_v1_departments__dept_id__get"];
+        /**
+         * Update Department
+         * @description Update mutable department fields.
+         */
+        put: operations["update_department_api_v1_departments__dept_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pending Approvals
+         * @description List all pending approval requests for the caller's tenant.
+         *
+         *     Tenant-scoped: only requests with ``org_id == tenant.org_id`` are returned.
+         */
+        get: operations["list_pending_approvals_api_v1_approvals__get"];
+        put?: never;
+        /**
+         * Create Approval Request
+         * @description Create a new approval request.
+         *
+         *     Called by workers when an agent hits a HITL interrupt. Requires Bearer
+         *     authentication (worker shared-secret token, with ``X-Selva-Tenant-Org``
+         *     header declaring the tenant). The persisted request's ``org_id`` is
+         *     derived server-side from the authenticated caller -- callers cannot
+         *     target an arbitrary tenant.
+         *
+         *     Only the worker/service role is permitted; user-initiated approval
+         *     creation is not a supported flow.
+         */
+        post: operations["create_approval_request_api_v1_approvals__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Approval Request
+         * @description Retrieve a single approval request by ID. Tenant-scoped.
+         *
+         *     Used by workers for polling approval status and by tacticians for the
+         *     detail view. Cross-tenant lookups return 404 (not 403) to avoid leaking
+         *     the existence of approval IDs across tenants.
+         */
+        get: operations["get_approval_request_api_v1_approvals__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Request
+         * @description Approve a pending request (the Tactician presses 'A').
+         */
+        post: operations["approve_request_api_v1_approvals__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{request_id}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deny Request
+         * @description Deny a pending request with optional feedback (the Tactician presses 'B').
+         */
+        post: operations["deny_request_api_v1_approvals__request_id__deny_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dispatch Task
+         * @description Dispatch a new swarm task.
+         *
+         *     Validates compute token budget, persists the task, and publishes a
+         *     message to the Redis task queue for worker consumption.
+         */
+        post: operations["dispatch_task_api_v1_swarms_dispatch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Active Tasks
+         * @description List tasks that are currently queued or in progress.
+         */
+        get: operations["list_active_tasks_api_v1_swarms_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Board
+         * @description Return tasks grouped by status column with aggregated event data.
+         */
+        get: operations["get_task_board_api_v1_swarms_tasks_board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task
+         * @description Retrieve a single task by ID.
+         */
+        get: operations["get_task_api_v1_swarms_tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Task Status
+         * @description Update a task's status.
+         *
+         *     When the status transitions to ``completed`` or ``failed`` the
+         *     ``completed_at`` timestamp is set automatically.
+         */
+        patch: operations["update_task_status_api_v1_swarms_tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/reap-stale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reap Stale Tasks
+         * @description Auto-fail queued/pending tasks older than 1 hour.
+         *
+         *     Called periodically by workers to prevent indefinite queue buildup.
+         *     No auth required (internal endpoint).
+         */
+        post: operations["reap_stale_tasks_api_v1_swarms_tasks_reap_stale_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Billing Status
+         * @description Proxy to the Dhanam billing API to retrieve subscription status.
+         *
+         *     Falls back to a local stub when the Dhanam API is unreachable so the
+         *     office UI can still render a meaningful state.
+         */
+        get: operations["billing_status_api_v1_billing_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compute Usage
+         * @description Return compute token usage aggregated from the ledger.
+         *
+         *     Groups usage by action type for the current UTC day.
+         */
+        get: operations["compute_usage_api_v1_billing_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compute Token Status
+         * @description Return the current compute token bucket status.
+         *
+         *     The daily limit is sourced from the subscription tier; usage is
+         *     summed from the ledger for today.
+         */
+        get: operations["compute_token_status_api_v1_billing_tokens_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Billing Portal
+         * @description Create a Dhanam billing portal session for self-service management.
+         */
+        post: operations["create_billing_portal_api_v1_billing_portal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Usage
+         * @description Record a compute token debit from a worker.
+         */
+        post: operations["record_usage_api_v1_billing_record_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/check-budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Budget
+         * @description Check whether an org has remaining compute token budget for today.
+         */
+        post: operations["check_budget_api_v1_billing_check_budget_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Skills
+         * @description Return all discovered skills, optionally filtered by tier.
+         */
+        get: operations["list_skills_api_v1_skills__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/community/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enable Community
+         * @description Enable community skills at runtime.
+         */
+        post: operations["enable_community_api_v1_skills_community_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/community/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable Community
+         * @description Disable community skills at runtime.
+         */
+        post: operations["disable_community_api_v1_skills_community_disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/community/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Community Status
+         * @description Return whether community skills are currently enabled.
+         */
+        get: operations["community_status_api_v1_skills_community_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/compact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Skills Compact
+         * @description Level 0: Compact skill index.
+         *
+         *     Returns [{name, description, category}] for all SKILL.md skills.
+         *     Approximately 3,000 tokens for a 50-skill catalogue.
+         *     Intended for LLM context injection before a phase loads full skill content.
+         */
+        get: operations["list_skills_compact_api_v1_skills_compact_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/md/{skill_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Skill Full
+         * @description Level 1: Full SKILL.md content for a named skill.
+         *
+         *     Returns the complete SKILL.md text. Use this when the agent decides
+         *     it needs full instructions for a specific skill.
+         */
+        get: operations["get_skill_full_api_v1_skills_md__skill_name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/md/{skill_name}/refs/{ref_path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Skill Reference
+         * @description Level 2: Specific reference file within a skill directory.
+         *
+         *     Useful for loading supplementary docs, API references, or example code
+         *     without loading the entire skill context.
+         */
+        get: operations["get_skill_reference_api_v1_skills_md__skill_name__refs__ref_path__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/refiner/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Refiner Metrics
+         * @description Return accumulated metrics from the most recent SkillRefiner run.
+         *
+         *     Useful for monitoring the health of the skill self-improvement loop.
+         */
+        get: operations["refiner_metrics_api_v1_skills_refiner_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/telegram/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Telegram Webhook
+         * @description Hermes-style multi-channel gateway — Telegram.
+         *
+         *     Validates the ``X-Telegram-Bot-Api-Secret-Token`` header (set when
+         *     registering the webhook via ``setWebhook?secret_token=...``) and routes
+         *     the ``/initiate_acp <url>`` slash command to a Celery ACP task.
+         */
+        post: operations["telegram_webhook_api_v1_gateway_gateway_telegram_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/discord/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discord Webhook
+         * @description Hermes-style multi-channel gateway — Discord.
+         *
+         *     Validates HMAC-SHA256 signature and handles:
+         *     - ``/status``: returns recent swarm transcript hits from EdgeMemoryDB.
+         *     - ``/initiate_acp <url>``: same trigger as Telegram.
+         *
+         *     Requires ``DISCORD_WEBHOOK_SECRET`` env var. Endpoint refuses requests
+         *     when the secret is unset (no fail-open).
+         */
+        post: operations["discord_webhook_api_v1_gateway_gateway_discord_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/slack/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Slack Webhook
+         * @description Hermes-style multi-channel gateway — Slack.
+         *
+         *     Validates Slack's v0 HMAC-SHA256 signature with timestamp replay protection
+         *     (rejects requests older than 5 minutes), then routes slash commands.
+         */
+        post: operations["slack_webhook_api_v1_gateway_gateway_slack_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/email/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email Inbound
+         * @description Accepts inbound email parse payloads from SendGrid or Postmark.
+         *     Routes commands from whitelisted sender addresses.
+         */
+        post: operations["email_inbound_api_v1_gateway_gateway_email_inbound_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/whatsapp/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whatsapp Webhook Verify
+         * @description Responds to the Meta webhook verification challenge (GET request).
+         *     Required during webhook registration in Meta Developer Portal.
+         */
+        get: operations["whatsapp_webhook_verify_api_v1_gateway_gateway_whatsapp_webhook_get"];
+        put?: never;
+        /**
+         * Whatsapp Inbound
+         * @description Receive inbound WhatsApp messages via Meta Cloud API webhook.
+         *     Validates X-Hub-Signature-256 and routes /acp commands.
+         *
+         *     Requires ``WHATSAPP_ACCESS_TOKEN`` env var (used as the HMAC secret).
+         *     Endpoint refuses requests when the secret is unset.
+         */
+        post: operations["whatsapp_inbound_api_v1_gateway_gateway_whatsapp_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/matrix/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Matrix Inbound
+         * @description Receive events from a Matrix appservice registration.
+         *     Validates the Authorization: Bearer <token> header.
+         */
+        put: operations["matrix_inbound_api_v1_gateway_gateway_matrix_webhook_put"];
+        /**
+         * Matrix Inbound
+         * @description Receive events from a Matrix appservice registration.
+         *     Validates the Authorization: Bearer <token> header.
+         */
+        post: operations["matrix_inbound_api_v1_gateway_gateway_matrix_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/mattermost/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mattermost Inbound
+         * @description Receive Mattermost slash command: /initiate_acp <url>.
+         *     Validates the shared mattermost_token from the request body.
+         */
+        post: operations["mattermost_inbound_api_v1_gateway_gateway_mattermost_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/signal/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signal Inbound
+         * @description Receive inbound Signal messages via signal-cli REST API envelope format.
+         *     Validates source number against the configured whitelist.
+         */
+        post: operations["signal_inbound_api_v1_gateway_gateway_signal_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/sms/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sms Inbound
+         * @description Accepts Twilio SMS webhook payloads.
+         *     Validates the X-Twilio-Signature HMAC and routes commands.
+         */
+        post: operations["sms_inbound_api_v1_gateway_gateway_sms_inbound_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/dingtalk/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dingtalk Webhook
+         * @description DingTalk inbound webhook — HMAC-SHA256 validated.
+         */
+        post: operations["dingtalk_webhook_api_v1_gateway_gateway_dingtalk_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/feishu/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Feishu Webhook
+         * @description Feishu (Lark) event webhook — challenge verification + ACP routing.
+         */
+        post: operations["feishu_webhook_api_v1_gateway_gateway_feishu_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/wecom/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wecom Webhook
+         * @description WeCom outgoing webhook — token-validated.
+         */
+        post: operations["wecom_webhook_api_v1_gateway_gateway_wecom_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/wecom/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wecom Callback
+         * @description WeCom server-mode callback — echoes challenge, logs encrypted messages.
+         */
+        post: operations["wecom_callback_api_v1_gateway_gateway_wecom_callback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/weixin/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Weixin Webhook
+         * @description Weixin via WxPusher — appToken validated.
+         */
+        post: operations["weixin_webhook_api_v1_gateway_gateway_weixin_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/bluebubbles/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bluebubbles Webhook
+         * @description BlueBubbles iMessage bridge webhook — password validated.
+         */
+        post: operations["bluebubbles_webhook_api_v1_gateway_gateway_bluebubbles_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/homeassistant/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Homeassistant Webhook
+         * @description Home Assistant webhook — Bearer long-lived token validated.
+         */
+        post: operations["homeassistant_webhook_api_v1_gateway_gateway_homeassistant_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/webhook/{channel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generic Webhook
+         * @description Generic HMAC-signed webhook. channel_id used for routing/logging.
+         *
+         *     Requires ``AUTOSWARM_WEBHOOK_SECRET`` env var. Endpoint refuses requests
+         *     when the secret is unset OR when the X-Webhook-Signature header is missing
+         *     (no fail-open).
+         */
+        post: operations["generic_webhook_api_v1_gateway_gateway_webhook__channel_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/gateway/api/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Api Complete
+         * @description Direct API completion — fire-and-forget ACP dispatch. Mirrors Hermes api_server mode.
+         */
+        post: operations["api_complete_api_v1_gateway_gateway_api_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Workflows
+         * @description List all workflows for the current tenant with pagination.
+         */
+        get: operations["list_workflows_api_v1_workflows_get"];
+        put?: never;
+        /**
+         * Create Workflow
+         * @description Create a new workflow definition.
+         */
+        post: operations["create_workflow_api_v1_workflows_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Templates
+         * @description List available workflow templates from data/workflow-templates/.
+         */
+        get: operations["list_templates_api_v1_workflows_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/from-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create From Template
+         * @description Create a new workflow from a built-in template.
+         */
+        post: operations["create_from_template_api_v1_workflows_from_template_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Workflow
+         * @description Get a single workflow by ID.
+         */
+        get: operations["get_workflow_api_v1_workflows__workflow_id__get"];
+        /**
+         * Update Workflow
+         * @description Update an existing workflow definition.
+         */
+        put: operations["update_workflow_api_v1_workflows__workflow_id__put"];
+        post?: never;
+        /**
+         * Delete Workflow
+         * @description Delete a workflow definition.
+         */
+        delete: operations["delete_workflow_api_v1_workflows__workflow_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Workflow
+         * @description Validate a workflow YAML without persisting it.
+         */
+        post: operations["validate_workflow_api_v1_workflows_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Workflow
+         * @description Import a workflow from YAML content.
+         */
+        post: operations["import_workflow_api_v1_workflows_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Workflow
+         * @description Export a workflow as YAML content.
+         */
+        get: operations["export_workflow_api_v1_workflows__workflow_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Artifacts
+         * @description List artifacts with pagination, optionally filtered by task_id.
+         */
+        get: operations["list_artifacts_api_v1_artifacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/artifacts/{artifact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Artifact
+         * @description Get artifact metadata by ID.
+         */
+        get: operations["get_artifact_api_v1_artifacts__artifact_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Artifact
+         * @description Delete an artifact by ID.
+         */
+        delete: operations["delete_artifact_api_v1_artifacts__artifact_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/artifacts/{artifact_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Artifact
+         * @description Stream artifact content.
+         */
+        get: operations["download_artifact_api_v1_artifacts__artifact_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketplace/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Marketplace Skills
+         * @description List marketplace skill entries with pagination, search, category filter, and sorting.
+         */
+        get: operations["list_marketplace_skills_api_v1_marketplace_skills_get"];
+        put?: never;
+        /**
+         * Publish Skill
+         * @description Publish a new skill to the marketplace.
+         *
+         *     The ``yaml_content`` field must contain valid SKILL.md content with
+         *     YAML frontmatter delimited by ``---`` fences.
+         */
+        post: operations["publish_skill_api_v1_marketplace_skills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketplace/skills/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Marketplace Skill
+         * @description Get a single marketplace entry with full details including ratings.
+         */
+        get: operations["get_marketplace_skill_api_v1_marketplace_skills__entry_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Unpublish Skill
+         * @description Unpublish a marketplace skill. Only the original author may delete.
+         */
+        delete: operations["unpublish_skill_api_v1_marketplace_skills__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketplace/skills/{entry_id}/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rate Skill
+         * @description Rate a marketplace skill. Upserts if the user already rated this entry.
+         */
+        post: operations["rate_skill_api_v1_marketplace_skills__entry_id__rate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketplace/skills/{entry_id}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Install Skill
+         * @description Install a marketplace skill into the community-skills directory.
+         *
+         *     Writes the YAML content as ``SKILL.md`` into
+         *     ``packages/skills/community-skills/{name}/`` and increments the download
+         *     counter.  After writing, the skill registry is refreshed so the new skill
+         *     becomes discoverable immediately.
+         */
+        post: operations["install_skill_api_v1_marketplace_skills__entry_id__install_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Maps
+         * @description List all maps for the current tenant with pagination.
+         */
+        get: operations["list_maps_api_v1_maps_get"];
+        put?: never;
+        /**
+         * Create Map
+         * @description Create a new map definition.
+         */
+        post: operations["create_map_api_v1_maps_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maps/{map_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Map
+         * @description Get a single map by ID.
+         */
+        get: operations["get_map_api_v1_maps__map_id__get"];
+        /**
+         * Update Map
+         * @description Update an existing map definition.
+         */
+        put: operations["update_map_api_v1_maps__map_id__put"];
+        post?: never;
+        /**
+         * Delete Map
+         * @description Delete a map definition.
+         */
+        delete: operations["delete_map_api_v1_maps__map_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maps/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Map
+         * @description Validate TMJ content and return it (for download).
+         */
+        post: operations["export_map_api_v1_maps_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maps/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Map
+         * @description Import a TMJ file as a new map.
+         */
+        post: operations["import_map_api_v1_maps_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Events
+         * @description List upcoming calendar events for the current user.
+         *
+         *     Returns events in the next *hours* hours (default 8) and a ``is_busy``
+         *     flag indicating whether the user is currently in a meeting.
+         */
+        get: operations["list_events_api_v1_calendar_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Calendar
+         * @description Store a calendar connection for the current user.
+         *
+         *     If a connection already exists it is updated with the new tokens.
+         */
+        post: operations["connect_calendar_api_v1_calendar_connect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect Calendar
+         * @description Remove the current user's calendar connection.
+         */
+        delete: operations["disconnect_calendar_api_v1_calendar_disconnect_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calendar Status
+         * @description Check the current user's calendar connection status.
+         */
+        get: operations["calendar_status_api_v1_calendar_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/intelligence/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Intelligence Config
+         * @description Return org-level inference config (providers, model assignments, priorities).
+         *
+         *     API keys are NEVER included in the response.
+         */
+        get: operations["get_intelligence_config_api_v1_intelligence_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Invoice
+         * @description Dispatch a billing graph to generate and stamp a CFDI 4.0 invoice.
+         *
+         *     Creates a ``SwarmTask`` with ``graph_type="billing"`` and enqueues it
+         *     on the Redis task stream for worker consumption.
+         */
+        post: operations["generate_invoice_api_v1_invoices_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/{uuid}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Invoice Status
+         * @description Check CFDI status via Karafiel.
+         *
+         *     Queries the Karafiel compliance API for the stamping status of a
+         *     given CFDI UUID.  Returns a placeholder when Karafiel is unavailable.
+         */
+        get: operations["invoice_status_api_v1_invoices__uuid__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chat History
+         * @description Return recent chat messages for a room with pagination, newest first.
+         *
+         *     Pagination: use ``limit`` and ``offset`` for standard pagination, or pass
+         *     ``before`` with the ``created_at`` of the oldest message in your current
+         *     batch to fetch the next page (cursor-based).
+         *
+         *     Tenant-scoped: only messages with ``org_id == tenant.org_id`` are returned.
+         */
+        get: operations["get_chat_history_api_v1_chat_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Chat Message
+         * @description Persist a chat message.
+         *
+         *     Requires Bearer-token authentication. The persisted message's ``org_id``
+         *     is derived server-side from the authenticated caller (``user['org_id']``)
+         *     -- the request body does not carry an ``org_id`` field.
+         *
+         *     Called by Colyseus (fire-and-forget) using the worker shared-secret token
+         *     plus the ``X-Selva-Tenant-Org`` header to declare the tenant scope.
+         */
+        post: operations["create_chat_message_api_v1_chat_messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Events
+         * @description List events with optional filters, newest first. Tenant-scoped.
+         */
+        get: operations["list_events_api_v1_events__get"];
+        put?: never;
+        /**
+         * Create Event
+         * @description Create a new task event.
+         *
+         *     Requires Bearer token authentication (worker token or JWT). The event's
+         *     ``org_id`` is derived server-side from the authenticated caller -- callers
+         *     cannot specify a target ``org_id`` in the body. Workers declare their
+         *     tenant via the ``X-Selva-Tenant-Org`` header (resolved by ``auth.py``).
+         *
+         *     Broadcasts only to WebSocket clients in the same tenant.
+         */
+        post: operations["create_event_api_v1_events__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/tasks/{task_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Timeline
+         * @description Full execution timeline for a single task. Tenant-scoped.
+         *
+         *     Returns only events with ``org_id == tenant.org_id``. A task that
+         *     belongs to another tenant (or does not exist at all) yields an empty
+         *     timeline rather than 404 -- this matches the response shape callers
+         *     expect for newly-dispatched tasks before any events have landed,
+         *     while still preventing cross-tenant data leak.
+         */
+        get: operations["get_task_timeline_api_v1_events_tasks__task_id__timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Metrics Dashboard
+         * @description Return aggregated ops metrics for the dashboard.
+         */
+        get: operations["get_metrics_dashboard_api_v1_metrics_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/roi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Roi Dashboard
+         * @description ROI dashboard: per-agent revenue vs cost.
+         *
+         *     Currently returns cost-side data from ComputeTokenLedger.
+         *     Revenue attribution (Phase 4 RevenueAttribution model) will be
+         *     added when the model and webhook wiring are complete.
+         */
+        get: operations["get_roi_dashboard_api_v1_metrics_roi_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Connected Users
+         * @description List currently connected users via Redis.
+         *
+         *     The Colyseus server publishes player state to Redis. We read the
+         *     latest snapshot here. Returns an empty list if Redis is unavailable.
+         */
+        get: operations["list_connected_users_api_v1_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kick User
+         * @description Publish a kick action to Redis for the Colyseus server to execute.
+         */
+        post: operations["kick_user_api_v1_admin_kick_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/room-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Room Config
+         * @description Update room configuration via Redis pub/sub.
+         */
+        post: operations["update_room_config_api_v1_admin_room_config_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Audit Logs
+         * @description List audit logs with pagination and optional filters. Admin only.
+         */
+        get: operations["list_audit_logs_api_v1_audit__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Audit Logs
+         * @description Export audit logs as CSV. Admin only. Max 10,000 rows.
+         */
+        get: operations["export_audit_logs_api_v1_audit_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/unified/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Unified Audit
+         * @description Return a merged, timestamp-DESC-ordered stream across the 4 Selva ledgers.
+         *
+         *     Query strategy: we fetch ``limit + 1`` rows from each requested source,
+         *     merge in Python, sort, then slice to ``limit``. For ``limit=500`` and four
+         *     sources that's up to 2004 rows materialized per request, which is bounded
+         *     and cheap given the ``ix_*_audit_created`` indexes. If we ever need
+         *     > 500-row pages we'll switch to an async heap-merge iterator.
+         *
+         *     The ``next_cursor`` is the oldest timestamp we returned; the client passes
+         *     it back as ``cursor`` on the next call to page strictly older.
+         */
+        get: operations["list_unified_audit_api_v1_audit_unified__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/unified": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Unified Audit
+         * @description Return a merged, timestamp-DESC-ordered stream across the 4 Selva ledgers.
+         *
+         *     Query strategy: we fetch ``limit + 1`` rows from each requested source,
+         *     merge in Python, sort, then slice to ``limit``. For ``limit=500`` and four
+         *     sources that's up to 2004 rows materialized per request, which is bounded
+         *     and cheap given the ``ix_*_audit_created`` indexes. If we ever need
+         *     > 500-row pages we'll switch to an async heap-merge iterator.
+         *
+         *     The ``next_cursor`` is the oldest timestamp we returned; the client passes
+         *     it back as ``cursor`` on the next call to page strictly older.
+         */
+        get: operations["list_unified_audit_api_v1_audit_unified_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sales Pipeline Metrics
+         * @description Sales pipeline metrics: task counts and average duration for sales graph.
+         */
+        get: operations["sales_pipeline_metrics_api_v1_analytics_sales_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/accounting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Accounting Close Status
+         * @description Accounting monthly close status: task progress for accounting graph.
+         */
+        get: operations["accounting_close_status_api_v1_analytics_accounting_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/intelligence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Intelligence Summary
+         * @description Intelligence briefing summary: count of briefings and data points.
+         */
+        get: operations["intelligence_summary_api_v1_analytics_intelligence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Tenant
+         * @description Provision a new tenant org with Mexican business defaults.
+         *
+         *     Creates the TenantConfig record and auto-generates Mexican department
+         *     structure (Direccion General, Administracion, Contabilidad, Ventas,
+         *     Operaciones, Legal).
+         *
+         *     If an RFC is provided it is validated structurally and optionally via
+         *     Karafiel when configured.
+         */
+        post: operations["create_tenant_api_v1_tenants__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Tenant
+         * @description Get the current user's tenant config.
+         */
+        get: operations["get_my_tenant_api_v1_tenants_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update My Tenant
+         * @description Update tenant settings (locale, timezone, currency, feature flags, limits).
+         *
+         *     Business identity fields (rfc, razon_social, regimen_fiscal) are
+         *     immutable after creation to ensure audit trail integrity.
+         */
+        patch: operations["update_my_tenant_api_v1_tenants_me_patch"];
+        trace?: never;
+    };
+    "/api/v1/tenants/me/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tenant Usage
+         * @description Get current tenant usage stats against configured limits.
+         *
+         *     Returns agent count, daily task count, and department count alongside
+         *     the configured limits from TenantConfig.
+         */
+        get: operations["tenant_usage_api_v1_tenants_me_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/me/sso": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Configure Sso
+         * @description Configure enterprise SSO connection for this tenant.
+         *
+         *     Stores the Janua connection ID so that users in this org are redirected
+         *     to the correct IdP during authentication.  Requires admin role.
+         */
+        patch: operations["configure_sso_api_v1_tenants_me_sso_patch"];
+        trace?: never;
+    };
+    "/api/v1/tenants/me/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Branding
+         * @description Get tenant branding config for white-label UI.
+         *
+         *     Returns sensible defaults when the tenant has no custom branding.
+         */
+        get: operations["get_branding_api_v1_tenants_me_branding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Branding
+         * @description Update white-label branding for this tenant.
+         *
+         *     Only non-null fields in the request body are applied.  Requires admin role.
+         */
+        patch: operations["update_branding_api_v1_tenants_me_branding_patch"];
+        trace?: never;
+    };
+    "/api/v1/tenant-identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Tenant Identity
+         * @description Create a tenant_identities row — call at end of onboarding.
+         */
+        post: operations["create_tenant_identity_api_v1_tenant_identities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant-identities/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve Tenant Identity
+         * @description Resolve a tenant by any per-service id.
+         */
+        get: operations["resolve_tenant_identity_api_v1_tenant_identities_resolve_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant-identities/{canonical_id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Tenant Consistency
+         * @description Stub drift check.
+         *
+         *     Real implementation needs per-service probes (Janua GET /orgs/{id},
+         *     Dhanam GET /spaces/{id}, PhyneCRM tenants.config, Karafiel GET
+         *     /orgs/{id}, Resend GET /domains/{id}). Tracked as follow-up — this
+         *     endpoint is a placeholder that confirms the row exists and returns
+         *     services_checked based on how many per-service IDs are populated on
+         *     the record.
+         */
+        post: operations["validate_tenant_consistency_api_v1_tenant_identities__canonical_id__validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/transcribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transcribe Audio
+         * @description Transcribe uploaded audio via the OpenAI Whisper API.
+         *
+         *     Accepts common audio formats (webm, wav, mp3, ogg, flac, m4a).
+         *     Returns the transcription text and requested language.
+         */
+        post: operations["transcribe_audio_api_v1_voice_transcribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/voice/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Dispatch
+         * @description Create a SwarmTask from transcribed voice input.
+         *
+         *     This endpoint accepts text (typically from a prior ``/transcribe`` call)
+         *     and dispatches it as a new task via the swarms subsystem.
+         */
+        post: operations["voice_dispatch_api_v1_voice_dispatch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Onboarding Status
+         * @description Return whether the org has chosen a voice mode yet.
+         *
+         *     Used by the UI to decide between routing the user to `/onboarding`
+         *     or letting them into `/office`.
+         */
+        get: operations["onboarding_status_api_v1_onboarding_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/voice-mode/preview/{mode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Voice Mode Preview
+         * @description Return the clause text + heads-up for a single mode (read-only).
+         */
+        get: operations["voice_mode_preview_api_v1_onboarding_voice_mode_preview__mode__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/tenant-identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tenant Identity
+         * @description Return the server-controlled outbound identity for the caller's tenant.
+         *
+         *     Used by ``SendEmailTool`` and ``SendMarketingEmailTool`` to populate
+         *     the ``From:`` header without trusting LLM-supplied kwargs. The LLM
+         *     has no input on what address goes into the From header — sender
+         *     identity is exclusively a server concern, sourced from the tenant's
+         *     own configuration.
+         *
+         *     Returns 403 for the unscoped ``platform`` org (worker tokens calling
+         *     without ``X-Selva-Tenant-Org``). Returns 404 when the tenant has no
+         *     ``tenant_configs`` row at all (i.e. truly unprovisioned). Returns
+         *     200 with nullable fields when the tenant exists but has not yet
+         *     populated the relevant fields — callers are expected to fail-closed
+         *     on missing fields rather than substituting LLM-supplied defaults.
+         */
+        get: operations["tenant_identity_api_v1_onboarding_tenant_identity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/voice-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Select Voice Mode
+         * @description First-run voice-mode selection during onboarding.
+         *
+         *     Fails with 409 if the tenant has already chosen a mode — use
+         *     PUT /settings/outbound-voice to change it.
+         */
+        post: operations["select_voice_mode_api_v1_onboarding_voice_mode_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/outbound-voice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change Voice Mode
+         * @description Change the tenant's voice mode from the /office modal.
+         *
+         *     Appends a new `voice_mode.changed` row to the consent ledger (never
+         *     overwrites the previous selection — the ledger is append-only).
+         */
+        put: operations["change_voice_mode_api_v1_settings_outbound_voice_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schedules/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Schedules
+         * @description Return all schedules owned by the authenticated user.
+         */
+        get: operations["list_schedules_api_v1_schedules__get"];
+        put?: never;
+        /**
+         * Create Schedule
+         * @description Create a recurring schedule.  The Celery Beat scheduler dynamically
+         *     picks up new entries via the ``schedules`` Postgres table.
+         */
+        post: operations["create_schedule_api_v1_schedules__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/schedules/{schedule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel Schedule
+         * @description Cancel (delete) a schedule. Users may only cancel their own; admins may cancel any.
+         */
+        delete: operations["cancel_schedule_api_v1_schedules__schedule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/command-approvals/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pending
+         * @description List all pending dangerous command approval requests.
+         */
+        get: operations["list_pending_api_v1_command_approvals_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/command-approvals/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Command
+         * @description Approve a pending dangerous command.
+         */
+        post: operations["approve_command_api_v1_command_approvals__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/command-approvals/{request_id}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deny Command
+         * @description Deny a pending dangerous command.
+         */
+        post: operations["deny_command_api_v1_command_approvals__request_id__deny_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trajectories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Trajectories
+         * @description List all exportable ACP run IDs.
+         */
+        get: operations["list_trajectories_api_v1_trajectories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trajectories/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trajectory
+         * @description Return a single ShareGPT-format trajectory for *run_id*.
+         */
+        get: operations["get_trajectory_api_v1_trajectories__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trajectories/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Batch
+         * @description Export multiple trajectories as a JSONL file download.
+         *
+         *     Body: {"run_ids": ["abc", "def"], "format": "sharegpt"}
+         */
+        post: operations["export_batch_api_v1_trajectories_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkpoints/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Checkpoints
+         * @description List all phase checkpoints for an ACP run.
+         */
+        get: operations["list_checkpoints_api_v1_checkpoints__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkpoints/{run_id}/{phase}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Checkpoint
+         * @description Retrieve the state snapshot for a specific phase of a run.
+         */
+        get: operations["get_checkpoint_api_v1_checkpoints__run_id___phase__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkpoints/{run_id}/{phase}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rollback To Phase
+         * @description Restore the ACP run state to a previous phase checkpoint and re-queue
+         *     the workflow from that phase.
+         */
+        post: operations["rollback_to_phase_api_v1_checkpoints__run_id___phase__rollback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/hub/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Browse Hub
+         * @description Browse community skills on agentskills.io.
+         */
+        get: operations["browse_hub_api_v1_skills_hub__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/hub/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Hub
+         * @description Full-text search the agentskills.io hub.
+         */
+        get: operations["search_hub_api_v1_skills_hub_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/hub/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Install Skill
+         * @description Download and install a skill from agentskills.io.
+         */
+        post: operations["install_skill_api_v1_skills_hub_install_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/playbooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Playbooks
+         * @description List all playbooks.
+         */
+        get: operations["list_playbooks_api_v1_playbooks_get"];
+        put?: never;
+        /**
+         * Create Playbook
+         * @description Create a new playbook.
+         */
+        post: operations["create_playbook_api_v1_playbooks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/playbooks/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match Playbook
+         * @description Find a matching enabled playbook for a trigger event.
+         *
+         *     Used by HeartbeatService and webhook handlers to resolve which
+         *     playbook (if any) should gate an auto-dispatched task.
+         */
+        get: operations["match_playbook_api_v1_playbooks_match_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/playbooks/{playbook_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Playbook
+         * @description Get a playbook by ID.
+         */
+        get: operations["get_playbook_api_v1_playbooks__playbook_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Playbook
+         * @description Delete a playbook.
+         */
+        delete: operations["delete_playbook_api_v1_playbooks__playbook_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Playbook
+         * @description Update a playbook.
+         */
+        patch: operations["update_playbook_api_v1_playbooks__playbook_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/gateway/phyne-crm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Phyne Crm Webhook
+         * @description Receive webhook events from PhyneCRM and auto-dispatch agent tasks.
+         *
+         *     Flow:
+         *     1. Verify HMAC signature
+         *     2. Map CRM event to internal event key
+         *     3. Look up matching playbook via /api/v1/playbooks/match
+         *     4. If playbook found and enabled → dispatch SwarmTask with playbook_id
+         *     5. If no playbook → acknowledge but don't dispatch
+         */
+        post: operations["phyne_crm_webhook_api_v1_gateway_phyne_crm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stripe/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stripe Webhook
+         * @description Verify Stripe signature; dispatch event to per-type handlers.
+         *
+         *     Stub event handlers log + 200 today. Real implementations land in
+         *     follow-up PRs as each event type is needed (subscription.created,
+         *     invoice.paid, payment_intent.succeeded, etc.).
+         */
+        post: operations["stripe_webhook_api_v1_stripe_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/probe/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Probe Draft
+         * @description Dry-run drafter. Never calls the real LLM.
+         *
+         *     Returns a deterministic, non-sentinel draft body so the probe's
+         *     "didn't return ``[LLM unavailable``" check passes. Under ``dry_run=False``
+         *     the implementation would route through the ModelRouter; keeping dry-run
+         *     as the only path here means this endpoint cannot accidentally bill.
+         */
+        post: operations["probe_draft_api_v1_probe_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/probe/email/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Probe Email Send
+         * @description Dry-run email-send contract validator.
+         *
+         *     Sanitises the HTML, returns the full shape the probe asserts on, and
+         *     never dispatches to Resend. The CLAUDE.md v2.1.1 contract requires
+         *     list-unsubscribe + sanitised HTML + fixed ``from_address``; this
+         *     endpoint is where the probe catches any regression.
+         */
+        post: operations["probe_email_send_api_v1_probe_email_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/probe/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Probe Run
+         * @description Persist a freshly-run probe report for the status page.
+         *
+         *     The probe CronJob POSTs its final ``ProbeReport.to_dict()`` here. We
+         *     stash the latest run in a single Redis key + append to a capped
+         *     history list. Redis failures are logged but do not surface to the
+         *     probe (the probe's health is defined by its own stages, not by
+         *     whether Nexus can persist its report).
+         */
+        post: operations["upload_probe_run_api_v1_probe_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/probe/latest-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Latest Probe Run
+         * @description Public read of the most recent probe run.
+         *
+         *     Intentionally unauthenticated: selva.town ``/status`` server-renders
+         *     this on every page load (with a short ``revalidate``) so the token
+         *     never needs to reach the browser. Returns ``null`` when no run has
+         *     been uploaded yet — the page handles the empty state client-side.
+         */
+        get: operations["get_latest_probe_run_api_v1_probe_latest_run_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/probe/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Probe History
+         * @description Recent probe runs, newest first. Public (same rationale as latest-run).
+         *
+         *     Capped at ``HISTORY_MAX_LEN`` rows. The status page uses this for a
+         *     mini sparkline showing the ok/fail pattern across recent hours.
+         */
+        get: operations["get_probe_history_api_v1_probe_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hitl/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Decisions
+         * @description Recent HITL decisions with filters. Observe-only; no mutation path.
+         */
+        get: operations["list_decisions_api_v1_hitl_decisions_get"];
+        put?: never;
+        /**
+         * Record Decision
+         * @description Record a HITL decision into the append-only log + roll the bucket.
+         */
+        post: operations["record_decision_api_v1_hitl_decisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hitl/confidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Confidence
+         * @description Admin dashboard over all buckets. Filterable, capped.
+         */
+        get: operations["list_confidence_api_v1_hitl_confidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chat/completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chat Completions
+         * @description OpenAI-compatible chat completion endpoint.
+         */
+        post: operations["chat_completions_v1_chat_completions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/embeddings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Embeddings
+         * @description OpenAI-compatible embeddings endpoint.
+         */
+        post: operations["embeddings_v1_embeddings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/a2a/.well-known/agent.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agent Card
+         * @description Return the agent discovery card.
+         */
+        get: operations["agent_card_api_v1_a2a__well_known_agent_json_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/a2a/tasks/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Task
+         * @description Accept a task from an external agent (one-shot).
+         */
+        post: operations["send_task_api_v1_a2a_tasks_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/a2a/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task
+         * @description Poll the status of an A2A task.
+         */
+        get: operations["get_task_api_v1_a2a_tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/a2a/tasks/sendSubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Subscribe
+         * @description Accept a task and stream status updates via SSE.
+         */
+        post: operations["send_subscribe_api_v1_a2a_tasks_sendSubscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+}
+export type webhooks = Record<string, never>;
+export interface components {
+    schemas: {
+        /** AccountingCloseStatus */
+        AccountingCloseStatus: {
+            /**
+             * Period
+             * @default
+             */
+            period: string;
+            /**
+             * Total Accounting Tasks
+             * @default 0
+             */
+            total_accounting_tasks: number;
+            /**
+             * Completed
+             * @default 0
+             */
+            completed: number;
+            /**
+             * Pending
+             * @default 0
+             */
+            pending: number;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /** Last Completed At */
+            last_completed_at?: string | null;
+        };
+        /** AgentAssign */
+        AgentAssign: {
+            /** Department Id */
+            department_id: string;
+        };
+        /**
+         * AgentCard
+         * @description Agent discovery metadata served at ``/.well-known/agent.json``.
+         *
+         *     External frameworks (CrewAI, LangGraph, MS Agent Framework) use this
+         *     to discover what this agent can do and how to call it.
+         */
+        AgentCard: {
+            /**
+             * Name
+             * @default AutoSwarm Office
+             */
+            name: string;
+            /**
+             * Description
+             * @default AI-powered virtual office with autonomous agent swarms
+             */
+            description: string;
+            /**
+             * Url
+             * @default
+             */
+            url: string;
+            /**
+             * Version
+             * @default 0.7.0
+             */
+            version: string;
+            /** Capabilities */
+            capabilities?: string[];
+            /** Skills */
+            skills?: components["schemas"]["AgentSkill"][];
+            /** Authentication */
+            authentication?: {
+                [key: string]: unknown;
+            };
+        };
+        /** AgentCreate */
+        AgentCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @default coder
+             */
+            role: string;
+            /**
+             * Level
+             * @default 1
+             */
+            level: number;
+            /** Department Id */
+            department_id?: string | null;
+            /** Skill Ids */
+            skill_ids?: string[] | null;
+        };
+        /** AgentListResponse */
+        AgentListResponse: {
+            /** Items */
+            items: components["schemas"]["AgentResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** AgentResponse */
+        AgentResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /** Status */
+            status: string;
+            /** Level */
+            level: number;
+            /** Department Id */
+            department_id: string | null;
+            /** Current Task Id */
+            current_task_id: string | null;
+            /** Skill Ids */
+            skill_ids: string[] | null;
+            /** Effective Skills */
+            effective_skills: string[];
+            /** Synergy Data */
+            synergy_data: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Tasks Completed
+             * @default 0
+             */
+            tasks_completed: number;
+            /**
+             * Tasks Failed
+             * @default 0
+             */
+            tasks_failed: number;
+            /**
+             * Approval Success Count
+             * @default 0
+             */
+            approval_success_count: number;
+            /**
+             * Approval Denial Count
+             * @default 0
+             */
+            approval_denial_count: number;
+            /** Avg Task Duration Seconds */
+            avg_task_duration_seconds?: number | null;
+            /** Last Task At */
+            last_task_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * AgentSkill
+         * @description A single capability advertised by an agent.
+         */
+        AgentSkill: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Tags */
+            tags?: string[];
+        };
+        /**
+         * AgentStatsUpdate
+         * @description Delta increments for agent performance stats. Worker-to-API.
+         */
+        AgentStatsUpdate: {
+            /**
+             * Tasks Completed Delta
+             * @default 0
+             */
+            tasks_completed_delta: number;
+            /**
+             * Tasks Failed Delta
+             * @default 0
+             */
+            tasks_failed_delta: number;
+            /**
+             * Approval Success Delta
+             * @default 0
+             */
+            approval_success_delta: number;
+            /**
+             * Approval Denial Delta
+             * @default 0
+             */
+            approval_denial_delta: number;
+            /** Task Duration Seconds */
+            task_duration_seconds?: number | null;
+        };
+        /** AgentSummary */
+        AgentSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /** Status */
+            status: string;
+            /** Level */
+            level: number;
+            /** Current Task Id */
+            current_task_id?: string | null;
+            /**
+             * Effective Skills
+             * @default []
+             */
+            effective_skills: string[];
+        };
+        /** AgentUpdate */
+        AgentUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Level */
+            level?: number | null;
+            /** Skill Ids */
+            skill_ids?: string[] | null;
+        };
+        /** ApprovalAction */
+        ApprovalAction: {
+            /** Feedback */
+            feedback?: string | null;
+        };
+        /** ApprovalListResponse */
+        ApprovalListResponse: {
+            /** Items */
+            items: components["schemas"]["nexus_api__routers__approvals__ApprovalRequestResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /**
+         * ApprovalStatus
+         * @description Status for dangerous-command approval requests.
+         * @enum {string}
+         */
+        ApprovalStatus: "pending" | "approved" | "denied" | "expired";
+        /** ArtifactListResponse */
+        ArtifactListResponse: {
+            /** Artifacts */
+            artifacts: components["schemas"]["ArtifactResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** ArtifactResponse */
+        ArtifactResponse: {
+            /** Id */
+            id: string;
+            /** Task Id */
+            task_id: string | null;
+            /** Agent Id */
+            agent_id: string | null;
+            /** Name */
+            name: string;
+            /** Content Type */
+            content_type: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at: string;
+        };
+        /** AuditLogListResponse */
+        AuditLogListResponse: {
+            /** Items */
+            items: components["schemas"]["AuditLogResponse"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /** AuditLogResponse */
+        AuditLogResponse: {
+            /** Id */
+            id: string;
+            /** Org Id */
+            org_id: string;
+            /** User Id */
+            user_id: string;
+            /** Action */
+            action: string;
+            /** Resource Type */
+            resource_type: string;
+            /** Resource Id */
+            resource_id: string | null;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            } | null;
+            /** Ip Address */
+            ip_address: string | null;
+            /** Created At */
+            created_at: string;
+        };
+        /** BatchExportRequest */
+        BatchExportRequest: {
+            /** Run Ids */
+            run_ids: string[];
+            /**
+             * Format
+             * @default sharegpt
+             */
+            format: string;
+        };
+        /** Body_transcribe_audio_api_v1_voice_transcribe_post */
+        Body_transcribe_audio_api_v1_voice_transcribe_post: {
+            /** File */
+            file: string;
+        };
+        /**
+         * BrandingConfig
+         * @description White-label branding settings for the office UI.
+         */
+        BrandingConfig: {
+            /** Brand Name */
+            brand_name?: string | null;
+            /** Brand Logo Url */
+            brand_logo_url?: string | null;
+            /** Brand Primary Color */
+            brand_primary_color?: string | null;
+        };
+        /** BucketView */
+        BucketView: {
+            /** Bucket Key */
+            bucket_key: string;
+            /** Agent Id */
+            agent_id: string | null;
+            /** Action Category */
+            action_category: string;
+            /** Org Id */
+            org_id: string;
+            /** Context Signature */
+            context_signature: string;
+            /** N Observed */
+            n_observed: number;
+            /** N Approved Clean */
+            n_approved_clean: number;
+            /** N Approved Modified */
+            n_approved_modified: number;
+            /** N Rejected */
+            n_rejected: number;
+            /** N Timeout */
+            n_timeout: number;
+            /** N Reverted */
+            n_reverted: number;
+            /** Confidence */
+            confidence: number;
+            tier: components["schemas"]["HitlConfidenceTier"];
+            /** Last Decision At */
+            last_decision_at: string | null;
+        };
+        /** BudgetResponse */
+        BudgetResponse: {
+            /** Daily Limit */
+            daily_limit: number;
+            /** Used */
+            used: number;
+            /** Remaining */
+            remaining: number;
+            /** Over Budget */
+            over_budget: boolean;
+        };
+        /**
+         * CalendarEventResponse
+         * @description Public representation of a calendar event.
+         */
+        CalendarEventResponse: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Start */
+            start: string;
+            /** End */
+            end: string;
+            /** Is All Day */
+            is_all_day: boolean;
+            /** Meeting Url */
+            meeting_url: string | null;
+            /** Organizer */
+            organizer: string;
+            /** Attendees */
+            attendees: string[];
+            /** Provider */
+            provider: string;
+        };
+        /**
+         * CalendarEventsListResponse
+         * @description List of calendar events.
+         */
+        CalendarEventsListResponse: {
+            /** Events */
+            events: components["schemas"]["CalendarEventResponse"][];
+            /** Is Busy */
+            is_busy: boolean;
+        };
+        /**
+         * CalendarProvider
+         * @description Supported calendar providers.
+         * @enum {string}
+         */
+        CalendarProvider: "google" | "microsoft";
+        /**
+         * CalendarStatusResponse
+         * @description Response for calendar connection status.
+         */
+        CalendarStatusResponse: {
+            /** Connected */
+            connected: boolean;
+            /** Provider */
+            provider?: string | null;
+            /** Connected At */
+            connected_at?: string | null;
+        };
+        /** ChatCompletionRequest */
+        ChatCompletionRequest: {
+            /**
+             * Model
+             * @default auto
+             */
+            model: string;
+            /** Messages */
+            messages: {
+                [key: string]: unknown;
+            }[];
+            /** Temperature */
+            temperature?: number | null;
+            /** Max Tokens */
+            max_tokens?: number | null;
+            /**
+             * Stream
+             * @default false
+             */
+            stream: boolean;
+            /** Tools */
+            tools?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Response Format */
+            response_format?: {
+                [key: string]: unknown;
+            } | null;
+            /** Top P */
+            top_p?: number | null;
+            /** Frequency Penalty */
+            frequency_penalty?: number | null;
+            /** Presence Penalty */
+            presence_penalty?: number | null;
+            /** Stop */
+            stop?: string[] | string | null;
+        };
+        /** ChatHistoryResponse */
+        ChatHistoryResponse: {
+            /** Items */
+            items: components["schemas"]["ChatMessageResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** ChatMessageCreate */
+        ChatMessageCreate: {
+            /** Room Id */
+            room_id: string;
+            /**
+             * Sender Session Id
+             * @default
+             */
+            sender_session_id: string;
+            /** Sender Name */
+            sender_name: string;
+            /** Content */
+            content: string;
+            /**
+             * Is System
+             * @default false
+             */
+            is_system: boolean;
+        };
+        /** ChatMessageResponse */
+        ChatMessageResponse: {
+            /** Id */
+            id: string;
+            /** Room Id */
+            room_id: string;
+            /** Sender Session Id */
+            sender_session_id: string;
+            /** Sender Name */
+            sender_name: string;
+            /** Content */
+            content: string;
+            /** Is System */
+            is_system: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** CheckpointListItem */
+        CheckpointListItem: {
+            /** Id */
+            id: string;
+            /** Phase */
+            phase: string;
+            /** Phase Index */
+            phase_index: number;
+            /** Created At */
+            created_at: string;
+        };
+        /** CheckpointState */
+        CheckpointState: {
+            /** Run Id */
+            run_id: string;
+            /** Phase */
+            phase: string;
+            /** State */
+            state: {
+                [key: string]: unknown;
+            };
+        };
+        /** ConfidenceDashboard */
+        ConfidenceDashboard: {
+            /** Total Buckets */
+            total_buckets: number;
+            /** Total Decisions */
+            total_decisions: number;
+            /** Buckets */
+            buckets: components["schemas"]["BucketView"][];
+        };
+        /**
+         * ConnectCalendarRequest
+         * @description Request body for connecting a calendar provider.
+         */
+        ConnectCalendarRequest: {
+            provider: components["schemas"]["CalendarProvider"];
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token?: string | null;
+        };
+        /**
+         * ConnectResponse
+         * @description Response after connecting a calendar.
+         */
+        ConnectResponse: {
+            /**
+             * Connected
+             * @default true
+             */
+            connected: boolean;
+            /** Provider */
+            provider: string;
+        };
+        /** ConnectedUser */
+        ConnectedUser: {
+            /** Session Id */
+            session_id: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+        };
+        /** CreateApprovalRequest */
+        CreateApprovalRequest: {
+            /** Agent Id */
+            agent_id: string;
+            /** Action Category */
+            action_category: string;
+            /** Action Type */
+            action_type: string;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Reasoning
+             * @default
+             */
+            reasoning: string;
+            /**
+             * Urgency
+             * @default medium
+             */
+            urgency: string;
+            /** Diff */
+            diff?: string | null;
+        };
+        /** CreateEventRequest */
+        CreateEventRequest: {
+            /** Event Type */
+            event_type: string;
+            /** Event Category */
+            event_category: string;
+            /** Task Id */
+            task_id?: string | null;
+            /** Agent Id */
+            agent_id?: string | null;
+            /** Node Id */
+            node_id?: string | null;
+            /** Graph Type */
+            graph_type?: string | null;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            } | null;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Provider */
+            provider?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Token Count */
+            token_count?: number | null;
+            /** Error Message */
+            error_message?: string | null;
+            /** Request Id */
+            request_id?: string | null;
+        };
+        /** CreateFromTemplateRequest */
+        CreateFromTemplateRequest: {
+            /** Template Filename */
+            template_filename: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** DecisionList */
+        DecisionList: {
+            /** Total */
+            total: number;
+            /** Decisions */
+            decisions: components["schemas"]["DecisionView"][];
+        };
+        /**
+         * DecisionOutcome
+         * @description Mirror of `HitlOutcome` — see `confidence.py` docstring rationale.
+         * @enum {string}
+         */
+        DecisionOutcome: "approved_clean" | "approved_modified" | "rejected" | "timeout" | "downstream_reverted";
+        /** DecisionView */
+        DecisionView: {
+            /** Id */
+            id: string;
+            /** Decided At */
+            decided_at: string;
+            /** Agent Id */
+            agent_id: string | null;
+            /** Action Category */
+            action_category: string;
+            /** Org Id */
+            org_id: string;
+            /** Bucket Key */
+            bucket_key: string;
+            outcome: components["schemas"]["HitlOutcome"];
+            /** Approver Id */
+            approver_id: string | null;
+            /** Latency Ms */
+            latency_ms: number | null;
+            /** Notes */
+            notes: string | null;
+        };
+        /** DepartmentCreate */
+        DepartmentCreate: {
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Max Agents
+             * @default 5
+             */
+            max_agents: number;
+            /**
+             * Position X
+             * @default 0
+             */
+            position_x: number;
+            /**
+             * Position Y
+             * @default 0
+             */
+            position_y: number;
+        };
+        /** DepartmentDetailResponse */
+        DepartmentDetailResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Description */
+            description: string;
+            /** Max Agents */
+            max_agents: number;
+            /** Position X */
+            position_x: number;
+            /** Position Y */
+            position_y: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Agents */
+            agents: components["schemas"]["AgentSummary"][];
+        };
+        /** DepartmentListResponse */
+        DepartmentListResponse: {
+            /** Items */
+            items: components["schemas"]["DepartmentResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** DepartmentResponse */
+        DepartmentResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Description */
+            description: string;
+            /** Max Agents */
+            max_agents: number;
+            /** Position X */
+            position_x: number;
+            /** Position Y */
+            position_y: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DepartmentUpdate */
+        DepartmentUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Max Agents */
+            max_agents?: number | null;
+            /** Position X */
+            position_x?: number | null;
+            /** Position Y */
+            position_y?: number | null;
+        };
+        /**
+         * DisconnectResponse
+         * @description Response after disconnecting a calendar.
+         */
+        DisconnectResponse: {
+            /**
+             * Disconnected
+             * @default true
+             */
+            disconnected: boolean;
+        };
+        /** DispatchRequest */
+        DispatchRequest: {
+            /** Description */
+            description: string;
+            /**
+             * Graph Type
+             * @default sequential
+             */
+            graph_type: string;
+            /** Assigned Agent Ids */
+            assigned_agent_ids?: string[];
+            /** Required Skills */
+            required_skills?: string[];
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Workflow Id
+             * @description UUID of a custom workflow definition (required for graph_type='custom')
+             */
+            workflow_id?: string | null;
+        };
+        /** DraftRequest */
+        DraftRequest: {
+            /** Correlation Id */
+            correlation_id: string;
+            /** Lead Id */
+            lead_id: string;
+            /**
+             * Dry Run
+             * @default true
+             */
+            dry_run: boolean;
+        };
+        /** DraftResponse */
+        DraftResponse: {
+            /** Draft */
+            draft: string;
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /** Token Count */
+            token_count: number;
+        };
+        /** EmailSendRequest */
+        EmailSendRequest: {
+            /** Correlation Id */
+            correlation_id: string;
+            /** Lead Id */
+            lead_id: string;
+            /** Body */
+            body: string;
+            /**
+             * Dry Run
+             * @default true
+             */
+            dry_run: boolean;
+        };
+        /** EmailSendResponse */
+        EmailSendResponse: {
+            /** Message Id */
+            message_id: string;
+            /** From Address */
+            from_address: string;
+            /** Provider */
+            provider: string;
+            /** List Unsubscribe Header Present */
+            list_unsubscribe_header_present: boolean;
+            /** Sanitized Html */
+            sanitized_html: string;
+        };
+        /** EmbeddingRequest */
+        EmbeddingRequest: {
+            /** Input */
+            input: string | string[];
+            /**
+             * Model
+             * @default text-embedding-3-small
+             */
+            model: string;
+            /**
+             * Encoding Format
+             * @default float
+             */
+            encoding_format: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HitlConfidenceTier
+         * @description Promotion ladder. Sprint 1 only ever assigns ASK.
+         * @enum {string}
+         */
+        HitlConfidenceTier: "ask" | "ask_quiet" | "allow_shadow" | "allow";
+        /**
+         * HitlOutcome
+         * @description Terminal outcomes for a HITL decision.
+         *
+         *     Order matters for the Beta posterior update:
+         *         approved_clean      → α += 1.0  (full trust signal)
+         *         approved_modified   → α += 0.3, β += 0.7  (partial rejection)
+         *         rejected            → β += 1.0
+         *         timeout             → β += 0.5  (silence ≠ approval)
+         *         downstream_reverted → β += 2.0  (loud negative; demotes buckets)
+         * @enum {string}
+         */
+        HitlOutcome: "approved_clean" | "approved_modified" | "rejected" | "timeout" | "downstream_reverted";
+        /** HubSkillResponse */
+        HubSkillResponse: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Author */
+            author: string;
+            /** Version */
+            version: string;
+            /** Category */
+            category: string;
+            /** Downloads */
+            downloads: number;
+            /** Url */
+            url: string;
+            /** Tags */
+            tags: string[];
+        };
+        /** InstallRequest */
+        InstallRequest: {
+            /** Skill Name */
+            skill_name: string;
+            /** Target Dir */
+            target_dir?: string | null;
+        };
+        /**
+         * InstallResponse
+         * @description Response after installing a skill from the marketplace.
+         */
+        InstallResponse: {
+            /**
+             * Installed
+             * @default true
+             */
+            installed: boolean;
+            /** Skill Name */
+            skill_name: string;
+            /** Install Path */
+            install_path: string;
+        };
+        /** IntelligenceSummary */
+        IntelligenceSummary: {
+            /**
+             * Total Briefings
+             * @default 0
+             */
+            total_briefings: number;
+            /** Last Briefing At */
+            last_briefing_at?: string | null;
+            /**
+             * Dof Entries Scanned
+             * @default 0
+             */
+            dof_entries_scanned: number;
+            /**
+             * Indicators Fetched
+             * @default 0
+             */
+            indicators_fetched: number;
+            /**
+             * Period
+             * @default
+             */
+            period: string;
+        };
+        /**
+         * InvoiceDispatchResponse
+         * @description Response after dispatching a billing graph task.
+         */
+        InvoiceDispatchResponse: {
+            /** Task Id */
+            task_id: string;
+            /** Status */
+            status: string;
+        };
+        /**
+         * InvoiceRequest
+         * @description Payload for generating a CFDI 4.0 invoice via the billing graph.
+         */
+        InvoiceRequest: {
+            /**
+             * Receptor Rfc
+             * @description Receptor RFC (12 or 13 chars)
+             */
+            receptor_rfc: string;
+            /**
+             * Conceptos
+             * @description Line items (clave_prod_serv, descripcion, importe, ...)
+             */
+            conceptos: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Forma Pago
+             * @description SAT forma de pago code
+             * @default 01
+             */
+            forma_pago: string;
+            /**
+             * Metodo Pago
+             * @description PUE or PPD
+             * @default PUE
+             */
+            metodo_pago: string;
+            /**
+             * Moneda
+             * @description Currency code
+             * @default MXN
+             */
+            moneda: string;
+            /**
+             * Emisor Rfc
+             * @description Override emisor RFC (defaults to org config)
+             */
+            emisor_rfc?: string | null;
+            /**
+             * Customer Email
+             * @description Email for invoice delivery
+             */
+            customer_email?: string | null;
+            /**
+             * Customer Phone
+             * @description Phone for WhatsApp delivery
+             */
+            customer_phone?: string | null;
+        };
+        /**
+         * InvoiceStatusResponse
+         * @description CFDI status lookup result.
+         */
+        InvoiceStatusResponse: {
+            /** Uuid */
+            uuid: string;
+            /** Status */
+            status: string;
+            /** Detail */
+            detail?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** KickRequest */
+        KickRequest: {
+            /** Session Id */
+            session_id: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+        };
+        /** MapCreateRequest */
+        MapCreateRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Tmj Content */
+            tmj_content: string;
+        };
+        /** MapImportRequest */
+        MapImportRequest: {
+            /** Tmj Content */
+            tmj_content: string;
+        };
+        /** MapListResponse */
+        MapListResponse: {
+            /** Items */
+            items: components["schemas"]["MapResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** MapResponse */
+        MapResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Tmj Content */
+            tmj_content: string;
+            /** Org Id */
+            org_id: string;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /** MapUpdateRequest */
+        MapUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Tmj Content */
+            tmj_content?: string | null;
+        };
+        /**
+         * MarketplaceEntryDetailResponse
+         * @description Detailed representation including individual ratings.
+         */
+        MarketplaceEntryDetailResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Author */
+            author: string;
+            /** Version */
+            version: string;
+            /** Readme */
+            readme: string | null;
+            /** Download Url */
+            download_url: string | null;
+            /** Category */
+            category: string | null;
+            /** Tags */
+            tags: string[];
+            /** Downloads */
+            downloads: number;
+            /** Avg Rating */
+            avg_rating: number | null;
+            /** Rating Count */
+            rating_count: number;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Yaml Content */
+            yaml_content: string;
+            /** Ratings */
+            ratings: components["schemas"]["SkillRatingResponse"][];
+        };
+        /**
+         * MarketplaceEntryResponse
+         * @description Public representation of a marketplace skill entry.
+         */
+        MarketplaceEntryResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Author */
+            author: string;
+            /** Version */
+            version: string;
+            /** Readme */
+            readme: string | null;
+            /** Download Url */
+            download_url: string | null;
+            /** Category */
+            category: string | null;
+            /** Tags */
+            tags: string[];
+            /** Downloads */
+            downloads: number;
+            /** Avg Rating */
+            avg_rating: number | null;
+            /** Rating Count */
+            rating_count: number;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /**
+         * MarketplaceListResponse
+         * @description Paginated list of marketplace entries.
+         */
+        MarketplaceListResponse: {
+            /** Entries */
+            entries: components["schemas"]["MarketplaceEntryResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** MetricsDashboardResponse */
+        MetricsDashboardResponse: {
+            /** Period */
+            period: string;
+            /** Agent Utilization Pct */
+            agent_utilization_pct: number;
+            /** Task Throughput */
+            task_throughput: {
+                [key: string]: unknown;
+            };
+            /** Approval Latency */
+            approval_latency: {
+                [key: string]: unknown;
+            };
+            /** Cost Breakdown */
+            cost_breakdown: {
+                [key: string]: unknown;
+            }[];
+            /** Error Rate */
+            error_rate: number;
+            /** Trends */
+            trends: {
+                [key: string]: components["schemas"]["TrendPoint"][];
+            };
+            /** Recent Errors */
+            recent_errors: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * ModelAssignmentResponse
+         * @description Model assignment without sensitive fields.
+         */
+        ModelAssignmentResponse: {
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /**
+             * Max Tokens
+             * @default 4096
+             */
+            max_tokens: number;
+            /**
+             * Temperature
+             * @default 0.7
+             */
+            temperature: number;
+        };
+        /**
+         * OnboardingStatus
+         * @description Whether the tenant has completed voice-mode onboarding.
+         */
+        OnboardingStatus: {
+            /** Voice Mode */
+            voice_mode: string | null;
+            /** Onboarding Complete */
+            onboarding_complete: boolean;
+            /** Clause Version */
+            clause_version: string;
+        };
+        /**
+         * OrgConfigResponse
+         * @description Org-level inference config — safe for API consumers.
+         *
+         *     API keys and agent templates are intentionally excluded.
+         */
+        OrgConfigResponse: {
+            /**
+             * Providers
+             * @default {}
+             */
+            providers: {
+                [key: string]: components["schemas"]["ProviderSummary"];
+            };
+            /**
+             * Model Assignments
+             * @default {}
+             */
+            model_assignments: {
+                [key: string]: components["schemas"]["ModelAssignmentResponse"];
+            };
+            /** Cloud Priority */
+            cloud_priority?: string[] | null;
+            /** Cheapest Priority */
+            cheapest_priority?: string[] | null;
+            /**
+             * Embedding Provider
+             * @default openai
+             */
+            embedding_provider: string;
+            /**
+             * Embedding Model
+             * @default text-embedding-3-small
+             */
+            embedding_model: string;
+        };
+        /** PlaybookCreate */
+        PlaybookCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Trigger Event
+             * @description Event key (e.g., 'crm:hot_lead')
+             */
+            trigger_event: string;
+            /**
+             * Allowed Actions
+             * @description ActionCategory values allowed without HITL
+             */
+            allowed_actions: string[];
+            /**
+             * Token Budget
+             * @description Max compute tokens per execution
+             * @default 50
+             */
+            token_budget: number;
+            /**
+             * Financial Cap Cents
+             * @description Max USD cents exposure per execution
+             * @default 0
+             */
+            financial_cap_cents: number;
+            /**
+             * Require Approval
+             * @description If True, playbook still requires HITL
+             * @default false
+             */
+            require_approval: boolean;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+        };
+        /** PlaybookResponse */
+        PlaybookResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Trigger Event */
+            trigger_event: string;
+            /** Allowed Actions */
+            allowed_actions: string[];
+            /** Token Budget */
+            token_budget: number;
+            /** Financial Cap Cents */
+            financial_cap_cents: number;
+            /** Require Approval */
+            require_approval: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Org Id */
+            org_id: string;
+            /** Created At */
+            created_at: string;
+        };
+        /** PlaybookUpdate */
+        PlaybookUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Allowed Actions */
+            allowed_actions?: string[] | null;
+            /** Token Budget */
+            token_budget?: number | null;
+            /** Financial Cap Cents */
+            financial_cap_cents?: number | null;
+            /** Require Approval */
+            require_approval?: boolean | null;
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** ProbeRunReport */
+        ProbeRunReport: {
+            /** Correlation Id */
+            correlation_id: string;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Started At */
+            started_at: number;
+            /** Finished At */
+            finished_at: number;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Ok */
+            ok: boolean;
+            /** Fail Count */
+            fail_count: number;
+            /** Stages */
+            stages: components["schemas"]["StageReport"][];
+        };
+        /**
+         * ProviderSummary
+         * @description Provider info with api_key_env redacted.
+         */
+        ProviderSummary: {
+            /** Base Url */
+            base_url: string;
+            /**
+             * Vision
+             * @default true
+             */
+            vision: boolean;
+            /**
+             * Timeout
+             * @default 120
+             */
+            timeout: number;
+        };
+        /**
+         * PublishSkillRequest
+         * @description Request body for publishing a new skill to the marketplace.
+         */
+        PublishSkillRequest: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Yaml Content */
+            yaml_content: string;
+            /** Readme */
+            readme?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Tags */
+            tags?: string[];
+        };
+        /**
+         * RateSkillRequest
+         * @description Request body for rating a marketplace skill.
+         */
+        RateSkillRequest: {
+            /** Rating */
+            rating: number;
+            /** Review */
+            review?: string | null;
+        };
+        /**
+         * RecordDecisionRequest
+         * @description Payload a caller POSTs when a HITL gate resolves.
+         */
+        RecordDecisionRequest: {
+            /** Agent Id */
+            agent_id?: string | null;
+            /** Action Category */
+            action_category: string;
+            /** Org Id */
+            org_id: string;
+            /** Context */
+            context?: {
+                [key: string]: unknown;
+            };
+            outcome: components["schemas"]["DecisionOutcome"];
+            /** Approver Id */
+            approver_id?: string | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Payload Hash */
+            payload_hash?: string | null;
+            /** Diff Hash */
+            diff_hash?: string | null;
+            /** Parent Decision Id */
+            parent_decision_id?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** RecordDecisionResponse */
+        RecordDecisionResponse: {
+            /** Decision Id */
+            decision_id: string;
+            /** Bucket Key */
+            bucket_key: string;
+            /** Context Signature */
+            context_signature: string;
+            /** Confidence */
+            confidence: number;
+            /** N Observed */
+            n_observed: number;
+            tier: components["schemas"]["HitlConfidenceTier"];
+        };
+        /** RecordRequest */
+        RecordRequest: {
+            /** Action */
+            action: string;
+            /** Amount */
+            amount: number;
+            /** Provider */
+            provider?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Agent Id */
+            agent_id?: string | null;
+            /** Task Id */
+            task_id?: string | null;
+            /**
+             * Org Id
+             * @default default
+             */
+            org_id: string;
+        };
+        /** RoomConfigUpdate */
+        RoomConfigUpdate: {
+            /** Max Players */
+            max_players?: number | null;
+            /** Motd */
+            motd?: string | null;
+        };
+        /**
+         * SSOConfig
+         * @description Enterprise SSO connection configuration.
+         */
+        SSOConfig: {
+            /** Janua Connection Id */
+            janua_connection_id: string;
+        };
+        /** SalesPipelineMetrics */
+        SalesPipelineMetrics: {
+            /**
+             * Total Leads
+             * @default 0
+             */
+            total_leads: number;
+            /**
+             * Active Tasks
+             * @default 0
+             */
+            active_tasks: number;
+            /**
+             * Completed Tasks
+             * @default 0
+             */
+            completed_tasks: number;
+            /**
+             * Failed Tasks
+             * @default 0
+             */
+            failed_tasks: number;
+            /** Avg Duration Seconds */
+            avg_duration_seconds?: number | null;
+            /**
+             * Period
+             * @default
+             */
+            period: string;
+        };
+        /** ScheduleCreate */
+        ScheduleCreate: {
+            /**
+             * Cron Expr
+             * @description Standard 5-field crontab expression
+             * @example 0 9 * * 1
+             */
+            cron_expr: string;
+            action: components["schemas"]["ScheduledAction"];
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /** Description */
+            description?: string | null;
+        };
+        /** ScheduleResponse */
+        ScheduleResponse: {
+            /** Id */
+            id: string;
+            /** User Id */
+            user_id: string;
+            /** Cron Expr */
+            cron_expr: string;
+            action: components["schemas"]["ScheduledAction"];
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Enabled */
+            enabled: boolean;
+            /** Description */
+            description: string | null;
+            /** Created At */
+            created_at: string;
+            /** Last Run At */
+            last_run_at: string | null;
+        };
+        /**
+         * ScheduledAction
+         * @description Actions that can be scheduled via cron expressions.
+         * @enum {string}
+         */
+        ScheduledAction: "acp_initiate" | "skill_refine" | "memory_compact";
+        /**
+         * SkillCompactResponse
+         * @description Level-0: compact skill metadata (~3k tokens for full catalogue).
+         */
+        SkillCompactResponse: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Category */
+            category: string;
+        };
+        /**
+         * SkillRatingResponse
+         * @description Public representation of a skill rating.
+         */
+        SkillRatingResponse: {
+            /** Id */
+            id: string;
+            /** User Id */
+            user_id: string;
+            /** Rating */
+            rating: number;
+            /** Review */
+            review: string | null;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * SkillResponse
+         * @description Public representation of a skill.
+         */
+        SkillResponse: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Tier */
+            tier: string;
+            /** Allowed Tools */
+            allowed_tools: string[];
+        };
+        /** StageReport */
+        StageReport: {
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Detail */
+            detail?: string | null;
+            /** Facts */
+            facts?: {
+                [key: string]: unknown;
+            };
+        };
+        /** StoredProbeRun */
+        StoredProbeRun: {
+            /** Correlation Id */
+            correlation_id: string;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Started At */
+            started_at: number;
+            /** Finished At */
+            finished_at: number;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Ok */
+            ok: boolean;
+            /** Fail Count */
+            fail_count: number;
+            /** Stages */
+            stages: components["schemas"]["StageReport"][];
+            /** Received At */
+            received_at: number;
+        };
+        /** SwarmTaskResponse */
+        SwarmTaskResponse: {
+            /** Id */
+            id: string;
+            /** Description */
+            description: string;
+            /** Graph Type */
+            graph_type: string;
+            /** Assigned Agent Ids */
+            assigned_agent_ids: string[];
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Status */
+            status: string;
+            /** Created At */
+            created_at: string;
+            /** Completed At */
+            completed_at: string | null;
+        };
+        /** TaskBoardItem */
+        TaskBoardItem: {
+            /** Id */
+            id: string;
+            /** Description */
+            description: string;
+            /** Graph Type */
+            graph_type: string;
+            /** Status */
+            status: string;
+            /** Agent Names */
+            agent_names: string[];
+            /** Created At */
+            created_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Total Tokens */
+            total_tokens: number | null;
+            /** Event Count */
+            event_count: number;
+        };
+        /** TaskBoardResponse */
+        TaskBoardResponse: {
+            /** Columns */
+            columns: {
+                [key: string]: components["schemas"]["TaskBoardItem"][];
+            };
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+        };
+        /** TaskEventResponse */
+        TaskEventResponse: {
+            /** Id */
+            id: string;
+            /** Task Id */
+            task_id: string | null;
+            /** Agent Id */
+            agent_id: string | null;
+            /** Event Type */
+            event_type: string;
+            /** Event Category */
+            event_category: string;
+            /** Node Id */
+            node_id: string | null;
+            /** Graph Type */
+            graph_type: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            } | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Provider */
+            provider: string | null;
+            /** Model */
+            model: string | null;
+            /** Token Count */
+            token_count: number | null;
+            /** Error Message */
+            error_message: string | null;
+            /** Request Id */
+            request_id: string | null;
+            /** Org Id */
+            org_id: string;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * TaskRequest
+         * @description Inbound task request from an external agent.
+         */
+        TaskRequest: {
+            /** Description */
+            description: string;
+            /**
+             * Graph Type
+             * @default coding
+             */
+            graph_type: string;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * TaskResponse
+         * @description Response returned after submitting or querying an A2A task.
+         */
+        TaskResponse: {
+            /** Task Id */
+            task_id: string;
+            status: components["schemas"]["TaskStatus"];
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Error */
+            error?: string | null;
+        };
+        /**
+         * TaskStatus
+         * @description Lifecycle status of an A2A task.
+         * @enum {string}
+         */
+        TaskStatus: "pending" | "running" | "completed" | "failed";
+        /** TaskStatusUpdate */
+        TaskStatusUpdate: {
+            /** Status */
+            status: string;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Started At */
+            started_at?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+        };
+        /**
+         * TenantCreate
+         * @description Create a new tenant org with optional Mexican business identity.
+         */
+        TenantCreate: {
+            /**
+             * Org Name
+             * @description Display name
+             */
+            org_name: string;
+            /**
+             * Rfc
+             * @description RFC fiscal identifier (Mexican tax ID)
+             */
+            rfc?: string | null;
+            /**
+             * Razon Social
+             * @description Legal business name
+             */
+            razon_social?: string | null;
+            /**
+             * Regimen Fiscal
+             * @description SAT regime code
+             */
+            regimen_fiscal?: string | null;
+            /**
+             * Locale
+             * @default es-MX
+             */
+            locale: string;
+            /**
+             * Timezone
+             * @default America/Mexico_City
+             */
+            timezone: string;
+            /**
+             * Currency
+             * @default MXN
+             */
+            currency: string;
+        };
+        /** TenantIdentityCreate */
+        TenantIdentityCreate: {
+            /** Canonical Id */
+            canonical_id: string;
+            /** Legal Name */
+            legal_name: string;
+            /** Primary Contact Email */
+            primary_contact_email?: string | null;
+            /** Janua Org Id */
+            janua_org_id?: string | null;
+            /** Dhanam Space Id */
+            dhanam_space_id?: string | null;
+            /** Phynecrm Tenant Id */
+            phynecrm_tenant_id?: string | null;
+            /** Karafiel Org Id */
+            karafiel_org_id?: string | null;
+            /** Resend Domain Ids */
+            resend_domain_ids?: string[] | null;
+            /** Cloudflare Zone Ids */
+            cloudflare_zone_ids?: string[] | null;
+            /** Selva Office Seat Ids */
+            selva_office_seat_ids?: string[] | null;
+            /** R2 Bucket Names */
+            r2_bucket_names?: string[] | null;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * TenantResponse
+         * @description Tenant configuration response.
+         */
+        TenantResponse: {
+            /** Id */
+            id: string;
+            /** Org Id */
+            org_id: string;
+            /** Rfc */
+            rfc?: string | null;
+            /** Razon Social */
+            razon_social?: string | null;
+            /** Regimen Fiscal */
+            regimen_fiscal?: string | null;
+            /** Locale */
+            locale: string;
+            /** Timezone */
+            timezone: string;
+            /** Currency */
+            currency: string;
+            /** Karafiel Org Id */
+            karafiel_org_id?: string | null;
+            /** Dhanam Space Id */
+            dhanam_space_id?: string | null;
+            /** Phyne Tenant Id */
+            phyne_tenant_id?: string | null;
+            /** Cfdi Enabled */
+            cfdi_enabled: boolean;
+            /** Intelligence Enabled */
+            intelligence_enabled: boolean;
+            /** Max Agents */
+            max_agents: number;
+            /** Max Daily Tasks */
+            max_daily_tasks: number;
+            /** Janua Connection Id */
+            janua_connection_id?: string | null;
+            /** Brand Name */
+            brand_name?: string | null;
+            /** Brand Logo Url */
+            brand_logo_url?: string | null;
+            /** Brand Primary Color */
+            brand_primary_color?: string | null;
+            /** Voice Mode */
+            voice_mode?: string | null;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * TenantUpdate
+         * @description Partial update for tenant settings (non-identity fields).
+         */
+        TenantUpdate: {
+            /** Locale */
+            locale?: string | null;
+            /** Timezone */
+            timezone?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Cfdi Enabled */
+            cfdi_enabled?: boolean | null;
+            /** Intelligence Enabled */
+            intelligence_enabled?: boolean | null;
+            /** Max Agents */
+            max_agents?: number | null;
+            /** Max Daily Tasks */
+            max_daily_tasks?: number | null;
+        };
+        /**
+         * TenantUsageResponse
+         * @description Current usage stats against tenant limits.
+         */
+        TenantUsageResponse: {
+            /** Org Id */
+            org_id: string;
+            /** Agent Count */
+            agent_count: number;
+            /** Agent Limit */
+            agent_limit: number;
+            /** Tasks Today */
+            tasks_today: number;
+            /** Task Daily Limit */
+            task_daily_limit: number;
+            /** Department Count */
+            department_count: number;
+        };
+        /** TimelineResponse */
+        TimelineResponse: {
+            /** Task Id */
+            task_id: string;
+            /** Events */
+            events: components["schemas"]["TaskEventResponse"][];
+            /** Total Duration Ms */
+            total_duration_ms: number | null;
+            /** Total Tokens */
+            total_tokens: number | null;
+        };
+        /** TrajectoryResponse */
+        TrajectoryResponse: {
+            /** Id */
+            id: string;
+            /** Conversations */
+            conversations: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** TranscribeResponse */
+        TranscribeResponse: {
+            /** Text */
+            text: string;
+            /** Language */
+            language: string;
+        };
+        /** TrendPoint */
+        TrendPoint: {
+            /** Timestamp */
+            timestamp: string;
+            /** Value */
+            value: number;
+        };
+        /**
+         * UnifiedAuditEvent
+         * @description Canonical cross-service audit event shape.
+         *
+         *     Fields are chosen to be the lowest common denominator across the four
+         *     Selva ledgers. Source-specific fields (approval chain, hash prefixes,
+         *     operation enum values) land in ``details`` so the UI can render them
+         *     verbatim without the backend needing to know every ledger's schema.
+         */
+        UnifiedAuditEvent: {
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /**
+             * Actor
+             * @description Janua user sub or ``agent:<uuid>`` if the action was agent-driven. NULL only for legacy rows predating RFC 0005's actor_user_sub column.
+             */
+            actor?: string | null;
+            /** Actor Email */
+            actor_email?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "selva_secret" | "selva_github" | "selva_config" | "selva_webhook";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "secret" | "github" | "config" | "webhook";
+            /** Action */
+            action: string;
+            /** Target */
+            target: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "success" | "failure" | "denied";
+            /** Request Id */
+            request_id?: string | null;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            };
+        };
+        /** UnifiedAuditListResponse */
+        UnifiedAuditListResponse: {
+            /** Events */
+            events: components["schemas"]["UnifiedAuditEvent"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** ValidateConsistencyResponse */
+        ValidateConsistencyResponse: {
+            /** Canonical Id */
+            canonical_id: string;
+            /** Services Checked */
+            services_checked: number;
+            /** Drifts */
+            drifts: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, unknown>;
+        };
+        /** VoiceDispatchRequest */
+        VoiceDispatchRequest: {
+            /** Text */
+            text: string;
+            /**
+             * Graph Type
+             * @default coding
+             */
+            graph_type: string;
+        };
+        /** VoiceDispatchResponse */
+        VoiceDispatchResponse: {
+            /** Text */
+            text: string;
+            /** Graph Type */
+            graph_type: string;
+            /** Status */
+            status: string;
+            /** Task Id */
+            task_id: string;
+        };
+        /**
+         * VoiceModePreview
+         * @description Clause preview for a single mode (read-only).
+         */
+        VoiceModePreview: {
+            /** Mode */
+            mode: string;
+            /** Label */
+            label: string;
+            /** Typed Phrase */
+            typed_phrase: string;
+            /** Heads Up */
+            heads_up: string;
+            /** Clause Body */
+            clause_body: string;
+            /** Clause Version */
+            clause_version: string;
+        };
+        /**
+         * VoiceModeSelection
+         * @description Payload for POST /voice-mode and PUT /settings/outbound-voice.
+         */
+        VoiceModeSelection: {
+            /**
+             * Mode
+             * @description One of the three legal voice modes.
+             */
+            mode: string;
+            /**
+             * Typed Confirmation
+             * @description Verbatim typed phrase matching the mode's clause.
+             */
+            typed_confirmation: string;
+        };
+        /** WorkflowCreateRequest */
+        WorkflowCreateRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Yaml Content */
+            yaml_content: string;
+        };
+        /** WorkflowImportRequest */
+        WorkflowImportRequest: {
+            /** Yaml Content */
+            yaml_content: string;
+        };
+        /** WorkflowListResponse */
+        WorkflowListResponse: {
+            /** Items */
+            items: components["schemas"]["WorkflowResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** WorkflowResponse */
+        WorkflowResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+            /** Description */
+            description: string;
+            /** Yaml Content */
+            yaml_content: string;
+            /** Org Id */
+            org_id: string;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /** WorkflowTemplateResponse */
+        WorkflowTemplateResponse: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Filename */
+            filename: string;
+            /** Category */
+            category: string;
+            /** Node Count */
+            node_count: number;
+        };
+        /** WorkflowUpdateRequest */
+        WorkflowUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Yaml Content */
+            yaml_content?: string | null;
+        };
+        /** WorkflowValidationResponse */
+        WorkflowValidationResponse: {
+            /** Is Valid */
+            is_valid: boolean;
+            /** Errors */
+            errors: {
+                [key: string]: unknown;
+            }[];
+            /** Warnings */
+            warnings: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** ApprovalRequestResponse */
+        nexus_api__routers__approvals__ApprovalRequestResponse: {
+            /** Id */
+            id: string;
+            /** Agent Id */
+            agent_id: string;
+            /** Action Category */
+            action_category: string;
+            /** Action Type */
+            action_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Diff */
+            diff: string | null;
+            /** Reasoning */
+            reasoning: string;
+            /** Urgency */
+            urgency: string;
+            /** Status */
+            status: string;
+            /** Feedback */
+            feedback: string | null;
+            /** Responded By */
+            responded_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Responded At */
+            responded_at: string | null;
+        };
+        /** DeleteResponse */
+        nexus_api__routers__artifacts__DeleteResponse: {
+            /**
+             * Deleted
+             * @default true
+             */
+            deleted: boolean;
+        };
+        /** ApprovalRequestResponse */
+        nexus_api__routers__command_approvals__ApprovalRequestResponse: {
+            /** Id */
+            id: string;
+            /** Run Id */
+            run_id: string;
+            /** Command */
+            command: string;
+            /** Reason */
+            reason: string;
+            status: components["schemas"]["ApprovalStatus"];
+            /** Requested At */
+            requested_at: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Resolved By */
+            resolved_by: string | null;
+        };
+        /**
+         * DeleteResponse
+         * @description Response after unpublishing a skill.
+         */
+        nexus_api__routers__marketplace__DeleteResponse: {
+            /**
+             * Deleted
+             * @default true
+             */
+            deleted: boolean;
+        };
+        /**
+         * TenantIdentityResponse
+         * @description Server-resolved outbound identity for a tenant.
+         *
+         *     Returned by ``GET /onboarding/tenant-identity``. Used by the email
+         *     tools to populate the ``From:`` header without trusting any
+         *     LLM-supplied kwargs (which would be a prompt-injection vector for
+         *     sender spoofing within the tenant's verified Resend domain).
+         *
+         *     Fields are nullable individually so the tool can detect partial
+         *     configuration (e.g. brand_name set but no primary contact email
+         *     resolved yet) and fail-closed on the missing piece. ``agent_slug``
+         *     is intentionally NOT returned here — agent slugs are resolved per
+         *     call from a server-controlled allow-list, never from the LLM.
+         */
+        nexus_api__routers__onboarding__TenantIdentityResponse: {
+            /**
+             * User Email
+             * @description Primary outbound mailbox for the tenant (drives From: in user_direct/dyad modes and Reply-To across all modes). Sourced from tenant_identities.primary_contact_email.
+             */
+            user_email?: string | null;
+            /**
+             * User Name
+             * @description Display name for the From: header. Sourced from tenant_configs.brand_name with fallback to tenant_identities.legal_name.
+             */
+            user_name?: string | null;
+            /**
+             * Org Name
+             * @description Organization legal name for the agent_identified signature block. Sourced from tenant_identities.legal_name with fallback to tenant_configs.razon_social or brand_name.
+             */
+            org_name?: string | null;
+        };
+        /** TenantIdentityResponse */
+        nexus_api__routers__tenant_identities__TenantIdentityResponse: {
+            /** Id */
+            id: string;
+            /** Canonical Id */
+            canonical_id: string;
+            /** Legal Name */
+            legal_name: string;
+            /** Primary Contact Email */
+            primary_contact_email: string | null;
+            /** Janua Org Id */
+            janua_org_id: string | null;
+            /** Dhanam Space Id */
+            dhanam_space_id: string | null;
+            /** Phynecrm Tenant Id */
+            phynecrm_tenant_id: string | null;
+            /** Karafiel Org Id */
+            karafiel_org_id: string | null;
+            /** Resend Domain Ids */
+            resend_domain_ids: string[] | null;
+            /** Cloudflare Zone Ids */
+            cloudflare_zone_ids: string[] | null;
+            /** Selva Office Seat Ids */
+            selva_office_seat_ids: string[] | null;
+            /** R2 Bucket Names */
+            r2_bucket_names: string[] | null;
+            /** Meta */
+            meta: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
+}
+export type $defs = Record<string, never>;
+export interface operations {
+    metrics_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    root_health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    health_api_v1_health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    ready_api_v1_health_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    health_detail_api_v1_health_detail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    pool_stats_api_v1_health_pool_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    queue_stats_api_v1_health_queue_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    dlq_stats_api_v1_health_dlq_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    consent_ledger_grants_api_v1_health_consent_ledger_grants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_agents_api_v1_agents__get: {
+        parameters: {
+            query?: {
+                department_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_agent_api_v1_agents__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_agent_api_v1_agents__agent_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_agent_api_v1_agents__agent_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_agent_api_v1_agents__agent_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_agent_api_v1_agents__agent_id__assign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentAssign"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_agent_stats_api_v1_agents__agent_id__stats_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentStatsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_departments_api_v1_departments__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_department_api_v1_departments__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepartmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_department_api_v1_departments__dept_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dept_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_department_api_v1_departments__dept_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dept_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepartmentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pending_approvals_api_v1_approvals__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_approval_request_api_v1_approvals__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApprovalRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__approvals__ApprovalRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_approval_request_api_v1_approvals__request_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__approvals__ApprovalRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_request_api_v1_approvals__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApprovalAction"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__approvals__ApprovalRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deny_request_api_v1_approvals__request_id__deny_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApprovalAction"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__approvals__ApprovalRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dispatch_task_api_v1_swarms_dispatch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_active_tasks_api_v1_swarms_tasks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwarmTaskResponse"][];
+                };
+            };
+        };
+    };
+    get_task_board_api_v1_swarms_tasks_board_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskBoardResponse"];
+                };
+            };
+        };
+    };
+    get_task_api_v1_swarms_tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_task_status_api_v1_swarms_tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reap_stale_tasks_api_v1_swarms_tasks_reap_stale_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
+    billing_status_api_v1_billing_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    compute_usage_api_v1_billing_usage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    compute_token_status_api_v1_billing_tokens_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    create_billing_portal_api_v1_billing_portal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    record_usage_api_v1_billing_record_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_budget_api_v1_billing_check_budget_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skills_api_v1_skills__get: {
+        parameters: {
+            query?: {
+                tier?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_community_api_v1_skills_community_enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    disable_community_api_v1_skills_community_disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    community_status_api_v1_skills_community_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+        };
+    };
+    list_skills_compact_api_v1_skills_compact_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillCompactResponse"][];
+                };
+            };
+        };
+    };
+    get_skill_full_api_v1_skills_md__skill_name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_reference_api_v1_skills_md__skill_name__refs__ref_path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_name: string;
+                ref_path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refiner_metrics_api_v1_skills_refiner_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    telegram_webhook_api_v1_gateway_gateway_telegram_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-telegram-bot-api-secret-token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discord_webhook_api_v1_gateway_gateway_discord_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-signature-256"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    slack_webhook_api_v1_gateway_gateway_slack_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-slack-signature"?: string;
+                "x-slack-request-timestamp"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_inbound_api_v1_gateway_gateway_email_inbound_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    whatsapp_webhook_verify_api_v1_gateway_gateway_whatsapp_webhook_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    whatsapp_inbound_api_v1_gateway_gateway_whatsapp_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    matrix_inbound_api_v1_gateway_gateway_matrix_webhook_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    matrix_inbound_api_v1_gateway_gateway_matrix_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mattermost_inbound_api_v1_gateway_gateway_mattermost_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    signal_inbound_api_v1_gateway_gateway_signal_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    sms_inbound_api_v1_gateway_gateway_sms_inbound_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-twilio-signature"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dingtalk_webhook_api_v1_gateway_gateway_dingtalk_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    feishu_webhook_api_v1_gateway_gateway_feishu_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    wecom_webhook_api_v1_gateway_gateway_wecom_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    wecom_callback_api_v1_gateway_gateway_wecom_callback_post: {
+        parameters: {
+            query?: {
+                echostr?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    weixin_webhook_api_v1_gateway_gateway_weixin_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    bluebubbles_webhook_api_v1_gateway_gateway_bluebubbles_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    homeassistant_webhook_api_v1_gateway_gateway_homeassistant_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    generic_webhook_api_v1_gateway_gateway_webhook__channel_id__post: {
+        parameters: {
+            query?: {
+                x_webhook_signature?: string;
+            };
+            header?: never;
+            path: {
+                channel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    api_complete_api_v1_gateway_gateway_api_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_workflows_api_v1_workflows_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_workflow_api_v1_workflows_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_api_v1_workflows_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTemplateResponse"][];
+                };
+            };
+        };
+    };
+    create_from_template_api_v1_workflows_from_template_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateFromTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_workflow_api_v1_workflows__workflow_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_workflow_api_v1_workflows__workflow_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_workflow_api_v1_workflows__workflow_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_workflow_api_v1_workflows_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowValidationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_workflow_api_v1_workflows_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_workflow_api_v1_workflows__workflow_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_artifacts_api_v1_artifacts_get: {
+        parameters: {
+            query?: {
+                task_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_artifact_api_v1_artifacts__artifact_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_artifact_api_v1_artifacts__artifact_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__artifacts__DeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_artifact_api_v1_artifacts__artifact_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_marketplace_skills_api_v1_marketplace_skills_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                category?: string | null;
+                sort_by?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketplaceListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_skill_api_v1_marketplace_skills_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketplaceEntryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_marketplace_skill_api_v1_marketplace_skills__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketplaceEntryDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unpublish_skill_api_v1_marketplace_skills__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__marketplace__DeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_skill_api_v1_marketplace_skills__entry_id__rate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RateSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillRatingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    install_skill_api_v1_marketplace_skills__entry_id__install_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_maps_api_v1_maps_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_map_api_v1_maps_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_map_api_v1_maps__map_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                map_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_map_api_v1_maps__map_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                map_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_map_api_v1_maps__map_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                map_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_map_api_v1_maps_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_map_api_v1_maps_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_events_api_v1_calendar_events_get: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarEventsListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_calendar_api_v1_calendar_connect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectCalendarRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_calendar_api_v1_calendar_disconnect_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisconnectResponse"];
+                };
+            };
+        };
+    };
+    calendar_status_api_v1_calendar_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarStatusResponse"];
+                };
+            };
+        };
+    };
+    get_intelligence_config_api_v1_intelligence_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgConfigResponse"];
+                };
+            };
+        };
+    };
+    generate_invoice_api_v1_invoices_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDispatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invoice_status_api_v1_invoices__uuid__status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_chat_history_api_v1_chat_history_get: {
+        parameters: {
+            query: {
+                room_id: string;
+                limit?: number;
+                offset?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_chat_message_api_v1_chat_messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatMessageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_events_api_v1_events__get: {
+        parameters: {
+            query?: {
+                task_id?: string | null;
+                agent_id?: string | null;
+                event_type?: string | null;
+                event_category?: string | null;
+                since?: string | null;
+                until?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskEventResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_event_api_v1_events__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEventRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_timeline_api_v1_events_tasks__task_id__timeline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_metrics_dashboard_api_v1_metrics_dashboard_get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricsDashboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_roi_dashboard_api_v1_metrics_roi_get: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_connected_users_api_v1_admin_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectedUser"][];
+                };
+            };
+        };
+    };
+    kick_user_api_v1_admin_kick_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KickRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_room_config_api_v1_admin_room_config_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoomConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_logs_api_v1_audit__get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                /** @description Filter by HTTP method */
+                action?: string | null;
+                /** @description Filter by resource type */
+                resource_type?: string | null;
+                /** @description Filter by user ID */
+                user_id?: string | null;
+                /** @description Filter after ISO datetime */
+                since?: string | null;
+                /** @description Filter before ISO datetime */
+                until?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_audit_logs_api_v1_audit_export_get: {
+        parameters: {
+            query?: {
+                /** @description Filter after ISO datetime */
+                since?: string | null;
+                /** @description Filter before ISO datetime */
+                until?: string | null;
+                /** @description Filter by HTTP method */
+                action?: string | null;
+                /** @description Filter by resource type */
+                resource_type?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_unified_audit_api_v1_audit_unified__get: {
+        parameters: {
+            query?: {
+                /** @description ISO-8601 lower bound (inclusive) */
+                since?: string | null;
+                /** @description ISO-8601 upper bound (inclusive) */
+                until?: string | null;
+                /** @description Filter to a subset of the four Selva ledgers. Omit for all four. Values: selva_secret, selva_github, selva_config, selva_webhook. */
+                source?: string[] | null;
+                /** @description Filter by ``actor_user_sub``. Non-admin callers are server-side forced to their own ``sub`` regardless of this parameter. */
+                actor?: string | null;
+                limit?: number;
+                /** @description ISO-8601 timestamp from a prior response's next_cursor */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnifiedAuditListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_unified_audit_api_v1_audit_unified_get: {
+        parameters: {
+            query?: {
+                /** @description ISO-8601 lower bound (inclusive) */
+                since?: string | null;
+                /** @description ISO-8601 upper bound (inclusive) */
+                until?: string | null;
+                /** @description Filter to a subset of the four Selva ledgers. Omit for all four. Values: selva_secret, selva_github, selva_config, selva_webhook. */
+                source?: string[] | null;
+                /** @description Filter by ``actor_user_sub``. Non-admin callers are server-side forced to their own ``sub`` regardless of this parameter. */
+                actor?: string | null;
+                limit?: number;
+                /** @description ISO-8601 timestamp from a prior response's next_cursor */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnifiedAuditListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sales_pipeline_metrics_api_v1_analytics_sales_get: {
+        parameters: {
+            query?: {
+                /** @description Time period: 1d, 7d, 30d, 90d */
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesPipelineMetrics"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accounting_close_status_api_v1_analytics_accounting_get: {
+        parameters: {
+            query?: {
+                /** @description Time period: 1d, 7d, 30d, 90d */
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountingCloseStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    intelligence_summary_api_v1_analytics_intelligence_get: {
+        parameters: {
+            query?: {
+                /** @description Time period: 1d, 7d, 30d, 90d */
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_tenant_api_v1_tenants__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_tenant_api_v1_tenants_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantResponse"];
+                };
+            };
+        };
+    };
+    update_my_tenant_api_v1_tenants_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_usage_api_v1_tenants_me_usage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantUsageResponse"];
+                };
+            };
+        };
+    };
+    configure_sso_api_v1_tenants_me_sso_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SSOConfig"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_branding_api_v1_tenants_me_branding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    update_branding_api_v1_tenants_me_branding_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandingConfig"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_tenant_identity_api_v1_tenant_identities_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantIdentityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__tenant_identities__TenantIdentityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_tenant_identity_api_v1_tenant_identities_resolve_get: {
+        parameters: {
+            query: {
+                /** @description One of: canonical_id, janua_org_id, dhanam_space_id, phynecrm_tenant_id, karafiel_org_id */
+                field: string;
+                value: string;
+            };
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__tenant_identities__TenantIdentityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_tenant_consistency_api_v1_tenant_identities__canonical_id__validate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                canonical_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateConsistencyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transcribe_audio_api_v1_voice_transcribe_post: {
+        parameters: {
+            query?: {
+                language?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_transcribe_audio_api_v1_voice_transcribe_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscribeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_dispatch_api_v1_voice_dispatch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceDispatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceDispatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    onboarding_status_api_v1_onboarding_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingStatus"];
+                };
+            };
+        };
+    };
+    voice_mode_preview_api_v1_onboarding_voice_mode_preview__mode__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceModePreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_identity_api_v1_onboarding_tenant_identity_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__onboarding__TenantIdentityResponse"];
+                };
+            };
+        };
+    };
+    select_voice_mode_api_v1_onboarding_voice_mode_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceModeSelection"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_voice_mode_api_v1_settings_outbound_voice_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceModeSelection"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_schedules_api_v1_schedules__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResponse"][];
+                };
+            };
+        };
+    };
+    create_schedule_api_v1_schedules__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_schedule_api_v1_schedules__schedule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pending_api_v1_command_approvals_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__command_approvals__ApprovalRequestResponse"][];
+                };
+            };
+        };
+    };
+    approve_command_api_v1_command_approvals__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__command_approvals__ApprovalRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deny_command_api_v1_command_approvals__request_id__deny_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__command_approvals__ApprovalRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_trajectories_api_v1_trajectories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    get_trajectory_api_v1_trajectories__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrajectoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_batch_api_v1_trajectories_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_checkpoints_api_v1_checkpoints__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckpointListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_checkpoint_api_v1_checkpoints__run_id___phase__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                phase: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckpointState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollback_to_phase_api_v1_checkpoints__run_id___phase__rollback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                phase: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    browse_hub_api_v1_skills_hub__get: {
+        parameters: {
+            query?: {
+                category?: string | null;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HubSkillResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_hub_api_v1_skills_hub_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HubSkillResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    install_skill_api_v1_skills_hub_install_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_playbooks_api_v1_playbooks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybookResponse"][];
+                };
+            };
+        };
+    };
+    create_playbook_api_v1_playbooks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaybookCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybookResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_playbook_api_v1_playbooks_match_get: {
+        parameters: {
+            query: {
+                event: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_playbook_api_v1_playbooks__playbook_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybookResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_playbook_api_v1_playbooks__playbook_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_playbook_api_v1_playbooks__playbook_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaybookUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybookResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    phyne_crm_webhook_api_v1_gateway_phyne_crm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    stripe_webhook_api_v1_stripe_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    probe_draft_api_v1_probe_draft_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    probe_email_send_api_v1_probe_email_send_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSendResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_probe_run_api_v1_probe_runs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProbeRunReport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_latest_probe_run_api_v1_probe_latest_run_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredProbeRun"] | null;
+                };
+            };
+        };
+    };
+    get_probe_history_api_v1_probe_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredProbeRun"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_decisions_api_v1_hitl_decisions_get: {
+        parameters: {
+            query?: {
+                agent_id?: string | null;
+                action_category?: string | null;
+                outcome?: components["schemas"]["HitlOutcome"] | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_decision_api_v1_hitl_decisions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordDecisionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_confidence_api_v1_hitl_confidence_get: {
+        parameters: {
+            query?: {
+                action_category?: string | null;
+                org_id?: string | null;
+                min_observed?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfidenceDashboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_completions_v1_chat_completions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Task-Type"?: string | null;
+                "X-Sensitivity"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatCompletionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    embeddings_v1_embeddings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbeddingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_card_api_v1_a2a__well_known_agent_json_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCard"];
+                };
+            };
+        };
+    };
+    send_task_api_v1_a2a_tasks_send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_api_v1_a2a_tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_subscribe_api_v1_a2a_tasks_sendSubscribe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+}

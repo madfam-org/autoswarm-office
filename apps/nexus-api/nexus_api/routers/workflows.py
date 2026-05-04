@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_non_guest
 from ..database import get_db
+from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import Workflow
 from ..tenant import TenantContext, get_tenant
 
@@ -145,11 +146,20 @@ async def create_workflow(
     body: WorkflowCreateRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> WorkflowResponse:
-    """Create a new workflow definition."""
+    """Create a new workflow definition.
+
+    Idempotency: replay-safe via the ``Idempotency-Key`` header. A retried
+    create should NOT produce a duplicate Workflow row.
+    """
+    if idem.is_replay and idem.cached is not None:
+        return WorkflowResponse.model_validate(idem.cached)
+
     # Validate the YAML before persisting
     validation = _validate_yaml(body.yaml_content)
     if not validation.is_valid:
+        # 422 — do NOT cache. Validation errors should re-evaluate on retry.
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"message": "Invalid workflow YAML", "errors": validation.errors},
@@ -188,7 +198,9 @@ async def create_workflow(
     )
     await db.flush()
 
-    return _workflow_to_response(wf)
+    response = _workflow_to_response(wf)
+    await idem.save(response.model_dump(mode="json"))
+    return response
 
 
 @router.get("", response_model=WorkflowListResponse)
@@ -425,10 +437,19 @@ async def import_workflow(
     body: WorkflowImportRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> WorkflowResponse:
-    """Import a workflow from YAML content."""
+    """Import a workflow from YAML content.
+
+    Idempotency: replay-safe via the ``Idempotency-Key`` header. A retried
+    upload should NOT produce a duplicate Workflow row.
+    """
+    if idem.is_replay and idem.cached is not None:
+        return WorkflowResponse.model_validate(idem.cached)
+
     validation = _validate_yaml(body.yaml_content)
     if not validation.is_valid:
+        # 422 — do NOT cache. Validation errors should re-evaluate on retry.
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"message": "Invalid workflow YAML", "errors": validation.errors},
@@ -464,7 +485,9 @@ async def import_workflow(
     )
     await db.flush()
 
-    return _workflow_to_response(wf)
+    response = _workflow_to_response(wf)
+    await idem.save(response.model_dump(mode="json"))
+    return response
 
 
 @router.get("/{workflow_id}/export")

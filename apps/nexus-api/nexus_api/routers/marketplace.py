@@ -16,6 +16,7 @@ from selva_skills import get_skill_registry, parse_skill_md_string
 
 from ..auth import get_current_user, require_non_guest
 from ..database import get_db
+from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import SkillMarketplaceEntry, SkillRating
 from ..tenant import TenantContext, get_tenant
 
@@ -409,6 +410,7 @@ async def install_skill(
     entry_id: str,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> InstallResponse:
     """Install a marketplace skill into the community-skills directory.
 
@@ -416,7 +418,22 @@ async def install_skill(
     ``packages/skills/community-skills/{name}/`` and increments the download
     counter.  After writing, the skill registry is refreshed so the new skill
     becomes discoverable immediately.
+
+    Idempotency: replay-safe via the ``Idempotency-Key`` header. The cache is
+    populated ONLY AFTER the SKILL.md file has been successfully written —
+    if a replay arrives but the install file was deleted out-of-band, the
+    cached InstallResponse may point to a missing file. We accept that
+    trade-off rather than re-running ``write_text`` on every replay
+    (which would silently re-install). Operators that want strict
+    file-presence guarantees should not delete community-skills/<name>/
+    behind the API's back.
     """
+    # Replay short-circuit: if the caller is retrying with the same
+    # Idempotency-Key and we have a cached success response, return it
+    # without touching the filesystem or bumping the download counter.
+    if idem.is_replay and idem.cached is not None:
+        return InstallResponse.model_validate(idem.cached)
+
     stmt = (
         select(SkillMarketplaceEntry)
         .where(SkillMarketplaceEntry.id == uuid.UUID(entry_id))
@@ -425,6 +442,8 @@ async def install_skill(
     result = await db.execute(stmt)
     entry = result.scalar_one_or_none()
     if not entry:
+        # 404 — do NOT cache. A subsequent retry should re-evaluate
+        # in case the entry got published between attempts.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Marketplace entry not found"
         )
@@ -436,6 +455,9 @@ async def install_skill(
     try:
         meta, _ = parse_skill_md_string(entry.yaml_content)
     except Exception as exc:
+        # 422 — do NOT cache. Validation errors are caller mistakes;
+        # we want the next retry to re-evaluate against the current
+        # YAML content.
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Stored YAML content is invalid: {exc}",
@@ -444,6 +466,9 @@ async def install_skill(
     skill_dir = _COMMUNITY_SKILLS_DIR / meta.name
     skill_dir.mkdir(parents=True, exist_ok=True)
     skill_md_path = skill_dir / "SKILL.md"
+    # The filesystem write is the side effect we MUST NOT double-run.
+    # If write_text raises (disk full, permission, etc.) we bail BEFORE
+    # caching so the next retry can re-attempt cleanly.
     skill_md_path.write_text(entry.yaml_content, encoding="utf-8")
 
     # Increment download count
@@ -472,10 +497,15 @@ async def install_skill(
     )
     await db.flush()
 
-    return InstallResponse(
+    response = InstallResponse(
         skill_name=meta.name,
         install_path=str(skill_md_path),
     )
+    # Cache only after the file write + DB increment + event emit all
+    # succeeded. A failure earlier short-circuits BEFORE this save() so
+    # the next retry runs fresh.
+    await idem.save(response.model_dump(mode="json"))
+    return response
 
 
 @router.delete("/skills/{entry_id}", response_model=DeleteResponse)

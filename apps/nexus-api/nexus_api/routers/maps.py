@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_non_guest
 from ..database import get_db
+from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import Map
 from ..tenant import TenantContext, get_tenant
 
@@ -115,8 +116,18 @@ async def create_map(
     body: MapCreateRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> MapResponse:
-    """Create a new map definition."""
+    """Create a new map definition.
+
+    Idempotency: replay-safe via the ``Idempotency-Key`` header. A retry
+    after a network blip should NOT produce a second Map row with the
+    same content. The cached response (containing the original map id)
+    is returned on replay.
+    """
+    if idem.is_replay and idem.cached is not None:
+        return MapResponse.model_validate(idem.cached)
+
     _validate_tmj(body.tmj_content)
 
     m = Map(
@@ -142,7 +153,9 @@ async def create_map(
     )
     await db.flush()
 
-    return _map_to_response(m)
+    response = _map_to_response(m)
+    await idem.save(response.model_dump(mode="json"))
+    return response
 
 
 @router.get("", response_model=MapListResponse)
@@ -270,8 +283,16 @@ async def import_map(
     body: MapImportRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> MapResponse:
-    """Import a TMJ file as a new map."""
+    """Import a TMJ file as a new map.
+
+    Idempotency: replay-safe via the ``Idempotency-Key`` header. A retried
+    upload should NOT produce a duplicate Map row.
+    """
+    if idem.is_replay and idem.cached is not None:
+        return MapResponse.model_validate(idem.cached)
+
     parsed = _validate_tmj(body.tmj_content)
 
     # Try to extract a name from TMJ metadata
@@ -304,7 +325,9 @@ async def import_map(
     )
     await db.flush()
 
-    return _map_to_response(m)
+    response = _map_to_response(m)
+    await idem.save(response.model_dump(mode="json"))
+    return response
 
 
 # -- Internal helpers ----------------------------------------------------------

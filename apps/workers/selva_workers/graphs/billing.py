@@ -143,7 +143,7 @@ def validate_rfcs(state: BillingState) -> BillingState:
         karafiel_url = os.environ.get("KARAFIEL_API_URL")
         karafiel_token = os.environ.get("KARAFIEL_API_TOKEN", "")
         if karafiel_url:
-            from madfam_inference.adapters.compliance import KarafielAdapter
+            from madfam_inference.adapters.karafiel import KarafielAdapter
 
             adapter = KarafielAdapter(base_url=karafiel_url, token=karafiel_token)
             emisor_valid = _run_async(adapter.validate_rfc(emisor_rfc))
@@ -204,7 +204,7 @@ def check_blacklist(state: BillingState) -> BillingState:
         karafiel_url = os.environ.get("KARAFIEL_API_URL")
         karafiel_token = os.environ.get("KARAFIEL_API_TOKEN", "")
         if karafiel_url:
-            from madfam_inference.adapters.compliance import KarafielAdapter
+            from madfam_inference.adapters.karafiel import KarafielAdapter
 
             adapter = KarafielAdapter(base_url=karafiel_url, token=karafiel_token)
             is_listed = _run_async(adapter.check_blacklist(receptor_rfc))
@@ -261,7 +261,7 @@ def generate_cfdi(state: BillingState) -> BillingState:
         karafiel_url = os.environ.get("KARAFIEL_API_URL")
         karafiel_token = os.environ.get("KARAFIEL_API_TOKEN", "")
         if karafiel_url:
-            from madfam_inference.adapters.compliance import KarafielAdapter
+            from madfam_inference.adapters.karafiel import KarafielAdapter
 
             adapter = KarafielAdapter(base_url=karafiel_url, token=karafiel_token)
             result = _run_async(
@@ -336,7 +336,7 @@ def stamp_cfdi(state: BillingState) -> BillingState:
             karafiel_url = os.environ.get("KARAFIEL_API_URL")
             karafiel_token = os.environ.get("KARAFIEL_API_TOKEN", "")
             if karafiel_url:
-                from madfam_inference.adapters.compliance import KarafielAdapter
+                from madfam_inference.adapters.karafiel import KarafielAdapter
 
                 adapter = KarafielAdapter(base_url=karafiel_url, token=karafiel_token)
                 stamp_result = _run_async(adapter.stamp_cfdi(cfdi_xml))
@@ -421,8 +421,11 @@ def notify_customer(state: BillingState) -> BillingState:
 
             wa_tool = WhatsAppTemplateTool()
             customer_name = state.get("workflow_variables", {}).get("customer_name", "Cliente")
+            # `stamp_result` can be explicitly None (not just missing), so the
+            # `state.get("stamp_result", {})` default doesn't fire — coerce to {}.
+            stamp_result = state.get("stamp_result") or {}
             total_amount = state.get("workflow_variables", {}).get(
-                "total", state.get("stamp_result", {}).get("total", "")
+                "total", stamp_result.get("total", "")
             )
             wa_result = _run_async(
                 wa_tool.execute(

@@ -50,8 +50,12 @@ def plan(state: CodingState) -> CodingState:
     messages = state.get("messages", [])
     task_description = ""
     for msg in messages:
-        if hasattr(msg, "content"):
-            task_description += msg.content + "\n"
+        # langchain BaseMessage.content is `str | list[str | dict]` — only
+        # str content contributes to the plan prompt; list-shaped content
+        # (multimodal blocks) is skipped.
+        content = getattr(msg, "content", None)
+        if isinstance(content, str):
+            task_description += content + "\n"
 
     try:
         from ..inference import call_llm, get_model_router
@@ -502,7 +506,7 @@ def push_gate(state: CodingState) -> CodingState:
     Uses LangGraph's ``interrupt()`` to pause the graph.  The Tactician
     must walk to the agent's Review Station and press 'A' to approve.
     """
-    branch = state.get("branch_name", "feature/auto-changes")
+    branch: str = state.get("branch_name") or "feature/auto-changes"
     code_changes = state.get("code_changes", [])
 
     approval_context = {

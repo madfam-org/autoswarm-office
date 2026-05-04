@@ -27,6 +27,7 @@ from .artifact import ListArtifactsTool, RetrieveArtifactTool, SaveArtifactTool
 from .backup_ops import get_backup_tools
 from .belvo_spei import get_belvo_spei_tools
 from .billing_tools import CreateCheckoutLinkTool, GetRevenueMetricsTool
+from .bluesky_tools import BlueskyPostTool
 from .calendar_tools import (
     CreateCalendarEventTool,
     ListCalendarEventsTool,
@@ -313,6 +314,13 @@ def get_builtin_tools() -> list[BaseTool]:
         # 30-min Redis per-instance rate-limit, HITL gate via
         # mastodon_promo_v1 playbook.
         MastodonPostTool(),
+        # Public-social outbound — Bluesky / AT Protocol. Mirrors the
+        # Reddit MVP shape: per-persona app-password creds, mandatory
+        # ~36-char disclosure footer (within Bluesky's 300-char hard
+        # limit), 30-min Redis rate-limit per persona, HITL gate via
+        # bluesky_promo_v1 playbook. Tech-leaning audience fits Selva +
+        # Yantra4D promo. Quote-posts deferred to v2.
+        BlueskyPostTool(),
         # Phygital tools (Yantra4D Engine Node)
         GenerateParametricModelTool(),
         RunDFMAnalysisTool(),

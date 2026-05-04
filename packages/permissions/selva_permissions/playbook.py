@@ -211,9 +211,30 @@ MASTODON_PROMO_V1 = PlaybookDefinition(
 )
 
 
+# Bluesky / AT Protocol promo playbook. Same shape as the Reddit MVP —
+# Bluesky's tech-leaning audience fits Selva (B2B founders/CTOs) and
+# Yantra4D (technical maker community); rounds out the v1 social-channel
+# set after Reddit (#149) and Mastodon. AT Protocol posts are replicated
+# across the network and survive local deletion via cached copies
+# elsewhere, so HITL stays on by default — agents draft, humans approve.
+# Defence in depth alongside the mandatory ~36-char disclosure footer
+# (within Bluesky's 300-char hard limit) + per-persona Redis 30-min
+# rate-limit.
+BLUESKY_PROMO_V1 = PlaybookDefinition(
+    id="bluesky_promo_v1",
+    name="Bluesky Promo (MVP)",
+    trigger_event="manual_dispatch",
+    allowed_actions={ActionCategory.SOCIAL_POST.value},
+    token_budget=20_000,
+    financial_cap_cents=0,  # Posting itself costs nothing; ad-spend is a separate playbook.
+    require_approval=True,  # HITL gate — one approval per post (defence in depth).
+)
+
+
 BUILTIN_PLAYBOOKS: dict[str, PlaybookDefinition] = {
     REDDIT_PROMO_V1.id: REDDIT_PROMO_V1,
     MASTODON_PROMO_V1.id: MASTODON_PROMO_V1,
+    BLUESKY_PROMO_V1.id: BLUESKY_PROMO_V1,
 }
 
 

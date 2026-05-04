@@ -128,6 +128,20 @@ async def create_map(
     db.add(m)
     await db.flush()
     await db.refresh(m)
+
+    # Late import to avoid the events router → maps circular risk.
+    # Mirror the pattern in stripe_webhooks.py / approvals.py / swarms.py.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="map.created",
+        event_category="map",
+        org_id=tenant.org_id,
+        payload={"map_id": str(m.id), "name": m.name},
+    )
+    await db.flush()
+
     return _map_to_response(m)
 
 
@@ -171,22 +185,43 @@ async def update_map(
     map_id: str,
     body: MapUpdateRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> MapResponse:
     """Update an existing map definition."""
     m = await _get_map_or_404(map_id, db)
 
+    fields_updated: list[str] = []
+
     if body.tmj_content is not None:
         _validate_tmj(body.tmj_content)
         m.tmj_content = body.tmj_content
+        fields_updated.append("tmj_content")
 
     if body.name is not None:
         m.name = body.name
+        fields_updated.append("name")
     if body.description is not None:
         m.description = body.description
+        fields_updated.append("description")
 
     m.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(m)
+
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="map.updated",
+        event_category="map",
+        org_id=tenant.org_id,
+        payload={
+            "map_id": str(m.id),
+            "fields_updated": fields_updated,
+        },
+    )
+    await db.flush()
+
     return _map_to_response(m)
 
 
@@ -198,10 +233,26 @@ async def update_map(
 async def delete_map(
     map_id: str,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> None:
     """Delete a map definition."""
     m = await _get_map_or_404(map_id, db)
+    # Capture identifiers BEFORE delete so the event payload survives the
+    # session-level expiration of the deleted ORM object.
+    map_id_str = str(m.id)
+    map_name = m.name
     await db.delete(m)
+    await db.flush()
+
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="map.deleted",
+        event_category="map",
+        org_id=tenant.org_id,
+        payload={"map_id": map_id_str, "name": map_name},
+    )
     await db.flush()
 
 
@@ -241,6 +292,18 @@ async def import_map(
     db.add(m)
     await db.flush()
     await db.refresh(m)
+
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="map.imported",
+        event_category="map",
+        org_id=tenant.org_id,
+        payload={"map_id": str(m.id), "name": m.name},
+    )
+    await db.flush()
+
     return _map_to_response(m)
 
 

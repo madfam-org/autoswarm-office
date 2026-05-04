@@ -120,6 +120,61 @@ require_kubectl() {
 # Main rotation logic
 # -----------------------------------------------------------------------------
 
+promote_consent_ledger_key() {
+  # Per-period key tracking (migration 0030): rotating
+  # CONSENT_LEDGER_SIGNING_SECRET requires promoting the new value in
+  # the DB registry FIRST so old ledger rows stay verifiable. The
+  # admin endpoint flips is_current=false on the previous row +
+  # inserts a new row in a single transaction.
+  #
+  # Requires NEXUS_API_URL + NEXUS_ADMIN_TOKEN env vars. When either
+  # is missing we fall back to the env-only K8s patch path with a
+  # loud warning (operator may need to manually promote the key
+  # afterwards via the admin endpoint).
+  local new_value="$1"
+  local nexus_url="${NEXUS_API_URL:-}"
+  local admin_token="${NEXUS_ADMIN_TOKEN:-}"
+
+  if [[ -z "$nexus_url" || -z "$admin_token" ]]; then
+    echo "  WARNING: NEXUS_API_URL or NEXUS_ADMIN_TOKEN unset — skipping" >&2
+    echo "    DB-level key promotion. The K8s Secret will be patched but" >&2
+    echo "    pre-rotation ledger rows will fail verification under the" >&2
+    echo "    new env-level key. To recover, set the env vars and re-run" >&2
+    echo "    OR call POST /api/v1/admin/consent-ledger/promote-key by hand." >&2
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "  WARNING: curl not in PATH — skipping DB-level key promotion." >&2
+    return 0
+  fi
+
+  echo "  promoting new key in DB registry via admin endpoint..."
+  local http_code
+  http_code=$(curl -sS -o /tmp/promote-key-resp.$$ -w "%{http_code}" \
+    -X POST \
+    -H "Authorization: Bearer $admin_token" \
+    -H "Content-Type: application/json" \
+    -d "{\"new_key_value\": \"$new_value\"}" \
+    "$nexus_url/api/v1/admin/consent-ledger/promote-key" || echo "000")
+
+  if [[ "$http_code" != "201" ]]; then
+    echo "  ERROR: DB-level key promotion failed (HTTP $http_code):" >&2
+    cat /tmp/promote-key-resp.$$ >&2 || true
+    rm -f /tmp/promote-key-resp.$$
+    echo "  Aborting rotation BEFORE patching K8s Secret to avoid" >&2
+    echo "  invalidating ledger verification." >&2
+    return 1
+  fi
+
+  local new_version
+  new_version=$(grep -oE '"new_key_version":[0-9]+' /tmp/promote-key-resp.$$ \
+    | head -1 | cut -d: -f2 || echo "?")
+  echo "  ✓ DB key promoted: new_key_version=$new_version"
+  rm -f /tmp/promote-key-resp.$$
+  return 0
+}
+
 rotate_one() {
   local target="$1"
   local namespace="$2"
@@ -158,7 +213,23 @@ rotate_one() {
 
   if [[ "$dry_run" == "true" ]]; then
     echo "  [dry-run] would patch K8s secret + restart: $deployments"
+    if [[ "$target" == "consent-ledger-signing" ]]; then
+      echo "  [dry-run] would call POST /api/v1/admin/consent-ledger/promote-key"
+    fi
     return 0
+  fi
+
+  # consent-ledger-signing has a DB-side dependency: the new key value
+  # must be promoted in the consent_ledger_signing_keys registry BEFORE
+  # we patch the K8s Secret, otherwise newly-signed rows will reference
+  # a key version the DB doesn't know about. The promote endpoint is
+  # idempotent in the sense that re-running it just creates another
+  # version (admin can clean up).
+  if [[ "$target" == "consent-ledger-signing" ]]; then
+    if ! promote_consent_ledger_key "$new_value"; then
+      echo "ERROR: DB key promotion failed — aborting K8s patch." >&2
+      exit 5
+    fi
   fi
 
   # Patch the secret. ``--type=merge`` so other keys in the secret are

@@ -252,6 +252,44 @@ async def consent_ledger_grants(
         "can_delete": None,
     }
 
+    # Migration 0030 signing-key registry probe runs FIRST so its
+    # output is in the body even when the grant probe below fails
+    # (e.g. SQLite test DB has no has_table_privilege function).
+    # Reports total registered versions + the current key's version
+    # without leaking key values.
+    async def _probe_signing_keys() -> dict[str, Any]:
+        try:
+            keys_summary = await db.execute(
+                text(
+                    """
+                    SELECT
+                        COUNT(*) AS total_versions,
+                        MAX(CASE WHEN is_current THEN key_version ELSE NULL END)
+                            AS current_version,
+                        SUM(CASE WHEN is_current THEN 1 ELSE 0 END)
+                            AS current_count
+                    FROM consent_ledger_signing_keys
+                    """
+                )
+            )
+            keys_row = keys_summary.one()
+            return {
+                "total_versions": int(keys_row.total_versions or 0),
+                "current_version": (
+                    int(keys_row.current_version)
+                    if keys_row.current_version is not None
+                    else None
+                ),
+                "current_count": int(keys_row.current_count or 0),
+            }
+        except Exception as exc:
+            # Table may not exist on a freshly-cloned dev DB without
+            # 0030 applied. Surface as a soft signal.
+            logger.warning("Signing-key registry probe failed: %s", exc)
+            return {"error": "registry_probe_unavailable"}
+
+    body["signing_keys"] = await _probe_signing_keys()
+
     try:
         result = await db.execute(
             text(

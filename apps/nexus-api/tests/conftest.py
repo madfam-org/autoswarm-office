@@ -118,9 +118,34 @@ _rate_limit_patch.start()
 
 @pytest.fixture(autouse=True)
 async def _setup_database() -> AsyncGenerator[None, None]:
-    """Create all tables before each test and drop them after."""
+    """Create all tables before each test and drop them after.
+
+    Also bootstraps a v1 consent-ledger signing key so any test that
+    exercises voice-mode/onboarding can sign a row. The v1 key value
+    matches ``Settings.consent_ledger_signing_secret`` so the legacy
+    ``verify_signature()`` path (env-keyed) and the new
+    ``verify_signature_with_db()`` path (registry-keyed) both succeed
+    against the same row. Mirrors what migration 0030 does in
+    production.
+    """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Bootstrap the v1 key out-of-band of the normal session factory
+    # so tests that override get_db still see a clean slate per test.
+    from nexus_api.models import ConsentLedgerSigningKey  # noqa: PLC0415
+
+    async with async_session_factory() as bootstrap_session:
+        key_value = _test_settings.consent_ledger_signing_secret
+        bootstrap_session.add(
+            ConsentLedgerSigningKey(
+                key_version=1,
+                key_value=key_value,
+                is_current=True,
+            )
+        )
+        await bootstrap_session.commit()
+
     yield
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

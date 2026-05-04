@@ -92,8 +92,15 @@ foundationally one-line dangerous if left undone.
   `stripe.Webhook.construct_event` with 300s replay-tolerance.
   Fail-closed on missing `STRIPE_WEBHOOK_SECRET` (503).
   Settings validator refuses empty secret when
-  `FEATURE_STRIPE_MXN_LIVE=true` in production. Per-event handlers
-  TBD per Phase 2 as each event type becomes operationally relevant.
+  `FEATURE_STRIPE_MXN_LIVE=true` in production. **Per-event handlers
+  shipped** in PR #116: `customer.subscription.{created,updated,deleted}`
+  + `invoice.{paid,payment_failed}` mirror state into `tenant_configs`
+  via migration 0027 (`stripe_customer_id` UNIQUE+indexed lookup),
+  refresh cached tier limits, and emit `billing.invoice_paid` /
+  `billing.payment_failed` task events. 22 regression tests pin the
+  contract. Operator follow-up: populate `STRIPE_PRICE_TO_TIER_MAP`
+  from Stripe Dashboard before flipping `FEATURE_STRIPE_MXN_LIVE` in
+  production.
 - **Production secrets provisioned** — `WORKER_API_TOKEN`,
   `CONSENT_LEDGER_SIGNING_SECRET`, `COLYSEUS_SERVICE_TOKEN` all need
   strong values in staging + prod. Settings validators now refuse
@@ -119,6 +126,14 @@ foundationally one-line dangerous if left undone.
   query patterns, enumerate every legitimate "no tenant context"
   path and either: (a) set an explicit context (e.g. "platform" for
   MADFAM-internal queries), or (b) document each one.
+  **First fix landed (PR #114)**: `POST /api/v1/swarms/tasks/reap-stale`
+  was silently scoped to one org because it inherited the caller's
+  `org_id` via `Depends(get_db)` and the permissive RLS policy then
+  filtered to that org only. Now requires a service/worker/platform/admin
+  role and explicitly resets `app.current_org_id = ''` for the
+  cross-tenant SELECT. The Phase 1.5 audit doc tracks the rest of the
+  endpoints that need similar treatment before the permissive escape
+  hatch is removed (see `docs/RLS_PHASE_1_5_AUDIT.md`).
 - **Tighten the policies** — remove the `IS NULL OR = ''` branch and
   require an explicit session org on every query against a tenant
   table. Migrations should set `app.current_org_id = 'system'` and
@@ -152,9 +167,36 @@ foundationally one-line dangerous if left undone.
   [docs/AUDIENCE_FILTER_ROLLOUT.md](docs/AUDIENCE_FILTER_ROLLOUT.md)
   (synthetic-exercise procedure pre-launch; full 48h soak when first
   paying tenant onboards).
-- **Mypy baseline elimination** — 144 errors in nexus-api, ~20 in
-  workers. Ratchet via CI: no new errors allowed; fix 10/week. Most are
-  `dict[str, Any]` overuse and missing return types in routers.
+- ~~**Mypy baseline elimination — nexus-api**~~ — DONE (waves 1, 1.5, 3).
+  144 → 0 in `apps/nexus-api/`. CI ratchet at `MAX_MYPY_ERRORS=0`.
+  Surfaced 4 latent bugs along the way (wrong `adapters.compliance`
+  import path, missing `await` on `KarafielAdapter.get_cfdi_status`,
+  invalid `tags=s.tags` attr access, stale type ignores).
+- ~~**Mypy baseline elimination — workers**~~ — DONE (PR #115).
+  14 → 0 in `apps/workers/`. CI ratchet at `MAX_MYPY_ERRORS=0`.
+  Added `_state_str` / `_state_dict` helpers for type-safe access on
+  loosely-typed graph state dicts. Documented latent
+  `PostgresSaver.from_conn_string` bug (every worker silently uses
+  `MemorySaver` because the `.setup()` call always raises
+  `AttributeError` caught by the broad except — needs a follow-up to
+  open a real `psycopg.Connection` and pass it to the
+  `PostgresSaver(conn=...)` constructor with worker-shutdown plumbing).
+- **Mypy baseline elimination — packages** — IN PROGRESS (PRs #117 +
+  #118). 129 → 47 in `packages/` (down 82 in 2 stacked PRs). CI
+  ratchet to be set at the post-merge count. Surfaced 6 latent silent
+  bugs: `InferenceProvider.stream` async-vs-async-generator signature
+  mismatch (every streaming caller broke at type check); `agent.py`
+  `call_llm` called with wrong arg shape and missing `await` since
+  written; 3 SDK examples (`basic_dispatch.py`, `custom_workflow.py`,
+  `list_agents.py`) using dict indexing on pydantic models — would
+  crash on first real run; `meeting_scheduler.py` loop variable `e`
+  shadowing an `except ValueError as e` (Python deletes the except
+  name at scope exit). Remaining 47 errors are concentrated in
+  langgraph type-system mismatches (`StateGraph.invoke` not yet
+  typed), `Client | None` union-attr noise, and one
+  `selva_memory.store.Base not valid as type` issue worth a closer
+  look — the 5/week rate target should burn down to <20 within a
+  couple weeks.
 - **Real load test** — target 100 concurrent SwarmTasks; measure DLQ
   depth, worker pool saturation, Redis Stream lag, LLM provider rate
   limits hit. Calibrate `MAX_CONCURRENT_TASKS`, `dispatch_rate_limit`,

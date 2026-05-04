@@ -133,6 +133,11 @@ module = [
     "sentry_sdk.*",
     "prometheus_client.*",
     "httpx.*",
+    # celery 5.x ships without `py.typed` and we only use a thin slice
+    # of it (Celery() constructor + decorator) — adding stubs is more
+    # surface area than it's worth.  Revisit if/when celery>=6 ships
+    # with type hints.
+    "celery.*",
 ]
 ignore_missing_imports = true
 

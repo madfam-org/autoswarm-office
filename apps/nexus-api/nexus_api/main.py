@@ -318,12 +318,14 @@ def create_app() -> FastAPI:
                 from selva_skills import get_skill_registry
 
                 registry = get_skill_registry()
+                # SkillMetadata has no `tags` attribute — AgentSkill.tags
+                # defaults to []. If we ever add tags to SkillMetadata,
+                # plumb it through here.
                 return [
                     AgentSkill(
                         id=s.name,
                         name=s.name,
                         description=s.description,
-                        tags=s.tags,
                     )
                     for s in registry.list_skills()
                 ]

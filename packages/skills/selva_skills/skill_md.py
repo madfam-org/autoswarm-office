@@ -48,7 +48,7 @@ def _parse_skill_md(path: Path) -> SkillDocument | None:
     try:
         import yaml
     except ImportError:
-        yaml = None  # type: ignore
+        yaml = None
 
     raw = path.read_text(encoding="utf-8", errors="replace")
     meta: dict[str, Any] = {}

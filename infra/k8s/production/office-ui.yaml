@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: office-ui
-          image: ghcr.io/madfam-org/autoswarm-office-ui:latest
+          image: ghcr.io/madfam-org/autoswarm-office-ui@sha256:d147cde24484330b89a353ef63254925c105c229decee56f7db4677e497b5bd9
           ports:
             - containerPort: 3000
               protocol: TCP

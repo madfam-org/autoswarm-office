@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: admin
-          image: ghcr.io/madfam-org/autoswarm-admin:latest
+          image: ghcr.io/madfam-org/autoswarm-admin@sha256:160b363b7d8c543150f995ed932f687a0bb2d9038990b83f441e46e96d5427da
           ports:
             - containerPort: 3000
               protocol: TCP

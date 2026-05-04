@@ -34,7 +34,7 @@ from selva_redis_pool.timeout import get_task_timeout
 from selva_tools import Audience as ToolAudience
 from selva_tools import with_audience
 
-from .checkpointer import create_checkpointer
+from .checkpointer import close_checkpointer, create_checkpointer
 from .config import get_settings
 from .event_emitter import emit_event as _emit_event
 from .graphs.accounting import build_accounting_graph
@@ -962,6 +962,12 @@ async def main() -> None:
         if _active_tasks:
             logger.info("Draining %d active task(s)...", len(_active_tasks))
             await asyncio.gather(*_active_tasks, return_exceptions=True)
+        # Release Postgres checkpoint pool BEFORE Redis pool. Order
+        # matters: in-flight tasks above may still be writing
+        # checkpoints; closing the checkpoint pool first while tasks
+        # could still be running would race. Drain finished above
+        # guarantees no task is mid-checkpoint when this runs.
+        close_checkpointer()
         await pool.close()
         logger.info("Worker shut down")
 

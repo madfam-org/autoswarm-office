@@ -5,13 +5,42 @@
 - **Pricing source-of-truth**: `infra/pricing/selva-tiers.json` (canonical, schema-validated against `infra/pricing/schema.json`). Derived from `internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md` (the human-readable upstream). Selva tiers (Tulana v0.1, MXN/hr): Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255 — confidence **medium**. Dhanam subscription daily limits (starter=1000, professional=5000, enterprise=25000) ship in the same JSON. The Python loader is `apps/nexus-api/nexus_api/billing_tiers.py`; the CI drift gate is `apps/nexus-api/tests/test_pricing_codification.py` (asserts loader + JSON + CLAUDE.md + emergency fallback all agree). Adjacent ecosystem bundles (Founder/Operator/Flywheel, USD/mo) are still in `apps/office-ui/src/app/bundles/page.tsx:60-117` — TS-side codification follow-up tracked in ROADMAP.
 - **PMF measurement**: per RFC 0013, NPS + Sean Ellis + retention via `@madfam/pmf-widget` → Tulana `/v1/pmf/*` endpoints. Composite PMF Score informs price moves + sunset decisions.
 
-## Security Posture (v2.2.x — post-remediation)
+## Patterns Added in v2.3.0 (operator must know)
+
+Three new patterns shipped 2026-05-04 that operators / contributors need
+to know about. Each has its own dedicated section below; this is the
+quick-reference index.
+
+- **Idempotency-Key on mutation endpoints** — 10 mutations are now
+  replay-safe. Use `Depends(get_idempotency_context)` on any new
+  mutation endpoint where double-execution would be costly. Pattern in
+  `apps/nexus-api/nexus_api/idempotency.py` docstring; adoption
+  examples in `routers/swarms.py:dispatch_task` and
+  `routers/marketplace.py:install_skill`. Test pattern in
+  `tests/test_idempotency_tier_1_adoption.py`.
+
+- **`tenant_session(org_id)` helper** for non-FastAPI database access
+  paths (WS handlers, A2A bridge, audit middleware). MUST be used
+  instead of bare `async_session_factory()` — the latter leaves
+  `app.current_org_id` unset and post-RLS-strict-mode that means
+  "queries succeed today but break the day strict mode lands." See
+  `apps/nexus-api/nexus_api/database.py:tenant_session` docstring.
+  For genuine cross-tenant operator queries (reap-stale,
+  fleet-wide reports), use `admin_session()` instead — it selects
+  the BYPASSRLS connection pool.
+
+- **PostgresSaver real lifecycle** — workers now persist LangGraph
+  state across pod restarts. Worker → checkpoint write → pod kill →
+  pod restart → graph resumes from checkpoint. Operator: ensure
+  `DATABASE_URL` is reachable from worker pods. Init failure logs at
+  ERROR (not WARNING) because falling back to `MemorySaver` silently
+  is the bug we just closed.
+
+## Security Posture (v2.2.x — post-remediation, augmented in v2.3.0)
 
 Quick-reference for new contributors. Each bullet group is an invariant the
-v2.2.x remediation enforces — break one and you break a tenancy/safety
-boundary. Followups (12 unhardened webhook handlers, Postgres RLS rollout,
-Colyseus 0.17 migration, Stripe webhook handler, tenant onboarding UI for
-`outbound_*` columns) are tracked in ROADMAP.md.
+remediation enforces — break one and you break a tenancy/safety
+boundary. Followups tracked in ROADMAP.md.
 
 - **Worker → API auth**: every worker call sends `X-Selva-Tenant-Org: <org_id>`
   alongside the `Authorization: Bearer <WORKER_API_TOKEN>` header. The header
@@ -103,9 +132,145 @@ Colyseus 0.17 migration, Stripe webhook handler, tenant onboarding UI for
 - **Cross-language single-source-of-truth**: `OFFICE_BOUNDS` and
   `WORLD_*` constants live in `packages/shared-types/src/world.ts` —
   consumed by both Colyseus (TS) and any Python service that needs
-  them via the generated bindings. Dhanam tier limits live in
-  `apps/nexus-api/nexus_api/billing_tiers.py` (`TIER_DAILY_TASK_LIMIT`).
-  Do not duplicate.
+  them via the generated bindings. Dhanam tier limits + Tulana hourly
+  packs live in `infra/pricing/selva-tiers.json` (canonical, schema-
+  validated against `infra/pricing/schema.json`); `billing_tiers.py`
+  loads from JSON. Do not duplicate; CI drift gate
+  (`tests/test_pricing_codification.py`) catches if you do.
+
+## Patterns Added in v2.3.0 — full reference
+
+### Idempotency-Key on mutation endpoints
+
+Use on POST endpoints whose effects are side-effecting + non-trivial
+to undo. Adopt via:
+
+```python
+from ..idempotency import IdempotencyContext, get_idempotency_context
+
+@router.post("/your-endpoint", response_model=YourResponse)
+async def your_handler(
+    body: YourRequest,
+    db: AsyncSession = Depends(get_db),
+    user: dict[str, Any] = Depends(get_current_user),
+    idem: IdempotencyContext = Depends(get_idempotency_context),
+) -> YourResponse:
+    # 1. Replay short-circuit
+    if idem.is_replay and idem.cached is not None:
+        return YourResponse.model_validate(idem.cached)
+
+    # 2. Do the work — every side effect must complete before save()
+    # ... mutation logic ...
+    response = YourResponse(...)
+
+    # 3. Cache only on success — 4xx/5xx HTTPException short-circuits
+    #    past this line, so failed paths don't lock out retries
+    await idem.save(response.model_dump(mode="json"))
+    return response
+```
+
+Key shape: `autoswarm:idem:<org_id>:<method>:<path>:<key>` — org-
+scoped (cross-tenant cache leak prevention) + method+path scoped
+(same key against /a vs /b are different operations per RFC 9457).
+24h TTL. No-op when `Idempotency-Key` header absent (caller opt-in).
+
+Currently adopted on: `swarms.dispatch`, `approvals.{approve,deny}`,
+`onboarding.voice-mode`, `marketplace.install`, `calendar.connect`,
+`maps.{create,import}`, `workflows.{create,import}`. See PRs #127,
+#141, #142.
+
+### `tenant_session(org_id)` for non-FastAPI DB paths
+
+Anywhere code opens a DB session OUTSIDE the request flow (WS
+handlers, background tasks, audit middleware), use `tenant_session`
+not `async_session_factory()` directly:
+
+```python
+from ..database import tenant_session
+
+async with tenant_session(org_id="org-abc") as db:
+    # session has app.current_org_id set; RLS policies pass
+    event = TaskEvent(org_id="org-abc", ...)
+    db.add(event)
+    # commit happens on context exit
+```
+
+For genuine cross-tenant operator queries (reap-stale, fleet-wide
+reports, cross-org analytics), use `admin_session()` instead — it
+selects the BYPASSRLS connection pool (`database_admin_url` env var
+sets the BYPASSRLS-role connection string; falls back to main pool
+when unset for dev / SQLite test paths).
+
+The 5 sites originally identified by the RLS Phase 1.5 audit
+(audit middleware, A2A bridge `_dispatch_a2a_task` +
+`_get_a2a_task_status`, WS initial-batch in
+`approvals.py:454/523`, WS initial-batch in `events.py:345`) all
+migrated in PR #126. Bare `async_session_factory()` MUST NOT be
+reintroduced — the import-shape regression tests in
+`tests/test_tenant_session_helper.py` catch it.
+
+### RLS strict mode + `admin_session()`
+
+Migration 0028 (PR #134) tightened the Phase 1 permissive policy
+(`IS NULL OR = '' OR = $org`) to strict
+(`current_setting(...) = $org OR current_setting(...) = 'platform'`)
++ applied `FORCE ROW LEVEL SECURITY` on all 18 tenant tables. Net
+effect: a session that doesn't `SET LOCAL app.current_org_id = ...`
+sees ZERO rows from tenant tables.
+
+Two new env vars:
+- `database_admin_url` — connection string for the BYPASSRLS role
+  (`app_admin`). When unset, `admin_session()` falls back to the
+  main pool (acceptable for SQLite tests; NOT for production where
+  RLS is FORCEd). Operator: provision the `app_admin` role per
+  migration 0028's docstring + set this env in production.
+- `db_admin_pool_size` (default 2) — small pool because
+  cross-tenant ops are rare.
+
+Operator runtime check: `GET /api/v1/health/rls-status` returns
+`{strict_mode_enabled, policies, force_rls_tables, app_admin_role_present, dialect}`.
+Returns 503 when strict mode isn't enabled — useful in alert
+chains to detect "we accidentally rolled back to permissive."
+
+### PostgresSaver real lifecycle
+
+Worker checkpoint persistence — closes the silent-state-loss bug
+where `PostgresSaver.from_conn_string()` was being called as a
+factory (it's a `@contextmanager`) so `MemorySaver` was used in
+practice. Worker pod kill mid-graph used to lose state; now it
+resumes from the checkpoint.
+
+`apps/workers/selva_workers/checkpointer.py` opens a
+`psycopg_pool.ConnectionPool` (min=1, max=4) wired into
+`PostgresSaver(conn=pool)`. `close_checkpointer()` is called from
+`__main__.py:main()` after the graceful drain so DB connections
+are released cleanly on SIGTERM.
+
+Init failure logs at **ERROR** (not WARNING) — Postgres-unreachable
+worker is degraded; ops needs to page on it. Falling back to
+MemorySaver silently is the regression we just closed.
+
+### Idempotency + tenant_session adoption checklist for new mutation endpoints
+
+When adding a new `POST` / `PUT` / `PATCH` / `DELETE` endpoint that
+modifies tenant-scoped state, the PR MUST:
+
+- [ ] Use `Depends(get_db)` (FastAPI request flow) OR
+      `tenant_session(org_id)` (non-request paths). Never bare
+      `async_session_factory()`.
+- [ ] Emit a `TaskEvent` via `emit_event_db` for state changes that
+      should be auditable (see `docs/AUDIT_TRAIL_GAP_ANALYSIS.md` for
+      the canonical pattern; CDC RFC 0019 will eventually replace
+      manual emit).
+- [ ] If the operation is side-effecting + costly to repeat
+      (dispatching a task, charging a customer, sending an email),
+      adopt `Depends(get_idempotency_context)` per the pattern above.
+- [ ] Classify into Tier 1 / Tier 2 / Tier 3 per `docs/SLOS.md` §1
+      and add an SLI row to §4.
+- [ ] If the endpoint hits a sibling service (Janua / Dhanam /
+      Karafiel / etc.), use `selva_observability.propagation` so the
+      W3C trace context flows (PR #137 wired this; happens for free
+      via `get_worker_auth_headers` and `_build_safe_request_kwargs`).
 
 ## Deployment Pipeline (dev → staging → prod)
 

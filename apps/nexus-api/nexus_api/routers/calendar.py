@@ -211,6 +211,24 @@ async def connect_calendar(
         db.add(connection)
         await db.flush()
 
+    # Audit trail: emit an event so the office UI activity feed surfaces
+    # calendar connections. Late import to avoid circular import with the
+    # events router. Fire-and-forget — errors swallowed inside
+    # ``emit_event_db`` so the connection always succeeds even if the
+    # audit pipeline is degraded.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="calendar.connected",
+        event_category="calendar",
+        org_id=tenant.org_id,
+        payload={
+            "provider": body.provider.value,
+            "user_sub": user_id,
+        },
+    )
+
     return ConnectResponse(provider=body.provider.value)
 
 
@@ -234,8 +252,27 @@ async def disconnect_calendar(
             detail="No calendar connection found",
         )
 
+    provider_value = connection.provider
     await db.delete(connection)
     await db.flush()
+
+    # Audit trail: emit an event so the office UI activity feed surfaces
+    # calendar disconnections. Late import to avoid circular import with
+    # the events router. Fire-and-forget — errors swallowed inside
+    # ``emit_event_db``.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="calendar.disconnected",
+        event_category="calendar",
+        org_id=tenant.org_id,
+        payload={
+            "provider": provider_value,
+            "user_sub": user_id,
+        },
+    )
+
     return DisconnectResponse()
 
 

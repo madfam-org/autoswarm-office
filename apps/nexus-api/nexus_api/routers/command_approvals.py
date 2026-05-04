@@ -141,6 +141,35 @@ async def _resolve(
 
     resolve_approval(request_id, approved, resolved_by=user_sub)
 
+    # Audit trail: emit an event so the office UI activity feed surfaces
+    # command-approval decisions (separate from the regular agent
+    # approvals.py path — this gates dangerous shell commands). Late
+    # import to avoid circular import with the events router. The
+    # command-approval row has no org_id today (per the existing
+    # ``_record_confidence_decision`` comment) so we emit under the
+    # ``platform`` org. Payload records IDs + run_id but NOT the raw
+    # command (treated as sensitive — its hash already lives in the
+    # HitlDecision row).
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type=(
+                "command_approval.approved" if approved else "command_approval.denied"
+            ),
+            event_category="approval",
+            org_id="platform",
+            payload={
+                "request_id": request_id,
+                "run_id": req.run_id,
+                "approver_sub": user_sub,
+            },
+        )
+        await db.commit()
+    except Exception:
+        logger.debug("Failed to emit command_approval event", exc_info=True)
+
     logger.info("Approval %s %s by %s", request_id, req.status, user_sub)
     return _to_schema(req)
 

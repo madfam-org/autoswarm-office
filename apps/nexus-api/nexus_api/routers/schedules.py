@@ -91,6 +91,28 @@ async def create_schedule(
         schedule.action,
         schedule.cron_expr,
     )
+
+    # Audit trail: emit an event so the office UI activity feed surfaces
+    # newly created cron schedules. Late import to avoid circular import
+    # with the events router. ``org_id`` is taken from the JWT, never
+    # from the request body. Fire-and-forget — errors swallowed inside
+    # ``emit_event_db``.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="schedule.created",
+        event_category="schedule",
+        org_id=user.get("org_id") or "default",
+        payload={
+            "schedule_id": str(schedule.id),
+            "action": str(schedule.action),
+            "cron_expr": schedule.cron_expr,
+            "user_sub": user_sub,
+        },
+    )
+    await db.commit()
+
     return _to_response(schedule)
 
 
@@ -123,9 +145,35 @@ async def cancel_schedule(
     user_sub = user["sub"]
     if schedule.user_id != user_sub and "admin" not in (user.get("roles") or []):
         raise HTTPException(status_code=403, detail="Cannot cancel another user's schedule")
+
+    # Capture identifying fields BEFORE delete so the audit payload
+    # records them post-deletion (the row is gone after db.delete).
+    schedule_action = str(schedule.action)
+    schedule_cron = schedule.cron_expr
+
     await db.delete(schedule)
     await db.commit()
     logger.info("Schedule %s cancelled by %s.", schedule_id, user_sub)
+
+    # Audit trail: emit an event so the office UI activity feed surfaces
+    # cancelled cron schedules. Late import to avoid circular import with
+    # the events router. ``org_id`` is taken from the JWT. Fire-and-forget
+    # — errors swallowed inside ``emit_event_db``.
+    from .events import emit_event_db
+
+    await emit_event_db(
+        db,
+        event_type="schedule.deleted",
+        event_category="schedule",
+        org_id=user.get("org_id") or "default",
+        payload={
+            "schedule_id": schedule_id,
+            "action": schedule_action,
+            "cron_expr": schedule_cron,
+            "user_sub": user_sub,
+        },
+    )
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------

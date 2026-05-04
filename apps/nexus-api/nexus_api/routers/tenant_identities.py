@@ -170,6 +170,42 @@ async def create_tenant_identity(payload: TenantIdentityCreate) -> TenantIdentit
             row.canonical_id,
             row.id,
         )
+
+        # Audit trail: emit an event when the cross-service identity
+        # map row is created. Mirrors the existing
+        # ``tenant_identity.updated`` emission in
+        # ``onboarding.py:update_tenant_identity`` so the office UI
+        # activity feed surfaces every identity-row mutation under one
+        # event_type. Payload records IDs + which per-service IDs are
+        # populated (NOT the legal_name / primary_contact_email — those
+        # are PII and remain in the row, not the audit log). Late
+        # import to avoid circular import with the events router.
+        from .events import emit_event_db
+
+        populated_services = sorted(
+            f
+            for f in (
+                "janua_org_id",
+                "dhanam_space_id",
+                "phynecrm_tenant_id",
+                "karafiel_org_id",
+            )
+            if getattr(row, f)
+        )
+        await emit_event_db(
+            session,
+            event_type="tenant.identity_updated",
+            event_category="tenant",
+            org_id=row.canonical_id,
+            payload={
+                "tenant_identity_id": str(row.id),
+                "canonical_id": row.canonical_id,
+                "populated_services": populated_services,
+                "operation": "create",
+            },
+        )
+        await session.commit()
+
         return _to_response(row)
 
 

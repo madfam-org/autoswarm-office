@@ -32,6 +32,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -185,9 +186,22 @@ class TenantIdentityResponse(BaseModel):
 
     Fields are nullable individually so the tool can detect partial
     configuration (e.g. brand_name set but no primary contact email
-    resolved yet) and fail-closed on the missing piece. ``agent_slug``
-    is intentionally NOT returned here — agent slugs are resolved per
-    call from a server-controlled allow-list, never from the LLM.
+    resolved yet) and fail-closed on the missing piece.
+
+    **Precedence chain** (resolved server-side; LLM has zero influence):
+
+    - ``user_email``: ``tenant_configs.outbound_user_email`` (first-class,
+      tenant-configurable via the office UI) → fall back to
+      ``tenant_identities.primary_contact_email`` (legacy MADFAM-ops-set
+      field).
+    - ``user_name``: ``tenant_configs.outbound_user_name`` →
+      ``tenant_configs.brand_name`` → ``tenant_identities.legal_name`` →
+      ``tenant_configs.razon_social``.
+    - ``org_name``: ``tenant_identities.legal_name`` →
+      ``tenant_configs.razon_social`` → ``tenant_configs.brand_name``.
+    - ``agent_slug``: ``tenant_configs.outbound_agent_slug`` if set and
+      in the email-tool allow-list, else None (caller falls back to its
+      own per-tool default — never to LLM-supplied raw text).
     """
 
     user_email: str | None = Field(
@@ -195,15 +209,16 @@ class TenantIdentityResponse(BaseModel):
         description=(
             "Primary outbound mailbox for the tenant (drives From: in "
             "user_direct/dyad modes and Reply-To across all modes). "
-            "Sourced from tenant_identities.primary_contact_email."
+            "Resolves tenant_configs.outbound_user_email then "
+            "tenant_identities.primary_contact_email."
         ),
     )
     user_name: str | None = Field(
         default=None,
         description=(
-            "Display name for the From: header. Sourced from "
-            "tenant_configs.brand_name with fallback to "
-            "tenant_identities.legal_name."
+            "Display name for the From: header. Resolves "
+            "tenant_configs.outbound_user_name then brand_name then "
+            "tenant_identities.legal_name then razon_social."
         ),
     )
     org_name: str | None = Field(
@@ -214,6 +229,102 @@ class TenantIdentityResponse(BaseModel):
             "fallback to tenant_configs.razon_social or brand_name."
         ),
     )
+    agent_slug: str | None = Field(
+        default=None,
+        description=(
+            "Optional tenant-configured agent slug for agent_identified "
+            "mode. NULL means the email tool should fall back to its "
+            "own per-call role → slug resolution. Constrained to the "
+            "5-entry allow-list (sales/support/growth/ops/research) at "
+            "PUT time."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Outbound identity update payload
+# ---------------------------------------------------------------------------
+
+# Mirror of ``email_tools._AGENT_ROLE_ALLOWLIST`` keys. Duplicated here
+# rather than imported because nexus-api MUST NOT depend on selva_tools
+# (worker package). Drift is caught by
+# ``test_onboarding_outbound_identity.py::test_agent_slug_allowlist_in_sync``.
+_AGENT_SLUG_ALLOWLIST = frozenset({"sales", "support", "growth", "ops", "research"})
+
+# Same regex used by SendEmailTool (``email_tools._EMAIL_RE``). Conservative
+# RFC-friendly check; rejects whitespace and missing @ / TLD.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class OutboundIdentityUpdate(BaseModel):
+    """Payload for PUT /api/v1/onboarding/tenant-identity.
+
+    All three fields are optional. Submitting a field as ``None`` clears
+    it (falls back to the legacy resolver chain on the next email send);
+    omitting a field leaves the existing value untouched. To distinguish
+    "omit" from "explicit null", the router uses ``model_dump(exclude_unset=True)``.
+    """
+
+    outbound_user_email: str | None = Field(
+        default=None,
+        max_length=255,
+        description=(
+            "Outbound mailbox for the From: address in user_direct + dyad "
+            "modes (and Reply-To across all modes). Validated against "
+            "_EMAIL_RE if non-null + non-empty."
+        ),
+    )
+    outbound_user_name: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Display name shown in the From: header.",
+    )
+    outbound_agent_slug: str | None = Field(
+        default=None,
+        max_length=100,
+        description=(
+            "Tenant-pinned agent slug for agent_identified mode. Must "
+            "be one of: sales, support, growth, ops, research."
+        ),
+    )
+
+    @field_validator("outbound_user_email")
+    @classmethod
+    def _validate_email(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        # Normalise whitespace; treat a trimmed empty string as "clear".
+        stripped = v.strip()
+        if not stripped:
+            return None
+        if not _EMAIL_RE.match(stripped):
+            raise ValueError(
+                f"outbound_user_email must be a valid email address (got: {stripped[:32]!r})"
+            )
+        return stripped
+
+    @field_validator("outbound_user_name")
+    @classmethod
+    def _validate_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        stripped = v.strip()
+        return stripped or None
+
+    @field_validator("outbound_agent_slug")
+    @classmethod
+    def _validate_slug(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        stripped = v.strip().lower()
+        if not stripped:
+            return None
+        if stripped not in _AGENT_SLUG_ALLOWLIST:
+            raise ValueError(
+                "outbound_agent_slug must be one of: "
+                + ", ".join(sorted(_AGENT_SLUG_ALLOWLIST))
+            )
+        return stripped
 
 
 # ---------------------------------------------------------------------------
@@ -510,23 +621,128 @@ async def tenant_identity(
     )
     identity = identity_row.scalar_one_or_none()
 
-    user_email = identity.primary_contact_email if identity else None
     legal_name = identity.legal_name if identity else None
+    primary_contact_email = identity.primary_contact_email if identity else None
 
-    # Display name for From: header. Prefer brand_name (white-label),
-    # then legal_name, then razon_social. None of these are
-    # LLM-controllable.
-    user_name = config.brand_name or legal_name or config.razon_social
-    # Org name for the agent_identified signature block. Prefer the
-    # legal name (matches the consent ledger), fall back to fiscal name
-    # then brand.
+    # Precedence chain (migration 0026): prefer the first-class
+    # tenant-configurable columns over the legacy fallback chain. This
+    # is the regression-fix path — tenants who set their outbound
+    # identity via the office UI no longer need MADFAM ops to populate
+    # ``tenant_identities`` for them.
+    #
+    # ``user_email``: tenant-set outbound > legacy primary_contact_email.
+    # ``user_name``: tenant-set name > white-label brand > legal name >
+    # fiscal razon_social. The white-label brand still beats legal_name
+    # here because tenants who set brand_name explicitly want that to
+    # appear in the From: header.
+    user_email = config.outbound_user_email or primary_contact_email
+    user_name = (
+        config.outbound_user_name
+        or config.brand_name
+        or legal_name
+        or config.razon_social
+    )
+    # Org name for the agent_identified signature block — preserve the
+    # pre-0026 chain since legal_name (matches the consent ledger) is
+    # the right anchor for legal/regulatory disclosure.
     org_name = legal_name or config.razon_social or config.brand_name
+    # Tenant-pinned agent slug (None means "let the email tool pick its
+    # own per-call default"). Already constrained to the allow-list at
+    # PUT time, so the value is safe to pass through unchanged.
+    agent_slug = config.outbound_agent_slug
 
     return TenantIdentityResponse(
         user_email=user_email,
         user_name=user_name,
         org_name=org_name,
+        agent_slug=agent_slug,
     )
+
+
+@router.put(
+    "/onboarding/tenant-identity",
+    response_model=TenantIdentityResponse,
+    dependencies=[Depends(require_non_guest)],
+)
+async def update_tenant_identity(
+    body: OutboundIdentityUpdate,
+    request: Request,
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> TenantIdentityResponse:
+    """Tenant-side update of outbound identity columns on tenant_configs.
+
+    Lets tenants configure From: header inputs from the office settings
+    UI without requiring MADFAM ops to populate tenant_identities. The
+    ``org_id`` is forced from the JWT (matching every other tenant-
+    scoped mutation) — request bodies cannot specify it.
+
+    Submitting ``null`` for a field clears it (the legacy fallback
+    chain takes over on the next email send). Omitting a field leaves
+    the existing value untouched (uses ``exclude_unset=True``).
+
+    Validation:
+
+    - ``outbound_user_email``: must match ``[^@\\s]+@[^@\\s]+\\.[^@\\s]+``.
+    - ``outbound_agent_slug``: must be in the 5-entry email-tool
+      allow-list (sales/support/growth/ops/research).
+    - ``outbound_user_name``: trimmed; max 255 chars (Pydantic).
+
+    Audit: emits ``tenant_identity.updated`` to ``task_events`` with
+    ``event_category="onboarding"`` so the change is in the audit
+    trail. Payload includes the keys that changed but not the values
+    (avoid leaking PII into the event log).
+    """
+    org_id = user.get("org_id")
+    if not org_id or org_id == "platform":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="tenant identity requires org-scoped auth (X-Selva-Tenant-Org header)",
+        )
+
+    config = await _load_tenant(db, org_id)
+
+    # ``exclude_unset=True`` distinguishes "user wants to clear this
+    # field to null" (key present with null value) from "user did not
+    # touch this field" (key absent). The first should overwrite to
+    # NULL; the second should leave the existing column unchanged.
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        # Nothing to do — return the current resolved identity. Avoids
+        # writing a no-op audit row.
+        return await tenant_identity(user=user, db=db)
+
+    changed_keys: list[str] = []
+    for key, value in updates.items():
+        previous = getattr(config, key, None)
+        if previous != value:
+            setattr(config, key, value)
+            changed_keys.append(key)
+
+    if not changed_keys:
+        # Submitted values matched stored values — no DB write, no event.
+        return await tenant_identity(user=user, db=db)
+
+    config.updated_at = datetime.now(UTC).replace(microsecond=0)
+    await db.flush()
+
+    user_sub = str(user.get("sub") or user.get("user_id") or "unknown")
+    user_agent = request.headers.get("user-agent")
+    actor_ip = _get_client_ip(request)
+    await emit_event_db(
+        db,
+        event_type="tenant_identity.updated",
+        event_category="onboarding",
+        org_id=org_id,
+        payload={
+            "changed_keys": sorted(changed_keys),
+            "actor_sub": user_sub,
+            "actor_ip": actor_ip,
+            "user_agent": user_agent,
+        },
+    )
+
+    return await tenant_identity(user=user, db=db)
 
 
 @router.post(

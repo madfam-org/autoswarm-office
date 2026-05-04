@@ -117,9 +117,22 @@ async def _fetch_tenant_identity(org_id: str) -> dict[str, Any] | None:
 
     Returns the dict from ``GET /api/v1/onboarding/tenant-identity`` or
     ``None`` on any error / missing config. The dict shape is
-    ``{user_email, user_name, org_name}`` (any field may be None when
-    the tenant has partial config). Callers MUST fail-closed on a None
-    return rather than substituting LLM-supplied defaults.
+    ``{user_email, user_name, org_name, agent_slug}`` (any field may be
+    None when the tenant has partial config). Callers MUST fail-closed
+    on a None return rather than substituting LLM-supplied defaults.
+
+    **Resolution chain (server-side, since migration 0026)**:
+
+    - ``user_email``: ``tenant_configs.outbound_user_email`` (first-class,
+      tenant-set via the office UI) → ``tenant_identities.primary_contact_email``
+      (legacy MADFAM-ops-set fallback).
+    - ``user_name``: ``tenant_configs.outbound_user_name`` →
+      ``tenant_configs.brand_name`` → ``tenant_identities.legal_name`` →
+      ``tenant_configs.razon_social``.
+    - ``org_name``: legacy chain (legal_name → razon_social → brand_name).
+    - ``agent_slug``: ``tenant_configs.outbound_agent_slug`` if the tenant
+      has pinned a specific agent, else None (caller falls back to its
+      own per-call role → slug resolver, never to LLM-supplied text).
 
     Same auth shape as ``_fetch_voice_mode``: worker token + the
     ``X-Selva-Tenant-Org`` header so nexus-api resolves the requesting

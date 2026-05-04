@@ -192,8 +192,28 @@ REDDIT_PROMO_V1 = PlaybookDefinition(
 )
 
 
+# Mastodon (fediverse) promo playbook. Same shape as the Reddit MVP —
+# Mastodon's federation model means a published toot is replicated to
+# every following instance and survives local deletion via cached copies
+# elsewhere in the network. Posts are FUNCTIONALLY PERMANENT across the
+# fediverse, so HITL stays on by default — agents draft, humans approve.
+# Defence in depth alongside the per-instance disclosure footer +
+# visibility allow-list (default 'unlisted' to avoid public-timeline
+# spam complaints) + Redis 30-min per-instance rate-limit.
+MASTODON_PROMO_V1 = PlaybookDefinition(
+    id="mastodon_promo_v1",
+    name="Mastodon Promo (MVP)",
+    trigger_event="manual_dispatch",
+    allowed_actions={ActionCategory.SOCIAL_POST.value},
+    token_budget=20_000,
+    financial_cap_cents=0,  # Posting itself costs nothing; ad-spend is a separate playbook.
+    require_approval=True,  # HITL gate — one approval per post.
+)
+
+
 BUILTIN_PLAYBOOKS: dict[str, PlaybookDefinition] = {
     REDDIT_PROMO_V1.id: REDDIT_PROMO_V1,
+    MASTODON_PROMO_V1.id: MASTODON_PROMO_V1,
 }
 
 

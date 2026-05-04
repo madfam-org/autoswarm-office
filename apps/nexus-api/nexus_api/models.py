@@ -444,6 +444,27 @@ class TenantConfig(Base):
     # values to the 3 legal modes.
     voice_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
+    # Stripe subscription state (migration 0027). Populated by the Stripe
+    # webhook handlers in ``routers/stripe_webhooks.py`` -- never written
+    # by application code directly. ``stripe_customer_id`` is the lookup
+    # key webhook handlers use to resolve a tenant from any
+    # ``customer.subscription.*`` or ``invoice.*`` event (UNIQUE +
+    # indexed at the DB level). ``subscription_status`` mirrors Stripe
+    # values (``active``, ``trialing``, ``past_due``, ``cancelled``, ...);
+    # NULL means "no Stripe subscription on file". ``subscription_tier``
+    # is the Selva tier slug derived from the price ID via
+    # ``Settings.stripe_price_to_tier_map`` and matches a key in
+    # ``billing_tiers.TIER_DAILY_TASK_LIMIT``.
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    subscription_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    subscription_tier: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    subscription_current_period_end: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Outbound identity (migration 0026). First-class columns so tenants
     # can configure From: header inputs from the office UI without ops
     # intervention. All nullable — the email lockdown's fallback chain

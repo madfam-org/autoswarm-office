@@ -518,12 +518,50 @@ class AuditLog(Base):
 # ---------------------------------------------------------------------------
 
 
+class ConsentLedgerSigningKey(Base):
+    """Per-period HMAC signing key registry (migration 0030).
+
+    Each row is a key version that has ever been current. The active
+    key has ``is_current=True`` and ``retired_at=NULL``; promoted-away
+    keys have ``is_current=False`` and ``retired_at=<promotion time>``.
+
+    Append-only at the application layer (UPDATE/DELETE revoked from
+    ``autoswarm_app`` in migration 0030). Promotion is the one
+    documented mutation, performed via
+    ``POST /api/v1/admin/consent-ledger/promote-key`` inside a
+    transaction that flips the previous current row to retired and
+    inserts a new row marked current.
+
+    A partial unique index on ``is_current`` enforces "at most one
+    current key" at the DB layer (Postgres only — see migration).
+    """
+
+    __tablename__ = "consent_ledger_signing_keys"
+
+    key_version: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key_value: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    retired_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
 class ConsentLedger(Base):
     """Append-only record of voice-mode consent events.
 
     UPDATE and DELETE are revoked from the app role at the DB level (see
     migration 0018). Writes are the only legal operation — replay the log
     to audit consent history.
+
+    The ``signing_key_version`` column (migration 0030) records which
+    HMAC key version signed this row, so verification still works
+    after a key rotation. The verifier looks up the row's
+    ``signing_key_version`` in ``consent_ledger_signing_keys`` and
+    recomputes the HMAC under that key's value. Pre-0030 rows
+    backfill to version 1 (the bootstrap key).
     """
 
     __tablename__ = "consent_ledger"
@@ -542,6 +580,12 @@ class ConsentLedger(Base):
     signer_ip: Mapped[str] = mapped_column(String(45), nullable=False)
     signer_user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     signature_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    signing_key_version: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("consent_ledger_signing_keys.key_version"),
+        nullable=False,
+        default=1,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

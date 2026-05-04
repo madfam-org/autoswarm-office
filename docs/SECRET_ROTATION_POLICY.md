@@ -89,13 +89,16 @@ follows the rollback procedure in §5.
 1. `colyseus-service` first (smallest blast radius — only chat persistence)
 2. `worker-api-token` second (worker→API auth — most active path, but
    K8s rolling restart keeps ≥1 pod serving)
-3. `consent-ledger-signing` last (signing key for new ledger rows; old
-   rows stay verifiable because they were signed with whatever key was
-   live at insertion time — the signature includes a timestamp so the
-   reader walks a per-period key index. **TODO: PR to add per-period key
-   tracking when this rotation pattern actually runs in production.** Until
-   then, rotating `CONSENT_LEDGER_SIGNING_SECRET` invalidates verification
-   of all pre-rotation rows. See §6.)
+3. `consent-ledger-signing` last (signing key for new ledger rows). The
+   rotation script first calls
+   `POST /api/v1/admin/consent-ledger/promote-key` to register the new
+   key value in the per-period registry (migration 0030), THEN patches
+   the K8s Secret. Old rows stay verifiable forever because each row
+   carries a `signing_key_version` and the verifier looks up the key
+   by version. Requires `NEXUS_API_URL` and `NEXUS_ADMIN_TOKEN` env
+   vars to be set; without them the script falls back to env-only
+   patching with a loud warning (operator must call the promote
+   endpoint by hand afterwards).
 
 ---
 
@@ -167,25 +170,44 @@ depth growing, workers can't authenticate):
 
 ---
 
-## 6. Known limitation: consent ledger key rotation
+## 6. Consent ledger key rotation (per-period tracking)
 
-Rotating `CONSENT_LEDGER_SIGNING_SECRET` invalidates HMAC verification
-of all pre-rotation rows. Today the verification path
-(`apps/nexus-api/nexus_api/routers/onboarding.py:compute_signature`)
-uses a single key.
+Rotating `CONSENT_LEDGER_SIGNING_SECRET` is now safe: per-period key
+tracking lives in `consent_ledger_signing_keys` (migration 0030).
+Every `consent_ledger` row carries a `signing_key_version` FK to
+that table; the verifier looks up the key value by version and
+recomputes the HMAC under it. Pre-0030 rows backfill to version 1
+(the bootstrap key, which is the env-level
+`CONSENT_LEDGER_SIGNING_SECRET` value at migration time).
 
-**Until per-period key tracking is built** (planned follow-up PR), the
-operational rule is:
+The rotation flow:
 
-- **Do NOT rotate `CONSENT_LEDGER_SIGNING_SECRET`** unless responding
-  to a confirmed compromise of that specific key
-- **Quarterly cycle skips this secret** until per-period tracking lands
+1. `scripts/rotate-secret.sh consent-ledger-signing` generates a new
+   32-byte hex value via `openssl rand -hex 32`.
+2. The script calls
+   `POST /api/v1/admin/consent-ledger/promote-key` with the new
+   value. The endpoint atomically marks the previous current row as
+   retired (`is_current=false`, `retired_at=NOW()`) and inserts a new
+   row with the next monotonic `key_version` and `is_current=true`.
+   A Postgres partial unique index on `is_current=true` enforces
+   "exactly one current key" at the DB layer.
+3. The script then patches the K8s Secret + rolling-restarts the
+   nexus-api Deployment so `_signing_secret()` (the env-level legacy
+   path used by offline auditor scripts) also picks up the new value.
+4. Old ledger rows continue to verify against their original key
+   version forever.
 
-When the per-period work lands, this section gets deleted and the
-`--all` rotation becomes safe.
+The script aborts BEFORE patching the K8s Secret if the promote-key
+call fails. Required env vars: `NEXUS_API_URL` (e.g.
+`https://api.selva.town`), `NEXUS_ADMIN_TOKEN` (Bearer token with
+`admin` or `platform` role).
 
-Tracked in [ROADMAP.md](../ROADMAP.md) as a follow-up under "Phase 3
-secret rotation policy".
+Quarterly cycle now safely includes `consent-ledger-signing`.
+
+The audit event `consent_ledger.key_promoted` (event_category
+`security`) is emitted to `task_events` on every promotion. Payload
+includes `new_key_version`, `previous_key_version`, `actor_sub`, and
+`actor_ip` — never the key value itself.
 
 ---
 

@@ -25,6 +25,7 @@ from .middleware.security import SecurityHeadersMiddleware, TenantRLSMiddleware
 from .middleware.tracing import TraceContextMiddleware
 from .routers import (
     admin,
+    admin_consent,
     agents,
     analytics,
     approvals,
@@ -189,6 +190,10 @@ def create_app() -> FastAPI:
     app.include_router(events.router, prefix="/api/v1/events")
     app.include_router(metrics.router, prefix="/api/v1/metrics")
     app.include_router(admin.router, prefix="/api/v1/admin")
+    # Per-period HMAC key tracking for the consent ledger (migration 0030).
+    # Endpoint at /api/v1/admin/consent-ledger/promote-key — requires
+    # admin OR platform role.
+    app.include_router(admin_consent.router, prefix="/api/v1")
     app.include_router(audit.router, prefix="/api/v1/audit")
     # Cross-service unified view over the 4 Selva RFC ledgers. Separate
     # from the middleware-row ``audit`` router above because the two

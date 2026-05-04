@@ -45,7 +45,7 @@ from ..auth import get_current_user, require_non_guest
 from ..config import get_settings
 from ..database import get_db
 from ..idempotency import IdempotencyContext, get_idempotency_context
-from ..models import ConsentLedger, TenantConfig, TenantIdentity
+from ..models import ConsentLedger, ConsentLedgerSigningKey, TenantConfig, TenantIdentity
 from .events import emit_event_db
 
 logger = logging.getLogger(__name__)
@@ -343,15 +343,80 @@ def _get_client_ip(request: Request) -> str:
 
 
 def _signing_secret() -> bytes:
-    """Return the HMAC signing secret as bytes.
+    """Return the HMAC signing secret from env as bytes (legacy fallback).
 
-    Read from ``Settings.consent_ledger_signing_secret`` on every call so
-    operators rotating the secret pick it up after a settings reload
-    without restarting the process. ``Settings`` already refuses the
+    Used only when no ``key_value`` is passed to ``compute_signature``
+    AND the per-period registry hasn't been queried (e.g. offline
+    auditor scripts). Reads from
+    ``Settings.consent_ledger_signing_secret`` on every call so
+    operators rotating the env-level secret pick it up after a
+    settings reload. ``Settings`` already refuses the
     ``dev-default-CHANGE-ME`` sentinel in production via
     ``_validate_config``.
     """
     return get_settings().consent_ledger_signing_secret.encode("utf-8")
+
+
+async def get_current_signing_key(
+    db: AsyncSession,
+) -> ConsentLedgerSigningKey:
+    """Return the active (``is_current=true``) signing key row.
+
+    Raises HTTPException(503) when no current key is configured —
+    happens when migration 0030 inserted a placeholder row because
+    ``CONSENT_LEDGER_SIGNING_SECRET`` was unset at migration time
+    and an admin hasn't promoted a real key yet.
+
+    Raises HTTPException(503) when the partial unique index has
+    been bypassed and multiple rows are current — defense in depth
+    against a bug in the promote path.
+    """
+    result = await db.execute(
+        select(ConsentLedgerSigningKey).where(
+            ConsentLedgerSigningKey.is_current.is_(True)
+        )
+    )
+    rows = result.scalars().all()
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "No current consent-ledger signing key configured. "
+                "Promote one via POST /api/v1/admin/consent-ledger/promote-key."
+            ),
+        )
+    if len(rows) > 1:
+        logger.error(
+            "consent_ledger_signing_keys has %d rows with is_current=true "
+            "(invariant violated; partial unique index may be missing)",
+            len(rows),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Multiple current signing keys (DB invariant violated).",
+        )
+    key = rows[0]
+    if not key.key_value:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Current signing key has empty value (placeholder row). "
+                "Promote a real key via POST /api/v1/admin/consent-ledger/promote-key."
+            ),
+        )
+    return key
+
+
+async def get_signing_key_by_version(
+    db: AsyncSession, version: int
+) -> ConsentLedgerSigningKey | None:
+    """Look up a key row by version (returns None if not found)."""
+    result = await db.execute(
+        select(ConsentLedgerSigningKey).where(
+            ConsentLedgerSigningKey.key_version == version
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 def compute_signature(
@@ -362,24 +427,35 @@ def compute_signature(
     clause_version: str,
     typed_confirmation: str,
     created_at: datetime,
+    key_value: str | bytes | None = None,
 ) -> str:
     """HMAC-SHA256 integrity digest over the ledger row's identifying fields.
 
-    Uses HMAC with a server-only secret (``CONSENT_LEDGER_SIGNING_SECRET``)
-    so an adversary with INSERT access on the ledger table cannot forge
-    rows that pass ``verify_signature`` — they would need the secret
-    held in the application process.
+    Uses HMAC with a server-only secret so an adversary with INSERT
+    access on the ledger table cannot forge rows that pass
+    ``verify_signature`` — they would need the secret held in the
+    application process.
+
+    Per-period key tracking (migration 0030): when ``key_value`` is
+    provided, the HMAC is computed under THAT key. When omitted, the
+    legacy single-key path falls back to ``_signing_secret()``
+    (env-driven). New ingest paths SHOULD pass ``key_value`` from the
+    current row in ``consent_ledger_signing_keys``; verification paths
+    pass the key matching the row's stored ``signing_key_version``.
 
     The output is structurally identical to a plain SHA-256 hex digest
     (64 lowercase hex chars), so the ``consent_ledger.signature_sha256``
-    column shape is unchanged. Rows signed under a previous secret (or
-    under the pre-HMAC plain SHA-256 algorithm) will fail verification
-    at audit time, which is the desired behaviour at the migration
-    boundary.
+    column shape is unchanged.
 
     Exported (not underscore-prefixed) so auditors holding the secret
     can import this function to re-verify ledger rows offline.
     """
+    if key_value is None:
+        secret = _signing_secret()
+    elif isinstance(key_value, str):
+        secret = key_value.encode("utf-8")
+    else:
+        secret = key_value
     payload = "|".join(
         [
             org_id,
@@ -390,17 +466,66 @@ def compute_signature(
             created_at.isoformat(),
         ]
     )
-    return hmac.new(_signing_secret(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.new(secret, payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+async def verify_signature_with_db(
+    db: AsyncSession, entry: ConsentLedger
+) -> bool:
+    """Recompute HMAC under the row's recorded ``signing_key_version``.
+
+    The async variant is the preferred verification path post-0030.
+    It:
+
+    1. Reads ``entry.signing_key_version`` (column added in 0030;
+       backfilled to 1 for pre-existing rows).
+    2. Looks up that version's ``key_value`` in
+       ``consent_ledger_signing_keys``.
+    3. Recomputes the HMAC under that key and compares with
+       ``hmac.compare_digest``.
+
+    Returns False if the key version's row has been deleted from the
+    registry (which the REVOKE on UPDATE/DELETE is supposed to
+    prevent — surface as a verification failure rather than crash).
+    """
+    version = getattr(entry, "signing_key_version", 1) or 1
+    key = await get_signing_key_by_version(db, version)
+    if key is None or not key.key_value:
+        logger.warning(
+            "consent_ledger row id=%s references signing_key_version=%d "
+            "with no matching registry row (verification fails)",
+            entry.id,
+            version,
+        )
+        return False
+
+    created_at = entry.created_at
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=UTC)
+    created_at = created_at.replace(microsecond=0)
+    expected = compute_signature(
+        org_id=entry.org_id,
+        user_sub=entry.user_sub,
+        mode=entry.mode,
+        clause_version=entry.clause_version,
+        typed_confirmation=entry.typed_confirmation,
+        created_at=created_at,
+        key_value=key.key_value,
+    )
+    return hmac.compare_digest(expected, entry.signature_sha256)
 
 
 def verify_signature(entry: ConsentLedger) -> bool:
-    """Recompute the HMAC-SHA256 digest and compare to the stored value.
+    """Legacy single-key verification path (uses env-driven secret).
 
-    Returns True iff the stored digest matches a fresh computation over
-    the row's current fields under the currently configured signing
-    secret. False means either: (a) the row has been tampered with,
-    (b) the signing secret has rotated, or (c) the row predates the
-    HMAC migration. All three cases warrant audit attention.
+    Kept for backwards compatibility with tests + offline auditor
+    scripts that don't have a DB session. Recomputes the HMAC under
+    the env-level ``CONSENT_LEDGER_SIGNING_SECRET``. Returns True
+    iff the stored digest matches.
+
+    Post-0030 callers should prefer ``verify_signature_with_db()``,
+    which honours per-row ``signing_key_version`` and survives
+    rotations.
 
     Normalizes ``created_at`` the same way the ingest path does
     (microseconds zeroed, UTC) so the round-trip through the DB does
@@ -465,6 +590,13 @@ async def _record_consent(
             detail="Authenticated user must have a verified email to sign consent.",
         )
 
+    # Resolve the current signing key BEFORE building the row so the
+    # ``signing_key_version`` column is populated. This raises 503 when
+    # no current key is configured (placeholder bootstrap row), which
+    # is the desired fail-closed behaviour — never sign with an empty
+    # key just because env wasn't set.
+    signing_key = await get_current_signing_key(db)
+
     # Truncate to whole seconds so the signature survives DB round-trips
     # (some backends drop sub-second precision on timestamp columns).
     created_at = datetime.now(UTC).replace(microsecond=0)
@@ -477,6 +609,7 @@ async def _record_consent(
         clause_version=CLAUSE_VERSION,
         typed_confirmation=submitted,
         created_at=created_at,
+        key_value=signing_key.key_value,
     )
 
     entry = ConsentLedger(
@@ -489,6 +622,7 @@ async def _record_consent(
         signer_ip=signer_ip,
         signer_user_agent=user_agent,
         signature_sha256=signature,
+        signing_key_version=signing_key.key_version,
         created_at=created_at,
     )
     db.add(entry)

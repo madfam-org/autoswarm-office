@@ -93,6 +93,15 @@ spec:
                 secretKeyRef:
                   name: autoswarm-secrets
                   key: WORKER_API_TOKEN
+            # CONSENT_LEDGER_SIGNING_SECRET added 2026-05-04 — Settings()
+            # validator (v2.3.0) refuses startup with the dev-default
+            # sentinel in production. Bootstrap key was generated and
+            # stored in autoswarm-secrets at the same time.
+            - name: CONSENT_LEDGER_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-secrets
+                  key: CONSENT_LEDGER_SIGNING_SECRET
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:

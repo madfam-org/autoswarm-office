@@ -100,7 +100,7 @@ async def emit_event(
         logger.warning("Failed to PUBLISH event %s to Redis", event_type)
 
 
-def instrumented_node(fn):  # type: ignore[no-untyped-def]
+def instrumented_node(fn):
     """Decorator that emits node.entered / node.exited / node.error events.
 
     Wraps a synchronous LangGraph node function. Measures duration via
@@ -109,7 +109,7 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
     """
 
     @functools.wraps(fn)
-    def wrapper(state, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def wrapper(state, *args, **kwargs):
         import asyncio
         import concurrent.futures
 
@@ -130,7 +130,7 @@ def instrumented_node(fn):  # type: ignore[no-untyped-def]
         nexus_url = _settings.nexus_api_url
         emit_timeout_s = _settings.event_emit_timeout_seconds
 
-        def _fire(coro):  # type: ignore[no-untyped-def]
+        def _fire(coro):
             """Run an async coroutine fire-and-forget from sync context."""
             try:
                 asyncio.get_running_loop()

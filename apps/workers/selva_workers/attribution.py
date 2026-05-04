@@ -39,7 +39,7 @@ def _lazy_init() -> None:
         logger.debug("Attribution: POSTHOG_API_KEY not set, events will be logged only")
         return
     try:
-        import posthog  # type: ignore[import-not-found]
+        import posthog
 
         posthog.api_key = api_key
         posthog.host = os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com")

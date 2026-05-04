@@ -106,6 +106,32 @@ def _handle_signal(sig: signal.Signals) -> None:
     _shutdown.set()
 
 
+def _state_str(state: dict, key: str, default: str = "") -> str:
+    """Read a string field from a loosely-typed graph state dict.
+
+    Graph state dicts are runtime ``dict[Any, Any]`` so ``state.get(key)``
+    statically resolves to ``object``. This helper preserves runtime behaviour
+    while satisfying mypy strict mode at the call site. Coerces non-string
+    values to ``str`` so downstream APIs that require ``str`` don't blow up
+    on accidental ints, but treats missing keys / ``None`` as ``default``.
+    """
+    value = state.get(key)
+    if value is None:
+        return default
+    return value if isinstance(value, str) else str(value)
+
+
+def _state_dict(state: dict, key: str) -> dict | None:
+    """Read an optional dict field from a loosely-typed graph state dict.
+
+    Returns ``None`` for missing keys, ``None`` values, or non-dict values
+    so callers that expect ``dict | None`` (e.g. ``update_task_status``'s
+    ``result`` parameter) don't receive a stray scalar.
+    """
+    value = state.get(key)
+    return value if isinstance(value, dict) else None
+
+
 async def run_graph_with_interrupts(
     compiled,  # noqa: ANN001 -- compiled LangGraph
     initial_state: dict,
@@ -523,7 +549,7 @@ async def process_task(task_data: dict) -> None:
                     run_graph_with_interrupts(compiled, initial_state, task_id, agent_id, handler),
                     timeout=timeout,
                 )
-        graph_status = result.get("status", "completed")
+        graph_status = _state_str(result, "status", "completed")
         if graph_status in ("completed", "pushed"):
             api_status = "completed"
         elif graph_status in ("blocked", "error", "denied", "timeout"):
@@ -534,7 +560,7 @@ async def process_task(task_data: dict) -> None:
             settings.nexus_api_url,
             task_id,
             api_status,
-            result.get("result"),
+            _state_dict(result, "result"),
             org_id=task_org_id or None,
         )
         await _emit_event(
@@ -561,7 +587,7 @@ async def process_task(task_data: dict) -> None:
                 agent_role,
                 description,
                 graph_type,
-                result.get("result"),
+                _state_dict(result, "result"),
                 graph_status,
                 duration_seconds=_duration,
             )
@@ -574,7 +600,7 @@ async def process_task(task_data: dict) -> None:
             )
             await update_bandit_reward(agent_id, 1.0 if api_status == "completed" else 0.2)
 
-        logger.info("Task %s completed with status: %s", task_id, result.get("status"))
+        logger.info("Task %s completed with status: %s", task_id, _state_str(result, "status"))
         await _publish_agent_status(agent_id, "idle", current_node_id="")
     except TimeoutError:
         logger.error("Task %s timed out after %ds", task_id, timeout)
@@ -812,7 +838,7 @@ async def _periodic_cleanup(repo_base: str, stale_hours: int) -> None:
 
 
 # Active concurrent tasks tracked for graceful shutdown.
-_active_tasks: set[asyncio.Task] = set()  # type: ignore[type-arg]
+_active_tasks: set[asyncio.Task[None]] = set()
 _task_semaphore: asyncio.Semaphore | None = None
 
 

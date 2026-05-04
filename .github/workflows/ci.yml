@@ -135,6 +135,31 @@ jobs:
             echo "::notice::mypy error count dropped from ${MAX_MYPY_ERRORS} to ${COUNT}. Lower MAX_MYPY_ERRORS in this PR so the ratchet stays tight."
           fi
 
+      - name: Mypy ratchet — workers (no new errors allowed)
+        # History:
+        #   2026-05-04 — wave 3 cleanup: 14 → 0. Added _state_str /
+        #     _state_dict helpers in __main__.py for type-safe access on
+        #     loosely-typed graph state dicts; normalized KarafielAdapter
+        #     return types to dict via .model_dump(); fixed research.py
+        #     join() to filter to str-only multimodal content; removed
+        #     stale # type: ignore comments from attribution.py +
+        #     event_emitter.py.
+        run: |
+          set -euo pipefail
+          MAX_MYPY_ERRORS=0
+          OUTPUT="$(uv run mypy apps/workers/ 2>&1 || true)"
+          COUNT="$(printf '%s\n' "$OUTPUT" | grep -E '^apps/workers/' | grep -c 'error:' || echo 0)"
+          echo "mypy errors in apps/workers: ${COUNT} (ceiling: ${MAX_MYPY_ERRORS})"
+          if [ "${COUNT:-0}" -gt "${MAX_MYPY_ERRORS}" ]; then
+            echo "::error::mypy error count grew (was ≤${MAX_MYPY_ERRORS}, now ${COUNT}). Either fix the new errors or, if you intentionally accept a regression, bump MAX_MYPY_ERRORS in .github/workflows/ci.yml with justification in the PR body."
+            echo "----- workers mypy errors -----"
+            printf '%s\n' "$OUTPUT" | grep -E '^apps/workers/' || true
+            exit 1
+          fi
+          if [ "${COUNT:-0}" -lt "${MAX_MYPY_ERRORS}" ]; then
+            echo "::notice::workers mypy errors dropped from ${MAX_MYPY_ERRORS} to ${COUNT}. Lower MAX_MYPY_ERRORS in this PR so the ratchet stays tight."
+          fi
+
   lint-community-skills:
     name: Lint Community Skills (advisory)
     runs-on: ubuntu-latest

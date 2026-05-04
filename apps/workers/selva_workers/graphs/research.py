@@ -37,7 +37,11 @@ def formulate_query(state: ResearchState) -> ResearchState:
     search query.  Falls back to raw concatenation when unavailable.
     """
     messages = state.get("messages", [])
-    raw_text = " ".join(msg.content for msg in messages if hasattr(msg, "content") and msg.content)
+    raw_text = " ".join(
+        msg.content
+        for msg in messages
+        if hasattr(msg, "content") and isinstance(msg.content, str) and msg.content
+    )
 
     try:
         from ..inference import call_llm, get_model_router

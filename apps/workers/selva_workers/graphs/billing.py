@@ -271,8 +271,8 @@ def generate_cfdi(state: BillingState) -> BillingState:
                     conceptos=conceptos,
                 )
             )
-            cfdi_xml = result.get("xml")
-            cfdi_uuid = result.get("uuid")
+            cfdi_xml = result.xml or None
+            cfdi_uuid = result.uuid or None
         else:
             raise RuntimeError("KARAFIEL_API_URL not set")
     except ImportError:
@@ -339,7 +339,9 @@ def stamp_cfdi(state: BillingState) -> BillingState:
                 from madfam_inference.adapters.karafiel import KarafielAdapter
 
                 adapter = KarafielAdapter(base_url=karafiel_url, token=karafiel_token)
-                stamp_result = _run_async(adapter.stamp_cfdi(cfdi_xml))
+                # adapter returns a StampResult pydantic model; downstream code
+                # uses dict access (.get) so normalize to a plain dict here.
+                stamp_result = _run_async(adapter.stamp_cfdi(cfdi_xml)).model_dump()
                 break
             else:
                 raise RuntimeError("KARAFIEL_API_URL not set")

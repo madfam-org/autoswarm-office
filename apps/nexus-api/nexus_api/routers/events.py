@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, verify_jwt
 from ..config import get_settings
-from ..database import async_session_factory, get_db
+from ..database import async_session_factory, get_db, tenant_session
 from ..models import TaskEvent
 from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter, event_manager
@@ -341,8 +341,14 @@ async def events_websocket(
     await event_manager.connect(websocket, client_id, org_id=org_id)
 
     # Send initial batch (tenant-scoped).
+    # Use tenant_session(org_id) instead of bare async_session_factory() so
+    # the SELECT honours RLS Phase 1.5 strict mode. Without it, the WS
+    # auth path resolves org_id from ?token= but the session var stays
+    # unset, and after tightening the SELECT would return zero rows
+    # (NULL session var ≠ org_id, no escape hatch). See
+    # docs/RLS_PHASE_1_5_AUDIT.md §2.E + §2.H.
     try:
-        async with async_session_factory() as session:
+        async with tenant_session(org_id=org_id) as session:
             result = await session.execute(
                 select(TaskEvent)
                 .where(TaskEvent.org_id == org_id)

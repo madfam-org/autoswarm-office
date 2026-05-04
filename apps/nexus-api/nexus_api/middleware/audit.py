@@ -124,9 +124,20 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
 
 async def _insert_audit_log(request: Request, response: Response) -> None:
-    """Insert an audit log entry. Failures are logged and suppressed."""
+    """Insert an audit log entry. Failures are logged and suppressed.
+
+    Uses ``tenant_session(org_id)`` instead of bare
+    ``async_session_factory()``. The middleware runs as fire-and-forget
+    after the response is sent, by which time the request-flow
+    ``org_id_var`` ContextVar is out of scope. Without an explicit
+    session-var binding, RLS Phase 1 relied on the permissive
+    ``IS NULL`` escape hatch to allow the INSERT — which means under
+    Phase 1.5 strict mode the INSERT would fail policy check. This
+    helper threads ``org_id`` (extracted from the request earlier)
+    into ``set_config`` so the policy passes.
+    """
     try:
-        from ..database import async_session_factory
+        from ..database import tenant_session
         from ..models import AuditLog
 
         resource_type, resource_id = _extract_resource_info(request.url.path)
@@ -134,7 +145,6 @@ async def _insert_audit_log(request: Request, response: Response) -> None:
         org_id = _extract_org_id(request)
         ip_address = _get_client_ip(request)
 
-        # Build details dict with relevant info
         details: dict[str, object] = {
             "path": request.url.path,
             "status_code": response.status_code,
@@ -142,7 +152,7 @@ async def _insert_audit_log(request: Request, response: Response) -> None:
         if request.url.query:
             details["query"] = str(request.url.query)[:500]
 
-        async with async_session_factory() as db:
+        async with tenant_session(org_id=org_id or "") as db:
             entry = AuditLog(
                 id=uuid.uuid4(),
                 org_id=org_id,
@@ -154,6 +164,6 @@ async def _insert_audit_log(request: Request, response: Response) -> None:
                 ip_address=ip_address,
             )
             db.add(entry)
-            await db.commit()
+            # commit happens on context-manager exit
     except Exception:
         logger.debug("Failed to insert audit log entry", exc_info=True)

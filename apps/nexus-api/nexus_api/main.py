@@ -226,11 +226,18 @@ def create_app() -> FastAPI:
         from selva_a2a.schema import TaskStatus as A2ATaskStatus
 
         async def _dispatch_a2a_task(req: A2ATaskRequest) -> str:
-            """Bridge an inbound A2A task into the internal dispatch pipeline."""
-            from .database import async_session_factory
+            """Bridge an inbound A2A task into the internal dispatch pipeline.
+
+            A2A tasks live in the synthetic ``"a2a-external"`` org. Use
+            ``tenant_session`` so RLS Phase 1.5 strict mode honours the
+            INSERT — bare ``async_session_factory()`` left
+            ``app.current_org_id`` unset, which the strict policy would
+            reject. See ``docs/RLS_PHASE_1_5_AUDIT.md`` §2.E.
+            """
+            from .database import tenant_session
             from .models import SwarmTask
 
-            async with async_session_factory() as db:
+            async with tenant_session(org_id="a2a-external") as db:
                 task = SwarmTask(
                     description=req.description,
                     graph_type=req.graph_type,
@@ -269,12 +276,18 @@ def create_app() -> FastAPI:
                 return task_id
 
         async def _get_a2a_task_status(task_id: str) -> A2ATaskResponse:
-            """Look up internal task status for an A2A caller."""
+            """Look up internal task status for an A2A caller.
+
+            Same RLS Phase 1.5 fix as ``_dispatch_a2a_task`` — A2A tasks
+            are in the ``"a2a-external"`` org so the SELECT must run
+            with ``app.current_org_id="a2a-external"`` to find them
+            once strict policies are enabled.
+            """
             import uuid as _uuid
 
             from sqlalchemy import select
 
-            from .database import async_session_factory
+            from .database import tenant_session
             from .models import SwarmTask
 
             try:
@@ -286,7 +299,7 @@ def create_app() -> FastAPI:
                     error="Invalid task ID",
                 )
 
-            async with async_session_factory() as db:
+            async with tenant_session(org_id="a2a-external") as db:
                 result = await db.execute(select(SwarmTask).where(SwarmTask.id == uid))
                 task = result.scalar_one_or_none()
 

@@ -316,6 +316,14 @@ jobs:
       - name: Run tests with coverage
         run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
         env:
+          # ENVIRONMENT default in nexus_api/config.py is "production"
+          # so that real deployments must opt out explicitly. CI is the
+          # one place that has to opt back in — without this, Settings()
+          # rejects the dev defaults for COLYSEUS_SECRET / WORKER_API_TOKEN
+          # / CONSENT_LEDGER_SIGNING_SECRET and pytest fails at module
+          # import. ``development`` is the only value the validators
+          # whitelist for the dev-default secrets path.
+          ENVIRONMENT: development
           DATABASE_URL: postgresql://autoswarm:autoswarm@localhost:5432/autoswarm
           REDIS_URL: redis://localhost:6379
 

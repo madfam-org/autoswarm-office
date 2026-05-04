@@ -545,10 +545,27 @@ export interface paths {
         put?: never;
         /**
          * Reap Stale Tasks
-         * @description Auto-fail queued/pending tasks older than 1 hour.
+         * @description Auto-fail queued/pending tasks older than 1 hour (cross-tenant ops).
          *
-         *     Called periodically by workers to prevent indefinite queue buildup.
-         *     No auth required (internal endpoint).
+         *     This is a platform health endpoint that operators or a cron job call
+         *     to clean up stuck tasks across **all tenants**. The role gate is the
+         *     access control: only callers carrying ``service``, ``worker``,
+         *     ``platform``, or ``admin`` roles may invoke it.
+         *
+         *     Tenancy bypass:
+         *         ``Depends(get_db)`` already set ``app.current_org_id`` to the
+         *         caller's JWT-derived ``org_id`` (or ``"default"`` for the dev
+         *         bypass). Because RLS policies on ``swarm_tasks`` filter by that
+         *         session var, leaving it set would scope the reaper to ONE org
+         *         and silently skip stale tasks in every other tenant -- the
+         *         exact bug fixed here (see ``docs/RLS_PHASE_1_5_AUDIT.md`` §2.C).
+         *
+         *         We explicitly reset the var to the empty string so the Phase 1
+         *         permissive policy (``IS NULL OR = '' OR = $org``) returns rows
+         *         from every tenant. After Phase 1.5 (migration 0027) tightens
+         *         the policy, this endpoint MUST switch to ``admin_session()``
+         *         (BYPASSRLS connection pool) -- the audit doc tracks this
+         *         follow-up.
          */
         post: operations["reap_stale_tasks_api_v1_swarms_tasks_reap_stale_post"];
         delete?: never;
@@ -2495,7 +2512,32 @@ export interface paths {
          *     on missing fields rather than substituting LLM-supplied defaults.
          */
         get: operations["tenant_identity_api_v1_onboarding_tenant_identity_get"];
-        put?: never;
+        /**
+         * Update Tenant Identity
+         * @description Tenant-side update of outbound identity columns on tenant_configs.
+         *
+         *     Lets tenants configure From: header inputs from the office settings
+         *     UI without requiring MADFAM ops to populate tenant_identities. The
+         *     ``org_id`` is forced from the JWT (matching every other tenant-
+         *     scoped mutation) — request bodies cannot specify it.
+         *
+         *     Submitting ``null`` for a field clears it (the legacy fallback
+         *     chain takes over on the next email send). Omitting a field leaves
+         *     the existing value untouched (uses ``exclude_unset=True``).
+         *
+         *     Validation:
+         *
+         *     - ``outbound_user_email``: must match ``[^@\s]+@[^@\s]+\.[^@\s]+``.
+         *     - ``outbound_agent_slug``: must be in the 5-entry email-tool
+         *       allow-list (sales/support/growth/ops/research).
+         *     - ``outbound_user_name``: trimmed; max 255 chars (Pydantic).
+         *
+         *     Audit: emits ``tenant_identity.updated`` to ``task_events`` with
+         *     ``event_category="onboarding"`` so the change is in the audit
+         *     trail. Payload includes the keys that changed but not the values
+         *     (avoid leaking PII into the event log).
+         */
+        put: operations["update_tenant_identity_api_v1_onboarding_tenant_identity_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2951,10 +2993,6 @@ export interface paths {
         /**
          * Stripe Webhook
          * @description Verify Stripe signature; dispatch event to per-type handlers.
-         *
-         *     Stub event handlers log + 200 today. Real implementations land in
-         *     follow-up PRs as each event type is needed (subscription.created,
-         *     invoice.paid, payment_intent.succeeded, etc.).
          */
         post: operations["stripe_webhook_api_v1_stripe_webhook_post"];
         delete?: never;
@@ -4568,6 +4606,32 @@ export interface components {
              */
             embedding_model: string;
         };
+        /**
+         * OutboundIdentityUpdate
+         * @description Payload for PUT /api/v1/onboarding/tenant-identity.
+         *
+         *     All three fields are optional. Submitting a field as ``None`` clears
+         *     it (falls back to the legacy resolver chain on the next email send);
+         *     omitting a field leaves the existing value untouched. To distinguish
+         *     "omit" from "explicit null", the router uses ``model_dump(exclude_unset=True)``.
+         */
+        OutboundIdentityUpdate: {
+            /**
+             * Outbound User Email
+             * @description Outbound mailbox for the From: address in user_direct + dyad modes (and Reply-To across all modes). Validated against _EMAIL_RE if non-null + non-empty.
+             */
+            outbound_user_email?: string | null;
+            /**
+             * Outbound User Name
+             * @description Display name shown in the From: header.
+             */
+            outbound_user_name?: string | null;
+            /**
+             * Outbound Agent Slug
+             * @description Tenant-pinned agent slug for agent_identified mode. Must be one of: sales, support, growth, ops, research.
+             */
+            outbound_agent_slug?: string | null;
+        };
         /** PlaybookCreate */
         PlaybookCreate: {
             /** Name */
@@ -5579,19 +5643,32 @@ export interface components {
          *
          *     Fields are nullable individually so the tool can detect partial
          *     configuration (e.g. brand_name set but no primary contact email
-         *     resolved yet) and fail-closed on the missing piece. ``agent_slug``
-         *     is intentionally NOT returned here — agent slugs are resolved per
-         *     call from a server-controlled allow-list, never from the LLM.
+         *     resolved yet) and fail-closed on the missing piece.
+         *
+         *     **Precedence chain** (resolved server-side; LLM has zero influence):
+         *
+         *     - ``user_email``: ``tenant_configs.outbound_user_email`` (first-class,
+         *       tenant-configurable via the office UI) → fall back to
+         *       ``tenant_identities.primary_contact_email`` (legacy MADFAM-ops-set
+         *       field).
+         *     - ``user_name``: ``tenant_configs.outbound_user_name`` →
+         *       ``tenant_configs.brand_name`` → ``tenant_identities.legal_name`` →
+         *       ``tenant_configs.razon_social``.
+         *     - ``org_name``: ``tenant_identities.legal_name`` →
+         *       ``tenant_configs.razon_social`` → ``tenant_configs.brand_name``.
+         *     - ``agent_slug``: ``tenant_configs.outbound_agent_slug`` if set and
+         *       in the email-tool allow-list, else None (caller falls back to its
+         *       own per-tool default — never to LLM-supplied raw text).
          */
         nexus_api__routers__onboarding__TenantIdentityResponse: {
             /**
              * User Email
-             * @description Primary outbound mailbox for the tenant (drives From: in user_direct/dyad modes and Reply-To across all modes). Sourced from tenant_identities.primary_contact_email.
+             * @description Primary outbound mailbox for the tenant (drives From: in user_direct/dyad modes and Reply-To across all modes). Resolves tenant_configs.outbound_user_email then tenant_identities.primary_contact_email.
              */
             user_email?: string | null;
             /**
              * User Name
-             * @description Display name for the From: header. Sourced from tenant_configs.brand_name with fallback to tenant_identities.legal_name.
+             * @description Display name for the From: header. Resolves tenant_configs.outbound_user_name then brand_name then tenant_identities.legal_name then razon_social.
              */
             user_name?: string | null;
             /**
@@ -5599,6 +5676,11 @@ export interface components {
              * @description Organization legal name for the agent_identified signature block. Sourced from tenant_identities.legal_name with fallback to tenant_configs.razon_social or brand_name.
              */
             org_name?: string | null;
+            /**
+             * Agent Slug
+             * @description Optional tenant-configured agent slug for agent_identified mode. NULL means the email tool should fall back to its own per-call role → slug resolution. Constrained to the 5-entry allow-list (sales/support/growth/ops/research) at PUT time.
+             */
+            agent_slug?: string | null;
         };
         /** TenantIdentityResponse */
         nexus_api__routers__tenant_identities__TenantIdentityResponse: {
@@ -7267,7 +7349,7 @@ export interface operations {
     wecom_callback_api_v1_gateway_gateway_wecom_callback_post: {
         parameters: {
             query?: {
-                echostr?: string;
+                echostr?: string | null;
             };
             header?: never;
             path?: never;
@@ -7364,7 +7446,7 @@ export interface operations {
     generic_webhook_api_v1_gateway_gateway_webhook__channel_id__post: {
         parameters: {
             query?: {
-                x_webhook_signature?: string;
+                x_webhook_signature?: string | null;
             };
             header?: never;
             path: {
@@ -9489,6 +9571,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["nexus_api__routers__onboarding__TenantIdentityResponse"];
+                };
+            };
+        };
+    };
+    update_tenant_identity_api_v1_onboarding_tenant_identity_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutboundIdentityUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["nexus_api__routers__onboarding__TenantIdentityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

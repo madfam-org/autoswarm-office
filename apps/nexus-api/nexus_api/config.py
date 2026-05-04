@@ -190,6 +190,20 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     feature_stripe_mxn_live: bool = False
 
+    # JSON mapping of Stripe price IDs (``price_...``) to Selva tier slugs
+    # (``starter`` / ``professional`` / ``enterprise``). The Stripe webhook
+    # handlers in ``routers/stripe_webhooks.py`` consult this map when a
+    # subscription is created or updated to determine which
+    # ``TIER_DAILY_TASK_LIMIT`` row to apply for the tenant. Tier slugs MUST
+    # be keys in ``billing_tiers.TIER_DAILY_TASK_LIMIT`` -- unknown tiers
+    # fall through to ``DEFAULT_TIER`` rather than raising. Example:
+    # ``{"price_1AbC...": "professional", "price_1XyZ...": "enterprise"}``.
+    # Empty default means handlers fall back to ``DEFAULT_TIER`` for every
+    # subscription -- safe for staging, broken for production. Operator
+    # populates this from the Stripe Dashboard once production prices are
+    # cut over.
+    stripe_price_to_tier_map: dict[str, str] = {}
+
     model_config = {
         "env_file": (str(_PROJECT_ROOT / ".env"), ".env"),
         "env_file_encoding": "utf-8",

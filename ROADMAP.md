@@ -127,14 +127,15 @@ foundationally one-line dangerous if left undone.
 
 ### Phase 2 — mid-leverage, more design (next month)
 
-- **Tenant onboarding UI for outbound identity** — `outbound_user_email`,
-  `outbound_user_name`, `outbound_agent_slug` as first-class
-  `tenant_configs` columns + Alembic migration + onboarding step + UI.
-  Until this exists, the email lockdown (commit f35f1b1) reads from
-  `tenant_configs.brand_name` / `razon_social` / `tenant_identities`
-  joined on `canonical_id` as best-effort fallbacks; tenants who haven't
-  manually populated `tenant_identities` get email refusals with
-  "Tenant outbound identity not configured."
+- **Tenant onboarding UI for outbound identity** — DONE (migration 0026).
+  `outbound_user_email`, `outbound_user_name`, `outbound_agent_slug`
+  are now first-class `tenant_configs` columns with a PUT endpoint
+  (`PUT /api/v1/onboarding/tenant-identity`) and an office-ui form
+  at `/settings/outbound-identity`. The GET endpoint prefers the new
+  columns over the legacy fallback chain
+  (brand_name / razon_social / tenant_identities); the legacy chain
+  still applies when the new columns are NULL so existing tenants
+  remain unaffected.
 - **Schema codegen TS↔Python** — 29 Python ORM models, ~7 TypeScript
   shared-types interfaces. Frontend hooks call uncovered endpoints with
   `Record<string, unknown>` ad-hoc shapes. Pipeline: `datamodel-code-generator`

@@ -120,6 +120,10 @@ async def _fetch_events(
     time_max: datetime,
 ) -> list[CalendarEvent]:
     """Fetch events from the appropriate calendar provider."""
+    # Both adapters expose the same `list_events` / `close` surface, but
+    # mypy infers `adapter` as `GoogleCalendarAdapter` from the first
+    # branch alone.  Annotate the union so the Microsoft branch type-checks.
+    adapter: GoogleCalendarAdapter | MicrosoftCalendarAdapter
     if connection.provider == CalendarProvider.GOOGLE.value:
         adapter = GoogleCalendarAdapter(connection.access_token)
     elif connection.provider == CalendarProvider.MICROSOFT.value:

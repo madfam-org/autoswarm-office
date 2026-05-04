@@ -86,7 +86,11 @@ async def compact_memory(retention_days: int = 30) -> dict:
         return {"compacted": 0, "run_ids": []}
 
     try:
-        from madfam_inference import get_default_router
+        # `get_default_router` is exported lazily by `madfam_inference`'s
+        # __init__ via a runtime alias that mypy can't resolve from the
+        # public package surface.  The fallback `except` block below
+        # handles ImportError/AttributeError so this is safe at runtime.
+        from madfam_inference import get_default_router  # type: ignore[attr-defined]
         from madfam_inference.types import InferenceRequest, RoutingPolicy, Sensitivity
 
         router = get_default_router()

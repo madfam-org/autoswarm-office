@@ -113,7 +113,10 @@ async def compute_token_status(
         pool = get_redis_pool(url=settings.redis_url)
         cached = await pool.execute_with_retry("get", f"autoswarm:tier:{tenant.org_id}")
         if cached:
-            daily_limit = int(cached)
+            # `execute_with_retry` is typed as returning `object`; the GET
+            # value is a bytes/str payload at runtime.  Coerce via str()
+            # so the int() cast has a concrete type to chew on.
+            daily_limit = int(str(cached))
     except Exception:
         logger.debug("Failed to fetch cached tier limit from Redis", exc_info=True)
 

@@ -1,4 +1,26 @@
-# Audit Trail Gap Analysis (2026-05-04)
+# Audit Trail Gap Analysis (2026-05-04) — SUPERSEDED
+
+> **Status (end-of-day 2026-05-04)**: All 37 mutation sites identified
+> in this doc are now closed across PRs #130 (wave 1 — tenants /
+> swarms / agents), #131 (wave 2 — workflows / marketplace / maps),
+> and #133 (wave 3 — calendar / schedules / hitl_confidence /
+> departments / tenant_identities / artifacts / command_approvals /
+> approvals.bulk_expire). Plus the new `bulk_expire` endpoint added
+> in wave 3.
+>
+> The document is preserved as historical reference for the
+> implementation pattern (late-import `emit_event_db`, no-PII
+> payload, two-commit ordering) + the gap-driven prioritization
+> that the three waves followed. Future audit-trail completeness
+> questions are answered by **RFC 0019** (`docs/rfcs/0019-cross-service-cdc-audit-topic.md`)
+> which proposes Postgres CDC as the long-arc replacement for the
+> manual `emit_event_db` discipline this doc was driving.
+>
+> **DO NOT use this doc as a TODO list — every item is shipped.**
+> Use it to understand the per-router mutation surface + the
+> implementation patterns that the three waves standardised on.
+
+---
 
 > Phase 3, item 19 in the [full-remediation plan](../ROADMAP.md). Read-only
 > investigation: identifies every state-mutating endpoint in `apps/nexus-api/`

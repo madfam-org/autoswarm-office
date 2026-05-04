@@ -250,6 +250,45 @@ Init failure logs at **ERROR** (not WARNING) — Postgres-unreachable
 worker is degraded; ops needs to page on it. Falling back to
 MemorySaver silently is the regression we just closed.
 
+### Consent-ledger per-period HMAC key tracking (PR #145)
+
+`CONSENT_LEDGER_SIGNING_SECRET` is now safe to rotate quarterly.
+Previously the env-level key was the single source for HMAC
+verification — rotating invalidated every pre-rotation row's
+signature forever. Per `docs/SECRET_ROTATION_POLICY.md` §6, the
+quarterly cycle USED to skip this secret. After PR #145 it doesn't.
+
+Mechanism:
+- Migration 0030 creates `consent_ledger_signing_keys` table
+  (`key_version` PK, `key_value`, `created_at`, `retired_at`,
+  `is_current`). Postgres partial unique index on
+  `is_current=true` enforces "exactly one current key" at the DB
+  layer.
+- `consent_ledger.signing_key_version` FK column means every row
+  carries its signing key's version. Pre-0030 rows backfill to v1.
+- `compute_signature()` insert path uses the current key + stamps
+  `signing_key_version`. Verify path looks up the row's version,
+  recomputes HMAC under that version. Old keys verify old rows
+  forever.
+- `POST /api/v1/admin/consent-ledger/promote-key` (admin/platform
+  role-gated) atomically retires old + inserts new key. Emits
+  `consent_ledger.key_promoted` audit event with payload
+  `{new_key_version, previous_key_version, actor_sub, actor_ip}`
+  — never the key value.
+- `scripts/rotate-secret.sh consent-ledger-signing` calls
+  promote-key FIRST then patches the K8s Secret — aborts cleanly
+  on promote-key failure (no half-applied state). Required env
+  vars: `NEXUS_API_URL`, `NEXUS_ADMIN_TOKEN`.
+- `GET /api/v1/health/consent-ledger-grants` extended to report
+  signing key count + current `key_version` (NEVER the value).
+
+Bootstrap: migration 0030 reads `CONSENT_LEDGER_SIGNING_SECRET`
+env at migration time. If set to a real value (not the
+`dev-default-CHANGE-ME` sentinel), v1 row gets that value with
+`is_current=true`. Otherwise v1 row inserted with empty value +
+`is_current=false`, so the system stays runnable but `_record_consent`
+fails-closed with HTTP 503 until an admin promotes a real key.
+
 ### Idempotency + tenant_session adoption checklist for new mutation endpoints
 
 When adding a new `POST` / `PUT` / `PATCH` / `DELETE` endpoint that

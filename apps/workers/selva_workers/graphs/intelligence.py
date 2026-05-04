@@ -246,6 +246,10 @@ def notify_team(state: IntelligenceState) -> IntelligenceState:
         from selva_tools.storage.local import LocalFSStorage
 
         storage = LocalFSStorage()
+        # briefing_text may be None if upstream nodes failed; skip artifact
+        # save in that case rather than crashing on None.encode().
+        if not briefing_text:
+            return state
         content_bytes = briefing_text.encode("utf-8")
         content_hash = hashlib.sha256(content_bytes).hexdigest()
         artifact_path = _run_async(storage.save(content_bytes, content_hash))

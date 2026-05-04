@@ -83,8 +83,10 @@ def fetch_context(state: CRMState) -> CRMState:
     falling back to mock data otherwise.
     """
     messages = state.get("messages", [])
-    recipient = state.get("recipient", "unknown@example.com")
-    crm_action = state.get("crm_action", "email")
+    # `recipient: str | None` in CRMState — coerce explicit None to the
+    # default so downstream str-typed adapter calls don't get a None.
+    recipient: str = state.get("recipient") or "unknown@example.com"
+    crm_action: str = state.get("crm_action") or "email"
 
     context_data: dict = {
         "recipient": recipient,
@@ -258,9 +260,9 @@ def approval_gate(state: CRMState) -> CRMState:
     The Tactician must review the drafted communication and approve or
     deny it before it is sent.
     """
-    draft = state.get("draft_content", "")
-    recipient = state.get("recipient", "unknown")
-    crm_action = state.get("crm_action", "email")
+    draft = state.get("draft_content", "") or ""
+    recipient: str = state.get("recipient") or "unknown"
+    crm_action: str = state.get("crm_action") or "email"
 
     approval_context = {
         "action": crm_action,
@@ -304,8 +306,8 @@ def send(state: CRMState) -> CRMState:
     configured, otherwise uses a placeholder result.
     """
     messages = state.get("messages", [])
-    recipient = state.get("recipient", "unknown")
-    crm_action = state.get("crm_action", "email")
+    recipient: str = state.get("recipient") or "unknown"
+    crm_action: str = state.get("crm_action") or "email"
 
     # Skip sending if the action was denied at the gate.
     if state.get("status") == "denied":
@@ -343,7 +345,7 @@ def send(state: CRMState) -> CRMState:
             from madfam_inference.adapters.crm import PhyneCRMAdapter
 
             adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
-            draft = state.get("draft_content", "")
+            draft = state.get("draft_content", "") or ""
             activity = _run_async(
                 adapter.create_activity(
                     type=crm_action,

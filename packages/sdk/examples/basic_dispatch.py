@@ -18,13 +18,13 @@ async def main() -> None:
         description="Refactor the auth middleware to use dependency injection",
         graph_type="coding",
     )
-    print(f"Task dispatched: {task['id']}")
-    print(f"Status: {task['status']}")
+    print(f"Task dispatched: {task.id}")
+    print(f"Status: {task.status}")
 
-    result = await client.wait_for_task(task["id"], timeout=120)
-    print(f"Final status: {result['status']}")
-    if result.get("result"):
-        print(f"Result: {result['result']}")
+    result = await client.wait_for_task(task.id, timeout=120)
+    print(f"Final status: {result.status}")
+    if result.payload.get("result"):
+        print(f"Result: {result.payload['result']}")
 
 
 if __name__ == "__main__":

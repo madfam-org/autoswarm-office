@@ -70,7 +70,7 @@ class BatchNodeHandler:
                     result = delegate_fn(item_state)
                     if asyncio.iscoroutine(result):
                         result = await result
-                    return result  # type: ignore[return-value]
+                    return result
 
             results = await asyncio.gather(
                 *[process_item(item) for item in items],

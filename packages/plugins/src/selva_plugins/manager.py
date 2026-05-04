@@ -18,7 +18,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import yaml  # type: ignore
+import yaml
 
 from .plugin_base import AutoSwarmPlugin, HookType
 
@@ -126,7 +126,7 @@ class PluginManager:
             plugin_dir / entrypoint,
         )
         module = importlib.util.module_from_spec(spec)  # type: ignore
-        spec.loader.exec_module(module)  # type: ignore
+        spec.loader.exec_module(module)
         plugin_class = getattr(module, class_name)
 
         plugin: AutoSwarmPlugin = plugin_class(manifest=manifest)

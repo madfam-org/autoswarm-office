@@ -88,7 +88,7 @@ class VaultStoreTool(BaseTool):
             "required": ["key", "value"],
         }
 
-    async def execute(
+    async def execute(  # type: ignore[override]
         self,
         *,
         key: str,
@@ -157,7 +157,7 @@ class VaultRetrieveTool(BaseTool):
             "required": ["key"],
         }
 
-    async def execute(self, *, key: str, namespace: str | None = None, **kwargs: Any) -> ToolResult:
+    async def execute(self, *, key: str, namespace: str | None = None, **kwargs: Any) -> ToolResult:  # type: ignore[override]
         if not ENCLII_API_URL:
             return ToolResult(success=False, error="ENCLII_API_URL not configured")
 
@@ -262,7 +262,7 @@ class VaultDeleteTool(BaseTool):
             "required": ["key"],
         }
 
-    async def execute(self, *, key: str, namespace: str | None = None, **kwargs: Any) -> ToolResult:
+    async def execute(self, *, key: str, namespace: str | None = None, **kwargs: Any) -> ToolResult:  # type: ignore[override]
         if not ENCLII_API_URL:
             return ToolResult(success=False, error="ENCLII_API_URL not configured")
 
@@ -318,7 +318,7 @@ class VaultRotateTool(BaseTool):
             "required": ["key", "new_value"],
         }
 
-    async def execute(
+    async def execute(  # type: ignore[override]
         self,
         *,
         key: str,

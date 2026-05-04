@@ -66,7 +66,7 @@ class PythonRunnerNodeHandler:
             # Build restricted globals
             safe_builtins = {
                 k: (
-                    __builtins__[k]  # type: ignore[index]
+                    __builtins__[k]
                     if isinstance(__builtins__, dict)
                     else getattr(__builtins__, k)
                 )

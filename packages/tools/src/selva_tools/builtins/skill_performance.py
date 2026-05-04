@@ -166,7 +166,7 @@ class SkillRecordOutcomeTool(BaseTool):
             # deployment).
             bandit_updated = False
             try:
-                from selva_orchestrator.bandit import ThompsonBandit  # type: ignore
+                from selva_orchestrator.bandit import ThompsonBandit
 
                 bandit = ThompsonBandit(persist_path=_bandit_path())
                 bandit.update(skill_id, reward)
@@ -251,7 +251,7 @@ class SkillGetMetricsTool(BaseTool):
             # Bandit arm stats — best-effort, read-only.
             bandit_stats: dict[str, float] | None = None
             try:
-                from selva_orchestrator.bandit import ThompsonBandit  # type: ignore
+                from selva_orchestrator.bandit import ThompsonBandit
 
                 bandit = ThompsonBandit(persist_path=_bandit_path())
                 stats = bandit.get_stats().get(skill_id)

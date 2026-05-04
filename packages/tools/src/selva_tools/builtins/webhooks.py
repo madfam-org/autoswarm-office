@@ -146,8 +146,8 @@ def _resolve_hitl_level(env: str, *, dual_for_prod: bool = True) -> str:
     ``ask`` (not currently used; kept for Sprint 2 rotation variants).
     """
     try:
-        from selva_permissions.engine import PermissionEngine  # type: ignore[import-not-found]
-        from selva_permissions.types import (  # type: ignore[import-not-found]
+        from selva_permissions.engine import PermissionEngine
+        from selva_permissions.types import (
             ActionCategory,
             PermissionLevel,
         )
@@ -197,7 +197,7 @@ def _audit_webhook(
 ) -> str | None:
     """Append a row to ``webhook_audit_log`` via nexus-api. Never raises."""
     try:
-        from nexus_api.audit.webhook_audit import append_audit_row  # type: ignore[import-not-found]
+        from nexus_api.audit.webhook_audit import append_audit_row
     except Exception:  # pragma: no cover — missing dep is dev-only
         logger.debug("nexus_api webhook_audit module unavailable; skipping DB write")
         return None

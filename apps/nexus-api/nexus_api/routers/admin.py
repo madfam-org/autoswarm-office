@@ -7,6 +7,8 @@ bypass, the dummy user always has ``admin`` in its roles array.
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -65,7 +67,10 @@ async def list_connected_users(
     try:
         pool = get_redis_pool()
         client = await pool.client()
-        data = await client.hgetall("autoswarm:connected-players")
+        # redis-py overloads `hgetall` to return either `Awaitable[dict]`
+        # (async client) or `dict` (sync client) — the union breaks
+        # `await`.  Our `client` is the async variant, so coerce via cast.
+        data = await cast(Awaitable[dict[Any, Any]], client.hgetall("autoswarm:connected-players"))
         users: list[ConnectedUser] = []
         for session_id, raw in data.items():
             import json

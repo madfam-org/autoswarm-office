@@ -84,11 +84,17 @@ jobs:
         # ceiling.
         #
         # History:
-        #   2026-05-03 — wave 1: 87 → 47 (this PR)
+        #   2026-05-03 — wave 1 (PR #97): 100 → 47 (cached-cache count;
+        #     fresh-cache baseline was 20 — the 47 ceiling was set under
+        #     a stale .mypy_cache that hid 27 errors).
+        #   2026-05-04 — wave 1.5 (this PR): 20 → 11 (fresh cache).
+        #     All 11 remaining are workspace-package import-not-found
+        #     errors (selva_skills, madfam_inference) blocked on a mypy
+        #     monorepo-resolution fix that is out of scope for this wave.
         run: |
           set -euo pipefail
           cd apps/nexus-api
-          MAX_MYPY_ERRORS=47
+          MAX_MYPY_ERRORS=11
           OUTPUT="$(uv run mypy . 2>&1 || true)"
           # The summary line shape is:  "Found N errors in M files (...)"
           COUNT="$(printf '%s\n' "$OUTPUT" | grep -oE '^Found [0-9]+ errors?' | grep -oE '[0-9]+' | head -1 || echo 0)"

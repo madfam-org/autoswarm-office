@@ -36,7 +36,8 @@ import logging
 import re
 import time
 import uuid
-from typing import Any
+from collections.abc import Awaitable
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
@@ -252,9 +253,12 @@ async def upload_probe_run(
     try:
         pool = get_redis_pool()
         client = await pool.client()
-        await client.set(REDIS_LATEST_KEY, payload)
-        await client.lpush(REDIS_HISTORY_KEY, payload)
-        await client.ltrim(REDIS_HISTORY_KEY, 0, HISTORY_MAX_LEN - 1)
+        # redis-py overloads its commands as `Awaitable[T] | T` to cover
+        # both sync + async clients in the same stub; our `client` is the
+        # async variant, so cast to the awaitable arm before `await`.
+        await cast(Awaitable[Any], client.set(REDIS_LATEST_KEY, payload))
+        await cast(Awaitable[Any], client.lpush(REDIS_HISTORY_KEY, payload))
+        await cast(Awaitable[Any], client.ltrim(REDIS_HISTORY_KEY, 0, HISTORY_MAX_LEN - 1))
     except Exception:
         logger.exception("probe run upload: redis persistence failed")
         return {
@@ -309,7 +313,10 @@ async def get_probe_history(limit: int = 20) -> list[StoredProbeRun]:
     try:
         pool = get_redis_pool()
         client = await pool.client()
-        raw_list = await client.lrange(REDIS_HISTORY_KEY, 0, limit - 1)
+        raw_list = await cast(
+            Awaitable[list[Any]],
+            client.lrange(REDIS_HISTORY_KEY, 0, limit - 1),
+        )
     except Exception:
         logger.exception("probe history: redis read failed")
         return []

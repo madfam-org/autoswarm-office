@@ -71,7 +71,7 @@ async def handle_run_acp(params: dict, req_id: Any) -> None:
         _write(_error(req_id, -32602, "target_url is required"))
         return
     try:
-        from nexus_api.tasks.acp_tasks import run_acp_workflow_task  # type: ignore
+        from nexus_api.tasks.acp_tasks import run_acp_workflow_task
 
         task = run_acp_workflow_task.delay(
             target_url,

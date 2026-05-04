@@ -28,10 +28,13 @@ router = APIRouter(prefix="/schedules", tags=["Schedules"])
 
 
 class ScheduleCreate(BaseModel):
+    # `example=` was a pydantic-v1 Field kwarg; v2 surfaces the same value
+    # via `json_schema_extra` so the OpenAPI doc still carries the sample
+    # crontab.
     cron_expr: str = Field(
         ...,
-        example="0 9 * * 1",
         description="Standard 5-field crontab expression",
+        json_schema_extra={"example": "0 9 * * 1"},
     )
     action: ScheduledAction
     payload: dict[str, Any] = Field(default_factory=dict)
@@ -68,8 +71,12 @@ async def create_schedule(
     Create a recurring schedule.  The Celery Beat scheduler dynamically
     picks up new entries via the ``schedules`` Postgres table.
     """
+    # `CurrentUser` is `dict[str, Any]` — see `nexus_api.auth.get_current_user`.
+    # The previous `user.sub` access happened to work at runtime because the
+    # dict carries a `sub` key, but mypy correctly flagged it as unsafe.
+    user_sub = user["sub"]
     schedule = Schedule(
-        user_id=user.sub,
+        user_id=user_sub,
         cron_expr=body.cron_expr,
         action=body.action,
         payload=body.payload,
@@ -81,7 +88,7 @@ async def create_schedule(
     logger.info(
         "Schedule %s created by user %s: %s @ %s",
         schedule.id,
-        user.sub,
+        user_sub,
         schedule.action,
         schedule.cron_expr,
     )
@@ -97,7 +104,9 @@ async def list_schedules(
     from sqlalchemy import select
 
     result = await db.execute(
-        select(Schedule).where(Schedule.user_id == user.sub).order_by(Schedule.created_at.desc())
+        select(Schedule)
+        .where(Schedule.user_id == user["sub"])
+        .order_by(Schedule.created_at.desc())
     )
     return [_to_response(s) for s in result.scalars().all()]
 
@@ -112,11 +121,12 @@ async def cancel_schedule(
     schedule = await db.get(Schedule, schedule_id)
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
-    if schedule.user_id != user.sub and "admin" not in (user.roles or []):
+    user_sub = user["sub"]
+    if schedule.user_id != user_sub and "admin" not in (user.get("roles") or []):
         raise HTTPException(status_code=403, detail="Cannot cancel another user's schedule")
     await db.delete(schedule)
     await db.commit()
-    logger.info("Schedule %s cancelled by %s.", schedule_id, user.sub)
+    logger.info("Schedule %s cancelled by %s.", schedule_id, user_sub)
 
 
 # ---------------------------------------------------------------------------

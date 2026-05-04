@@ -14,7 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 try:
     from selva_skills import DEFAULT_ROLE_SKILLS
 except ImportError:
-    DEFAULT_ROLE_SKILLS: dict = {}
+    # Fallback when the workspace package is not importable (e.g. partial
+    # install).  Re-annotating the symbol here triggered mypy's `no-redef`;
+    # the bare assignment keeps the original `dict[str, list[str]]` type
+    # inferred from the import branch.
+    DEFAULT_ROLE_SKILLS = {}
 
 from ..auth import get_current_user
 from ..database import get_db

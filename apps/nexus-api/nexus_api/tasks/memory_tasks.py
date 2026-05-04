@@ -86,7 +86,7 @@ async def compact_memory(retention_days: int = 30) -> dict:
         return {"compacted": 0, "run_ids": []}
 
     try:
-        from madfam_inference import get_default_router  # type: ignore[attr-defined]
+        from madfam_inference import get_default_router
         from madfam_inference.types import InferenceRequest, RoutingPolicy, Sensitivity
 
         router = get_default_router()

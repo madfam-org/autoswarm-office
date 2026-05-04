@@ -499,13 +499,17 @@ async def mattermost_inbound(request: Request) -> dict[str, Any]:
     _require_secret("MATTERMOST_TOKEN", settings.mattermost_token)
     try:
         form = await request.form()
-        token = form.get("token", "")
-        text = form.get("text", "")
-        user_name = form.get("user_name", "unknown")
+        # Starlette's `form.get()` returns `UploadFile | str | None`; the
+        # Mattermost slash-command envelope is always url-encoded form data,
+        # so coerce explicitly to keep mypy happy and reject any oddly-typed
+        # UploadFile before we try to .strip() it.
+        token = str(form.get("token", "") or "")
+        text = str(form.get("text", "") or "")
+        user_name = str(form.get("user_name", "unknown") or "unknown")
     except Exception:
         return {"status": "ignored"}
 
-    if not hmac.compare_digest(str(token), settings.mattermost_token):
+    if not hmac.compare_digest(token, settings.mattermost_token):
         raise HTTPException(status_code=401, detail="Invalid Mattermost token")
 
     target_url = text.strip()
@@ -738,7 +742,7 @@ async def wecom_webhook(request: Request) -> dict[str, Any]:
 
 
 @router.post("/wecom/callback")
-async def wecom_callback(request: Request, echostr: str = None) -> Any:
+async def wecom_callback(request: Request, echostr: str | None = None) -> Any:
     """WeCom server-mode callback — echoes challenge, logs encrypted messages."""
     if echostr:
         return echostr
@@ -818,7 +822,7 @@ async def homeassistant_webhook(request: Request) -> dict[str, Any]:
 async def generic_webhook(
     channel_id: str,
     request: Request,
-    x_webhook_signature: str = None,
+    x_webhook_signature: str | None = None,
 ) -> dict[str, Any]:
     """Generic HMAC-signed webhook. channel_id used for routing/logging.
 

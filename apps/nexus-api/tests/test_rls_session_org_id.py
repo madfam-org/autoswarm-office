@@ -28,7 +28,6 @@ from nexus_api import database
 from nexus_api.database import _set_session_org_id
 from nexus_api.middleware.security import org_id_var
 
-
 # ---------------------------------------------------------------------------
 # _set_session_org_id behaviour
 # ---------------------------------------------------------------------------
@@ -147,9 +146,9 @@ class TestMigrationTableList:
                 isinstance(cls, type)
                 and hasattr(cls, "__tablename__")
                 and hasattr(cls, "__table__")
+                and "org_id" in cls.__table__.columns  # type: ignore[attr-defined]
             ):
-                if "org_id" in cls.__table__.columns:  # type: ignore[attr-defined]
-                    org_scoped_tables.add(cls.__tablename__)
+                org_scoped_tables.add(cls.__tablename__)
 
         # Every org-scoped table MUST be in the migration. Extra tables in
         # the migration that aren't in models are fine — they may be from

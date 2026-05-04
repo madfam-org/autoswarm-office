@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -25,6 +26,7 @@ from ..database import get_db
 from ..models import Agent
 from ..tenant import TenantContext, get_tenant
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["agents"], dependencies=[Depends(get_current_user)])
 
 
@@ -193,6 +195,34 @@ async def create_agent(
     db.add(agent)
     await db.flush()
     await db.refresh(agent)
+
+    # Audit trail: emit agent.created event. Per-tenant agent roster
+    # changes are customer-visible in the office UI sidebar; ops needs
+    # the event for "tenant complained their agent vanished — when did
+    # the create/delete happen?". See gap doc #7. NOTE: agent.name is
+    # PII-adjacent (operator-chosen, but can include user IDs in some
+    # tenants), so we deliberately omit it from the payload — the
+    # agent_id is enough to look up the row. role/level are not PII.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="agent.created",
+            event_category="agent",
+            agent_id=agent.id,
+            org_id=tenant.org_id,
+            payload={
+                "agent_id": str(agent.id),
+                "role": agent.role,
+                "level": agent.level,
+                "department_id": str(agent.department_id) if agent.department_id else None,
+                "skill_count": len(agent.skill_ids) if agent.skill_ids else 0,
+            },
+        )
+    except Exception:
+        logger.warning("Failed to emit agent.created audit event", exc_info=True)
+
     return _agent_to_response(agent)
 
 
@@ -222,6 +252,29 @@ async def update_agent(
     agent.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(agent)
+
+    # Audit trail: emit agent.updated event. Carries only the *names* of
+    # changed fields, not the values — values like name can be PII-adjacent
+    # and the agent_id is enough to retrieve the new state. org_id is read
+    # from the agent row itself (resource-of-record), matching the
+    # update_task_status pattern.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="agent.updated",
+            event_category="agent",
+            agent_id=agent.id,
+            org_id=agent.org_id,
+            payload={
+                "agent_id": str(agent.id),
+                "fields_changed": sorted(update_data.keys()),
+            },
+        )
+    except Exception:
+        logger.warning("Failed to emit agent.updated audit event", exc_info=True)
+
     return _agent_to_response(agent)
 
 
@@ -241,10 +294,36 @@ async def assign_agent(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid department UUID"
         ) from exc
 
+    previous_department_id = agent.department_id
     agent.department_id = dept_uid
     agent.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(agent)
+
+    # Audit trail: emit agent.assigned event. Department reassignments
+    # change which patrol zone the agent occupies and which review
+    # station it walks to — a customer-visible change that ops needs to
+    # answer "who moved my agent at 14:22?". UUIDs only, no PII.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="agent.assigned",
+            event_category="agent",
+            agent_id=agent.id,
+            org_id=agent.org_id,
+            payload={
+                "agent_id": str(agent.id),
+                "previous_department_id": (
+                    str(previous_department_id) if previous_department_id else None
+                ),
+                "new_department_id": str(dept_uid),
+            },
+        )
+    except Exception:
+        logger.warning("Failed to emit agent.assigned audit event", exc_info=True)
+
     return _agent_to_response(agent)
 
 
@@ -299,5 +378,41 @@ async def delete_agent(
 ) -> None:
     """Remove an agent permanently."""
     agent = await _get_agent_or_404(agent_id, db)
+
+    # Capture identifying scalars BEFORE deletion — once db.delete() runs
+    # and we flush, accessing agent.org_id / agent.id can hit a
+    # DetachedInstanceError in some session configurations.
+    deleted_agent_id_str = str(agent.id)
+    deleted_role = agent.role
+    deleted_org_id = agent.org_id
+
     await db.delete(agent)
     await db.flush()
+
+    # Audit trail: emit agent.deleted event. The most important agent
+    # event for ops triage — "tenant complained their agent vanished",
+    # answer requires the timestamp + actor in the event log. We
+    # deliberately omit the agent name (PII-adjacent) but keep the role
+    # so the activity feed can render "Coder agent deleted" without
+    # leaking the operator-chosen name.
+    #
+    # NOTE: agent_id is intentionally NOT passed to the FK column on
+    # TaskEvent — the row was just deleted, and even though the FK has
+    # ondelete=SET NULL it would still fail the immediate INSERT
+    # validation. The deleted UUID lives in payload.agent_id instead so
+    # ops can still cross-reference.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="agent.deleted",
+            event_category="agent",
+            org_id=deleted_org_id,
+            payload={
+                "agent_id": deleted_agent_id_str,
+                "role": deleted_role,
+            },
+        )
+    except Exception:
+        logger.warning("Failed to emit agent.deleted audit event", exc_info=True)

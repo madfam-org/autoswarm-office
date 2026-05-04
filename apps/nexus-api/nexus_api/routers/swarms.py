@@ -665,6 +665,10 @@ async def update_task_status(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
+    # Capture old status for the audit event payload (lets OpsFeed render
+    # "queued → running" arrows without a follow-up DB query).
+    old_status = task.status
+
     task.status = body.status
 
     if body.result is not None:
@@ -681,6 +685,40 @@ async def update_task_status(
 
     await db.flush()
     await db.refresh(task)
+
+    # Audit trail: emit task.status_changed event. Worker writes back
+    # queued → running → completed/failed via this PATCH; today the table
+    # holds the truth but the event stream doesn't, forcing OpsFeed to
+    # poll. Carrying old → new in the payload lets clients render
+    # transitions without an extra fetch. See gap doc #3.
+    #
+    # org_id is taken from the task row itself (the resource being
+    # mutated), not from the worker's X-Selva-Tenant-Org header — the
+    # truth-of-record for "which tenant owns this task" lives on the
+    # row. error_message is intentionally excluded from the payload
+    # because it can carry stack traces / file paths that other tenants
+    # in the same org should not necessarily see in the activity feed.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="task.status_changed",
+            event_category="task",
+            task_id=task.id,
+            graph_type=task.graph_type,
+            org_id=task.org_id,
+            payload={
+                "task_id": str(task.id),
+                "old_status": old_status,
+                "new_status": task.status,
+            },
+        )
+    except Exception:
+        logging.getLogger(__name__).debug(
+            "Failed to emit task.status_changed event",
+            exc_info=True,
+        )
 
     return _task_to_response(task)
 

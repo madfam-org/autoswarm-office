@@ -19,6 +19,7 @@ from ..approval_notifier import notify_approval_decision
 from ..auth import get_current_user, require_non_guest, verify_jwt
 from ..config import get_settings
 from ..database import get_db, tenant_session
+from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import ApprovalRequest, SwarmTask
 from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter, manager
@@ -313,9 +314,24 @@ async def approve_request(
     _: None = Depends(require_non_guest),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> ApprovalRequestResponse:
-    """Approve a pending request (the Tactician presses 'A')."""
+    """Approve a pending request (the Tactician presses 'A').
+
+    Idempotency: when the caller sends ``Idempotency-Key`` header, a
+    successful approval response is cached for 24h scoped by (org_id,
+    POST, /api/v1/approvals/{id}/approve, key). Retries with the same
+    key replay the cached response. Only the success path is cached —
+    a 404 (not found) or 409 (already resolved) leaves the cache empty
+    so the next retry can re-evaluate.
+    """
+    if idem.is_replay and idem.cached is not None:
+        return ApprovalRequestResponse.model_validate(idem.cached)
+
     feedback = body.feedback if body else None
+    # _respond_to_request raises HTTPException on 404 / 409, which short-
+    # circuits the caching path below — exactly the contract we want
+    # (failure responses must NOT poison the idempotency cache).
     result = await _respond_to_request(
         request_id,
         "approved",
@@ -343,6 +359,9 @@ async def approve_request(
             exc_info=True,
         )
 
+    # Cache only on success. No-op when Idempotency-Key was absent.
+    await idem.save(result.model_dump(mode="json"))
+
     return result
 
 
@@ -357,8 +376,17 @@ async def deny_request(
     _: None = Depends(require_non_guest),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> ApprovalRequestResponse:
-    """Deny a pending request with optional feedback (the Tactician presses 'B')."""
+    """Deny a pending request with optional feedback (the Tactician presses 'B').
+
+    Idempotency: same contract as ``approve_request``. Only the success
+    path is cached — a 404 (not found) or 409 (already resolved) leaves
+    the cache empty so the next retry can re-evaluate.
+    """
+    if idem.is_replay and idem.cached is not None:
+        return ApprovalRequestResponse.model_validate(idem.cached)
+
     feedback = body.feedback if body else None
     result = await _respond_to_request(
         request_id,
@@ -386,6 +414,9 @@ async def deny_request(
             "Failed to emit PostHog selva_approval_responded (denied) event",
             exc_info=True,
         )
+
+    # Cache only on success. No-op when Idempotency-Key was absent.
+    await idem.save(result.model_dump(mode="json"))
 
     return result
 

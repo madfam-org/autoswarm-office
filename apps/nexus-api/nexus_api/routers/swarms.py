@@ -24,6 +24,7 @@ from ..auth import get_current_user, require_non_demo, require_non_guest
 from ..billing_tiers import get_daily_limit
 from ..config import get_settings
 from ..database import get_db
+from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import Agent, ComputeTokenLedger, SwarmTask, TaskEvent, TenantConfig, Workflow
 from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter
@@ -153,12 +154,24 @@ async def dispatch_task(
     request: Request,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> SwarmTaskResponse:
     """Dispatch a new swarm task.
 
     Validates compute token budget, persists the task, and publishes a
     message to the Redis task queue for worker consumption.
+
+    Idempotency: when the caller sends ``Idempotency-Key`` header, a
+    successful response is cached for 24h scoped by (org_id, POST,
+    /api/v1/swarms/dispatch, key). Retries with the same key replay the
+    cached response instead of dispatching a duplicate task. Header
+    absent → endpoint behaves exactly as before (no caching).
     """
+    # Idempotency replay short-circuit. Must run before any DB work so
+    # the second call doesn't even hit the compute-budget ledger.
+    if idem.is_replay and idem.cached is not None:
+        return SwarmTaskResponse.model_validate(idem.cached)
+
     settings = get_settings()
 
     # Extract request_id for cross-service correlation.
@@ -482,7 +495,14 @@ async def dispatch_task(
             exc_info=True,
         )
 
-    return _task_to_response(task)
+    response = _task_to_response(task)
+
+    # Cache the response BEFORE returning so a network blip mid-response
+    # on the first call still gives the second call something to replay.
+    # No-op when the caller didn't send Idempotency-Key.
+    await idem.save(response.model_dump(mode="json"))
+
+    return response
 
 
 @router.get("/tasks", response_model=list[SwarmTaskResponse])

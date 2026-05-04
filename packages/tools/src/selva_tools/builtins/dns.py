@@ -131,7 +131,7 @@ class GetNameserversTool(BaseTool):
             "required": ["domain"],
         }
 
-    async def execute(self, *, domain: str, **kwargs: Any) -> ToolResult:
+    async def execute(self, *, domain: str, **kwargs: Any) -> ToolResult:  # type: ignore[override]
         if err := _check_credentials():
             return ToolResult(success=False, error=err)
         try:
@@ -188,7 +188,7 @@ class UpdateNameserversTool(BaseTool):
             "required": ["domain", "nameservers"],
         }
 
-    async def execute(self, *, domain: str, nameservers: list[str], **kwargs: Any) -> ToolResult:
+    async def execute(self, *, domain: str, nameservers: list[str], **kwargs: Any) -> ToolResult:  # type: ignore[override]
         if err := _check_credentials():
             return ToolResult(success=False, error=err)
         if len(nameservers) < 2:
@@ -234,7 +234,7 @@ class ListDnsRecordsTool(BaseTool):
             "required": ["domain"],
         }
 
-    async def execute(self, *, domain: str, **kwargs: Any) -> ToolResult:
+    async def execute(self, *, domain: str, **kwargs: Any) -> ToolResult:  # type: ignore[override]
         if err := _check_credentials():
             return ToolResult(success=False, error=err)
         try:
@@ -307,7 +307,7 @@ class CreateDnsRecordTool(BaseTool):
             "required": ["domain", "record_type", "content"],
         }
 
-    async def execute(
+    async def execute(  # type: ignore[override]
         self,
         *,
         domain: str,
@@ -373,7 +373,7 @@ class DeleteDnsRecordTool(BaseTool):
             "required": ["domain", "record_id"],
         }
 
-    async def execute(self, *, domain: str, record_id: str, **kwargs: Any) -> ToolResult:
+    async def execute(self, *, domain: str, record_id: str, **kwargs: Any) -> ToolResult:  # type: ignore[override]
         if err := _check_credentials():
             return ToolResult(success=False, error=err)
         try:

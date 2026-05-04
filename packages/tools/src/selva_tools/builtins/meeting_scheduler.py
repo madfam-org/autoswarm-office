@@ -261,9 +261,13 @@ class MeetingFindSlotsTool(BaseTool):
                 break
 
         slots: list[dict[str, str]] = []
-        for s, e in intersection:
+        # Loop var renamed from "e" to "end" to avoid shadowing the
+        # ``except ValueError as e`` above — Python deletes that name
+        # at the end of the except block, so mypy flags the reuse as
+        # reading a deleted variable.
+        for s, end in intersection:
             cursor = s
-            while cursor + duration <= e:
+            while cursor + duration <= end:
                 slots.append(
                     {
                         "start": _iso(cursor),

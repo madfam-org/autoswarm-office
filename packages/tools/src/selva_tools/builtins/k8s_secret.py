@@ -169,7 +169,7 @@ def _load_k8s_config() -> None:
     In-cluster: projected SA token at the standard path.
     Local dev: kubeconfig from ``KUBECONFIG`` env var or ``~/.kube/config``.
     """
-    from kubernetes import config as k8s_config  # type: ignore[import-not-found]
+    from kubernetes import config as k8s_config
 
     if os.path.exists(SERVICEACCOUNT_TOKEN_PATH):
         k8s_config.load_incluster_config()
@@ -187,8 +187,8 @@ def _get_current_sha(namespace: str, secret_name: str, key: str) -> str | None:
     return ``None`` (permission denied) in prod; idempotency in that
     case relies on the audit log instead — see ``_audit_already_applied``.
     """
-    from kubernetes import client  # type: ignore[import-not-found]
-    from kubernetes.client.rest import ApiException  # type: ignore[import-not-found]
+    from kubernetes import client
+    from kubernetes.client.rest import ApiException
 
     v1 = client.CoreV1Api()
     try:
@@ -215,8 +215,8 @@ def _apply_secret(namespace: str, secret_name: str, key: str, value: str) -> str
     Returns ``"create"`` if the Secret didn't exist and was created,
     ``"update"`` if it existed and was patched.
     """
-    from kubernetes import client  # type: ignore[import-not-found]
-    from kubernetes.client.rest import ApiException  # type: ignore[import-not-found]
+    from kubernetes import client
+    from kubernetes.client.rest import ApiException
 
     v1 = client.CoreV1Api()
     encoded_value = base64.b64encode(value.encode("utf-8")).decode("ascii")
@@ -266,7 +266,7 @@ def _audit_already_applied(
     """
     try:
         from nexus_api.audit.secret_audit import (
-            was_already_applied,  # type: ignore[import-not-found]
+            was_already_applied,
         )
     except Exception:  # pragma: no cover — missing dep is dev-only
         return False
@@ -308,7 +308,7 @@ def _audit_record(
     only ``sha_full[:8]`` is persisted.
     """
     try:
-        from nexus_api.audit.secret_audit import append_audit_row  # type: ignore[import-not-found]
+        from nexus_api.audit.secret_audit import append_audit_row
     except Exception:  # pragma: no cover — missing dep is dev-only
         logger.debug("nexus_api audit module unavailable; skipping DB write")
         return
@@ -343,8 +343,8 @@ def _resolve_hitl_level(env: str) -> str:
     Returns one of ``"allow"``, ``"ask"``, ``"ask_dual"``.
     """
     try:
-        from selva_permissions.engine import PermissionEngine  # type: ignore[import-not-found]
-        from selva_permissions.types import (  # type: ignore[import-not-found]
+        from selva_permissions.engine import PermissionEngine
+        from selva_permissions.types import (
             ActionCategory,
             PermissionLevel,
         )

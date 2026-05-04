@@ -130,7 +130,7 @@ class WebExtractTool(BaseTool):
 
         # Try Playwright browser_extract first
         try:
-            from selva_tools.browser import browser_extract  # type: ignore
+            from selva_tools.browser import browser_extract
 
             content = await browser_extract(url)
         except Exception as exc:
@@ -211,7 +211,7 @@ class DelegateTaskTool(BaseTool):
         timeout: float = float(kwargs.get("timeout", 300))
 
         try:
-            from nexus_api.tasks.acp_tasks import run_acp_workflow_task  # type: ignore
+            from nexus_api.tasks.acp_tasks import run_acp_workflow_task
         except ImportError:
             return ToolResult(
                 success=False,

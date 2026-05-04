@@ -174,8 +174,8 @@ def _resolve_hitl_level(operation: GithubAdminOperation, *, removing: bool) -> s
     - ``audit_team_membership``: ALLOW
     """
     try:
-        from selva_permissions.engine import PermissionEngine  # type: ignore[import-not-found]
-        from selva_permissions.types import (  # type: ignore[import-not-found]
+        from selva_permissions.engine import PermissionEngine
+        from selva_permissions.types import (
             ActionCategory,
             PermissionLevel,
         )
@@ -386,7 +386,7 @@ def _audit_record(
     nexus-api package on the path.
     """
     try:
-        from nexus_api.audit.github_admin_audit import (  # type: ignore[import-not-found]
+        from nexus_api.audit.github_admin_audit import (
             append_audit_row,
         )
     except Exception:  # pragma: no cover — missing dep is dev-only
@@ -1337,7 +1337,7 @@ class GithubAdminAuditTeamMembershipTool(BaseTool):
         # --- drift lookup (best effort) ---
         expected: list[str] | None = None
         try:
-            from nexus_api.audit.github_admin_audit import (  # type: ignore[import-not-found]
+            from nexus_api.audit.github_admin_audit import (
                 last_team_membership_row,
             )
 

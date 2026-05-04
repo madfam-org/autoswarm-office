@@ -17,7 +17,7 @@ async def main() -> None:
     agents = await client.list_agents()
     print(f"Found {len(agents)} agents:\n")
     for agent in agents:
-        print(f"  {agent['name']:20s} | {agent['role']:15s} | {agent['status']}")
+        print(f"  {agent.name:20s} | {agent.role:15s} | {agent.status}")
 
 
 if __name__ == "__main__":

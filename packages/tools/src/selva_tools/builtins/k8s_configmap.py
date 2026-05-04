@@ -204,7 +204,7 @@ def _load_k8s_config() -> None:
     ``_K8sAuthError`` when neither is available -- the RFC 0007 tool
     refuses to fall back to anonymous access.
     """
-    from kubernetes import config as k8s_config  # type: ignore[import-not-found]
+    from kubernetes import config as k8s_config
 
     if os.path.exists(SERVICEACCOUNT_TOKEN_PATH):
         k8s_config.load_incluster_config()
@@ -233,8 +233,8 @@ def _read_configmap(namespace: str, name: str) -> dict[str, str] | None:
     Raises ``_K8sAuthError`` on 403 so callers can distinguish missing-
     ConfigMap (None) from RBAC failure.
     """
-    from kubernetes import client  # type: ignore[import-not-found]
-    from kubernetes.client.rest import ApiException  # type: ignore[import-not-found]
+    from kubernetes import client
+    from kubernetes.client.rest import ApiException
 
     v1 = client.CoreV1Api()
     try:
@@ -256,8 +256,8 @@ def _read_configmap(namespace: str, name: str) -> dict[str, str] | None:
 
 def _list_configmaps(namespace: str, label_selector: str | None) -> list[dict[str, Any]]:
     """Return a compact list of ConfigMaps in the namespace."""
-    from kubernetes import client  # type: ignore[import-not-found]
-    from kubernetes.client.rest import ApiException  # type: ignore[import-not-found]
+    from kubernetes import client
+    from kubernetes.client.rest import ApiException
 
     v1 = client.CoreV1Api()
     try:
@@ -304,8 +304,8 @@ def _apply_configmap_key(
     Returns ``"create"`` if the ConfigMap didn't exist and was created,
     ``"update"`` if it existed and was patched.
     """
-    from kubernetes import client  # type: ignore[import-not-found]
-    from kubernetes.client.rest import ApiException  # type: ignore[import-not-found]
+    from kubernetes import client
+    from kubernetes.client.rest import ApiException
 
     v1 = client.CoreV1Api()
     body = client.V1ConfigMap(
@@ -344,8 +344,8 @@ def _delete_configmap_key(namespace: str, name: str, key: str) -> bool:
     Uses a strategic-merge-patch with ``$patch: delete`` semantics on
     the key. If the ConfigMap itself is missing, returns False.
     """
-    from kubernetes import client  # type: ignore[import-not-found]
-    from kubernetes.client.rest import ApiException  # type: ignore[import-not-found]
+    from kubernetes import client
+    from kubernetes.client.rest import ApiException
 
     v1 = client.CoreV1Api()
     # JSON-merge-patch: setting a data key to null removes it.
@@ -400,7 +400,7 @@ def _audit_record(
     """
     try:
         from nexus_api.audit.configmap_audit import (
-            append_audit_row,  # type: ignore[import-not-found]
+            append_audit_row,
         )
     except Exception:  # pragma: no cover -- missing dep is dev-only
         logger.debug("nexus_api audit module unavailable; skipping DB write")
@@ -443,8 +443,8 @@ def _resolve_hitl_level(env: str, *, feature_flag: bool) -> str:
       - prod    -> ASK for non-flag keys; ASK_DUAL for feature-flag keys
     """
     try:
-        from selva_permissions.engine import PermissionEngine  # type: ignore[import-not-found]
-        from selva_permissions.types import (  # type: ignore[import-not-found]
+        from selva_permissions.engine import PermissionEngine
+        from selva_permissions.types import (
             ActionCategory,
             PermissionLevel,
         )

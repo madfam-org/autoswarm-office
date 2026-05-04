@@ -138,6 +138,24 @@ module = [
     # surface area than it's worth.  Revisit if/when celery>=6 ships
     # with type hints.
     "celery.*",
+    # Optional / heavy third-party deps imported guardedly inside tool
+    # implementations. Stubs either don't exist (weasyprint, pdfplumber,
+    # pgvector) or aren't worth the install size (matplotlib). dnspython
+    # ships a `py.typed` in modern releases but the slice we use lags.
+    # asyncpg / bleach / markdown / requests are well-typed but not worth
+    # pulling in `types-*` stubs for the few call sites. nexus_api.redis_pool
+    # is internal — the workspace package is installed but missing py.typed.
+    "asyncpg.*",
+    "bleach.*",
+    "dns.*",
+    "kubernetes.*",
+    "markdown.*",
+    "matplotlib.*",
+    "nexus_api.redis_pool",
+    "pdfplumber.*",
+    "pgvector.*",
+    "requests.*",
+    "weasyprint.*",
 ]
 ignore_missing_imports = true
 

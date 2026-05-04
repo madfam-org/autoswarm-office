@@ -20,12 +20,12 @@ async def main(workflow_id: str) -> None:
         graph_type="custom",
         workflow_id=workflow_id,
     )
-    print(f"Custom workflow task dispatched: {task['id']}")
+    print(f"Custom workflow task dispatched: {task.id}")
     print(f"Workflow: {workflow_id}")
-    print(f"Status: {task['status']}")
+    print(f"Status: {task.status}")
 
-    result = await client.wait_for_task(task["id"], timeout=300)
-    print(f"Final status: {result['status']}")
+    result = await client.wait_for_task(task.id, timeout=300)
+    print(f"Final status: {result.status}")
 
 
 if __name__ == "__main__":

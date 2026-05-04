@@ -232,12 +232,17 @@ foundationally one-line dangerous if left undone.
 - **Compliance audit prep** — SOC 2 Type II is a 6-12 month engagement;
   ISO 27001 similar; LFPDPPP enforcement already active per the v2.2.0
   voice-mode/consent-ledger work.
-- **Pricing contract codified** — Tulana decision doc → JSON →
-  Dhanam catalog API → bundle page UI all read from one place; CI
-  fails if they drift. Current state: CLAUDE.md cites a non-existent
-  `scripts/seed-mvp.py` for pricing; bundle prices live in
-  `apps/office-ui/src/app/bundles/page.tsx`; Dhanam tier-fetch path
-  is hardcoded fallback dict in `nexus_api/billing_tiers.py`.
+- **Pricing contract codified** — PARTIAL. Tulana decision doc →
+  `infra/pricing/selva-tiers.json` (canonical, schema-validated)
+  shipped. Python loader `nexus_api/billing_tiers.py` reads from JSON
+  with the same exported names + same fallback semantics (zero
+  behaviour change). CI drift gate
+  (`tests/test_pricing_codification.py`) asserts loader + JSON +
+  CLAUDE.md + emergency fallback all agree. **Remaining**: TS-side
+  reader for `apps/office-ui/src/app/bundles/page.tsx` (still has
+  hardcoded BUNDLES const for Founder/Operator/Flywheel composite
+  bundles); Dhanam catalog API integration (when Dhanam exposes the
+  fetch API the JSON becomes the bootstrap fallback only).
 - **Real PMF measurement loop** — RFC 0013 widget exists; needs adoption
   tracking, score stability, composite informing tier sunsetting
   decisions automatically.
@@ -280,7 +285,7 @@ These cannot be assessed from inside selva-office:
 | Load test scenarios | 80% (was 30%) | 90% |
 | Backups + DR | unknown | 90% |
 | Deployment pipeline | 70% | 90% |
-| Pricing source-of-truth | 30% | 85% |
+| Pricing source-of-truth | 65% (was 30%) | 85% |
 | Schema coherence cross-language | 40% | 85% |
 | Frontend code health | 60% | 85% |
 | A11y (WCAG 2.1 AA) | 65% | 90% |

@@ -8,6 +8,7 @@ import time
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp
 
 from selva_redis_pool import get_redis_pool
 
@@ -21,7 +22,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Falls back to allowing all requests if Redis is unavailable.
     """
 
-    def __init__(self, app, redis_url: str, requests_per_minute: int = 60) -> None:  # type: ignore[no-untyped-def]
+    def __init__(
+        self, app: ASGIApp, redis_url: str, requests_per_minute: int = 60
+    ) -> None:
         super().__init__(app)
         self.redis_url = redis_url
         self.requests_per_minute = requests_per_minute

@@ -84,7 +84,7 @@ async def rollback_to_phase(
 
     # Re-queue the workflow from this phase
     try:
-        from nexus_api.tasks.acp_tasks import run_acp_workflow_task  # type: ignore
+        from nexus_api.tasks.acp_tasks import run_acp_workflow_task
 
         task = run_acp_workflow_task.delay(
             state.get("target_url", ""),

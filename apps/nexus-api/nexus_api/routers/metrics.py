@@ -279,9 +279,14 @@ async def get_roi_dashboard(
         .group_by(Agent.name)
     )
 
+    # Both paths feed `rows` into the same row-iteration loop below. We
+    # widen the static type to a sequence of generic 3-tuples so the
+    # successful Row[(str,int,int)] and the manually-built fallback tuples
+    # are both accepted without a per-branch cast.
+    rows: list[Any]
     try:
         result = await db.execute(agent_stats_q)
-        rows = result.all()
+        rows = list(result.all())
     except Exception:
         # Fallback: simple agent list with task counts
         agents_result = await db.execute(select(Agent.name, Agent.tasks_completed))

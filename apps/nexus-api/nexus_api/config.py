@@ -175,6 +175,13 @@ class Settings(BaseSettings):
     # matching the pattern of other optional external-provider tokens.
     nexus_probe_token: str = ""
 
+    # Default outbound From: header used by the probe contract validator and
+    # any other dry-run paths that need a stable sender identity. Workers
+    # that actually send email use the per-tenant identity resolved by
+    # ``_fetch_tenant_identity`` (see CLAUDE.md "Outbound email lockdown")
+    # — this value is *not* a fallback for live sends.
+    email_from: str = "noreply@selva.town"
+
     # -- Stripe webhook (Phase 1 scaffold) ------------------------------------
     # Required when ``feature_stripe_mxn_live`` is true (see
     # _validate_config below). Empty default means the webhook endpoint

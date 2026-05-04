@@ -31,12 +31,21 @@ try:
     class SessionCheckpoint(Base):
         __tablename__ = "session_checkpoints"
 
-        id: str = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-        run_id: str = Column(String(255), nullable=False, index=True)
-        phase: str = Column(String(64), nullable=False)  # e.g. "phase_i", "phase_ii", etc.
-        phase_index: int = Column(Integer, nullable=False)
-        state_json: str = Column(Text, nullable=False)  # JSON-serialized graph state
-        created_at: datetime = Column(
+        # NOTE: do not re-add `: str =` style inline annotations.  SQLAlchemy's
+        # `Column(...)` returns `Column[T]`, not `T`, so an inline annotation
+        # like `id: str = Column(String(36), ...)` makes mypy treat
+        # `SessionCheckpoint.id` as a plain `str`, which then breaks
+        # `Select.where(SessionCheckpoint.id == foo)` (mypy infers the `==`
+        # result as `bool`) and `SessionCheckpoint.created_at.desc()`
+        # (mypy thinks `created_at` is a `datetime`).  Either drop the
+        # annotations entirely (as below) or use SQLAlchemy 2.x's
+        # `Mapped[T]` / `mapped_column` API.
+        id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+        run_id = Column(String(255), nullable=False, index=True)
+        phase = Column(String(64), nullable=False)  # e.g. "phase_i", "phase_ii", etc.
+        phase_index = Column(Integer, nullable=False)
+        state_json = Column(Text, nullable=False)  # JSON-serialized graph state
+        created_at = Column(
             DateTime(timezone=True),
             nullable=False,
             default=lambda: datetime.now(tz=UTC),
@@ -107,7 +116,10 @@ class CheckpointManager:
             cp = result.scalar_one_or_none()
             if cp is None:
                 return None
-            return json.loads(cp.state_json)
+            # `cp.state_json` is `Column[str]` to mypy under the legacy
+            # `Column()` API, but `str` at runtime once accessed off an
+            # instance.  Coerce explicitly so `json.loads` is happy.
+            return json.loads(str(cp.state_json))
         else:
             raw = _IN_MEMORY_STORE.get(run_id, {}).get(phase)
             return json.loads(raw) if raw else None

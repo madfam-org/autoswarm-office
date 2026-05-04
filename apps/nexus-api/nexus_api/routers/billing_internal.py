@@ -90,7 +90,7 @@ async def check_budget(
         pool = get_redis_pool(url=settings.redis_url)
         cached = await pool.execute_with_retry("get", f"autoswarm:tier:{org_id}")
         if cached:
-            daily_limit = int(cached)  # type: ignore[call-overload]
+            daily_limit = int(cached)
     except Exception:
         logger.debug("Failed to fetch cached tier limit from Redis", exc_info=True)
 

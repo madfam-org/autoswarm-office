@@ -110,9 +110,13 @@ async def _resolve(
         raise HTTPException(status_code=409, detail=f"Request already {req.status}")
 
     decided_at = datetime.now(tz=UTC)
+    # `CurrentUser` is `dict[str, Any]` — see `nexus_api.auth.get_current_user`.
+    # The previous `user.sub` access happened to work at runtime because the
+    # dict carries a `sub` key, but mypy correctly flagged it as unsafe.
+    user_sub = user["sub"]
     req.status = ApprovalStatus.APPROVED if approved else ApprovalStatus.DENIED
     req.resolved_at = decided_at
-    req.resolved_by = user.sub
+    req.resolved_by = user_sub
 
     # Record a HITL-confidence decision alongside the approval row. Best
     # effort: if anything below fails, the approval itself still resolves.
@@ -125,7 +129,7 @@ async def _resolve(
             request=req,
             approved=approved,
             decided_at=decided_at,
-            approver_id=user.sub,
+            approver_id=user_sub,
         )
     except Exception:
         logger.exception("HITL confidence recording failed (observe-only, non-fatal)")
@@ -136,9 +140,9 @@ async def _resolve(
     # Notify the in-process approval store
     from selva_tools.approval import resolve_approval
 
-    resolve_approval(request_id, approved, resolved_by=user.sub)
+    resolve_approval(request_id, approved, resolved_by=user_sub)
 
-    logger.info("Approval %s %s by %s", request_id, req.status, user.sub)
+    logger.info("Approval %s %s by %s", request_id, req.status, user_sub)
     return _to_schema(req)
 
 

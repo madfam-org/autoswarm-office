@@ -141,12 +141,27 @@ def _build_safe_request_kwargs(
     URL, a ``Host`` header pointing at the original hostname, and an
     ``extensions={"sni_hostname": ...}`` entry so HTTPS cert verification works
     against the original hostname even though we connect to the IP literal.
+
+    Also injects the W3C ``traceparent`` (and ``tracestate`` if present) header
+    when an OpenTelemetry span is active, so downstream services can correlate
+    traces. No-op when OTel is not installed or no span is active.
     """
     ip_url, hostname, original_url = _resolve_safe_url(url)
     merged_headers = dict(headers or {})
     # Preserve any caller-supplied Host header only if it matches the hostname;
     # otherwise force it to the validated hostname for cert + vhost routing.
     merged_headers["Host"] = hostname
+
+    # Inject W3C trace context. We do this AFTER all other headers are set so
+    # the propagator overwrites any stale traceparent the caller might have
+    # passed in. selva_observability gracefully no-ops when OTel is missing.
+    try:
+        from selva_observability import inject_trace_context
+
+        inject_trace_context(merged_headers)
+    except ImportError:
+        # selva_observability not installed (e.g. minimal tools-only env).
+        pass
 
     request_kwargs: dict[str, Any] = {
         "method": method,

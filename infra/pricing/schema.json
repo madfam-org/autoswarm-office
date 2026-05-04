@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://selva.town/schemas/pricing/selva-tiers.json",
+  "title": "Selva tier pricing — single source of truth",
+  "description": "Canonical pricing data for Selva. Anything that reads tier numbers — billing_tiers.py, the office-ui bundle page, Dhanam catalog seeders — should fetch from this file (Python) or import via JSON at build time (TS). Hardcoding numbers anywhere else trips the CI drift gate.",
+  "type": "object",
+  "required": [
+    "generated_from",
+    "last_updated",
+    "tulana_metered_hourly_packs",
+    "dhanam_subscription_daily_limits",
+    "external_a2a_default"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Pointer to this schema file. Editors that follow $schema get autocomplete + validation."
+    },
+    "generated_from": {
+      "type": "string",
+      "description": "Path to the upstream Tulana decision doc this data was derived from. MUST be a real file in the internal-devops/decisions/ tree."
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date (YYYY-MM-DD) when this file was last edited. Bumped manually with every value change."
+    },
+    "currency_assumption_mxn_per_usd": {
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 100.0,
+      "description": "FX rate baked into MXN tier values. Per Tulana v0.1: 17.0. Update when Tulana v0.2 ships dynamic FX."
+    },
+    "iva_included": {
+      "type": "boolean",
+      "description": "Whether MXN values include 16% IVA. Per Tulana v0.1: true."
+    },
+    "_comment_for_humans": {
+      "type": "string",
+      "description": "Free-text guidance for editors. Ignored by code; surfaced in code review."
+    },
+    "tulana_metered_hourly_packs": {
+      "type": "object",
+      "required": ["confidence", "tiers"],
+      "properties": {
+        "_doc": { "type": "string" },
+        "confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "tiers": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z_]*$": {
+              "type": "object",
+              "required": ["name", "hourly_rate_mxn", "ideal_for", "metered_unit"],
+              "properties": {
+                "name": { "type": "string" },
+                "hourly_rate_mxn": { "type": "integer", "minimum": 0 },
+                "ideal_for": { "type": "string" },
+                "metered_unit": {
+                  "type": "string",
+                  "enum": ["agent-hour", "task", "token"]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "dhanam_subscription_daily_limits": {
+      "type": "object",
+      "required": ["confidence", "default_tier", "tiers"],
+      "properties": {
+        "_doc": { "type": "string" },
+        "confidence": { "type": "string" },
+        "default_tier": {
+          "type": "string",
+          "description": "Tier slug used when an org has no Dhanam subscription. MUST be a key in `tiers`."
+        },
+        "tiers": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z_]*$": {
+              "type": "object",
+              "required": ["daily_token_limit"],
+              "properties": {
+                "daily_token_limit": { "type": "integer", "minimum": 0 },
+                "stripe_price_id_env_key": {
+                  "type": "string",
+                  "description": "Env var name that holds the Stripe price ID for this tier. The actual price ID is per-environment and lives in the secret store."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "external_a2a_default": {
+      "type": "object",
+      "required": ["daily_token_limit"],
+      "properties": {
+        "_doc": { "type": "string" },
+        "confidence": { "type": "string" },
+        "daily_token_limit": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

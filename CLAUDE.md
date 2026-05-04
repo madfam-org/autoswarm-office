@@ -2,7 +2,7 @@
 
 ## Pricing & PMF Anchoring
 
-- **Pricing source-of-truth**: `internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md`. Selva tiers (Tulana v0.1 recommended, MXN/hr): Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255. Confidence: **medium** — only product with a Tulana v0.1 SKU live. The MXN/hr tier numbers are not yet codified in any local seed script — pricing flows from the Tulana decision doc into Dhanam's billing catalog at runtime. Adjacent ecosystem bundles (Founder/Operator/Flywheel, USD/mo) are seeded in `apps/office-ui/src/app/bundles/page.tsx:60-117`.
+- **Pricing source-of-truth**: `infra/pricing/selva-tiers.json` (canonical, schema-validated against `infra/pricing/schema.json`). Derived from `internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md` (the human-readable upstream). Selva tiers (Tulana v0.1, MXN/hr): Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255 — confidence **medium**. Dhanam subscription daily limits (starter=1000, professional=5000, enterprise=25000) ship in the same JSON. The Python loader is `apps/nexus-api/nexus_api/billing_tiers.py`; the CI drift gate is `apps/nexus-api/tests/test_pricing_codification.py` (asserts loader + JSON + CLAUDE.md + emergency fallback all agree). Adjacent ecosystem bundles (Founder/Operator/Flywheel, USD/mo) are still in `apps/office-ui/src/app/bundles/page.tsx:60-117` — TS-side codification follow-up tracked in ROADMAP.
 - **PMF measurement**: per RFC 0013, NPS + Sean Ellis + retention via `@madfam/pmf-widget` → Tulana `/v1/pmf/*` endpoints. Composite PMF Score informs price moves + sunset decisions.
 
 ## Security Posture (v2.2.x — post-remediation)

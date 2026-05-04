@@ -1,0 +1,56 @@
+{
+  "$schema": "./schema.json",
+  "generated_from": "internal-devops/decisions/2026-04-25-tulana-ecosystem-pricing.md",
+  "last_updated": "2026-04-25",
+  "currency_assumption_mxn_per_usd": 17.0,
+  "iva_included": true,
+  "_comment_for_humans": "Single source of truth for Selva's tier pricing. Edits must trace back to the Tulana decision doc cited in `generated_from`. The CI drift check (tests/test_pricing_codification.py + a grep gate) prevents these numbers from being hardcoded anywhere else in the repo. To change a number: (1) update the Tulana decision doc with rationale, (2) update this JSON, (3) bump `last_updated`, (4) verify confidence level, (5) merge in one PR so the trail is intact.",
+  "tulana_metered_hourly_packs": {
+    "_doc": "Per the Tulana decision doc (2026-04-25). Confidence: medium — only Selva product with a Tulana v0.1 SKU. Numbers are MXN/hr metered against agent-hours consumed. v0.2 will replace these with WTP-validated values.",
+    "confidence": "medium",
+    "tiers": {
+      "maker_pack": {
+        "name": "Maker Pack",
+        "hourly_rate_mxn": 85,
+        "ideal_for": "Solo operator / fractional work",
+        "metered_unit": "agent-hour"
+      },
+      "studio_pack": {
+        "name": "Studio Pack",
+        "hourly_rate_mxn": 170,
+        "ideal_for": "Small team workflows",
+        "metered_unit": "agent-hour"
+      },
+      "enterprise_pack": {
+        "name": "Enterprise Pack",
+        "hourly_rate_mxn": 255,
+        "ideal_for": "Multi-team / regulated environments",
+        "metered_unit": "agent-hour"
+      }
+    }
+  },
+  "dhanam_subscription_daily_limits": {
+    "_doc": "Per-tier daily compute-token budget. These were the hardcoded fallback in apps/nexus-api/nexus_api/billing_tiers.py before this codification. Same numbers, now JSON-sourced. Stripe webhook handlers (apps/nexus-api/nexus_api/routers/stripe_webhooks.py) override at runtime via the autoswarm:tier:<org_id> Redis key when a customer.subscription.* event lands. This dict is the cache-miss fallback only.",
+    "confidence": "high (existing production behaviour)",
+    "default_tier": "starter",
+    "tiers": {
+      "starter": {
+        "daily_token_limit": 1000,
+        "stripe_price_id_env_key": "STRIPE_PRICE_ID_STARTER"
+      },
+      "professional": {
+        "daily_token_limit": 5000,
+        "stripe_price_id_env_key": "STRIPE_PRICE_ID_PROFESSIONAL"
+      },
+      "enterprise": {
+        "daily_token_limit": 25000,
+        "stripe_price_id_env_key": "STRIPE_PRICE_ID_ENTERPRISE"
+      }
+    }
+  },
+  "external_a2a_default": {
+    "_doc": "Default daily quota for external A2A callers when their per-caller subscription_tier is unset. RFC 0018 (in flight) introduces per-caller tenant rows that override this. Until that lands, every external A2A caller shares the synthetic 'a2a-external' org with this hard cap.",
+    "confidence": "low — operator-set, not Tulana-derived",
+    "daily_token_limit": 200
+  }
+}

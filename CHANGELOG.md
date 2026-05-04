@@ -143,6 +143,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `emit_event_db` discipline. 4-phase 10-week migration. Operator
   decisions blocking start: Kafka cluster ownership, ~$300-800/mo
   cost approval.
+- **RFC 0020 — Per-tenant data residency for SAT-bound tenants**
+  (#144) — hybrid Pattern A (dedicated MX-region cluster for
+  SAT-bound) + Pattern C (gateway-routed shards for everyone else),
+  driven by `tenant_configs.data_residency_region` ENUM. Phased
+  migration. Implementation blocked on operator cluster-provisioning
+  decision.
+- **RFC 0021 — Multi-region failover** (#144) — active-passive
+  (warm standby, ~30min RTO) for next 12 months → active-active in
+  Q1 2027 once regional infrastructure matures through quarterly
+  drills. Active-active multi-master rejected upfront. Implementation
+  blocked on RFC 0020's cluster topology decisions.
+
+### Compliance + ecosystem cohesion (post-#143 additions)
+
+- **Per-period consent ledger key tracking** (#145) — closes
+  the §6 limitation in `docs/SECRET_ROTATION_POLICY.md`. Migration
+  0030 adds `consent_ledger_signing_keys` table (key_version PK,
+  partial unique index on `is_current=true`); `consent_ledger`
+  rows carry `signing_key_version` FK so old rows verify under
+  their original key forever. New
+  `POST /api/v1/admin/consent-ledger/promote-key` endpoint
+  (admin/platform role-gated) atomically retires old + inserts
+  new key + emits `consent_ledger.key_promoted` audit event.
+  `scripts/rotate-secret.sh consent-ledger-signing` updated to
+  call promote-key FIRST then patch K8s Secret. Quarterly
+  rotation cycle now safely includes this secret. 10 new tests
+  + 30 existing consent/onboarding tests still green.
 
 ### Documentation
 
@@ -167,8 +194,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   flip env var after.
 - **Secret rotation policy** (#138) — quarterly cadence, procedure,
   rollback, audit, compliance (SOC 2 CC6.1, NIST SP 800-57 Part 1,
-  MX LFPDPPP).
+  MX LFPDPPP). §6 limitation closed by #145 — quarterly cycle now
+  safely includes consent-ledger-signing.
 - **CDC audit topic RFC** (#140) — see Architecture section.
+- **CHANGELOG `[2.3.0]` + CLAUDE.md operator patterns** (#143) —
+  this very entry, plus the "Patterns Added in v2.3.0" reference
+  section in CLAUDE.md (idempotency adoption recipe,
+  `tenant_session()` usage, RLS strict mode + `admin_session()`,
+  PostgresSaver lifecycle, 5-item adoption checklist).
+- **Data residency RFC #0020 + multi-region failover RFC #0021**
+  (#144) — see Architecture section.
+- **Wrap-up doc refresh** (this PR) — ROADMAP scorecard updated to
+  2.3.0 baseline with 4 dimensions newly improved (per-period
+  consent ledger key tracking → consent ledger integrity 90→95%;
+  Audit trail in-Selva 80→100%; Architecture RFCs landed 1→5;
+  Secret rotation 0→100%). Cross-service audit correlation added as
+  separate dimension at 20% (RFC 0019 shipped, awaits Kafka
+  provisioning). Top-line metrics updated: 32 Alembic migrations
+  (was 25), 828 test files (was 794), 5 architecture RFCs.
 
 ### Operator todo list (gating items not in this release)
 

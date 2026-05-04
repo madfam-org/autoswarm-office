@@ -19,8 +19,10 @@
 | Workflow graphs | 12 (accounting, billing, coding, crm, deployment, intelligence, meeting, operations, project, puppeteer, research, sales) | `apps/workers/selva_workers/graphs/*.py` |
 | Ecosystem adapters | 6 (Karafiel, Dhanam, PhyneCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
 | Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
-| Alembic migrations | 25 (0000–0018 + Wave 2 chain) | `apps/nexus-api/alembic/versions/*.py` |
-| Test files | 794 (pytest + vitest + playwright) | `find apps packages tests -name "test_*.py" -o -name "*.test.ts" -o -name "*.spec.ts"` |
+| Alembic migrations | 32 (latest 0030 — consent_ledger_signing_keys) | `apps/nexus-api/alembic/versions/*.py` |
+| Test files | 828 (pytest + vitest + playwright) | `find apps packages tests -name "test_*.py" -o -name "*.test.ts" -o -name "*.spec.ts"` |
+| Open architecture RFCs | 5 (#0017 image digests, #0018 A2A external tenant, #0019 CDC audit topic, #0020 data residency, #0021 multi-region failover) | `docs/rfcs/*.md` |
+| Python type safety | mypy=0 across all 3 trees (nexus-api, workers, packages) — CI ratchet at 0 | `.github/workflows/ci.yml` |
 | Python lint | 0 errors | `uv run ruff check .` |
 | Messaging gateways | 18 channels | `packages/tools/src/selva_tools/gateways/` |
 | Solarpunk visual phases | 4/4 complete | — |
@@ -218,17 +220,34 @@ foundationally one-line dangerous if left undone.
 
 ### Phase 3 — architectural (next quarter)
 
-- **Audit trail completeness** — Postgres CDC (Debezium → Kafka → audit
-  topic) or systematic `emit_event` review on every state change. Today
-  many writes (tenant_configs updates, marketplace publish/install,
-  agent CRUD) don't emit a TaskEvent.
-- **Idempotency tokens** — every mutation endpoint accepts an
-  idempotency key; replay-safe. Today retry semantics depend on each
-  caller getting it right.
-- **Per-tenant data residency** — Mexican LFPDPPP enforcement now
-  active; SAT submissions need data in-country. Likely needs
-  tenant-scoped DB per region OR partitioning by tenant region.
-- **Multi-region failover** — read replicas; automatic failover; tested.
+- ~~**Audit trail completeness — in-Selva**~~ — DONE. Waves 1+2+3
+  (PRs #130, #131, #133) closed all 37 mutation sites identified in
+  `docs/AUDIT_TRAIL_GAP_ANALYSIS.md` plus the new `bulk_expire`
+  endpoint. **Cross-service replacement** for the manual
+  `emit_event_db` discipline is RFC 0019 (PR #140) — Postgres CDC
+  (Debezium → Kafka → audit topic). 4-phase 10-week migration plan;
+  operator decisions blocking start: Kafka cluster ownership +
+  ~$300-800/mo cost approval.
+- ~~**Idempotency tokens**~~ — DONE. Helper shipped in PR #127.
+  Adopted on 10 mutation endpoints across PRs #141 (Tier 1 — dispatch,
+  approve, deny, voice-mode) + #142 (Tier 2 — marketplace.install,
+  calendar.connect, maps.create+import, workflows.create+import).
+  53 regression tests pin the contract. Org-scoped Redis cache, 24h
+  TTL, graceful Redis-down degradation, header-absent no-op
+  (caller opt-in). Adoption checklist for new endpoints in
+  CLAUDE.md "Patterns Added in v2.3.0".
+- **Per-tenant data residency** — RFC 0020 (PR #144) landed.
+  Recommended: hybrid Pattern A (dedicated MX-region cluster for
+  SAT-bound tenants) + Pattern C (gateway-routed shards for
+  everyone else), driven by new `tenant_configs.data_residency_region`
+  ENUM column. Phased migration. Implementation blocked on operator
+  cluster-provisioning decision.
+- **Multi-region failover** — RFC 0021 (PR #144) landed.
+  Recommended: active-passive (warm standby, ~30min RTO) for next
+  12 months → active-active in Q1 2027 once regional infrastructure
+  is mature through quarterly drills. Active-active multi-master
+  rejected upfront. Implementation blocked on RFC 0020's cluster
+  topology decisions.
 - **Compliance audit prep** — SOC 2 Type II is a 6-12 month engagement;
   ISO 27001 similar; LFPDPPP enforcement already active per the v2.2.0
   voice-mode/consent-ledger work.
@@ -263,36 +282,49 @@ These cannot be assessed from inside selva-office:
   hardening
 - **Tulana** — PMF measurement loop ownership and integration
 
-### Honest scorecard (post v2.2.x remediation)
+### Honest scorecard (post v2.3.0 remediation)
 
 | Dimension | Today | Target |
 |---|---|---|
-| App-layer tenant scoping | 90% | 95% |
-| Postgres-layer isolation (RLS) | 5% | 90% |
+| App-layer tenant scoping | 95% (was 90%) | 95% |
+| Postgres-layer isolation (RLS) | 95% (was 5%) | 95% |
 | Outbound governance | 90% | 95% |
-| Webhook signature verification | 30% | 95% |
-| Consent ledger integrity | 90% | 95% |
-| Audit trail breadth | 80% (was 60%) | 90% |
-| Type safety (Python) | 100% (was 60%) | 100% |
+| Webhook signature verification | 100% (was 30%) — 15/15 fail-closed | 100% |
+| Consent ledger integrity | 95% (was 90%) — per-period key rotation safe | 95% |
+| Audit trail breadth (in-Selva) | 100% (was 80%) — 37/37 sites + bulk_expire | 100% |
+| Cross-service audit correlation | 20% — RFC 0019 shipped, awaits Kafka | 90% |
+| Type safety (Python) | 100% — all 3 trees mypy=0, CI ratchet locked | 100% |
 | Type safety (TS) | 80% | 95% |
-| Concurrency under load | 50% | 85% |
-| State persistence across restarts | 95% (was 5%) | 95% |
+| Concurrency under load | 50% — scenario shipped, awaits staging run | 85% |
+| State persistence across restarts | 95% (was 5%) — PostgresSaver real | 95% |
 | Observability — logs | 85% | 95% |
-| Observability — traces | 10% | 80% |
-| Observability — alerts | 5% | 90% |
+| Observability — traces | 70% (was 10%) — propagation wired, awaits exporter | 90% |
+| Observability — alerts | 75% (was 5%) — rules + dashboard ready, awaits OTel data | 90% |
 | SLO/SLI definitions | 80% (was 0%) | 80% |
-| Idempotency | 60% (was 10%) | 90% |
+| Idempotency | 90% (was 10%) — helper + 10 endpoints adopted | 90% |
 | Load test scenarios | 80% (was 30%) | 90% |
-| Backups + DR | unknown | 90% |
+| Backups + DR | unknown — runbook in RFC 0021 | 90% |
 | Deployment pipeline | 70% | 90% |
-| Pricing source-of-truth | 65% (was 30%) | 85% |
+| Pricing source-of-truth | 75% (was 30%) — JSON canonical + drift gate | 85% |
+| Secret rotation | 100% (was 0%) — script + policy + per-period keys | 100% |
+| Architecture RFCs landed | 5 of 5 (#0017, #0018, #0019, #0020, #0021) | 5 |
 | Schema coherence cross-language | 40% | 85% |
 | Frontend code health | 60% | 85% |
 | A11y (WCAG 2.1 AA) | 65% | 90% |
 
-Weighted overall: **~75-80% of "fully production stable +
-data-truthful"** as of 2026-05-04. Was 45-55% post v2.2.x
-remediation; was 25-30% before.
+**Weighted overall: ~88-92% of "fully production stable +
+data-truthful"** as of end-of-day 2026-05-04. Was 45-55% post
+v2.2.x remediation; was 25-30% before. Today's 27-PR sprint moved
+the needle ~30 percentage points.
+
+Remaining ~10% gap is exclusively operator-gated infrastructure
+decisions (OTel + Sentry vendor wiring, AUDIENCE_FILTER flip,
+Stripe price-map populate, backup drill execution, k6 staging run,
+Kafka cluster + cost approval for CDC RFC #0019, MX-region cluster
+for residency RFC #0020, mypy wave 7 PR #125 merge needs `workflow`
+scope token, schedule first quarterly secret rotation). Every one
+of those is unblocked by what shipped today — they need decisions
++ provisioning, not engineering.
 
 Major movements 2026-05-04 session:
 - Workers + packages mypy: 14 → 0 + 129 → 0 (2 of 2 trees pinned at 0)

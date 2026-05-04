@@ -44,7 +44,7 @@ class PromptCacheManager:
         messages: list[dict[str, Any]],
         system_prompt: str,
         provider: str,
-    ) -> tuple[list[dict[str, Any]], str | dict]:
+    ) -> tuple[list[dict[str, Any]], str | list[dict[str, Any]]]:
         """
         Inject Anthropic ``cache_control`` breakpoints.
 

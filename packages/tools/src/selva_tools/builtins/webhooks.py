@@ -262,17 +262,16 @@ def _stripe_create_webhook_endpoint(
         "Content-Type": "application/x-www-form-urlencoded",
     }
     owned = client is None
-    if owned:
-        client = httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
     try:
-        resp = client.post(
+        resp = http.post(
             f"{STRIPE_API_BASE}/webhook_endpoints",
             content=body,
             headers=headers,
         )
     finally:
-        if owned and client is not None:
-            client.close()
+        if owned:
+            http.close()
     if resp.status_code >= 400:
         raise _WebhookProviderError(f"stripe create returned status={resp.status_code}")
     return resp.json()
@@ -289,17 +288,16 @@ def _stripe_list_webhook_endpoints(
     """
     headers = {"Authorization": f"Bearer {api_key}"}
     owned = client is None
-    if owned:
-        client = httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
     try:
-        resp = client.get(
+        resp = http.get(
             f"{STRIPE_API_BASE}/webhook_endpoints",
             headers=headers,
             params={"limit": 100},
         )
     finally:
-        if owned and client is not None:
-            client.close()
+        if owned:
+            http.close()
     if resp.status_code >= 400:
         raise _WebhookProviderError(f"stripe list returned status={resp.status_code}")
     body = resp.json()
@@ -313,16 +311,15 @@ def _stripe_delete_webhook_endpoint(
     False if already absent (404). Raises on other errors."""
     headers = {"Authorization": f"Bearer {api_key}"}
     owned = client is None
-    if owned:
-        client = httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
     try:
-        resp = client.delete(
+        resp = http.delete(
             f"{STRIPE_API_BASE}/webhook_endpoints/{webhook_id}",
             headers=headers,
         )
     finally:
-        if owned and client is not None:
-            client.close()
+        if owned:
+            http.close()
     if resp.status_code == 404:
         return False
     if resp.status_code >= 400:
@@ -350,17 +347,16 @@ def _resend_create_webhook(
         "Content-Type": "application/json",
     }
     owned = client is None
-    if owned:
-        client = httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
     try:
-        resp = client.post(
+        resp = http.post(
             f"{RESEND_API_BASE}/webhooks",
             json=body,
             headers=headers,
         )
     finally:
-        if owned and client is not None:
-            client.close()
+        if owned:
+            http.close()
     if resp.status_code >= 400:
         raise _WebhookProviderError(f"resend create returned status={resp.status_code}")
     return resp.json()
@@ -381,17 +377,16 @@ def _janua_register_redirect(
     }
     body = {"add_redirect_uri": redirect_uri}
     owned = client is None
-    if owned:
-        client = httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
     try:
-        resp = client.patch(
+        resp = http.patch(
             f"{base}/admin/clients/{client_id}",
             json=body,
             headers=headers,
         )
     finally:
-        if owned and client is not None:
-            client.close()
+        if owned:
+            http.close()
     if resp.status_code >= 400:
         raise _WebhookProviderError(f"janua redirect register returned status={resp.status_code}")
     return resp.json()

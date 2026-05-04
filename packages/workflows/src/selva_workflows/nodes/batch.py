@@ -77,11 +77,13 @@ class BatchNodeHandler:
                 return_exceptions=True,
             )
 
-            # Separate successes from errors
+            # Separate successes from errors. ``return_exceptions=True`` may
+            # return any ``BaseException``, so guard against the wider type
+            # (mypy widens to ``dict | BaseException``).
             successes: list[dict] = []
             errors: list[str] = []
             for r in results:
-                if isinstance(r, Exception):
+                if isinstance(r, BaseException):
                     errors.append(str(r))
                 else:
                     successes.append(r)

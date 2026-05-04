@@ -155,8 +155,10 @@ class WorkflowCompiler:
             for warning in result.warnings:
                 logger.warning("Workflow '%s': %s", workflow.name, warning.message)
 
-        # Build the state graph
-        graph = StateGraph(dict)
+        # Build the state graph. ``StateGraph`` is generic in StateT and
+        # langgraph's stubs reject the bare ``dict`` we use as the state
+        # container; the runtime accepts it fine.
+        graph = StateGraph(dict)  # type: ignore[type-var]
 
         node_map = {n.id: n for n in workflow.nodes}
         entry_id = workflow.entry_node or workflow.nodes[0].id
@@ -206,8 +208,13 @@ class WorkflowCompiler:
                 for e in edges:
                     targets.add(e.target)
 
-                # Build path map: target -> target (identity mapping for LangGraph)
-                path_map: dict[str, str] = {}
+                # Build path map: target -> target (identity mapping for
+                # LangGraph). ``add_conditional_edges`` is typed
+                # ``dict[Hashable, str]``; ``dict[str, str]`` is structurally
+                # compatible but mypy needs the wider key type.
+                from collections.abc import Hashable
+
+                path_map: dict[Hashable, str] = {}
                 for target in targets:
                     if target == END_SENTINEL:
                         path_map[END_SENTINEL] = END

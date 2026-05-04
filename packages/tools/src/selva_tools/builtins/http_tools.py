@@ -109,13 +109,16 @@ def _resolve_safe_url(url: str) -> tuple[str, str, str]:
     # multi-record DNS responses with one private entry still get rejected.
     chosen_ip: str | None = None
     for _family, _type, _proto, _canonname, sockaddr in addrinfos:
-        ip_obj = ipaddress.ip_address(sockaddr[0])
+        # sockaddr[0] is the address string for both AF_INET and AF_INET6;
+        # the tuple type is heterogeneous so mypy widens to ``str | int``.
+        ip_str = str(sockaddr[0])
+        ip_obj = ipaddress.ip_address(ip_str)
         if _is_private_ip(ip_obj):
             raise ValueError(
                 f"Hostname resolves to a private/reserved IP address: {hostname}"
             )
         if chosen_ip is None:
-            chosen_ip = sockaddr[0]
+            chosen_ip = ip_str
 
     assert chosen_ip is not None  # validated by len(addrinfos) check above
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import importlib.util
 import logging
 from pathlib import Path
 from typing import Any
@@ -125,7 +126,11 @@ class PluginManager:
             f"autoswarm_plugin_{plugin_dir.name}",
             plugin_dir / entrypoint,
         )
-        module = importlib.util.module_from_spec(spec)  # type: ignore
+        if spec is None or spec.loader is None:
+            raise RuntimeError(
+                f"Could not build module spec for plugin at {plugin_dir / entrypoint}"
+            )
+        module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         plugin_class = getattr(module, class_name)
 

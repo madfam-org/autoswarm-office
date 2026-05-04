@@ -199,11 +199,11 @@ async def _persist_and_broadcast(request_id: str, run_id: str, command: str, rea
     try:
         from datetime import datetime
 
-        from nexus_api.database import AsyncSessionLocal
+        from nexus_api.database import async_session_factory
         from nexus_api.models import ApprovalStatus as DBStatus
         from nexus_api.models import CommandApprovalRequest as ApprovalRequest
 
-        async with AsyncSessionLocal() as session:
+        async with async_session_factory() as session:
             req = ApprovalRequest(
                 id=request_id,
                 run_id=run_id,

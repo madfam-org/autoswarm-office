@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+import os
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from ..base import BaseTool, ToolResult
@@ -68,44 +69,24 @@ class CreateCalendarEventTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
-        title = kwargs.get("title", "")
-        start_time = kwargs.get("start_time", "")
-        end_time = kwargs.get("end_time", "")
-        description = kwargs.get("description", "")
-        attendees = kwargs.get("attendees", [])
-        calendar_id = kwargs.get("calendar_id", "primary")
-
-        try:
-            from selva_calendar.google import GoogleCalendarAdapter
-
-            adapter = GoogleCalendarAdapter()
-            event = await adapter.create_event(
-                calendar_id=calendar_id,
-                title=title,
-                start_time=start_time,
-                end_time=end_time,
-                description=description,
-                attendees=attendees,
-            )
-            event_id = event.get("id", "unknown") if isinstance(event, dict) else "created"
-            return ToolResult(
-                output=f"Event '{title}' created (id={event_id})",
-                data={
-                    "event_id": event_id,
-                    "title": title,
-                    "start_time": start_time,
-                    "end_time": end_time,
-                },
-            )
-        except ImportError:
-            logger.warning("selva_calendar not available")
-            return ToolResult(
-                success=False,
-                error="Calendar not configured. Install selva_calendar package.",
-            )
-        except Exception as exc:
-            logger.error("create_calendar_event failed: %s", exc)
-            return ToolResult(success=False, error=str(exc))
+        # NOTE: ``GoogleCalendarAdapter`` does not currently expose a
+        # ``create_event`` method (the adapter is read-only — list_events +
+        # check_busy). The previous implementation called the missing method
+        # and silently swallowed the AttributeError into a generic error
+        # response, making the tool look like it was a config issue. Surface
+        # the truth instead so callers know to track adapter write support.
+        return ToolResult(
+            success=False,
+            error=(
+                "create_calendar_event is not implemented: the Google adapter "
+                "is read-only. Track addition of write support before re-enabling."
+            ),
+            data={
+                "title": kwargs.get("title", ""),
+                "start_time": kwargs.get("start_time", ""),
+                "end_time": kwargs.get("end_time", ""),
+            },
+        )
 
 
 class ListCalendarEventsTool(BaseTool):
@@ -133,26 +114,57 @@ class ListCalendarEventsTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
-        date = kwargs.get("date", "")
+        date_str = kwargs.get("date", "")
         calendar_id = kwargs.get("calendar_id", "primary")
+
+        access_token = (
+            kwargs.get("access_token")
+            or os.environ.get("GOOGLE_CALENDAR_ACCESS_TOKEN")
+            or ""
+        )
+        if not access_token:
+            return ToolResult(
+                success=False,
+                error=(
+                    "Calendar not configured: pass ``access_token`` or set "
+                    "GOOGLE_CALENDAR_ACCESS_TOKEN env var."
+                ),
+            )
 
         try:
             from selva_calendar.google import GoogleCalendarAdapter
 
-            adapter = GoogleCalendarAdapter()
-            events = await adapter.list_events(
-                calendar_id=calendar_id,
-                time_min=f"{date}T00:00:00Z",
-                time_max=f"{date}T23:59:59Z",
-            )
-            event_list = events if isinstance(events, list) else []
+            try:
+                day = date.fromisoformat(date_str)
+            except ValueError:
+                return ToolResult(
+                    success=False,
+                    error=f"Invalid date format: '{date_str}'. Use YYYY-MM-DD.",
+                )
+
+            time_min = datetime.combine(day, datetime.min.time())
+            time_max = datetime.combine(day, datetime.max.time())
+
+            adapter = GoogleCalendarAdapter(access_token=access_token)
+            try:
+                events = await adapter.list_events(
+                    time_min=time_min,
+                    time_max=time_max,
+                    calendar_id=calendar_id,
+                )
+            finally:
+                await adapter.close()
+
             summary = "\n".join(
-                f"- {e.get('summary', 'Untitled')} ({e.get('start', {}).get('dateTime', '')})"
-                for e in event_list
+                f"- {e.title} ({e.start.isoformat()})" for e in events
             )
             return ToolResult(
-                output=summary or f"No events on {date}",
-                data={"date": date, "events": event_list, "count": len(event_list)},
+                output=summary or f"No events on {date_str}",
+                data={
+                    "date": date_str,
+                    "events": [e.model_dump(mode="json") for e in events],
+                    "count": len(events),
+                },
             )
         except ImportError:
             logger.warning("selva_calendar not available")

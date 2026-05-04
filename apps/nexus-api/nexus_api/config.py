@@ -26,6 +26,20 @@ class Settings(BaseSettings):
     db_max_overflow: int = 20
     db_pool_recycle: int = 1800  # 30 minutes
     db_pool_timeout: int = 30
+    # Optional connection string for the ``app_admin`` BYPASSRLS Postgres
+    # role created by migration 0028. When set, ``admin_session()`` opens
+    # sessions against this connection so cross-tenant maintenance ops
+    # (reap-stale, audit exports, future Celery jobs) skip RLS policy
+    # checks at the database level. When empty, ``admin_session()`` falls
+    # back to ``database_url`` and logs a warning -- strict-mode policies
+    # will then return zero rows for cross-tenant queries, which is the
+    # deliberate "misconfigured" signal. Set to e.g.
+    # ``postgresql+asyncpg://app_admin:...@host:5432/autoswarm``.
+    database_admin_url: str = ""
+    # Pool sizing for the admin engine. Cross-tenant ops are rare by
+    # design so the pool is intentionally small -- bumping it is a smell.
+    db_admin_pool_size: int = 2
+    db_admin_max_overflow: int = 5
     redis_url: str = "redis://localhost:6379"
 
     # -- Auth (Janua OIDC) ----------------------------------------------------

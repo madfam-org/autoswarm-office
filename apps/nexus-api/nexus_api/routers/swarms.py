@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -736,7 +736,6 @@ _REAP_STALE_ALLOWED_ROLES: frozenset[str] = frozenset(
 @router.post("/tasks/reap-stale")
 async def reap_stale_tasks(
     user: dict = Depends(get_current_user),  # noqa: B008
-    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> dict[str, int]:
     """Auto-fail queued/pending tasks older than 1 hour (cross-tenant ops).
 
@@ -745,22 +744,27 @@ async def reap_stale_tasks(
     access control: only callers carrying ``service``, ``worker``,
     ``platform``, or ``admin`` roles may invoke it.
 
-    Tenancy bypass:
-        ``Depends(get_db)`` already set ``app.current_org_id`` to the
-        caller's JWT-derived ``org_id`` (or ``"default"`` for the dev
-        bypass). Because RLS policies on ``swarm_tasks`` filter by that
-        session var, leaving it set would scope the reaper to ONE org
-        and silently skip stale tasks in every other tenant -- the
-        exact bug fixed here (see ``docs/RLS_PHASE_1_5_AUDIT.md`` §2.C).
+    Tenancy bypass (Phase 1.5 -- migration 0028):
+        Uses ``admin_session()`` which opens a session against the
+        ``app_admin`` BYPASSRLS connection pool. This is the canonical
+        way to express "I genuinely need to read/mutate rows belonging
+        to multiple tenants in one query" under the strict RLS policies
+        installed by migration 0028.
 
-        We explicitly reset the var to the empty string so the Phase 1
-        permissive policy (``IS NULL OR = '' OR = $org``) returns rows
-        from every tenant. After Phase 1.5 (migration 0027) tightens
-        the policy, this endpoint MUST switch to ``admin_session()``
-        (BYPASSRLS connection pool) -- the audit doc tracks this
-        follow-up.
+        Pre-migration-0028 this endpoint relied on the Phase 1 permissive
+        policy (``IS NULL OR = '' OR = $org``) and manually reset the
+        session var to ``""`` to fall through to the IS NULL leg. That
+        leg no longer exists -- under the strict policies a reset
+        session var would return zero rows. ``admin_session()`` logs at
+        WARNING on every entry, so the cross-tenant access is visible in
+        structured logs without needing to parse pg_stat_activity.
+
+        See ``docs/RLS_PHASE_1_5_AUDIT.md`` §2.C and §3 for the full
+        rationale.
     """
     from datetime import timedelta
+
+    from ..database import admin_session
 
     roles = user.get("roles", [])
     if not any(r in _REAP_STALE_ALLOWED_ROLES for r in roles):
@@ -772,34 +776,28 @@ async def reap_stale_tasks(
             ),
         )
 
-    # Bypass tenant RLS for this query -- see docstring + audit doc.
-    # ``set_config(..., true)`` is transaction-local (equivalent to
-    # ``SET LOCAL``). Skipped on SQLite (test path) where ``set_config``
-    # does not exist; RLS is a Postgres-only concept anyway.
-    bind = db.get_bind()
-    if bind is not None and bind.dialect.name == "postgresql":
-        await db.execute(text("SELECT set_config('app.current_org_id', '', true)"))
-
     cutoff = datetime.now(UTC) - timedelta(hours=1)
-    result = await db.execute(
-        select(SwarmTask)
-        .where(SwarmTask.status.in_(["queued", "pending"]))
-        .where(SwarmTask.created_at < cutoff)
-    )
-    stale_tasks = result.scalars().all()
+    async with admin_session() as db:
+        result = await db.execute(
+            select(SwarmTask)
+            .where(SwarmTask.status.in_(["queued", "pending"]))
+            .where(SwarmTask.created_at < cutoff)
+        )
+        stale_tasks = result.scalars().all()
 
-    for task in stale_tasks:
-        task.status = "failed"
-        task.error_message = "Reaped: stale task older than 1 hour"
-        task.completed_at = datetime.now(UTC)
+        for task in stale_tasks:
+            task.status = "failed"
+            task.error_message = "Reaped: stale task older than 1 hour"
+            task.completed_at = datetime.now(UTC)
 
-    await db.flush()
+        await db.flush()
+        reaped_count = len(stale_tasks)
 
-    if stale_tasks:
+    if reaped_count:
         logging.getLogger(__name__).warning(
             "Reaped %d stale task(s) across all tenants (caller=%s)",
-            len(stale_tasks),
+            reaped_count,
             user.get("sub", "unknown"),
         )
 
-    return {"reaped": len(stale_tasks)}
+    return {"reaped": reaped_count}

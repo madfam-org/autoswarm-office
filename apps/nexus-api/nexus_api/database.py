@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from functools import lru_cache
@@ -16,6 +17,8 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from .config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -37,6 +40,57 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     """Return a session factory bound to the cached engine."""
     return async_sessionmaker(
         get_engine(),
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_admin_engine() -> AsyncEngine:
+    """Return a cached async engine for the ``app_admin`` BYPASSRLS role.
+
+    Uses ``Settings.database_admin_url`` when set; otherwise falls back to
+    the regular ``database_url`` (dev / SQLite test path -- there is no
+    separate admin role to connect as). Logs a warning at first
+    construction when the fallback is taken so ops can spot a missed
+    rollout.
+
+    The engine has a small pool (default 2 / max overflow 5) because
+    cross-tenant ops are rare by design. Bumping the pool is a smell --
+    if you find yourself wanting more admin connections, the caller is
+    probably hot-pathing a query that should be tenant-scoped.
+
+    See ``admin_session`` for the user-facing context manager.
+    """
+    settings = get_settings()
+    url = settings.database_admin_url or settings.database_url
+    if not settings.database_admin_url:
+        logger.warning(
+            "DATABASE_ADMIN_URL is not set; admin_session() falls back to the "
+            "main database_url. In production this means admin_session() runs "
+            "as the regular app role and DOES NOT bypass RLS -- cross-tenant "
+            "ops will return zero rows under the strict policies installed by "
+            "migration 0028. Set DATABASE_ADMIN_URL to a connection string "
+            "for the 'app_admin' role (BYPASSRLS) created by that migration."
+        )
+    return create_async_engine(
+        url,
+        echo=False,
+        pool_size=settings.db_admin_pool_size,
+        max_overflow=settings.db_admin_max_overflow,
+        pool_recycle=settings.db_pool_recycle,
+        pool_timeout=settings.db_pool_timeout,
+        pool_pre_ping=True,
+    )
+
+
+def get_admin_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Return a session factory bound to the admin engine.
+
+    See ``get_admin_engine`` for pool sizing rationale.
+    """
+    return async_sessionmaker(
+        get_admin_engine(),
         class_=AsyncSession,
         expire_on_commit=False,
     )
@@ -161,6 +215,78 @@ async def tenant_session(org_id: str) -> AsyncGenerator[AsyncSession, None]:
                     text("SELECT set_config('app.current_org_id', :org_id, true)"),
                     {"org_id": org_id or ""},
                 )
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def admin_session() -> AsyncGenerator[AsyncSession, None]:
+    """Open a session against the ``app_admin`` BYPASSRLS connection pool.
+
+    Use this -- and ONLY this -- for cross-tenant maintenance ops that
+    need to read or mutate rows belonging to multiple tenants in a single
+    query. Examples in the current codebase:
+
+        - ``swarms.reap_stale_tasks`` (sweeps stale tasks across all
+          tenants every cron tick)
+        - Future Celery jobs that aggregate metrics across tenants
+        - Audit / compliance exports
+
+    Logs a WARNING on every entry so cross-tenant access is observable in
+    structured logs without needing to grep ``pg_stat_activity``. If you
+    are tempted to silence the warning, that is the signal you want
+    ``tenant_session("platform")`` instead -- which uses the strict-mode
+    platform-bypass marker but still goes through the regular RLS-enforced
+    pool, leaving an audit trail.
+
+    Choosing between this and ``tenant_session("platform")``:
+
+        - ``admin_session()``:
+            Cross-tenant **maintenance** -- callers that genuinely need to
+            see or mutate rows from multiple tenants in one query and
+            cannot enumerate them. Selects a separate connection pool
+            backed by the ``app_admin`` Postgres role (BYPASSRLS).
+            Strongest bypass -- skips every RLS policy check.
+
+        - ``tenant_session("platform")``:
+            Platform-internal queries that the strict policies recognise
+            via the ``'platform'`` marker. Stays in the regular
+            RLS-enforced pool; a misconfigured policy would still deny
+            the query, which is the desired defense in depth.
+
+    Behaviour:
+        - On Postgres with ``DATABASE_ADMIN_URL`` set: connects as
+          ``app_admin``, BYPASSRLS skips every policy. No session var
+          is set (it would be a no-op anyway -- the role bypasses).
+        - On Postgres WITHOUT ``DATABASE_ADMIN_URL``: falls back to the
+          regular pool (logged loudly at engine construction time).
+          Strict-mode policies will return zero rows -- this is the
+          deliberate misconfiguration signal for ops.
+        - On SQLite (test path): opens a regular session, no RLS
+          concept exists. Tests assert behaviour by spying on the
+          admin_session factory.
+
+    Example:
+        async with admin_session() as db:
+            stale = await db.execute(
+                select(SwarmTask)
+                .where(SwarmTask.status == "queued")
+                .where(SwarmTask.created_at < cutoff)
+            )
+            # commits on context exit, rolls back on exception
+    """
+    logger.warning(
+        "admin_session() opened -- cross-tenant access path "
+        "(audit doc: docs/RLS_PHASE_1_5_AUDIT.md §3)"
+    )
+    factory = get_admin_session_factory()
+    async with factory() as session:
+        try:
             yield session
             await session.commit()
         except Exception:

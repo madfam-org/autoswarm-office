@@ -126,6 +126,17 @@ class Settings(BaseSettings):
     signal_cli_url: str = ""  # URL of running signal-cli REST API
     signal_allowed_numbers: str = ""  # Comma-separated E.164 source numbers
 
+    # -- Gateway Wave 3 (Phase 1 hardening) -----------------------------------
+    # These were previously read via getattr(settings, "...", None) — moving
+    # them to explicit fields so the fail-closed _require_secret pattern has
+    # a single source of truth and tests can monkeypatch the field directly.
+    dingtalk_app_secret: str = ""  # DingTalk webhook HMAC-SHA256 secret
+    feishu_app_secret: str = ""  # Feishu/Lark event webhook signing secret
+    wecom_token: str = ""  # WeCom outgoing webhook query-param token
+    weixin_app_token: str = ""  # Weixin via WxPusher appToken
+    bluebubbles_password: str = ""  # BlueBubbles iMessage bridge basic-auth pwd
+    ha_token: str = ""  # Home Assistant long-lived bearer token
+
     # -- Security -------------------------------------------------------------
     dev_auth_bypass: bool = False
     rate_limit_per_minute: int = 60

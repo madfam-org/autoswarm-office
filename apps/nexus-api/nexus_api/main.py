@@ -22,6 +22,7 @@ from .middleware.csrf import CSRFMiddleware
 from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.security import SecurityHeadersMiddleware, TenantRLSMiddleware
+from .middleware.tracing import TraceContextMiddleware
 from .routers import (
     admin,
     agents,
@@ -147,6 +148,12 @@ def create_app() -> FastAPI:
         csp_extra_sources=settings.csp_extra_sources,
     )
     app.add_middleware(RequestIdMiddleware)
+    # TraceContextMiddleware MUST be added AFTER RequestIdMiddleware so it
+    # runs BEFORE it on inbound requests (Starlette middleware stack is
+    # LIFO on the request path). This way the W3C parent context is
+    # attached before RequestIdMiddleware reads the current span to format
+    # the outgoing ``traceparent`` response header.
+    app.add_middleware(TraceContextMiddleware)
     app.add_middleware(TenantRLSMiddleware)
     app.add_middleware(
         RateLimitMiddleware,

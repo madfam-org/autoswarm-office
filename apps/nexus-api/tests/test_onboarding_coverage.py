@@ -252,3 +252,193 @@ class TestVerifySignatureBranches:
         )
         # Signature must still verify after normalization.
         assert _ob.verify_signature(entry) is True
+
+
+# ---------------------------------------------------------------------------
+# Direct endpoint invocation — bypass FastAPI to give pytest-cov a clean
+# stack frame for line tracking. The async-via-httpx-via-ASGI path
+# loses trace events under some pytest-cov configurations.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestEndpointsDirect:
+    """Direct calls bypass FastAPI dependency injection and ASGI."""
+
+    async def test_onboarding_status_direct_no_config(
+        self, db_session: AsyncSession
+    ) -> None:
+        from nexus_api.routers.onboarding import onboarding_status
+
+        out = await onboarding_status(user={"org_id": "ghost-org"}, db=db_session)
+        assert out.voice_mode is None
+        assert out.onboarding_complete is False
+
+    async def test_onboarding_status_direct_with_config(
+        self,
+        client: httpx.AsyncClient,
+        auth_headers: dict[str, str],
+        db_session: AsyncSession,
+    ) -> None:
+        from nexus_api.routers.onboarding import onboarding_status
+
+        await _bootstrap_tenant(client, auth_headers)
+        # Force a voice_mode on the tenant
+        tc = (await db_session.execute(select(TenantConfig))).scalar_one()
+        tc.voice_mode = "agent_identified"
+        await db_session.commit()
+
+        out = await onboarding_status(user={"org_id": "dev-org"}, db=db_session)
+        assert out.voice_mode == "agent_identified"
+        assert out.onboarding_complete is True
+
+    async def test_voice_mode_preview_direct(self) -> None:
+        from nexus_api.routers.onboarding import voice_mode_preview
+
+        out = await voice_mode_preview(mode="user_direct")
+        assert out.mode == "user_direct"
+        assert "AI disclosure" in out.heads_up or "AI disclosure" in out.clause_body
+
+    async def test_tenant_identity_direct_403_for_platform(
+        self, db_session: AsyncSession
+    ) -> None:
+        from fastapi import HTTPException
+
+        from nexus_api.routers.onboarding import tenant_identity
+
+        with pytest.raises(HTTPException) as exc:
+            await tenant_identity(user={"org_id": "platform"}, db=db_session)
+        assert exc.value.status_code == 403
+
+    async def test_tenant_identity_direct_403_when_no_org(
+        self, db_session: AsyncSession
+    ) -> None:
+        from fastapi import HTTPException
+
+        from nexus_api.routers.onboarding import tenant_identity
+
+        with pytest.raises(HTTPException) as exc:
+            await tenant_identity(user={}, db=db_session)
+        assert exc.value.status_code == 403
+
+    async def test_tenant_identity_direct_404_when_no_config(
+        self, db_session: AsyncSession
+    ) -> None:
+        from fastapi import HTTPException
+
+        from nexus_api.routers.onboarding import tenant_identity
+
+        with pytest.raises(HTTPException) as exc:
+            await tenant_identity(user={"org_id": "missing-org"}, db=db_session)
+        assert exc.value.status_code == 404
+
+    async def test_select_voice_mode_direct_409_when_already_set(
+        self,
+        client: httpx.AsyncClient,
+        auth_headers: dict[str, str],
+        db_session: AsyncSession,
+    ) -> None:
+        from unittest.mock import MagicMock
+
+        from fastapi import HTTPException
+
+        from nexus_api.routers.onboarding import (
+            CONSENT_CLAUSES,
+            VoiceModeSelection,
+            select_voice_mode,
+        )
+
+        await _bootstrap_tenant(client, auth_headers)
+        tc = (await db_session.execute(select(TenantConfig))).scalar_one()
+        tc.voice_mode = "dyad_selva_plus_user"
+        await db_session.commit()
+
+        request = MagicMock()
+        request.headers = {"user-agent": "test"}
+        request.client = MagicMock(host="127.0.0.1")
+        body = VoiceModeSelection(
+            mode="agent_identified",
+            typed_confirmation=CONSENT_CLAUSES["agent_identified"]["typed_phrase"],
+        )
+        with pytest.raises(HTTPException) as exc:
+            await select_voice_mode(
+                body=body,
+                request=request,
+                user={"org_id": "dev-org", "sub": "u", "email": "u@x.io"},
+                db=db_session,
+            )
+        assert exc.value.status_code == 409
+
+    async def test_change_voice_mode_direct_same_mode_short_circuits(
+        self,
+        client: httpx.AsyncClient,
+        auth_headers: dict[str, str],
+        db_session: AsyncSession,
+    ) -> None:
+        from unittest.mock import MagicMock
+
+        from nexus_api.routers.onboarding import (
+            CONSENT_CLAUSES,
+            VoiceModeSelection,
+            change_voice_mode,
+        )
+
+        await _bootstrap_tenant(client, auth_headers)
+        tc = (await db_session.execute(select(TenantConfig))).scalar_one()
+        tc.voice_mode = "dyad_selva_plus_user"
+        await db_session.commit()
+
+        request = MagicMock()
+        request.headers = {"user-agent": "test"}
+        request.client = MagicMock(host="127.0.0.1")
+        body = VoiceModeSelection(
+            mode="dyad_selva_plus_user",
+            typed_confirmation=CONSENT_CLAUSES["dyad_selva_plus_user"]["typed_phrase"],
+        )
+        out = await change_voice_mode(
+            body=body,
+            request=request,
+            user={"org_id": "dev-org", "sub": "u", "email": "u@x.io"},
+            db=db_session,
+        )
+        # Same mode → short-circuit, no new ledger row.
+        assert out.voice_mode == "dyad_selva_plus_user"
+        ledgers = (await db_session.execute(select(ConsentLedger))).scalars().all()
+        assert len(ledgers) == 0
+
+    async def test_change_voice_mode_direct_with_change(
+        self,
+        client: httpx.AsyncClient,
+        auth_headers: dict[str, str],
+        db_session: AsyncSession,
+    ) -> None:
+        from unittest.mock import MagicMock
+
+        from nexus_api.routers.onboarding import (
+            CONSENT_CLAUSES,
+            VoiceModeSelection,
+            change_voice_mode,
+        )
+
+        await _bootstrap_tenant(client, auth_headers)
+        tc = (await db_session.execute(select(TenantConfig))).scalar_one()
+        tc.voice_mode = "dyad_selva_plus_user"
+        await db_session.commit()
+
+        request = MagicMock()
+        request.headers = {"user-agent": "test"}
+        request.client = MagicMock(host="127.0.0.1")
+        body = VoiceModeSelection(
+            mode="agent_identified",
+            typed_confirmation=CONSENT_CLAUSES["agent_identified"]["typed_phrase"],
+        )
+        out = await change_voice_mode(
+            body=body,
+            request=request,
+            user={"org_id": "dev-org", "sub": "u", "email": "u@x.io"},
+            db=db_session,
+        )
+        assert out.voice_mode == "agent_identified"
+        ledgers = (await db_session.execute(select(ConsentLedger))).scalars().all()
+        assert len(ledgers) == 1
+        assert ledgers[0].mode == "agent_identified"

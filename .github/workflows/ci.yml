@@ -233,10 +233,95 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
+  critical-path-coverage:
+    name: Critical Path Coverage Gate
+    runs-on: ubuntu-latest
+    needs: lint-py
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      # Phase 2 critical-path coverage ratchet (Selva Office, May 2026).
+      # The five files below are the highest-blast-radius surfaces in
+      # the repo: JWT verification, the dispatch endpoint, voice-mode
+      # consent ledger, outbound email governance, and worker auth
+      # headers. A regression here is a security or tenancy incident.
+      #
+      # The threshold (75%) is the floor agreed in the Phase 2 PR.
+      # When you raise the actual coverage on these files, also raise
+      # ``--cov-fail-under`` in the same PR so the next regressor
+      # cannot quietly creep back down to today's ceiling.
+      - name: nexus-api critical paths
+        run: |
+          cd apps/nexus-api
+          uv run pytest \
+            tests/test_auth_coverage.py \
+            tests/test_auth_worker_token_scoping.py \
+            tests/test_database_coverage.py \
+            tests/test_voice_mode_onboarding.py \
+            tests/test_consent_ledger.py \
+            tests/test_onboarding_coverage.py \
+            tests/test_onboarding_outbound_identity.py \
+            tests/test_swarms_coverage.py \
+            tests/test_swarm_task_lifecycle.py \
+            tests/test_dispatch_audience_gate.py \
+            tests/test_dispatch_rate_limit.py \
+            tests/test_performance_dispatch.py \
+            --cov=nexus_api.auth \
+            --cov=nexus_api.database \
+            --cov=nexus_api.routers.onboarding \
+            --cov=nexus_api.routers.swarms \
+            --cov-report=term-missing \
+            --cov-fail-under=75 \
+            -q
+
+      - name: outbound governance (email + marketing) critical paths
+        run: |
+          cd packages/tools
+          uv run pytest \
+            tests/test_email_voice_mode_gate.py \
+            tests/test_email_signatures.py \
+            tests/test_email_tools_coverage.py \
+            tests/test_marketing_tools_coverage.py \
+            --cov=selva_tools.builtins.email_tools \
+            --cov=selva_tools.builtins.marketing_tools \
+            --cov-report=term-missing \
+            --cov-fail-under=75 \
+            -q
+
+      - name: artifact storage containment
+        run: |
+          cd packages/tools
+          uv run pytest \
+            --cov=selva_tools.storage.local \
+            --cov-report=term-missing \
+            --cov-fail-under=75 \
+            --ignore=tests/test_pricing_intel_weekly.py \
+            -q
+
+      - name: worker auth headers
+        run: |
+          cd apps/workers
+          uv run pytest \
+            tests/test_worker_auth.py \
+            --cov=selva_workers.auth \
+            --cov-report=term-missing \
+            --cov-fail-under=75 \
+            -q
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [test-ts, test-py, typecheck-py]
+    needs: [test-ts, test-py, typecheck-py, critical-path-coverage]
     steps:
       - uses: actions/checkout@v4
 

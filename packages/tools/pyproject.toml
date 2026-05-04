@@ -33,6 +33,14 @@ mcp = ["jsonrpc-base>=2.0"]
 # Install via ``pip install selva-tools[reddit]`` in worker images that
 # need outbound social.
 reddit = ["praw>=7.7,<8"]
+# Bluesky / AT Protocol posting capability lives in
+# builtins/bluesky_tools.py. Optional for the same reasons as ``reddit``
+# (most workers don't need it; ``atproto`` pulls in ``websockets`` and
+# ``libipld`` adding ~500KB to the image; tool degrades gracefully —
+# raises ``ToolNotConfiguredError`` when the package is missing).
+# Install via ``pip install selva-tools[bluesky]`` in worker images
+# that need outbound public-social via Bluesky.
+bluesky = ["atproto>=0.0.46"]
 
 [build-system]
 requires = ["hatchling"]

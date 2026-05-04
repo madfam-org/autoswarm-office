@@ -168,6 +168,62 @@ The tool is gated by:
 `X` (Twitter), LinkedIn, and crossposting are explicitly out of scope
 for this MVP.
 
+## Outbound Bluesky / AT Protocol Posting (operator runbook)
+
+Tenant swarms can submit text posts to Bluesky via the `bluesky_post`
+tool (`packages/tools/src/selva_tools/builtins/bluesky_tools.py`). The
+tool mirrors the Reddit MVP shape and is gated by:
+
+1. **Mandatory per-persona credentials** — env vars
+   `BLUESKY_HANDLE_<PERSONA_ID>` (e.g. `madfam.bsky.social`) and
+   `BLUESKY_APP_PASSWORD_<PERSONA_ID>` (16-char app password,
+   NOT the account login password). Missing either raises
+   `ToolNotConfiguredError` (no placeholder ever shipped).
+2. **300-character hard limit, including the disclosure footer** —
+   Bluesky's per-post limit is 300 chars. The mandatory disclosure
+   footer is ~36 chars, leaving ~264 chars for promo content. If user
+   text alone overflows 300, or text + footer overflows, the tool
+   raises `PostTooLongError` (no silent truncation — agent must
+   rewrite tighter). Document any longer drafts as a thread-of-replies
+   (out of scope for v1; v2 ships threading helpers).
+3. **Mandatory AI disclosure footer** — every post gets the suffix
+   `\n\n— Posted by an AI agent on behalf of MADFAM` appended
+   automatically. Idempotent — agents that pre-stamp the footer are
+   not double-stamped.
+4. **30-min Redis rate-limit per persona** —
+   `selva:bluesky:last_post:{persona_id}` key with 30-min TTL.
+   Bluesky's underlying API limit is high (5000 points/hr); the
+   conservative cadence here is for promo content, not API hygiene.
+5. **`langs` field** — default `["en"]`. Pass `langs=["es"]` for
+   Karafiel/Dhanam Spanish promo copy so Bluesky's discovery feeds
+   surface the post to the right audience.
+6. **HITL gate via the `bluesky_promo_v1` built-in playbook** —
+   `require_approval=True`, `financial_cap_cents=0`,
+   `token_budget=20_000`.
+
+### Operator provisioning steps
+
+1. For each persona that will post (e.g. `default`, `growth-bot-1`,
+   `karafiel-es`), log in to <https://bsky.app/settings/app-passwords>
+   under the persona's Bluesky account.
+2. Generate a NEW app password (16 chars, displayed once). Treat it
+   like an API token — rotate quarterly per
+   `docs/SECRET_ROTATION_POLICY.md`.
+3. Store the handle + app password as Vault secrets, sync to the
+   `autoswarm` namespace K8s Secret used by the worker Deployment.
+   Naming convention:
+   - `BLUESKY_HANDLE_DEFAULT` = `madfam.bsky.social`
+   - `BLUESKY_APP_PASSWORD_DEFAULT` = `xxxx-xxxx-xxxx-xxxx`
+   - (uppercase + hyphens replaced with underscores)
+4. Install the `bluesky` extra in the worker image:
+   `pip install selva-tools[bluesky]` (pulls in `atproto>=0.0.46`).
+5. Quote-posts, image attachments, and threading are explicitly out
+   of scope for this v1; v2 will add them.
+
+`X` (Twitter) parity is still tracked in ROADMAP. Bluesky's tech-
+leaning audience fits Selva (B2B founders/CTOs) and Yantra4D
+(technical maker community) — that's why we ship it before X.
+
 ## Contributing
 
 1. Create a feature branch from `main`.

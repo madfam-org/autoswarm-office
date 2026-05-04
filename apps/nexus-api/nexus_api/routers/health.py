@@ -299,3 +299,150 @@ async def consent_ledger_grants(
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return body
+
+
+# Tenant tables enumerated by migration 0028. Kept here as a copy to avoid
+# importing the migration module (filenames starting with a digit need
+# importlib gymnastics). Tested for sync via the contract test in
+# `test_rls_strict_mode.py`.
+_RLS_STATUS_TENANT_TABLES = (
+    "departments",
+    "agents",
+    "approval_requests",
+    "swarm_tasks",
+    "workflows",
+    "artifacts",
+    "compute_token_ledger",
+    "skill_marketplace_entries",
+    "skill_ratings",
+    "calendar_connections",
+    "maps",
+    "task_events",
+    "chat_messages",
+    "tenant_configs",
+    "audit_logs",
+    "consent_ledger",
+    "hitl_decisions",
+    "hitl_confidence",
+)
+
+
+@router.get("/rls-status")
+async def rls_status(
+    response: Response,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Verify the RLS Phase 1.5 strict-mode migration has landed on this DB.
+
+    Returns the runtime RLS posture so ops can confirm migration 0028
+    applied cleanly on a live cluster:
+
+        - ``strict_mode_enabled``: True iff every tenant table has FORCE
+          ROW LEVEL SECURITY AND its policy lacks the Phase 1 ``IS NULL``
+          escape-hatch leg. False means the cluster is still on Phase 1
+          (migration 0025) policies, OR the rollout is partial.
+        - ``policies``: per-table snapshot of the policy definition
+          (name + USING clause). Lets ops eyeball that the strict form
+          is in place.
+        - ``force_rls_tables``: list of tables that have ``FORCE ROW
+          LEVEL SECURITY`` enabled. Should equal the tenant-table list
+          when strict mode is on.
+        - ``app_admin_role_present``: True iff the ``app_admin``
+          BYPASSRLS role exists. Required for ``admin_session()`` to
+          actually bypass.
+
+    Open endpoint (no auth) -- matches the rest of `/health/*`.
+
+    Returns 503 when strict mode is NOT enabled, so the endpoint can
+    drive a CI gate or ops dashboard alarm. SQLite test paths return a
+    static "not_postgres" response with 200.
+    """
+    body: dict[str, Any] = {
+        "strict_mode_enabled": False,
+        "policies": [],
+        "force_rls_tables": [],
+        "app_admin_role_present": False,
+    }
+
+    bind = db.get_bind()
+    if bind is None or bind.dialect.name != "postgresql":
+        body["dialect"] = "not_postgres"
+        return body
+
+    try:
+        # Per-table policy snapshot.
+        policy_rows = await db.execute(
+            text(
+                """
+                SELECT schemaname, tablename, policyname, qual
+                FROM pg_policies
+                WHERE schemaname = 'public'
+                  AND policyname LIKE 'tenant_isolation_%'
+                ORDER BY tablename
+                """
+            )
+        )
+        policies = [
+            {
+                "table": row.tablename,
+                "policy_name": row.policyname,
+                "using_clause": row.qual,
+            }
+            for row in policy_rows
+        ]
+
+        # Tables with FORCE RLS enabled. ``relrowsecurity`` AND
+        # ``relforcerowsecurity`` together mean the table has RLS on AND
+        # forces it on table-owner queries (i.e. only BYPASSRLS roles
+        # skip the policy).
+        force_rows = await db.execute(
+            text(
+                """
+                SELECT relname AS tablename
+                FROM pg_class
+                WHERE relnamespace = 'public'::regnamespace
+                  AND relrowsecurity = true
+                  AND relforcerowsecurity = true
+                ORDER BY relname
+                """
+            )
+        )
+        force_rls_tables = sorted(row.tablename for row in force_rows)
+
+        # ``app_admin`` role existence + BYPASSRLS bit.
+        admin_row = await db.execute(
+            text("SELECT rolbypassrls FROM pg_roles WHERE rolname = 'app_admin'")
+        )
+        admin_record = admin_row.first()
+        app_admin_present = admin_record is not None and bool(admin_record.rolbypassrls)
+    except Exception as exc:
+        logger.warning("RLS status probe failed: %s", exc)
+        body["error"] = "rls_probe_unavailable"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return body
+
+    # Strict mode = every tenant table has a policy that lacks the
+    # ``IS NULL`` escape-hatch leg AND has FORCE RLS on.
+    expected_tables = set(_RLS_STATUS_TENANT_TABLES)
+    forced_set = set(force_rls_tables)
+    permissive_policy = any(
+        "IS NULL" in (p["using_clause"] or "").upper() for p in policies
+    )
+    strict_mode = (
+        not permissive_policy
+        and expected_tables.issubset(forced_set)
+        and len(policies) >= len(expected_tables)
+        and app_admin_present
+    )
+
+    body["strict_mode_enabled"] = strict_mode
+    body["policies"] = policies
+    body["force_rls_tables"] = force_rls_tables
+    body["app_admin_role_present"] = app_admin_present
+
+    if not strict_mode:
+        # Surface as degraded so a dashboard alarm or post-deploy probe
+        # can catch a partial rollout.
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return body

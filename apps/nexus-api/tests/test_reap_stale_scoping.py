@@ -16,20 +16,21 @@ Post-fix behaviour pinned by these tests:
        ``admin`` role returns 403.
     3. Authenticated caller WITH one of those roles succeeds and reaps
        stale tasks across every tenant in one call.
-    4. On a Postgres bind the endpoint resets ``app.current_org_id``
-       to ``''`` before the SELECT so the Phase 1 permissive policy
-       (``IS NULL OR = '' OR = $org``) returns rows from every tenant.
-       (SQLite test path: assertion is structural, not behavioural --
-       SQLite has no RLS, so we mock the bind to verify the SQL is
-       emitted on the Postgres branch.)
+    4. The endpoint opens an ``admin_session()`` (BYPASSRLS pool) instead
+       of a regular tenant-scoped session. This is the Phase 1.5
+       (migration 0028) replacement for the Phase 1
+       ``set_config('app.current_org_id', '', true)`` hack -- under the
+       strict policies the manual reset would return zero rows.
+       ``TestReapStaleAdminSessionUsage`` pins the new contract.
 """
 
 from __future__ import annotations
 
 import uuid
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -80,12 +81,7 @@ class TestReapStaleRoleGate:
     async def test_non_privileged_role_returns_403(
         self, client: httpx.AsyncClient, auth_headers: dict[str, str]
     ) -> None:
-        """A regular tactician without service/worker/platform/admin -> 403.
-
-        Pre-fix any logged-in user could trigger the reaper. Post-fix the
-        role allow-list rejects everyone except the four privileged
-        roles, so a tactician-only user is rejected.
-        """
+        """A regular tactician without service/worker/platform/admin -> 403."""
         try:
             _fastapi_app.dependency_overrides[get_current_user] = (
                 lambda: _user_with_roles(["tactician"])
@@ -139,12 +135,7 @@ class TestReapStaleRoleGate:
         auth_headers: dict[str, str],
         role: str,
     ) -> None:
-        """Each of the four privileged roles in the allow-list passes the gate.
-
-        Asserts 200 (not 403). Doesn't seed any stale tasks -- the reap
-        count is allowed to be 0; what we're pinning here is that the
-        role check itself does not reject the request.
-        """
+        """Each of the four privileged roles in the allow-list passes the gate."""
         try:
             _fastapi_app.dependency_overrides[get_current_user] = (
                 lambda: _user_with_roles([role])
@@ -174,23 +165,15 @@ class TestReapStaleCrossTenant:
     ) -> None:
         """Seed stale tasks in 3 distinct orgs; one reap call must catch all 3.
 
-        This is the core regression test. Pre-fix the endpoint scoped to
-        the caller's org, so 3 stale tasks in 3 different orgs would
-        only have the caller-org one reaped. Post-fix the session var
-        is reset so the policy permits all rows.
-
-        Note on the test DB: SQLite has no RLS, so the SELECT is
-        always cross-tenant in tests regardless of the fix. The thing
-        we're validating here is the **application-layer** behaviour:
-        the endpoint does NOT add a ``WHERE org_id = ...`` clause, so
-        on Postgres+permissive-policy it reaches all rows, and on
-        Postgres+strict-policy (Phase 1.5) it would also reach all rows
-        once the BYPASSRLS path is wired. The Postgres-specific session
-        var assertion lives in ``TestReapStaleSessionVarBypass`` below.
+        SQLite has no RLS, so the SELECT is always cross-tenant in tests
+        regardless of the fix. The thing we're validating here is the
+        **application-layer** behaviour: the endpoint does NOT add a
+        ``WHERE org_id = ...`` clause, so on Postgres+permissive-policy
+        and on Postgres+strict-policy-via-app_admin (Phase 1.5) it
+        reaches all rows. The Postgres-specific ``admin_session()``
+        usage assertion lives in ``TestReapStaleAdminSessionUsage`` below.
         """
         try:
-            # Caller is org-A but we expect stale tasks from B and C
-            # to also be reaped.
             _fastapi_app.dependency_overrides[get_current_user] = (
                 lambda: _user_with_roles(["service"], org_id="org-A")
             )
@@ -208,8 +191,6 @@ class TestReapStaleCrossTenant:
                 )
                 for org in ("org-A", "org-B", "org-C")
             ]
-            # Sanity control: a fresh task in yet another org must NOT
-            # be reaped (status check, not org check).
             fresh_task = SwarmTask(
                 description="fresh task in org-D",
                 graph_type="research",
@@ -217,7 +198,6 @@ class TestReapStaleCrossTenant:
                 payload={},
                 status="queued",
                 org_id="org-D",
-                # default created_at = now -> not stale
             )
             db_session.add_all([*stale_tasks, fresh_task])
             await db_session.commit()
@@ -232,8 +212,6 @@ class TestReapStaleCrossTenant:
                 f"would have reaped only the caller-org slice."
             )
 
-            # Verify each stale task is now failed and the fresh one
-            # is untouched.
             for task in (*stale_tasks, fresh_task):
                 await db_session.refresh(task)
             for task in stale_tasks:
@@ -248,60 +226,54 @@ class TestReapStaleCrossTenant:
 
 
 @pytest.mark.asyncio
-class TestReapStaleSessionVarBypass:
-    """The Postgres-only branch resets the RLS session var to ''."""
+class TestReapStaleAdminSessionUsage:
+    """The endpoint opens ``admin_session()`` instead of ``Depends(get_db)``.
 
-    async def test_postgres_bind_emits_empty_session_var_set(
+    Phase 1.5 / migration 0028 replaces the Phase 1
+    ``set_config('app.current_org_id', '', true)`` hack -- which only
+    worked because the permissive policy honoured the NULL / empty-string
+    escape hatch -- with the ``app_admin`` BYPASSRLS Postgres role
+    accessed via the ``admin_session()`` helper. Under the strict
+    policies the old hack returns zero rows.
+    """
+
+    async def test_endpoint_no_longer_depends_on_get_db(self) -> None:
+        """The handler signature must NOT include ``Depends(get_db)``.
+
+        If ``get_db`` re-appears, ``_set_session_org_id`` writes the
+        caller's ``org_id`` into the session var, the strict-mode RLS
+        policy then scopes the reap SELECT to that one org, and the
+        cross-tenant bug is back.
+        """
+        import inspect
+
+        from nexus_api.routers.swarms import reap_stale_tasks
+
+        sig = inspect.signature(reap_stale_tasks)
+        param_names = set(sig.parameters)
+        assert "db" not in param_names, (
+            "reap_stale_tasks reverted to Depends(get_db) -- under strict "
+            "RLS this scopes the SELECT to the caller's tenant. Use "
+            "admin_session() inside the handler body instead."
+        )
+
+    async def test_endpoint_opens_admin_session(
         self, client: httpx.AsyncClient, auth_headers: dict[str, str]
     ) -> None:
-        """When the session is bound to Postgres, ``set_config('app.current_org_id', '', true)``
-        is emitted before the reap SELECT.
+        """``admin_session()`` is invoked exactly once per call.
 
-        We can't run real Postgres in this test suite, so we monkey-patch
-        the test session's ``get_bind()`` to claim a Postgres dialect and
-        intercept ``execute()`` calls to capture the SQL strings. The
-        invariant: the very first ``execute()`` MUST be the
-        ``set_config`` reset; without it the reap query runs under the
-        caller's tenant scope and the bug is back.
+        Spies on the helper at the ``nexus_api.database`` module the
+        router imports it from. Reuses the SQLite-backed factory inside
+        the spy so the endpoint can still flush its updates.
         """
-        from nexus_api.database import async_session_factory
+        from nexus_api import database as db_module
 
-        # Capture every text() statement passed to db.execute via a wrapper
-        # session whose get_bind() claims to be Postgres. We don't override
-        # the session itself -- we override get_db so the endpoint receives
-        # a session whose underlying behaviour is sqlite but whose
-        # introspection lies about the dialect. That's enough to push the
-        # endpoint down the Postgres branch.
-        executed_statements: list[str] = []
+        admin_session_calls: list[None] = []
 
-        async def _spy_get_db():
-            async with async_session_factory() as session:
-                real_execute = session.execute
-                real_get_bind = session.get_bind
-
-                def _fake_get_bind():
-                    bind = real_get_bind()
-                    if bind is None:
-                        return None
-                    fake = MagicMock(wraps=bind)
-                    fake.dialect = MagicMock()
-                    fake.dialect.name = "postgresql"
-                    return fake
-
-                async def _capturing_execute(statement, *args, **kwargs):  # type: ignore[no-untyped-def]
-                    sql_str = str(statement)
-                    executed_statements.append(sql_str)
-                    # Skip the set_config call -- SQLite has no such
-                    # function, so emitting it would explode. Pretend it
-                    # succeeded by returning an empty mock result.
-                    if "set_config" in sql_str and "current_org_id" in sql_str:
-                        result = MagicMock()
-                        result.scalars = MagicMock(return_value=MagicMock(all=lambda: []))
-                        return result
-                    return await real_execute(statement, *args, **kwargs)
-
-                session.get_bind = _fake_get_bind  # type: ignore[method-assign]
-                session.execute = _capturing_execute  # type: ignore[method-assign]
+        @asynccontextmanager
+        async def _spy_admin_session():
+            admin_session_calls.append(None)
+            async with db_module.async_session_factory() as session:
                 try:
                     yield session
                     await session.commit()
@@ -309,115 +281,19 @@ class TestReapStaleSessionVarBypass:
                     await session.rollback()
                     raise
 
-        from nexus_api.database import get_db
-
         try:
             _fastapi_app.dependency_overrides[get_current_user] = (
                 lambda: _user_with_roles(["service"])
             )
-            _fastapi_app.dependency_overrides[get_db] = _spy_get_db
+            with patch.object(db_module, "admin_session", _spy_admin_session):
+                resp = await client.post(
+                    "/api/v1/swarms/tasks/reap-stale", headers=auth_headers
+                )
 
-            resp = await client.post(
-                "/api/v1/swarms/tasks/reap-stale", headers=auth_headers
-            )
             assert resp.status_code == 200, resp.text
-
-            # The set_config reset MUST be emitted, AND it MUST come
-            # before the SwarmTask SELECT. Pre-fix neither of these was
-            # true.
-            set_config_idx = next(
-                (
-                    i
-                    for i, sql in enumerate(executed_statements)
-                    if "set_config" in sql and "current_org_id" in sql
-                ),
-                None,
-            )
-            assert set_config_idx is not None, (
-                "Expected SELECT set_config('app.current_org_id', '', true) "
-                "before the reap query; the endpoint is back to scoping "
-                "the SELECT to the caller's tenant. Statements observed: "
-                f"{executed_statements!r}"
-            )
-
-            # And the SET must be the empty-string form, not the org_id form.
-            set_config_sql = executed_statements[set_config_idx]
-            assert "''" in set_config_sql or "'', true" in set_config_sql, (
-                f"set_config call must reset the var to ''; "
-                f"got {set_config_sql!r}"
-            )
-
-            # Find the reap SELECT and verify ordering.
-            select_idx = next(
-                (
-                    i
-                    for i, sql in enumerate(executed_statements)
-                    if "FROM swarm_tasks" in sql or "from swarm_tasks" in sql.lower()
-                ),
-                None,
-            )
-            assert select_idx is not None, (
-                "Reap SELECT against swarm_tasks not observed; "
-                f"statements: {executed_statements!r}"
-            )
-            assert set_config_idx < select_idx, (
-                "set_config reset MUST run before the reap SELECT, else "
-                "the SELECT runs under the caller's tenant scope. "
-                f"set_config at {set_config_idx}, SELECT at {select_idx}"
+            assert len(admin_session_calls) == 1, (
+                f"admin_session() should be invoked exactly once per "
+                f"reap-stale call; got {len(admin_session_calls)}"
             )
         finally:
             _fastapi_app.dependency_overrides.pop(get_current_user, None)
-            _fastapi_app.dependency_overrides.pop(get_db, None)
-
-    async def test_sqlite_bind_skips_session_var_set(
-        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
-    ) -> None:
-        """On a SQLite bind (test default), the set_config call is skipped.
-
-        SQLite has no ``set_config`` function, so emitting the reset
-        would crash. The endpoint must guard the call with a dialect
-        check. This test confirms the SQLite path stays clean.
-        """
-        from nexus_api.database import async_session_factory
-
-        executed_statements: list[str] = []
-
-        async def _spy_get_db():
-            async with async_session_factory() as session:
-                real_execute = session.execute
-
-                async def _capturing_execute(statement, *args, **kwargs):  # type: ignore[no-untyped-def]
-                    executed_statements.append(str(statement))
-                    return await real_execute(statement, *args, **kwargs)
-
-                session.execute = _capturing_execute  # type: ignore[method-assign]
-                try:
-                    yield session
-                    await session.commit()
-                except Exception:
-                    await session.rollback()
-                    raise
-
-        from nexus_api.database import get_db
-
-        try:
-            _fastapi_app.dependency_overrides[get_current_user] = (
-                lambda: _user_with_roles(["service"])
-            )
-            _fastapi_app.dependency_overrides[get_db] = _spy_get_db
-
-            resp = await client.post(
-                "/api/v1/swarms/tasks/reap-stale", headers=auth_headers
-            )
-            assert resp.status_code == 200, resp.text
-
-            assert not any(
-                "set_config" in sql and "current_org_id" in sql
-                for sql in executed_statements
-            ), (
-                "SQLite path should NOT emit set_config (no such function "
-                f"in SQLite). Statements observed: {executed_statements!r}"
-            )
-        finally:
-            _fastapi_app.dependency_overrides.pop(get_current_user, None)
-            _fastapi_app.dependency_overrides.pop(get_db, None)

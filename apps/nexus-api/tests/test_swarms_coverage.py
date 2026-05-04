@@ -620,6 +620,18 @@ class TestEndpointsDirect:
         assert exc.value.status_code == 404
 
     async def test_reap_stale_tasks_direct(self, db_session) -> None:
+        """Direct call to ``reap_stale_tasks``.
+
+        Phase 1.5 / migration 0028: the endpoint opens its own
+        ``admin_session()`` against the BYPASSRLS pool instead of
+        receiving a session via ``Depends(get_db)``. Spy on the
+        helper at the module level so the test session is reused
+        without a second engine.
+        """
+        from contextlib import asynccontextmanager
+        from unittest.mock import patch
+
+        from nexus_api import database as db_module
         from nexus_api.routers.swarms import reap_stale_tasks
 
         old = SwarmTask(
@@ -630,9 +642,20 @@ class TestEndpointsDirect:
         db_session.add(old)
         await db_session.commit()
 
+        @asynccontextmanager
+        async def _spy_admin_session():
+            async with db_module.async_session_factory() as session:
+                try:
+                    yield session
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
+                    raise
+
         # Caller must hold an allowed role (service / worker / platform / admin).
         platform_caller = {"sub": "ops-cron", "roles": ["service"], "org_id": "platform"}
-        out = await reap_stale_tasks(user=platform_caller, db=db_session)
+        with patch.object(db_module, "admin_session", _spy_admin_session):
+            out = await reap_stale_tasks(user=platform_caller)
         assert out["reaped"] == 1
         await db_session.refresh(old)
         assert old.status == "failed"

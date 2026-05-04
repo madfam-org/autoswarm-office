@@ -63,8 +63,20 @@ def get_admin_engine() -> AsyncEngine:
     See ``admin_session`` for the user-facing context manager.
     """
     settings = get_settings()
-    url = settings.database_admin_url or settings.database_url
     if not settings.database_admin_url:
+        # Fallback: reuse the main engine. In production this means
+        # admin_session() runs as the regular app role and DOES NOT
+        # bypass RLS -- cross-tenant ops will return zero rows under
+        # the strict policies installed by migration 0028. Logged
+        # loudly so ops can spot a missed rollout.
+        #
+        # In tests this is the desired behaviour: conftest's SQLite
+        # engine creates the schema once on the main engine and the
+        # admin "engine" must point at the same in-memory DB to see
+        # those tables. Reusing the main engine handle achieves that
+        # without a second create_async_engine call (which would create
+        # a fresh empty in-memory SQLite -- different connection, no
+        # tables, dual-engine breakage).
         logger.warning(
             "DATABASE_ADMIN_URL is not set; admin_session() falls back to the "
             "main database_url. In production this means admin_session() runs "
@@ -73,8 +85,10 @@ def get_admin_engine() -> AsyncEngine:
             "migration 0028. Set DATABASE_ADMIN_URL to a connection string "
             "for the 'app_admin' role (BYPASSRLS) created by that migration."
         )
+        return get_engine()
+
     return create_async_engine(
-        url,
+        settings.database_admin_url,
         echo=False,
         pool_size=settings.db_admin_pool_size,
         max_overflow=settings.db_admin_max_overflow,

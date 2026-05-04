@@ -22,6 +22,7 @@
     "generate-assets": "node scripts/generate-assets.js",
     "generate-variants": "node scripts/generate-variants.js && node scripts/generate-tile-variants.js",
     "generate-map": "node scripts/generate-map.js",
+    "generate-types": "node scripts/generate-shared-types.mjs",
     "test:e2e": "playwright test"
   },
   "pnpm": {
@@ -36,6 +37,7 @@
     "@napi-rs/canvas": "^0.1.100",
     "@vitest/coverage-v8": "^2.1.8",
     "husky": "^9.1.7",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.8.3",
     "turbo": "^2.9.6",
     "typescript": "^5.7.3",

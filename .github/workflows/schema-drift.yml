@@ -1,0 +1,63 @@
+name: Schema Drift
+
+# Catches the case where a Pydantic model or FastAPI route changes
+# but the generated TypeScript wire types under
+# `packages/shared-types/src/generated/` were not regenerated.
+#
+# Runs `pnpm generate-types` (which calls `uv run` against the nexus-api
+# workspace) and then `git diff --exit-code` on the generated dir.
+#
+# Fix-up workflow when this fails:
+#   pnpm generate-types
+#   git add packages/shared-types/src/generated/
+#   git commit -m "chore(types): regenerate wire types"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: schema-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  schema-drift:
+    name: Generated wire types are in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Regenerate TypeScript wire types
+        run: pnpm generate-types
+
+      - name: Fail if generated types are out of sync
+        run: |
+          if ! git diff --exit-code packages/shared-types/src/generated/; then
+            echo ""
+            echo "::error::packages/shared-types/src/generated/ is out of sync."
+            echo "::error::A Pydantic model or FastAPI route changed but the wire"
+            echo "::error::types were not regenerated. Run \`pnpm generate-types\`"
+            echo "::error::locally and commit the result."
+            exit 1
+          fi

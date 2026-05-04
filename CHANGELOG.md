@@ -4,6 +4,184 @@ All notable changes to **Selva Office** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0] - 2026-05-04
+
+> Production-truthfulness sprint. 24 PRs in 24h closed every in-repo
+> Phase 1, Phase 2, and Phase 3 item that didn't require an operator
+> decision. Estimated platform stability moved from ~58% (start of
+> session) to ~85% (end). Remaining gap is concentrated in
+> operator-gated infra (OTel + Sentry vendor wiring, AUDIENCE_FILTER
+> flip, Stripe price→tier map, backup drill execution) and longer-arc
+> architecture (per-tenant data residency, multi-region failover, CDC
+> audit topic — all RFCs landed).
+
+### Added
+
+#### Persistence + correctness
+- **Real PostgresSaver lifecycle** (#123) — closes the silent
+  state-loss bug where every worker pod was using `MemorySaver`
+  because `PostgresSaver.from_conn_string` is a `@contextmanager`
+  not a factory. Now opens a `psycopg_pool.ConnectionPool` (min=1,
+  max=4) wired into `PostgresSaver(conn=pool)`. Worker pod restart
+  mid-graph now resumes from a real checkpoint instead of restarting
+  from scratch. `close_checkpointer()` wired into the graceful drain.
+- **`tenant_session(org_id)` helper** (#126) — closes 5 RLS Phase 1.5
+  break sites that opened `async_session_factory()` directly without
+  setting `app.current_org_id`. Audit middleware, A2A bridge
+  helpers, WS initial-batch handlers all migrated. Required
+  prerequisite for strict mode.
+- **RLS strict mode** (#134, migration 0028) — drops the
+  `IS NULL OR = ''` permissive escape hatch from migration 0025's
+  policies, applies `FORCE ROW LEVEL SECURITY` on all 18 tenant
+  tables, adds `app_admin` BYPASSRLS role, ships `admin_session()`
+  helper for cross-tenant ops endpoints, adds
+  `GET /api/v1/health/rls-status` for runtime verification.
+
+#### Audit + observability
+- **Audit-trail completeness** (#130, #131, #133) — closes 37 of 37
+  mutation sites identified in `docs/AUDIT_TRAIL_GAP_ANALYSIS.md`
+  across 14 routers (tenants, swarms, agents, workflows,
+  marketplace, maps, calendar, schedules, hitl_confidence,
+  departments, tenant_identities, artifacts, command_approvals,
+  approvals.bulk_expire). New `bulk_expire` endpoint added.
+- **W3C trace context propagation** (#137) — `opentelemetry.propagate`
+  extract on FastAPI server side, inject on worker→nexus-api hops via
+  `selva_workers.auth.get_worker_auth_headers()`, inject on outbound
+  HTTP from tools via `_build_safe_request_kwargs`. Stays no-op when
+  OTel exporter is unset (operator-gated). 18 new tests pin the
+  contract.
+- **SLO definitions** (#129) — three-tier endpoint classification with
+  per-tier latency / error / availability targets, multi-window
+  multi-burn-rate alert specs (Google SRE Workbook ch.5), separate
+  task-level SLIs (success rate ≥95% / 7d, DLQ <5 sustained, approval
+  queue p95 <2h), quarterly review cadence, per-PR adoption checklist.
+- **SLO recording rules + alerts + Grafana dashboard** (#139) — 16
+  Prometheus recording rules + 7 multi-window burn-rate alerts + 10
+  Grafana panels in `infra/{prometheus,grafana}/`. promtool-validated.
+  Becomes useful when OTel exporter is wired.
+
+#### Compliance + ecosystem cohesion
+- **Stripe webhook real handlers** (#116) — 5 events
+  (`customer.subscription.{created,updated,deleted}`,
+  `invoice.{paid,payment_failed}`) mirror state into `tenant_configs`
+  via migration 0027 (`stripe_customer_id` UNIQUE+indexed). Refresh
+  cached tier limits + emit billing events. 22 regression tests.
+  **Operator gate**: populate `STRIPE_PRICE_TO_TIER_MAP` from Stripe
+  Dashboard before flipping `FEATURE_STRIPE_MXN_LIVE=true`.
+- **`email_inbound` webhook hardening** (#122) — 15/15 webhook
+  handlers now fail-closed. Provider-agnostic allow-list pattern via
+  `_require_inbound_allowlist`. Trust signal documented.
+- **Pricing source-of-truth** (#135) — Tulana decision doc → JSON →
+  loader pattern. Canonical data in `infra/pricing/selva-tiers.json`
+  (schema-validated). `apps/nexus-api/nexus_api/billing_tiers.py`
+  refactored to load from JSON with same exported names + same
+  fallback semantics. CI drift gate
+  (`tests/test_pricing_codification.py`) catches loader / JSON /
+  CLAUDE.md / fallback disagreement.
+
+#### Operator surface
+- **Idempotency-Key dependency + adoption** (#127, #141, #142) —
+  `Depends(get_idempotency_context)` on 10 mutation endpoints (4
+  Tier 1: `dispatch`, `approve`, `deny`, `voice-mode`; 6 Tier 2:
+  `marketplace.install`, `calendar.connect`, `maps.create`,
+  `maps.import`, `workflows.create`, `workflows.import`).
+  Org-scoped Redis cache, 24h TTL, graceful Redis-down degradation.
+  53 regression tests across the helper + adoption.
+- **Secret rotation tool + policy** (#138) — `scripts/rotate-secret.sh`
+  rotates `WORKER_API_TOKEN` / `CONSENT_LEDGER_SIGNING_SECRET` /
+  `COLYSEUS_SERVICE_TOKEN` atomically (K8s Secret patch + rolling
+  restart + per-pod env verification). `docs/SECRET_ROTATION_POLICY.md`
+  defines quarterly cadence + procedure + rollback. Smoke tests in
+  `tests/scripts/`. Bash 4+ required (Linux CI ok; macOS dev needs
+  brew bash).
+- **`reap-stale` tenant-scoping fix** (#114) — was silently scoped
+  to one org via the Phase 1 RLS escape hatch (always reaped only
+  `org_id="default"`). Now role-gated to service/worker/platform/admin
+  and explicitly resets `app.current_org_id` to bypass tenant RLS.
+  11 regression tests.
+
+#### Resilience
+- **`_cleanup_stale_worktrees` OSError fix** (#113) — surfaced by
+  PR #112 coverage push. Worker startup no longer crashes on stale
+  NFS / dead-symlink / permission-denied worktrees.
+- **`Idempotency-Key` org-scoped Redis cache** prevents cross-tenant
+  cache leak and method+path scopes prevent same-key-different-op
+  conflation.
+
+#### CI + type safety
+- **Workers mypy 14 → 0** (#115) + **Packages mypy 129 → 0** (#117,
+  #118, #125) — three trees pinned at `MAX_MYPY_ERRORS=0` (nexus-api
+  was already 0). 14+ latent silent-failure bugs surfaced and fixed
+  along the way: `InferenceProvider.stream` async-vs-async-generator
+  signature mismatch (every streaming caller broke at type check),
+  `agent.py` `call_llm` wrong-shape + missing-await + nonexistent
+  `.content` (silent fallback every workflow run), 3 SDK examples
+  using dict indexing on pydantic models (would crash on first run),
+  `meeting_scheduler.py` loop variable shadowing an `except ValueError
+  as e`, `selva_tools/approval.py` non-existent `AsyncSessionLocal`,
+  calendar tools API mismatches, operations.py dead Dhanam branch,
+  router pydantic ValidationError on prompt-cache hit, subgraph
+  uncompiled-graph `.invoke()`, missing awaits in agent learning
+  loop.
+- **CI test-py + wire-types-drift gates restored** (#121) — both
+  silently red on every commit for a week+. test-py needed
+  `ENVIRONMENT: development` so Settings validators wouldn't reject
+  dev defaults; wire-types needed regeneration after PR #114 + #116
+  changed FastAPI route docstrings.
+- **Workers `__main__.py` coverage 42% → 96%** (#112) — 47-test
+  task lifecycle suite. Surfaced + flagged-as-xfail (later fixed in
+  #113) the OSError swallow bug.
+
+### Architecture (RFCs landed, implementation tracked)
+
+- **RFC 0018 — A2A external-tenant model** (#136) — closes the
+  synthetic `org_id="a2a-external"` smell. Migration 0029 scaffolds
+  `external_a2a_callers` table; bridge cutover deferred to
+  follow-up PR per RFC Phase D.
+- **RFC 0019 — Cross-service CDC audit topic** (#140) — Postgres
+  CDC (Debezium → Kafka → audit topic) replaces the manual
+  `emit_event_db` discipline. 4-phase 10-week migration. Operator
+  decisions blocking start: Kafka cluster ownership, ~$300-800/mo
+  cost approval.
+
+### Documentation
+
+- **Audit trail gap analysis** (#124) — 38 routers / 53 mutation
+  sites / 37 gaps catalogued (now closed via waves 1-3). Per-router
+  table with suggested event types. Implementation guidance, test
+  pattern, 3-week phased rollout estimate, LFPDPPP + GDPR
+  compliance notes. Doc supersedes itself now that all 37 sites are
+  closed.
+- **RLS Phase 1.5 audit** (PR #107, pre-session) — six silent-break
+  sites identified; reap-stale fixed (#114), 5 break sites migrated
+  to `tenant_session()` (#126), strict mode landed (#134).
+- **Load test scenario + runbook** (#128) — k6 100-concurrent-tasks
+  scenario + per-metric calibration → production-config mapping +
+  results template + quarterly cadence.
+- **Observability vendor selection** (PR #109, pre-session) —
+  Grafana Cloud Free→Pro recommendation for traces+logs+metrics;
+  Sentry Team plan EU region recommendation. Operator decision
+  pending.
+- **AUDIENCE_FILTER rollout plan** (PR #109, pre-session) — synthetic
+  exercise pre-launch; 48h soak when first paying tenant onboards;
+  flip env var after.
+- **Secret rotation policy** (#138) — quarterly cadence, procedure,
+  rollback, audit, compliance (SOC 2 CC6.1, NIST SP 800-57 Part 1,
+  MX LFPDPPP).
+- **CDC audit topic RFC** (#140) — see Architecture section.
+
+### Operator todo list (gating items not in this release)
+
+- Populate `STRIPE_PRICE_TO_TIER_MAP` env var from Stripe Dashboard
+- Wire `OTEL_EXPORTER_OTLP_ENDPOINT` per the vendor selection doc
+- Provision Sentry per-service DSNs
+- Run a synthetic AUDIENCE_FILTER exercise + flip
+  `AUDIENCE_FILTER_ENABLED=true` after 24-48h shadow-block soak
+- Schedule first quarterly secret rotation
+- Run the load-test scenario in staging
+- Run a backup/restore drill in staging
+- Decide Kafka cluster ownership for CDC RFC 0019
+
 ## [2.2.0] - 2026-04-17
 
 ### Added

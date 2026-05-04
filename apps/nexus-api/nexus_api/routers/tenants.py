@@ -370,6 +370,32 @@ async def create_tenant(
         len(MEXICAN_DEPARTMENTS),
     )
 
+    # Audit trail: emit tenant.created event. Load-bearing for LFPDPPP
+    # compliance (Mexican PII regulation requires creation timestamp +
+    # creator identity). Late import avoids circular risk with the events
+    # router. See docs/AUDIT_TRAIL_GAP_ANALYSIS.md gap #1.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="tenant.created",
+            event_category="tenant",
+            org_id=org_id,
+            payload={
+                "tenant_config_id": str(config.id),
+                "has_rfc": body.rfc is not None,
+                "regimen_fiscal": body.regimen_fiscal,
+                "locale": body.locale,
+                "timezone": body.timezone,
+                "currency": body.currency,
+                "departments_provisioned": len(MEXICAN_DEPARTMENTS),
+                "actor_sub": user.get("sub"),
+            },
+        )
+    except Exception:
+        logger.warning("Failed to emit tenant.created audit event", exc_info=True)
+
     return _to_response(config)
 
 
@@ -419,6 +445,29 @@ async def update_my_tenant(
     config.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(config)
+
+    # Audit trail: emit tenant.config_updated event. Surfaces tenant
+    # self-service knob changes (locale, feature flags, limits) into the
+    # office UI activity feed. Payload carries only the keys that changed
+    # — never the surrounding identity fields. See gap doc #2.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="tenant.config_updated",
+            event_category="tenant",
+            org_id=tenant.org_id,
+            payload={
+                "tenant_config_id": str(config.id),
+                "fields_changed": sorted(update_data.keys()),
+            },
+        )
+    except Exception:
+        logger.warning(
+            "Failed to emit tenant.config_updated audit event", exc_info=True
+        )
+
     return _to_response(config)
 
 
@@ -486,6 +535,31 @@ async def configure_sso(
     config.janua_connection_id = body.janua_connection_id
     config.updated_at = datetime.now(UTC)
     await db.flush()
+
+    # Audit trail: emit tenant.sso_configured event. SSO connection IDs
+    # are not PII (Janua-side opaque identifiers) so the value is safe to
+    # echo in the payload — but actor_sub is included so ops can answer
+    # "which admin re-pointed SSO at 03:14?". Aligned with the broader
+    # tenant config-change audit surface in gap doc.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="tenant.sso_configured",
+            event_category="tenant",
+            org_id=org_id,
+            payload={
+                "tenant_config_id": str(config.id),
+                "janua_connection_id": body.janua_connection_id,
+                "actor_sub": user.get("sub"),
+            },
+        )
+    except Exception:
+        logger.warning(
+            "Failed to emit tenant.sso_configured audit event", exc_info=True
+        )
+
     return {"status": "configured", "janua_connection_id": body.janua_connection_id}
 
 
@@ -549,6 +623,29 @@ async def update_branding(
     config.updated_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(config)
+
+    # Audit trail: emit tenant.branding_updated event. Brand name + logo
+    # URL + primary color are not PII (these are public-facing UI knobs),
+    # so the changed-fields list is safe to include without echoing the
+    # values themselves.
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="tenant.branding_updated",
+            event_category="tenant",
+            org_id=org_id,
+            payload={
+                "tenant_config_id": str(config.id),
+                "fields_changed": sorted(update_data.keys()),
+                "actor_sub": user.get("sub"),
+            },
+        )
+    except Exception:
+        logger.warning(
+            "Failed to emit tenant.branding_updated audit event", exc_info=True
+        )
 
     return {
         "brand_name": config.brand_name or "Selva Office",

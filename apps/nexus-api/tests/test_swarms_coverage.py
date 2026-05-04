@@ -630,7 +630,9 @@ class TestEndpointsDirect:
         db_session.add(old)
         await db_session.commit()
 
-        out = await reap_stale_tasks(db=db_session)
+        # Caller must hold an allowed role (service / worker / platform / admin).
+        platform_caller = {"sub": "ops-cron", "roles": ["service"], "org_id": "platform"}
+        out = await reap_stale_tasks(user=platform_caller, db=db_session)
         assert out["reaped"] == 1
         await db_session.refresh(old)
         assert old.status == "failed"

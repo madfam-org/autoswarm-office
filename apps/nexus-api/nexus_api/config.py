@@ -49,7 +49,13 @@ class Settings(BaseSettings):
     telegram_webhook_secret: str = ""
     discord_webhook_secret: str = ""
     slack_signing_secret: str = ""  # Slack v0 HMAC signing secret
-    gateway_email_whitelist: str = ""  # Comma-separated authorised sender addresses
+    # Comma-separated authorised sender addresses for the inbound-email
+    # parse webhook (POST /api/v1/gateway/email/inbound). Acts as the
+    # equivalent of a shared HMAC secret for the other 14 gateway
+    # handlers: empty string means the endpoint is disabled (503), not
+    # "accept any sender". See `_require_inbound_allowlist` in
+    # `routers/gateway.py` for the threat model.
+    gateway_email_whitelist: str = ""
     twilio_auth_token: str = ""  # Twilio account auth token
     twilio_account_sid: str = ""  # Twilio account SID
 

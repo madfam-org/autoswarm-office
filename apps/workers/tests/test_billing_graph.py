@@ -159,7 +159,7 @@ class TestValidateRfcs:
 
         with (
             patch.dict("os.environ", {"KARAFIEL_API_URL": "http://fake-karafiel:8080"}),
-            patch.dict(sys.modules, {"madfam_inference.adapters.compliance": mock_module}),
+            patch.dict(sys.modules, {"madfam_inference.adapters.karafiel": mock_module}),
             patch("selva_workers.graphs.billing._run_async", side_effect=lambda x: x),
         ):
             result = validate_rfcs(
@@ -203,7 +203,7 @@ class TestCheckBlacklist:
 
         with (
             patch.dict("os.environ", {"KARAFIEL_API_URL": "http://fake-karafiel:8080"}),
-            patch.dict(sys.modules, {"madfam_inference.adapters.compliance": mock_module}),
+            patch.dict(sys.modules, {"madfam_inference.adapters.karafiel": mock_module}),
             patch("selva_workers.graphs.billing._run_async", side_effect=lambda x: x),
         ):
             result = check_blacklist(
@@ -229,7 +229,7 @@ class TestCheckBlacklist:
 
         with (
             patch.dict("os.environ", {"KARAFIEL_API_URL": "http://fake-karafiel:8080"}),
-            patch.dict(sys.modules, {"madfam_inference.adapters.compliance": mock_module}),
+            patch.dict(sys.modules, {"madfam_inference.adapters.karafiel": mock_module}),
             patch("selva_workers.graphs.billing._run_async", side_effect=lambda x: x),
         ):
             result = check_blacklist(
@@ -281,7 +281,7 @@ class TestGenerateCfdi:
 
         with (
             patch.dict("os.environ", {"KARAFIEL_API_URL": "http://fake-karafiel:8080"}),
-            patch.dict(sys.modules, {"madfam_inference.adapters.compliance": mock_module}),
+            patch.dict(sys.modules, {"madfam_inference.adapters.karafiel": mock_module}),
             patch("selva_workers.graphs.billing._run_async", side_effect=lambda x: x),
         ):
             result = generate_cfdi(
@@ -358,7 +358,7 @@ class TestStampCfdi:
 
         with (
             patch.dict("os.environ", {"KARAFIEL_API_URL": "http://fake-karafiel:8080"}),
-            patch.dict(sys.modules, {"madfam_inference.adapters.compliance": mock_module}),
+            patch.dict(sys.modules, {"madfam_inference.adapters.karafiel": mock_module}),
             patch("selva_workers.graphs.billing._run_async", side_effect=lambda x: x),
         ):
             result = stamp_cfdi(

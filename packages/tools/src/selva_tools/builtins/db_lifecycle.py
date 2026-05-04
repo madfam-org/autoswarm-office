@@ -41,7 +41,7 @@ _SAFE_IDENT = re.compile(r"^[A-Za-z0-9_.\-/]+$")
 
 def _load_core_client() -> Any | None:
     try:
-        from kubernetes import client, config  # type: ignore
+        from kubernetes import client, config
     except ImportError:
         return None
     try:
@@ -68,7 +68,7 @@ async def _exec_in_postgres(
     if core is None:
         return False, "kubernetes client unavailable"
     try:
-        from kubernetes.stream import stream  # type: ignore
+        from kubernetes.stream import stream
     except ImportError:
         return False, "kubernetes.stream unavailable"
     try:

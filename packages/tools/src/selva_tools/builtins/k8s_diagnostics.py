@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def _load_clients() -> tuple[Any, Any, Any] | None:
     """Lazy import + load the kubernetes clients. Returns None on error."""
     try:
-        from kubernetes import client, config  # type: ignore
+        from kubernetes import client, config
     except ImportError:
         logger.warning("kubernetes package not installed")
         return None

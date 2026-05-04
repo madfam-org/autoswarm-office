@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import email.utils
 import hashlib
 import hmac
 import ipaddress
@@ -105,6 +106,99 @@ def _require_secret(env_name: str, value: str | None) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="webhook endpoint not configured",
         )
+
+
+def _parse_email_address(raw: str) -> str:
+    """Extract the bare email address from an RFC 5322 ``From:`` value.
+
+    Inbound parse providers (SendGrid, Postmark, Mailgun) forward the
+    raw ``From:`` header verbatim, which can take any of these shapes:
+
+        alice@example.com
+        Alice <alice@example.com>
+        "Alice, Bob" <alice@example.com>
+
+    Returns the lowercased bare address (``alice@example.com``) so the
+    allow-list comparison is normalized. Returns an empty string when the
+    input has no parseable address. Display names are intentionally
+    discarded — they are attacker-controllable and MUST NOT participate
+    in the trust decision.
+    """
+    if not raw:
+        return ""
+    _name, addr = email.utils.parseaddr(raw)
+    addr = addr.strip().lower()
+    # ``email.utils.parseaddr`` is greedy: ``parseaddr("Just a Name")``
+    # returns ``("", "Just")``. Require an ``@`` so a malformed/header-only
+    # ``From:`` value can't accidentally collide with a malformed allow-list
+    # entry. Either side missing means "no usable address".
+    return addr if "@" in addr else ""
+
+
+def _require_inbound_allowlist(env_name: str, allowlist_csv: str | None, sender: str) -> None:
+    """Refuse the request when the inbound-sender allow-list is misconfigured
+    or the verified sender is not on the list.
+
+    Threat model:
+    - Inbound-email parse providers (SendGrid, Postmark, Mailgun, etc.)
+      do NOT all share a common HMAC contract, and we accept the same
+      payload shape from any of them. The trust signal is therefore the
+      ``From:`` address that the upstream provider has *already* validated
+      via SPF/DKIM/DMARC at MX time. This helper makes that trust
+      decision explicit and fail-closed.
+    - The allow-list is the equivalent of a shared secret in the other
+      handlers: empty → endpoint disabled (503), not "allow everyone".
+      That closes the pre-hardening fail-open bug where
+      ``if whitelist and sender not in whitelist:`` accepted any sender
+      from the public internet whenever ``GATEWAY_EMAIL_WHITELIST`` was
+      unset.
+    - Operators MUST front this endpoint with a provider that enforces
+      DKIM/SPF/DMARC alignment on inbound mail. Without that upstream
+      enforcement, an attacker can spoof an allow-listed ``From:``
+      address. (Equivalent assumption to the WeCom/Weixin
+      query-token handlers, which trust the upstream provider to deliver
+      the token over TLS.)
+
+    Returns 503 when ``allowlist_csv`` is empty/unset (handler disabled).
+    Raises 401 when ``sender`` is not on the comma-separated allow-list.
+    Comparison is case-insensitive and ignores RFC 5322 display names —
+    callers should pre-normalize via ``_parse_email_address``.
+    """
+    if not allowlist_csv:
+        logger.error(
+            "email_inbound webhook received but %s is unset; refusing to verify",
+            env_name,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="webhook endpoint not configured",
+        )
+
+    allowlist = {entry.strip().lower() for entry in allowlist_csv.split(",") if entry.strip()}
+    if not allowlist:
+        # CSV present but every entry was whitespace -- treat as misconfigured.
+        logger.error(
+            "email_inbound webhook received but %s contains no usable entries; "
+            "refusing to verify",
+            env_name,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="webhook endpoint not configured",
+        )
+
+    # Defense in depth: normalize the sender side too, even though the
+    # canonical caller (``email_inbound``) pre-normalizes via
+    # ``_parse_email_address``. A future caller that forgets to normalize
+    # still gets correct case-insensitive matching.
+    sender_norm = sender.strip().lower()
+    if sender_norm not in allowlist:
+        logger.warning(
+            "email_inbound: rejected sender %r — not on %s allow-list",
+            sender,
+            env_name,
+        )
+        raise HTTPException(status_code=401, detail="Sender not authorised")
 
 
 def _verify_hmac(body: bytes, signature: str, secret: str) -> bool:
@@ -327,19 +421,41 @@ async def slack_webhook(
 async def email_inbound(request: Request) -> dict[str, Any]:
     """
     Accepts inbound email parse payloads from SendGrid or Postmark.
-    Routes commands from whitelisted sender addresses.
+    Routes commands from allow-listed sender addresses.
+
+    SECURITY (Phase 1 hardening): Unlike the other 14 webhook handlers,
+    this endpoint does NOT use a shared HMAC secret -- inbound-email
+    parse providers don't share a common signing contract. The trust
+    signal is the ``From:`` address that the upstream provider has
+    already validated via SPF/DKIM/DMARC at MX time, checked against
+    the operator-controlled ``GATEWAY_EMAIL_WHITELIST`` allow-list.
+
+    Fail-closed contract:
+    - 503 when ``GATEWAY_EMAIL_WHITELIST`` is unset (endpoint disabled).
+      Pre-hardening this would 200 and dispatch an ACP task with an
+      attacker-supplied URL because empty allow-list short-circuited
+      the membership check.
+    - 401 when the parsed ``From:`` address is not on the allow-list.
+    - 200 + ``status: ignored`` when the body has no ``initiate_acp:``
+      command (so spam / out-of-band mail from allow-listed senders
+      doesn't error-loop the upstream provider).
+
+    See ``_require_inbound_allowlist`` for the full threat model.
     """
     settings = get_settings()
     payload = await request.json()
 
-    # SendGrid uses 'from', Postmark uses 'From'
-    sender = payload.get("from") or payload.get("From", "")
+    # SendGrid uses 'from', Postmark uses 'From'. Both forward the raw
+    # RFC 5322 header, so strip display names before allow-list matching.
+    raw_sender = payload.get("from") or payload.get("From", "")
+    sender = _parse_email_address(raw_sender)
     body_text = payload.get("text") or payload.get("TextBody", "")
 
-    whitelist = [s.strip() for s in settings.gateway_email_whitelist.split(",") if s.strip()]
-    if whitelist and sender not in whitelist:
-        logger.warning("Gateway (Email): rejected sender %s — not in whitelist.", sender)
-        raise HTTPException(status_code=403, detail="Sender not authorised")
+    _require_inbound_allowlist(
+        "GATEWAY_EMAIL_WHITELIST",
+        settings.gateway_email_whitelist,
+        sender,
+    )
 
     for line in body_text.splitlines():
         line = line.strip()

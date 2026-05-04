@@ -101,10 +101,14 @@ foundationally one-line dangerous if left undone.
 - **OTel exporter actually wired** — `OTEL_EXPORTER_OTLP_ENDPOINT` is
   read but no-op when unset. Pick a backend (Honeycomb / Tempo /
   Datadog), wire the env var, get traces flowing for at least one
-  request path end-to-end.
+  request path end-to-end. **Vendor decision pending operator review** —
+  see [docs/OBSERVABILITY_VENDOR_SELECTION.md](docs/OBSERVABILITY_VENDOR_SELECTION.md)
+  (recommendation: Grafana Cloud Free → Pro for traces+logs+metrics).
 - **Sentry DSN per service** — `init_sentry()` exists but DSNs are
   missing from `.env.example`; verify it's actually catching errors.
-  Add source-map upload for office-ui in CI.
+  Add source-map upload for office-ui in CI. **Vendor decision pending
+  operator review** — same doc as above (recommendation: stay with
+  Sentry Team plan EU region, $26/mo).
 
 ### Phase 1.5 — RLS tightening (after 1-2 weeks of production observation)
 
@@ -144,7 +148,10 @@ foundationally one-line dangerous if left undone.
 - **AUDIENCE_FILTER_ENABLED=true** — currently shadow-mode (default
   `false`). After 24-48h observation in production confirms the
   shadow-block log is empty, flip the gate so platform-only tools
-  actually refuse tenant invocations.
+  actually refuse tenant invocations. **Rollout plan ready** — see
+  [docs/AUDIENCE_FILTER_ROLLOUT.md](docs/AUDIENCE_FILTER_ROLLOUT.md)
+  (synthetic-exercise procedure pre-launch; full 48h soak when first
+  paying tenant onboards).
 - **Mypy baseline elimination** — 144 errors in nexus-api, ~20 in
   workers. Ratchet via CI: no new errors allowed; fix 10/week. Most are
   `dict[str, Any]` overuse and missing return types in routers.

@@ -96,12 +96,15 @@ class RedisMemoryProvider(MemoryProvider):
     _MAX_EPISODES = 200
 
     def __init__(self) -> None:
+        # Type as Optional so the absent-redis branch is well-typed.
+        self._redis: Any = None
         try:
-            import redis.asyncio as aioredis  # type: ignore
+            import redis.asyncio as aioredis
 
-            self._redis = aioredis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+            self._redis = aioredis.from_url(
+                os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+            )
         except ImportError:
-            self._redis = None
             logger.warning("RedisMemoryProvider: redis.asyncio not installed.")
 
     async def insert(self, episode: dict[str, Any]) -> None:

@@ -368,6 +368,18 @@ jobs:
             --cov-fail-under=75 \
             -q
 
+      - name: workers (__main__ task driver)
+        run: |
+          cd apps/workers
+          uv run pytest \
+            tests/test_main_lifecycle.py \
+            tests/test_worker_concurrency.py \
+            tests/test_repo_validation.py \
+            --cov=selva_workers.__main__ \
+            --cov-report=term-missing \
+            --cov-fail-under=75 \
+            -q
+
   build:
     name: Build
     runs-on: ubuntu-latest

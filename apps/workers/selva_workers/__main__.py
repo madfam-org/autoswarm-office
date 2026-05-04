@@ -780,12 +780,17 @@ async def _cleanup_stale_worktrees(repo_base: str, stale_hours: int = 24) -> int
     removed = 0
 
     for worktree_root in base.glob("*/_worktrees"):
-        if not worktree_root.is_dir():
-            continue
-        for wt_dir in worktree_root.iterdir():
-            if not wt_dir.is_dir():
+        try:
+            if not worktree_root.is_dir():
                 continue
+            entries = list(worktree_root.iterdir())
+        except OSError:
+            logger.warning("Could not enumerate worktree root: %s", worktree_root)
+            continue
+        for wt_dir in entries:
             try:
+                if not wt_dir.is_dir():
+                    continue
                 mtime = wt_dir.stat().st_mtime
                 if mtime < cutoff:
                     shutil.rmtree(wt_dir, ignore_errors=True)

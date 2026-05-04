@@ -83,26 +83,52 @@ jobs:
         # the next regressor cannot quietly creep back up to today's
         # ceiling.
         #
+        # IMPORTANT: mypy is invoked from the **repo root** so the
+        # `mypy_path` entries in pyproject.toml resolve correctly to
+        # workspace packages.  Running `cd apps/nexus-api && uv run mypy .`
+        # breaks workspace-package resolution because the relative
+        # `mypy_path` entries become invalid.  See wave 3 history below.
+        #
         # History:
         #   2026-05-03 — wave 1 (PR #97): 100 → 47 (cached-cache count;
         #     fresh-cache baseline was 20 — the 47 ceiling was set under
         #     a stale .mypy_cache that hid 27 errors).
-        #   2026-05-04 — wave 1.5 (this PR): 20 → 11 (fresh cache).
-        #     All 11 remaining are workspace-package import-not-found
+        #   2026-05-04 — wave 1.5: 20 → 11 (fresh cache).
+        #     All 11 remaining were workspace-package import-not-found
         #     errors (selva_skills, madfam_inference) blocked on a mypy
-        #     monorepo-resolution fix that is out of scope for this wave.
+        #     monorepo-resolution fix that was out of scope.
+        #   2026-05-03 — wave 3 (this PR): 11 → 0.  Switched the ratchet
+        #     invocation from `cd apps/nexus-api && uv run mypy .` to
+        #     `uv run mypy apps/nexus-api/` so that the root pyproject's
+        #     `mypy_path` resolves workspace packages (selva_skills,
+        #     madfam_inference, etc.).  Added `celery.*` to the
+        #     ignore_missing_imports overrides.  Fixed 4 latent bugs
+        #     surfaced by the now-resolving imports:
+        #       - apps/nexus-api/.../invoices.py — wrong import path
+        #         (`adapters.compliance` → `adapters.karafiel`) AND a
+        #         missing `await` on `KarafielAdapter.get_cfdi_status`
+        #         that was being thread-pooled instead of awaited.
+        #       - apps/nexus-api/.../main.py — `tags=s.tags` referenced
+        #         a non-existent attribute on `SkillMetadata`.
+        #       - apps/nexus-api/.../acp_server.py — two stale
+        #         `# type: ignore` comments (now resolvable, so unused).
+        #       - packages/skills/.../skill_md.py — same.
         run: |
           set -euo pipefail
-          cd apps/nexus-api
-          MAX_MYPY_ERRORS=11
-          OUTPUT="$(uv run mypy . 2>&1 || true)"
-          # The summary line shape is:  "Found N errors in M files (...)"
-          COUNT="$(printf '%s\n' "$OUTPUT" | grep -oE '^Found [0-9]+ errors?' | grep -oE '[0-9]+' | head -1 || echo 0)"
+          MAX_MYPY_ERRORS=0
+          OUTPUT="$(uv run mypy apps/nexus-api/ 2>&1 || true)"
+          # Mypy from the repo root traverses into workspace packages
+          # (selva_*, madfam_*) — that's intentional, it gives nexus-api
+          # accurate types instead of `Any`.  But we only ratchet the
+          # nexus-api error count here; workspace-package errors are
+          # tracked separately by the advisory `Mypy (strict — workspace-wide)`
+          # step above.  Filter the output to nexus-api file paths only.
+          COUNT="$(printf '%s\n' "$OUTPUT" | grep -E '^apps/nexus-api/' | grep -c 'error:' || echo 0)"
           echo "mypy errors in apps/nexus-api: ${COUNT} (ceiling: ${MAX_MYPY_ERRORS})"
           if [ "${COUNT:-0}" -gt "${MAX_MYPY_ERRORS}" ]; then
             echo "::error::mypy error count grew (was ≤${MAX_MYPY_ERRORS}, now ${COUNT}). Either fix the new errors or, if you intentionally accept a regression, bump MAX_MYPY_ERRORS in .github/workflows/ci.yml with justification in the PR body."
-            echo "----- full mypy output -----"
-            printf '%s\n' "$OUTPUT"
+            echo "----- nexus-api mypy errors -----"
+            printf '%s\n' "$OUTPUT" | grep -E '^apps/nexus-api/' || true
             exit 1
           fi
           if [ "${COUNT:-0}" -lt "${MAX_MYPY_ERRORS}" ]; then

@@ -95,7 +95,7 @@ async def handle_get_result(params: dict, req_id: Any) -> None:
         _write(_error(req_id, -32602, "run_id is required"))
         return
     try:
-        from celery.result import AsyncResult  # type: ignore
+        from celery.result import AsyncResult
 
         result = AsyncResult(run_id)
         state = result.state
@@ -109,7 +109,7 @@ async def handle_get_result(params: dict, req_id: Any) -> None:
 
 async def handle_list_skills(params: dict, req_id: Any) -> None:
     try:
-        from selva_skills import get_skill_registry  # type: ignore
+        from selva_skills import get_skill_registry
 
         skills = [
             {"name": s.name, "description": s.description}

@@ -168,16 +168,18 @@ async def invoice_status(
 
     if karafiel_url:
         try:
-            from madfam_inference.adapters.compliance import KarafielAdapter
+            from madfam_inference.adapters.karafiel import KarafielAdapter
 
             adapter = KarafielAdapter(base_url=karafiel_url, token=karafiel_token)
-            import asyncio
 
-            result = await asyncio.to_thread(adapter.get_cfdi_status, uuid)
+            # `get_cfdi_status` is an async coroutine returning a CFDIStatus
+            # pydantic model — await it directly, do NOT thread-pool it.
+            cfdi_status = await adapter.get_cfdi_status(uuid)
+            detail_dict = cfdi_status.model_dump()
             return InvoiceStatusResponse(
                 uuid=uuid,
-                status=result.get("status", "unknown"),
-                detail=result,
+                status=cfdi_status.estado or "unknown",
+                detail=detail_dict,
             )
         except Exception as exc:
             logger.warning("Karafiel CFDI status lookup failed for %s", uuid, exc_info=True)

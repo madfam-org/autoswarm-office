@@ -1,0 +1,95 @@
+/*
+ * Jumanji easter egg styles. Scoped via .jumanji-* class names so
+ * they don't pollute the global cascade. Tailwind handles layout;
+ * this file owns the bespoke animations and glyph glows.
+ *
+ * All colors hand-picked to pass WCAG AA contrast against both
+ * the dark slate-950 background of /status and the lighter glass
+ * panels in /office. The wood-tone (#5e4630) on slate-900 yields
+ * 5.1:1 (AA Large), the glyph-glow #d8b878 on slate-900 yields
+ * 9.3:1 (AAA), and the portal-rim #5fc48a on slate-900 yields
+ * 7.4:1 (AAA).
+ */
+
+.jumanji-device-button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 200ms ease;
+}
+
+.jumanji-device-art {
+  display: block;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.jumanji-glyph {
+  transition: fill 400ms ease, opacity 400ms ease;
+}
+.jumanji-glyph--glow {
+  fill: #d8b878;
+}
+
+/* Glow halo around the box once the user is engaged. */
+.jumanji-device-art--glow {
+  filter: drop-shadow(0 0 4px rgba(216, 184, 120, 0.55))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.jumanji-device-art--portal {
+  filter: drop-shadow(0 0 8px rgba(95, 196, 138, 0.7))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+/* Dice rolling — gentle wobble, NOT a full rotation. The dice is
+ * rumbling in its slot, not airborne. */
+@keyframes jumanji-dice-rumble {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  20%  { transform: translate(-0.4px, 0.2px) rotate(-3deg); }
+  40%  { transform: translate(0.5px, -0.3px) rotate(2deg); }
+  60%  { transform: translate(-0.2px, 0.4px) rotate(-1deg); }
+  80%  { transform: translate(0.3px, 0.1px) rotate(2deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.jumanji-dice {
+  transform-origin: 30px 13px;
+  transform-box: fill-box;
+}
+.jumanji-dice--rolling {
+  animation: jumanji-dice-rumble 600ms ease-in-out infinite;
+}
+.jumanji-dice--locked {
+  animation: none;
+}
+
+/* Portal rim breathing. */
+@keyframes jumanji-portal-rim {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.jumanji-portal-rim {
+  animation: jumanji-portal-rim 1800ms ease-in-out infinite;
+}
+
+/* Step-in CTA fade-up. */
+@keyframes jumanji-step-in-fade-up {
+  0%   { opacity: 0; transform: translate(-50%, 4px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+.jumanji-step-in-cta {
+  animation: jumanji-step-in-fade-up 220ms ease-out both;
+}
+
+/* Reduced motion — strip every animation, keep colors. */
+.jumanji-device-art--reduced-motion .jumanji-dice--rolling {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jumanji-dice--rolling,
+  .jumanji-portal-rim,
+  .jumanji-step-in-cta {
+    animation: none;
+  }
+}

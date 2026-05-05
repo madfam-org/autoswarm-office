@@ -15,6 +15,7 @@
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { JumanjiDevice } from '@/components/easter-eggs/JumanjiDevice';
 
 // Refetch every 30s so the page never goes more than one cycle stale.
 export const revalidate = 30;
@@ -249,12 +250,25 @@ export default async function StatusPage() {
               })}
             </ul>
 
-            <div className="mt-10 text-center text-[11px] text-slate-600">
-              Page revalidates every 30s. Probe runs every hour at :07.
+            <div className="mt-10 flex items-center justify-center gap-4 text-[11px] text-slate-600">
+              <span>Page revalidates every 30s. Probe runs every hour at :07.</span>
+              {/*
+                Easter egg placement: tucked into the status footer so the
+                device "looks like" another tiny system component
+                (orchestrator/router/redis row context). Not on a
+                high-traffic CTA page.
+              */}
+              <JumanjiDevice currentPage="/status" placement="inline" />
             </div>
           </>
         ) : (
-          <EmptyState />
+          <div className="space-y-12">
+            <EmptyState />
+            <div className="flex items-center justify-center gap-4 text-[11px] text-slate-600">
+              <span>Awaiting first probe upload.</span>
+              <JumanjiDevice currentPage="/status" placement="inline" />
+            </div>
+          </div>
         )}
       </main>
     </div>

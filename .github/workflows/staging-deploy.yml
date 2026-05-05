@@ -112,6 +112,8 @@ jobs:
             NEXT_PUBLIC_JANUA_CLIENT_ID=${{ secrets.JANUA_STAGING_CLIENT_ID || 'autoswarm-office-staging' }}
             NEXT_PUBLIC_DEMO_ENABLED=true
             NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true
+            NEXT_PUBLIC_APP_URL=https://staging.selva.town
+            NEXT_PUBLIC_MARKETING_URL=https://staging.selva.town
           tags: |
             ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:staging-${{ steps.sha.outputs.short }}
             ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:staging-latest

@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
   "langgraph>=0.2.60",
   "langgraph-checkpoint-postgres>=2.0",
-  "langchain-core>=0.3.28",
+  "langchain-core>=1.2.22",
   "psycopg[binary]>=3.1",
   "redis>=5.2.1",
   "httpx>=0.28.1",

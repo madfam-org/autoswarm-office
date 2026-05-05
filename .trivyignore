@@ -1,0 +1,23 @@
+# .trivyignore — selva-office
+#
+# Each entry MUST cite (1) why the upstream fix is unavailable or unworkable
+# and (2) the specific reason this codebase is not exposed to the
+# vulnerability's preconditions. Re-evaluate every entry on every CI failure.
+
+# CVE-2024-23342 — python-ecdsa "Minerva" timing side-channel attack on
+# ECDSA signature operations. Upstream has no fix (see
+# https://github.com/tlsfuzzer/python-ecdsa/security/advisories/GHSA-wj6h-64fc-37mp).
+# selva-office is NOT exposed:
+#   - ecdsa is transitive-only, pulled in by python-jose 3.5.0 via
+#     algorithm-dispatch tables; we never `import ecdsa` directly.
+#   - The ONLY jwt.decode() call site (apps/nexus-api/nexus_api/auth.py:91)
+#     pins algorithms=["RS256"] (RSA), so python-jose never hands a token
+#     to ecdsa for verification, even when an attacker supplies the JWT.
+#   - No other call site uses python-jose.
+# The Minerva attack additionally requires precise per-operation timing
+# measurements against the running process, which our internal-API
+# traffic shape does not afford to a remote attacker. Re-evaluate if
+# (a) any new code path adds an ECDSA-keyed JWT alg to the whitelist,
+# (b) python-jose is ever invoked on attacker-controlled tokens with a
+# permissive algorithms= list, or (c) python-ecdsa ships a fix.
+CVE-2024-23342

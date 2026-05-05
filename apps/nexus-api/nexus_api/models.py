@@ -1170,3 +1170,147 @@ class ExternalA2ACaller(Base):
     # The MADFAM user_sub who approved this caller during registration.
     # NULL for the legacy/seed row inserted by ops.
     owner_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Dragon-egg social-account hatching (migration 0032)
+# ---------------------------------------------------------------------------
+
+
+class SocialAccountEgg(Base):
+    """A social-media account being warmed up — the "egg" in the dragon-egg
+    metaphor.
+
+    Each row represents one (platform, persona_id) account being incubated
+    through the canonical 7-day warmup curve from the launch runbook
+    (``internal-devops/runbooks/2026-05-04-first-autonomous-campaign-launch.md``
+    §4.2). Status progresses ``laid → incubating → hatching → hatched →
+    matured`` as warmup actions complete.
+
+    Phase 1 scope (MVP): Mastodon, Bluesky, Reddit. ``admin@madfam.io``-
+    gated at the router layer; ``owner_org_id`` defaults to ``'madfam'``
+    so single-tenant Phase 1 rows are still tenant-scoped for the Phase 2
+    multi-tenant cutover.
+
+    Credentials remain in env vars under the existing
+    ``MASTODON_ACCESS_TOKEN_<PERSONA_ID>`` convention — the egg row holds
+    only the persona_id, never the token. Phase 2 will move credentials
+    to Vault.
+    """
+
+    __tablename__ = "social_account_eggs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=_new_uuid
+    )
+    persona_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Phase 1 scope: 'mastodon' | 'bluesky' | 'reddit'. CHECK-constrained
+    # at the DB layer; the app validates app-side too (defense in depth).
+    platform: Mapped[str] = mapped_column(String(32), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    handle: Mapped[str] = mapped_column(String(255), nullable=False)
+    instance_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # 'laid' | 'incubating' | 'hatching' | 'hatched' | 'matured'.
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="laid")
+    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    laid_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+    hatched_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    matured_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    owner_org_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="madfam", index=True
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    # ``metadata`` is a reserved attribute on SQLAlchemy's DeclarativeBase
+    # (it points at the ``MetaData`` registry). Use a trailing-underscore
+    # python attribute mapped to a ``metadata_`` column to dodge the
+    # collision while keeping the API response shape readable.
+    metadata_: Mapped[dict] = mapped_column(
+        "metadata_", JSON, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utcnow,
+        onupdate=_utcnow,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "platform", "persona_id", name="uq_social_account_eggs_platform_persona"
+        ),
+    )
+
+    actions: Mapped[list[SocialAccountWarmupAction]] = relationship(
+        "SocialAccountWarmupAction",
+        back_populates="egg",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="SocialAccountWarmupAction.day_offset",
+    )
+
+
+class SocialAccountWarmupAction(Base):
+    """A single action in an egg's warmup plan — one row per row of the
+    7-day curve (or per-action sub-row).
+
+    Generated when the egg is laid via
+    ``dragon_egg_service.lay_egg()``. The worker drains rows where
+    ``status='planned' AND scheduled_for <= NOW()`` and dispatches each
+    via the matching social tool (``mastodon_post``, ``bluesky_post``,
+    ``reddit_post``) or queues a HITL approval for follow / boost /
+    profile actions (Phase 1 = HITL-only for those).
+
+    ``content_brief`` is reserved for the Phase 2 content-generator
+    service that pre-populates copy. NULL in Phase 1; operator composes
+    copy at execute time.
+    """
+
+    __tablename__ = "social_account_warmup_actions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=_new_uuid
+    )
+    egg_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("social_account_eggs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # 7 action types from the runbook §4.2 curve.
+    action_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    # 'planned' | 'pending_human' | 'in_flight' | 'completed' | 'failed' | 'skipped'.
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="planned"
+    )
+    scheduled_for: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    executed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    day_offset: Mapped[int] = mapped_column(Integer, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_brief: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utcnow,
+        onupdate=_utcnow,
+    )
+
+    egg: Mapped[SocialAccountEgg] = relationship(
+        "SocialAccountEgg", back_populates="actions"
+    )

@@ -39,6 +39,7 @@ import { useWhiteboard } from '@/hooks/useWhiteboard';
 import { useSpotlight } from '@/hooks/useSpotlight';
 import { useNotifications } from '@/hooks/useNotifications';
 import { MobileNav } from '@/components/MobileNav';
+import { AtriumOverlay } from '@/components/atrium/AtriumOverlay';
 import { MegaphoneControls } from '@/components/MegaphoneControls';
 import { SpotlightControls } from '@/components/SpotlightControls';
 import { SpotlightView } from '@/components/SpotlightView';
@@ -890,6 +891,12 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
           onDeny={handleDeny}
         />
       )}
+
+      {/* MADFAM Ecosystem Atrium — floating-window overlay. Hidden in
+          demo mode (the office is sandboxed there) but always present
+          in live mode. Office canvas remains interactive between
+          windows because the overlay container is pointer-events:none. */}
+      {!isDemo && <AtriumOverlay />}
 
       <MobileNav activeTab={mobileTab} onTabChange={handleMobileTabChange} />
     </main>

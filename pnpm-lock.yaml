@@ -252,6 +252,9 @@ importers:
       simple-peer:
         specifier: ^9.11.1
         version: 9.11.1
+      zustand:
+        specifier: ^4.5.7
+        version: 4.5.7(@types/react@19.2.14)(react@19.2.5)
     devDependencies:
       '@autoswarm/config':
         specifier: workspace:*

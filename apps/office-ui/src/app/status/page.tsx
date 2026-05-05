@@ -207,6 +207,9 @@ export default async function StatusPage() {
             <span>/</span>
             <span className="text-slate-400">status</span>
             <span className="ml-auto flex gap-3">
+              <Link href="/atrium" className="text-slate-500 hover:text-emerald-400">
+                Atrium →
+              </Link>
               <Link href="/catalog" className="text-slate-500 hover:text-emerald-400">
                 catalog →
               </Link>

@@ -281,6 +281,9 @@ export default async function BundlesPage() {
             <span>/</span>
             <span className="text-slate-400">bundles</span>
             <span className="ml-auto flex gap-3">
+              <Link href="/atrium" className="text-slate-500 hover:text-emerald-400">
+                Atrium →
+              </Link>
               <Link href="/catalog" className="text-slate-500 hover:text-emerald-400">
                 catalog →
               </Link>

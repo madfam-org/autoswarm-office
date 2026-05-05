@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@autoswarm/shared-types": "workspace:*",
-    "@colyseus/core": "^0.17.42",
+    "@colyseus/core": "^0.17.43",
     "@colyseus/schema": "^2.0.35",
     "@colyseus/ws-transport": "^0.17.13",
     "dotenv": "^16.4.7",

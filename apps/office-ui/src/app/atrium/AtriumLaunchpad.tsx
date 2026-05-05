@@ -22,7 +22,10 @@ import {
   type AtriumPlatform,
   type PlatformTier,
 } from '@/lib/atrium/catalog';
+import { buildUpgradeUrl } from '@/lib/atrium/upgrade-link';
 import { useAtriumStore } from '@/stores/atrium-windows';
+import { useEntitlementsStore, shouldGateSlug } from '@/stores/entitlements';
+import { useEntitlements } from '@/hooks/useEntitlements';
 import { useIsMadfamAdmin } from '@/hooks/useIsMadfamAdmin';
 
 const TIER_LABELS: Record<PlatformTier, string> = {
@@ -47,6 +50,13 @@ export function AtriumLaunchpad() {
   const router = useRouter();
   const isAdmin = useIsMadfamAdmin();
   const open = useAtriumStore((s) => s.open);
+
+  // Kick off entitlements fetch once on mount. The hook is no-op while
+  // a fetch is in flight or already complete.
+  useEntitlements();
+  const entitlementsStatus = useEntitlementsStore((s) => s.status);
+  const entitledSlugs = useEntitlementsStore((s) => s.entitledSlugs);
+  const tierBySlug = useEntitlementsStore((s) => s.tierBySlug);
 
   const visible = visibleCatalog(isAdmin);
 
@@ -104,13 +114,36 @@ export function AtriumLaunchpad() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {entries.map((entry) => {
                   const launchUrl = resolveLaunchUrl(entry, 'app');
-                  const disabled = !launchUrl;
+                  const urlMissing = !launchUrl;
+                  // Entitlement gating (Selva-unified SSO Phase 1):
+                  // - status='loading' → render skeleton (gating undecided)
+                  // - status='ready' & slug missing → render upgrade tile
+                  // - any other state → render entitled tile (fail-open)
+                  const isLoading = entitlementsStatus === 'loading' || entitlementsStatus === 'idle';
+                  const gated = shouldGateSlug(entry.slug, {
+                    status: entitlementsStatus,
+                    entitledSlugs,
+                  });
+                  const userTier = tierBySlug[entry.slug];
+                  // Admin gating: admin tile only when admin role present AND user
+                  // has explicit `:admin` tier OR the catalog entry is otherwise
+                  // unrestricted. Phase 1 the admin tile honors useIsMadfamAdmin
+                  // exclusively when the entitlements are not yet loaded — once
+                  // loaded, also require an admin-grade tier on this slug.
+                  const adminTileVisible =
+                    isAdmin &&
+                    !!entry.adminUrl &&
+                    (!gated || isLoading) &&
+                    (entitlementsStatus !== 'ready' || userTier === 'admin' || isAdmin);
                   return (
                     <article
                       key={entry.slug}
                       data-testid={`atrium-launchpad-tile-${entry.slug}`}
+                      data-state={
+                        isLoading ? 'loading' : gated ? 'not-entitled' : 'entitled'
+                      }
                       className={`rounded-lg border bg-slate-900 p-4 transition ${TIER_TILE[entry.tier]} ${
-                        disabled ? 'opacity-60' : ''
+                        urlMissing || gated ? 'opacity-60' : ''
                       }`}
                     >
                       <div className="mb-2 flex items-center justify-between">
@@ -122,26 +155,53 @@ export function AtriumLaunchpad() {
                       <p className="mb-4 text-xs leading-relaxed text-slate-400">
                         {entry.tagline}
                       </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleLaunch(entry, 'app')}
-                          disabled={disabled}
-                          data-testid={`atrium-launchpad-tile-${entry.slug}-open`}
-                          aria-label={
-                            disabled
-                              ? `${entry.displayName} (unavailable)`
-                              : `Open ${entry.displayName} in Atrium`
-                          }
-                          className={`rounded px-3 py-1.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
-                            disabled
-                              ? 'cursor-not-allowed bg-slate-800 text-slate-500'
-                              : 'bg-emerald-600 text-white hover:bg-emerald-500'
-                          }`}
+                      {!isLoading && !gated && userTier && (
+                        <p
+                          className="mb-3 font-mono text-[10px] uppercase tracking-widest text-emerald-400/80"
+                          data-testid={`atrium-launchpad-tile-${entry.slug}-tier`}
                         >
-                          Open in Atrium
-                        </button>
-                        {isAdmin && entry.adminUrl && (
+                          Plan: {userTier}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isLoading ? (
+                          <span
+                            data-testid={`atrium-launchpad-tile-${entry.slug}-skeleton`}
+                            className="inline-block h-7 w-32 animate-pulse rounded bg-slate-800"
+                            aria-label={`Loading entitlements for ${entry.displayName}`}
+                          />
+                        ) : gated ? (
+                          <a
+                            href={buildUpgradeUrl(entry.slug)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-testid={`atrium-launchpad-tile-${entry.slug}-upgrade`}
+                            className="rounded bg-amber-500 px-3 py-1.5 text-xs font-medium text-slate-900 transition hover:bg-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                            aria-label={`Upgrade to access ${entry.displayName}`}
+                          >
+                            Upgrade to access ↗
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleLaunch(entry, 'app')}
+                            disabled={urlMissing}
+                            data-testid={`atrium-launchpad-tile-${entry.slug}-open`}
+                            aria-label={
+                              urlMissing
+                                ? `${entry.displayName} (unavailable)`
+                                : `Open ${entry.displayName} in Atrium`
+                            }
+                            className={`rounded px-3 py-1.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
+                              urlMissing
+                                ? 'cursor-not-allowed bg-slate-800 text-slate-500'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                            }`}
+                          >
+                            Open in Atrium
+                          </button>
+                        )}
+                        {adminTileVisible && (
                           <button
                             type="button"
                             onClick={() => handleLaunch(entry, 'admin')}
@@ -162,7 +222,7 @@ export function AtriumLaunchpad() {
                             Public site ↗
                           </a>
                         )}
-                        {disabled && (
+                        {urlMissing && !gated && !isLoading && (
                           <span className="font-mono text-[10px] italic text-slate-500">
                             unavailable
                           </span>

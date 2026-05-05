@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import InferenceProvider
 from .caching import PromptCacheManager
@@ -10,6 +12,36 @@ from .types import InferenceRequest, InferenceResponse, Sensitivity
 
 logger = logging.getLogger(__name__)
 _cache_manager = PromptCacheManager()
+
+
+def _budget_gate_enabled() -> bool:
+    return os.environ.get("BUDGET_GATE_ENABLED", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    )
+
+
+def _try_import_budget_gate() -> Any:
+    """Best-effort lazy import of the budget gate.
+
+    Returns ``None`` (and logs once) when the package isn't installed.
+    The integration is intentionally optional — the gate is a
+    bedrock-safety opt-in, not a hard dependency of the inference
+    router.
+    """
+    try:
+        import madfam_budget_gate
+
+        return madfam_budget_gate
+    except ImportError:
+        logger.warning(
+            "budget-gate: BUDGET_GATE_ENABLED is set but madfam-budget-gate "
+            "package is not installed; gate is disabled"
+        )
+        return None
 
 
 def _is_hard_failure(exc: BaseException) -> bool:
@@ -134,9 +166,18 @@ class ModelRouter:
         self,
         providers: dict[str, InferenceProvider],
         org_config: object | None = None,
+        *,
+        budget_gate: Any | None = None,
     ) -> None:
         self._providers = providers
         self._org_config = org_config
+        # Budget gate is opt-in: a caller can pass an instance, or the
+        # router builds one on the first ``complete()`` call when the
+        # ``BUDGET_GATE_ENABLED`` env flag is set and the package is
+        # importable.  Once built (or determined missing) the result is
+        # memoised on the instance.
+        self._budget_gate: Any | None = budget_gate
+        self._budget_gate_resolved: bool = budget_gate is not None
 
     @property
     def available_providers(self) -> list[str]:
@@ -259,7 +300,51 @@ class ModelRouter:
 
         Retries once on the primary provider (with 1s delay), then falls
         through to alternative providers before raising.
+
+        When ``BUDGET_GATE_ENABLED=true`` and the ``madfam-budget-gate``
+        package is importable, every call is gated by an org/agent/global
+        spend check before dispatch.  After a successful response the
+        actual usage is recorded against the same scope so daily and
+        monthly caps stay accurate.  Default OFF — operators flip the
+        flag in production after the first smoke pass.
         """
+        gate, scope = self._resolve_gate_and_scope(request)
+        if gate is not None and scope is not None:
+            decision = await gate.check(
+                scope,
+                estimated_tokens=request.policy.max_tokens,
+                estimated_cost_usd=0.0,
+            )
+            if not decision.allowed:
+                from madfam_budget_gate import BudgetExhausted  # local import
+
+                raise BudgetExhausted(decision.reason, decision.retry_after_seconds)
+
+        response = await self._complete_inner(request)
+
+        # Post-call recording — fire-and-forget: a record() failure must
+        # never break the inference path.  The gate's own record() logs
+        # exceptions internally, but we add an extra try/except for the
+        # local import path.
+        if gate is not None and scope is not None:
+            try:
+                usage = response.usage or {}
+                input_tokens = int(usage.get("input_tokens", 0))
+                output_tokens = int(usage.get("output_tokens", 0))
+                await gate.record(
+                    scope,
+                    actual_tokens=input_tokens + output_tokens,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    provider=response.provider,
+                    model=response.model,
+                )
+            except Exception as exc:
+                logger.warning("budget-gate: record() raised: %s", exc)
+
+        return response
+
+    async def _complete_inner(self, request: InferenceRequest) -> InferenceResponse:
         provider = self._select_provider(request)
 
         # Gap 7: Apply Anthropic prefix-cache breakpoints if applicable
@@ -315,6 +400,41 @@ class ModelRouter:
                 last_exc = exc
 
         raise RuntimeError(f"All providers failed for request. Last error: {last_exc}")
+
+    def _resolve_gate_and_scope(self, request: InferenceRequest) -> tuple[Any, Any]:
+        """Return ``(gate, scope)`` if budget gate is enabled, else ``(None, None)``.
+
+        First call lazily resolves the gate; subsequent calls reuse the
+        cached value.  Scope is built from request metadata: in this
+        bootstrap integration we honour the ``BUDGET_GATE_DEFAULT_ORG_ID``
+        env var as the org_id and leave agent_id unset.  Callers that
+        need finer-grained scoping should pass an explicit gate
+        instance via the constructor.
+        """
+        if not _budget_gate_enabled():
+            return None, None
+        if not self._budget_gate_resolved:
+            self._budget_gate_resolved = True
+            module = _try_import_budget_gate()
+            if module is None:
+                self._budget_gate = None
+            else:
+                try:
+                    self._budget_gate = module.BudgetGate.from_env()
+                except Exception as exc:
+                    logger.warning("budget-gate: from_env() failed: %s", exc)
+                    self._budget_gate = None
+        if self._budget_gate is None:
+            return None, None
+
+        # Scope extraction — minimal and overridable.  Callers wanting
+        # per-agent scoping inject a gate via constructor + a custom
+        # extraction strategy upstream.
+        from madfam_budget_gate import BudgetScope  # local import
+
+        org_id = os.environ.get("BUDGET_GATE_DEFAULT_ORG_ID") or None
+        scope = BudgetScope(org_id=org_id)
+        return self._budget_gate, scope
 
     async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
         """Route the request to the appropriate provider and stream the response."""

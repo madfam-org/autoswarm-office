@@ -27,6 +27,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from .gate import BudgetGate
+from .scope import BudgetScope
+
 _FASTAPI_AVAILABLE: bool
 try:
     from fastapi import APIRouter, HTTPException, Query
@@ -34,9 +37,6 @@ try:
     _FASTAPI_AVAILABLE = True
 except ImportError:  # pragma: no cover — only triggered when extra is missing
     _FASTAPI_AVAILABLE = False
-
-from .gate import BudgetGate
-from .scope import BudgetScope
 
 
 def build_router(gate: BudgetGate, *, prefix: str = "/budget-gate") -> Any:

@@ -73,13 +73,10 @@ class BudgetScope:
              BudgetScope(org_id=None, agent_id=None, tag=None)]
         """
         result: list[BudgetScope] = []
+        if self.is_global:
+            return result
         if self.agent_id is not None and self.org_id is not None:
             result.append(BudgetScope(org_id=self.org_id))
-        if not self.is_global and self.org_id is None:
-            # Agent-only or tag-only scope — no org parent, jump to global.
-            pass
-        elif self.agent_id is not None and self.org_id is None:
-            pass
         result.append(BudgetScope())
         return result
 

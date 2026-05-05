@@ -34,6 +34,13 @@ def test_org_chain_includes_global_only() -> None:
     assert chain == [s, BudgetScope()]
 
 
+def test_global_chain_is_self_only() -> None:
+    """Global scope's chain must not include itself twice (regression guard)."""
+    s = BudgetScope()
+    assert s.parents() == []
+    assert s.chain() == [s]
+
+
 def test_resolve_caps_falls_through_to_env_defaults() -> None:
     env = ResolvedCaps(
         daily_usd=10.0,

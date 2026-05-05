@@ -96,7 +96,7 @@ function prefersReducedMotion(): boolean {
 export function EcosystemWindow({
   window: w,
   isFocused,
-}: EcosystemWindowProps): JSX.Element | null {
+}: EcosystemWindowProps) {
   const close = useAtriumStore((s) => s.close);
   const focus = useAtriumStore((s) => s.focus);
   const minimize = useAtriumStore((s) => s.minimize);

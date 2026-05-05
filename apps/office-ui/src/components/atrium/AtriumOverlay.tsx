@@ -26,7 +26,7 @@ import {
   useAtriumStore,
 } from '@/stores/atrium-windows';
 
-export function AtriumOverlay(): JSX.Element {
+export function AtriumOverlay() {
   const windows = useAtriumStore((s) => s.windows);
   const focusedSlug = useAtriumStore((s) => s.focusedSlug);
   const ordered = selectWindowsZOrdered({ windows });

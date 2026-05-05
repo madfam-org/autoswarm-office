@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'atrium_intro_seen';
 
-export function AtriumIntroHint(): JSX.Element | null {
+export function AtriumIntroHint() {
   // Default to false so we don't flash the hint to operators who've
   // already dismissed it. Hydrate from localStorage on mount.
   const [shouldShow, setShouldShow] = useState(false);

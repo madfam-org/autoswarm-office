@@ -20,6 +20,6 @@ export const metadata: Metadata = {
     'Welcome to the Atrium — the central space inside the Selva office where every MADFAM platform converges as a draggable window.',
 };
 
-export default function AtriumLaunchpadPage(): JSX.Element {
+export default function AtriumLaunchpadPage() {
   return <AtriumLaunchpad />;
 }

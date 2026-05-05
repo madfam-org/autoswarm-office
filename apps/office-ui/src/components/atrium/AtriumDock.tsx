@@ -50,7 +50,7 @@ interface AtriumDockProps {
   className?: string;
 }
 
-export function AtriumDock({ className = '' }: AtriumDockProps): JSX.Element {
+export function AtriumDock({ className = '' }: AtriumDockProps) {
   const isAdmin = useIsMadfamAdmin();
   const open = useAtriumStore((s) => s.open);
   const focus = useAtriumStore((s) => s.focus);

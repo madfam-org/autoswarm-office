@@ -18,7 +18,7 @@ import {
   useAtriumStore,
 } from '@/stores/atrium-windows';
 
-export function AtriumTaskbar(): JSX.Element | null {
+export function AtriumTaskbar() {
   const windows = useAtriumStore((s) => s.windows);
   const focusedSlug = useAtriumStore((s) => s.focusedSlug);
   const focus = useAtriumStore((s) => s.focus);

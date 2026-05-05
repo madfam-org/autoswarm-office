@@ -43,7 +43,7 @@ const TIER_TILE: Record<PlatformTier, string> = {
   'ecosystem-service': 'border-sky-700/60 hover:border-sky-500',
 };
 
-export function AtriumLaunchpad(): JSX.Element {
+export function AtriumLaunchpad() {
   const router = useRouter();
   const isAdmin = useIsMadfamAdmin();
   const open = useAtriumStore((s) => s.open);

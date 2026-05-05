@@ -7,7 +7,7 @@ dependencies = [
   "pydantic>=2.10.5",
   "pyyaml>=6.0",
   "langgraph>=0.2.60",
-  "langchain-core>=0.3.28",
+  "langchain-core>=1.2.22",
   "madfam-inference",
   "selva-permissions",
   "playwright>=1.49.0",

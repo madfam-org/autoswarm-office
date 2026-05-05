@@ -912,6 +912,21 @@ async def main() -> None:
     _active_tasks.add(scheduled_action_task)
     scheduled_action_task.add_done_callback(_active_tasks.discard)
 
+    # Start dragon-egg warmup drain loop.
+    # Sibling job to the scheduled-action drain — drains
+    # social_account_warmup_actions every 60s and dispatches the
+    # platform tool for ``planned`` actions whose ``scheduled_for <=
+    # NOW()``. See selva_workers/jobs/dragon_egg_warmup.py for the
+    # full design (HITL respect, tool routing, content_brief
+    # contract, budget-gate TODO).
+    from .jobs.dragon_egg_warmup import (
+        periodic_loop as _dragon_egg_warmup_loop,
+    )
+
+    dragon_egg_task = asyncio.create_task(_dragon_egg_warmup_loop(_shutdown))
+    _active_tasks.add(dragon_egg_task)
+    dragon_egg_task.add_done_callback(_active_tasks.discard)
+
     # Log available inference providers at startup.
     from .inference import validate_providers
 

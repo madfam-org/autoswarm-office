@@ -91,11 +91,11 @@ class ContextFileLoader:
                     continue
                 # A2: Expand @context_ref inline references
                 content = self._expand_refs(content, root)
-                # A1: Injection scan
-                content = self._scan_injection(filename, content)
-                if content is None:  # blocked
+                # A1: Injection scan — returns ``None`` to signal "blocked"
+                scanned = self._scan_injection(filename, content)
+                if scanned is None:  # blocked
                     continue
-                sections.append(f"## [{filename}]\n\n{content}")
+                sections.append(f"## [{filename}]\n\n{scanned}")
 
         if not sections:
             return ""

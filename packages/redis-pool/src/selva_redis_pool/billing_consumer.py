@@ -119,8 +119,13 @@ class BillingEventConsumer:
 
         logger.info("Billing consumer stopped")
 
-    async def _process_message(self, msg_id: str, fields: dict[str, Any]) -> None:
-        """Process a single stream message with retry/DLQ logic."""
+    async def _process_message(self, msg_id: str, fields: dict[Any, Any]) -> None:
+        """Process a single stream message with retry/DLQ logic.
+
+        ``fields`` may be keyed by ``str`` or ``bytes`` depending on whether
+        the underlying Redis client was configured with ``decode_responses``;
+        we accept both shapes defensively.
+        """
         get_redis_pool()
 
         try:

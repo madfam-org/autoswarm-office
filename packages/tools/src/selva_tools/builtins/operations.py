@@ -160,22 +160,11 @@ class InventoryCheckTool(BaseTool):
         if not sku:
             return ToolResult(success=False, error="sku is required")
 
-        # Try Dhanam adapter
-        try:
-            from madfam_inference.adapters.dhanam import DhanamAdapter
-
-            adapter = DhanamAdapter()
-            result = await adapter.get_inventory(sku, warehouse=warehouse or None)
-            return ToolResult(
-                success=True,
-                output=f"Inventory for SKU {sku}: {result.get('quantity', 'N/A')} units",
-                data=result if isinstance(result, dict) else {"raw": str(result)},
-            )
-        except (ImportError, AttributeError):
-            pass
-        except Exception as exc:
-            logger.debug("Dhanam inventory check failed: %s", exc)
-
+        # NOTE: a previous version tried ``DhanamAdapter().get_inventory(...)``
+        # but Dhanam is the billing/economic-data adapter and never had an
+        # inventory method. The AttributeError was silently swallowed, making
+        # the tool look like it was "trying Dhanam first" when in reality it
+        # always fell through to PravaraMES. Removed.
         # Try PravaraMES
         pravara_url = os.environ.get("PRAVARA_MES_API_URL", "")
         if pravara_url:

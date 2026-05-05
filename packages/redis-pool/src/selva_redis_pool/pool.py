@@ -7,8 +7,9 @@ import contextlib
 import logging
 import os
 import time
-from collections.abc import Iterator
+from collections.abc import Awaitable, Iterator
 from enum import Enum
+from typing import Any, cast
 
 import redis.asyncio as aioredis
 from redis.asyncio import ConnectionPool, Redis
@@ -73,7 +74,7 @@ class RedisPool:
         self._last_failure_time: float = 0.0
 
     @classmethod
-    def get_instance(cls, **kwargs: object) -> RedisPool:
+    def get_instance(cls, **kwargs: Any) -> RedisPool:
         """Get or create the singleton pool instance."""
         if cls._instance is None:
             cls._instance = cls(**kwargs)
@@ -209,7 +210,10 @@ class RedisPool:
         """Check connectivity."""
         try:
             client = await self._ensure_pool()
-            await client.ping()
+            # redis-py stubs type ``ping`` as ``Awaitable[bool] | bool`` because
+            # the same method is shared with the sync client; on
+            # ``redis.asyncio.Redis`` it always returns an awaitable.
+            await cast(Awaitable[bool], client.ping())
             self._record_success()
             return True
         except Exception:
@@ -217,6 +221,6 @@ class RedisPool:
             return False
 
 
-def get_redis_pool(**kwargs: object) -> RedisPool:
+def get_redis_pool(**kwargs: Any) -> RedisPool:
     """Get the singleton Redis pool instance."""
     return RedisPool.get_instance(**kwargs)

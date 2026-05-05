@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from collections.abc import MutableMapping
+from typing import Any
 
 import structlog
 
@@ -67,10 +69,10 @@ def _add_service_name(service_name: str) -> structlog.types.Processor:
     """Create a processor that adds service_name to each log event."""
 
     def processor(
-        logger: logging.Logger,
+        logger: Any,
         method_name: str,
-        event_dict: dict[str, object],
-    ) -> dict[str, object]:
+        event_dict: MutableMapping[str, Any],
+    ) -> MutableMapping[str, Any]:
         event_dict["service"] = service_name
         return event_dict
 

@@ -11,17 +11,20 @@ from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Column, String, delete, select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import declarative_base
 
 from .embeddings import DEFAULT_DIM, EmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
+# ``declarative_base()`` returns a dynamically generated class; mypy can't
+# trace it as a valid base. The whole module is SA 1.4-style ORM, kept for
+# backwards compat with the ``MemoryEntryModel`` schema in the wild.
 Base = declarative_base()
 
 
-class MemoryEntryModel(Base):
+class MemoryEntryModel(Base):  # type: ignore[misc, valid-type]
     __tablename__ = "agent_memories"
     id = Column(String, primary_key=True)
     agent_id = Column(String, index=True, nullable=False)
@@ -69,8 +72,8 @@ class MemoryStore:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
         self._engine = create_async_engine(db_url, echo=False)
-        self._session_factory = sessionmaker(
-            self._engine, class_=AsyncSession, expire_on_commit=False
+        self._session_factory = async_sessionmaker(
+            self._engine, expire_on_commit=False
         )
 
     async def _init_db(self) -> None:
@@ -169,17 +172,25 @@ class MemoryStore:
 
             entries = []
             for row in rows:
+                # ``row`` is a MemoryEntryModel instance; mypy types the
+                # column descriptors as ``Column[X]`` due to the SA 1.4
+                # legacy declarative pattern, but at runtime they hold ``X``.
+                row_id: str = row.id  # type: ignore[assignment]
+                row_text: str = row.text  # type: ignore[assignment]
+                row_metadata: dict[str, Any] = row.metadata_  # type: ignore[assignment]
+                row_created_at: str = row.created_at  # type: ignore[assignment]
+                row_agent_id: str = row.agent_id  # type: ignore[assignment]
                 if filter_metadata and not all(
-                    row.metadata_.get(k) == v for k, v in filter_metadata.items()
+                    row_metadata.get(k) == v for k, v in filter_metadata.items()
                 ):
                     continue
                 entries.append(
                     MemoryEntry(
-                        id=row.id,
-                        text=row.text,
-                        metadata=row.metadata_,
-                        created_at=row.created_at,
-                        agent_id=row.agent_id,
+                        id=row_id,
+                        text=row_text,
+                        metadata=row_metadata,
+                        created_at=row_created_at,
+                        agent_id=row_agent_id,
                     )
                 )
             return entries
@@ -197,7 +208,9 @@ class MemoryStore:
             )
             result = await session.execute(stmt)
             await session.commit()
-            return result.rowcount
+            # ``execute(delete(...))`` returns a CursorResult exposing
+            # ``rowcount``; mypy widens to the base ``Result`` which lacks it.
+            return int(result.rowcount)  # type: ignore[attr-defined]
 
     @property
     def count(self) -> int:

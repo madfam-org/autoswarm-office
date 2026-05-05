@@ -53,12 +53,20 @@ class SubgraphNodeHandler:
                 )
                 return {**state, "current_node_id": node.id}
 
-            # Compile and invoke the sub-workflow
+            # Compile and invoke the sub-workflow. ``WorkflowCompiler.compile``
+            # returns the uncompiled ``StateGraph``; the runnable is produced
+            # by calling ``.compile()`` on that graph. The previous code
+            # called ``.invoke()`` directly on the StateGraph, which raises
+            # AttributeError at runtime — silently masked by the broad
+            # exception handler at the call site. Surface bug fix.
             from ..compiler import WorkflowCompiler
 
             compiler = WorkflowCompiler(workflow_loader=loader)
-            compiled = compiler.compile(sub_workflow)
-            result = compiled.invoke(state)
+            compiled_graph = compiler.compile(sub_workflow).compile()
+            # langgraph stubs type ``invoke`` against ``StateT`` (the generic
+            # state schema); we use a plain ``dict`` as the runtime state
+            # container — see the ``StateGraph(dict)`` ignore in compiler.py.
+            result = compiled_graph.invoke(state)  # type: ignore[arg-type]
 
             # Merge subgraph result back
             merged = {**state, **result, "current_node_id": node.id}

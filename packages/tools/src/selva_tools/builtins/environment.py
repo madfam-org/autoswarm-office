@@ -28,7 +28,7 @@ class EnvInfoTool(BaseTool):
 
     async def execute(self, **kwargs: Any) -> ToolResult:
         include_env_vars = kwargs.get("include_env_vars", False)
-        info = {
+        info: dict[str, Any] = {
             "os": platform.system(),
             "os_version": platform.version(),
             "python_version": sys.version,

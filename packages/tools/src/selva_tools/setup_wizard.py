@@ -15,6 +15,8 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from collections.abc import Awaitable
+from typing import cast
 
 # ---------------------------------------------------------------------------
 # Helper utilities
@@ -119,7 +121,9 @@ async def step_connectivity(collected: dict) -> None:
             import redis.asyncio as aioredis
 
             r = aioredis.from_url(redis_url)
-            await r.ping()
+            # redis-py types ``ping`` as ``Awaitable[bool] | bool`` because
+            # the same method is shared with the sync client.
+            await cast(Awaitable[bool], r.ping())
             await r.aclose()
             _ok("Redis connection successful")
         except Exception as exc:

@@ -199,9 +199,45 @@ jobs:
         #         broad ``except`` silently fell through to the static
         #         fallback on every workflow run. Fixed call to the
         #         correct API + asyncio.run() bridge.
+        #   2026-05-04 — wave 7 (this PR): 34 → 0. Surfaced latent bugs:
+        #       - tools/approval._persist_and_broadcast imported
+        #         ``AsyncSessionLocal`` from nexus_api.database, which
+        #         doesn't exist (it's ``async_session_factory``). Every
+        #         approval-request DB persist call hit the broad
+        #         ``except Exception`` and was silently dropped — every
+        #         approval request bypassed the audit table.
+        #       - tools/builtins/calendar_tools.CreateCalendarEventTool
+        #         instantiated GoogleCalendarAdapter() with no
+        #         access_token (TypeError) AND called .create_event()
+        #         which the adapter never had. Tool always returned a
+        #         generic error; replaced with an explicit "not implemented".
+        #       - tools/builtins/calendar_tools.ListCalendarEventsTool
+        #         passed ISO date strings to list_events() which expects
+        #         datetime objects, AND iterated CalendarEvent pydantic
+        #         instances as if they were raw dicts (.get on model).
+        #         Same fail-silent path — fixed both.
+        #       - tools/builtins/operations.InventoryCheckTool tried
+        #         DhanamAdapter().get_inventory(...) but Dhanam is the
+        #         billing/economic-data adapter — it never had inventory.
+        #         The AttributeError was silently swallowed by
+        #         ``except (ImportError, AttributeError): pass``, so the
+        #         "try Dhanam first" comment was a lie — every call always
+        #         fell through to PravaraMES. Removed the dead branch.
+        #       - inference/router.complete assigned the result of
+        #         apply_cache_breakpoints (a ``list[dict]`` when caching is
+        #         enabled) directly to ``request.system_prompt`` typed
+        #         ``str | None``. Pydantic v2 forbids extra/wrong types so
+        #         this would ValidationError at runtime the moment any
+        #         Anthropic call hit the cache threshold. Bypassed.
+        #       - workflows/nodes/subgraph called ``.invoke()`` directly
+        #         on the StateGraph returned by WorkflowCompiler.compile()
+        #         — but ``compile()`` returns the *uncompiled* StateGraph;
+        #         you have to call ``.compile()`` on it to get a runnable
+        #         with ``invoke``. AttributeError at runtime, silently
+        #         masked by the broad except in the subgraph node. Fixed.
         run: |
           set -euo pipefail
-          MAX_MYPY_ERRORS=116
+          MAX_MYPY_ERRORS=0
           OUTPUT="$(uv run mypy packages/ 2>&1 || true)"
           COUNT="$(printf '%s\n' "$OUTPUT" | grep -E '^packages/' | grep -c 'error:' || echo 0)"
           echo "mypy errors in packages/: ${COUNT} (ceiling: ${MAX_MYPY_ERRORS})"

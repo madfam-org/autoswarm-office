@@ -18,6 +18,7 @@ dependencies = [
   "selva-sdk",
   "selva-calendar",
   "selva-a2a",
+  "madfam-budget-gate",
 ]
 
 [tool.uv.workspace]
@@ -36,6 +37,7 @@ members = [
   "packages/sdk",
   "packages/calendar",
   "packages/a2a",
+  "packages/budget-gate",
 ]
 
 [tool.uv.sources]
@@ -53,6 +55,7 @@ selva-memory = { workspace = true }
 selva-sdk = { workspace = true }
 selva-calendar = { workspace = true }
 selva-a2a = { workspace = true }
+madfam-budget-gate = { workspace = true }
 
 [tool.uv]
 dev-dependencies = [
@@ -62,6 +65,7 @@ dev-dependencies = [
   "ruff>=0.8.6",
   "mypy>=1.14.1",
   "aiosqlite>=0.22.1",
+  "fakeredis>=2.35.1",
 ]
 
 [tool.ruff]
@@ -80,7 +84,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
 "**/builtins/marketing_tools.py" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["selva_orchestrator", "madfam_inference", "selva_permissions", "nexus_api", "selva_workers", "selva_skills", "selva_observability", "selva_redis_pool", "selva_workflows", "selva_tools", "selva_memory", "selva_sdk", "selva_calendar", "selva_a2a"]
+known-first-party = ["selva_orchestrator", "madfam_inference", "selva_permissions", "nexus_api", "selva_workers", "selva_skills", "selva_observability", "selva_redis_pool", "selva_workflows", "selva_tools", "selva_memory", "selva_sdk", "selva_calendar", "selva_a2a", "madfam_budget_gate"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -103,6 +107,7 @@ mypy_path = [
     "packages/sdk",
     "packages/calendar",
     "packages/a2a",
+    "packages/budget-gate/src",
     "apps/nexus-api",
     "apps/workers",
 ]

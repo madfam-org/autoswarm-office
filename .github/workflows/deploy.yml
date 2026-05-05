@@ -173,6 +173,8 @@ jobs:
             NEXT_PUBLIC_JANUA_CLIENT_ID=${{ secrets.JANUA_CLIENT_ID || 'autoswarm-office' }}
             NEXT_PUBLIC_DEMO_ENABLED=true
             NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true
+            NEXT_PUBLIC_APP_URL=https://app.selva.town
+            NEXT_PUBLIC_MARKETING_URL=https://selva.town
           tags: |
             ${{ env.REGISTRY }}/${{ matrix.image }}:${{ steps.meta.outputs.sha }}
             ${{ env.REGISTRY }}/${{ matrix.image }}:latest

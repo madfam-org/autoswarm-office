@@ -897,6 +897,21 @@ async def main() -> None:
     _active_tasks.add(cleanup_task)
     cleanup_task.add_done_callback(_active_tasks.discard)
 
+    # Start scheduled-action drain loop.
+    # Drains ScheduledAction.SOCIAL_POST rows once per minute. See
+    # selva_workers/jobs/social_post_executor.py for the full design
+    # (Celery vs APScheduler decision, HITL respect, rate-limit
+    # rescheduling, dead-letter, and the budget-gate TODO).
+    from .jobs.social_post_executor import (
+        periodic_loop as _scheduled_action_periodic_loop,
+    )
+
+    scheduled_action_task = asyncio.create_task(
+        _scheduled_action_periodic_loop(_shutdown),
+    )
+    _active_tasks.add(scheduled_action_task)
+    scheduled_action_task.add_done_callback(_active_tasks.discard)
+
     # Log available inference providers at startup.
     from .inference import validate_providers
 

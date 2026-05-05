@@ -20,7 +20,7 @@
     "js-yaml": "^4.1.1",
     "next": "^15.1.5",
     "phaser": "^3.87.0",
-    "posthog-js": "^1.372.1",
+    "posthog-js": "^1.372.8",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "simple-peer": "^9.11.1",
@@ -36,7 +36,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.5.0",
     "jsdom": "^25.0.1",
-    "postcss": "^8.5.12",
+    "postcss": "^8.5.14",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"

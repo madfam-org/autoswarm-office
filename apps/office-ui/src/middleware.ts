@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const APP_HOST = 'app.selva.town';
 const LANDING_HOST = 'selva.town';
 
-const PUBLIC_PATHS = ['/', '/login', '/guest', '/demo', '/api/health'];
+const PUBLIC_PATHS = ['/', '/login', '/guest', '/demo', '/api/health', '/api/auth'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

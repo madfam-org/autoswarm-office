@@ -27,10 +27,12 @@ What this tool deliberately does NOT do (deferred to later sprints):
   ``rotation_plan`` lands in Sprint 2.
 - **Write to Vault**. Vault backend migration is Sprint 3.
 
-Transport: uses the ``kubernetes`` Python SDK and reads the projected
-ServiceAccount token from
-``/var/run/secrets/kubernetes.io/serviceaccount/token`` inside the
-cluster. For local dev (or tests) it falls back to ``~/.kube/config``.
+Transport: uses the ``kubernetes`` Python SDK and prefers the projected
+``selva-secret-writer`` ServiceAccount token mounted at
+``/var/run/secrets/selva/secret-writer/token`` inside worker pods. It
+loads the in-cluster CA/server config from the pod default token mount,
+then swaps the bearer token to the dedicated writer token. For local dev
+(or tests) it falls back to ``~/.kube/config``.
 """
 
 from __future__ import annotations
@@ -82,7 +84,8 @@ ALLOWED_NAMESPACES = frozenset(
 # to grow.
 MAX_VALUE_BYTES = 64 * 1024
 
-SERVICEACCOUNT_TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+DEFAULT_SERVICEACCOUNT_TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+SERVICEACCOUNT_TOKEN_PATH = "/var/run/secrets/selva/secret-writer/token"
 
 
 class SecretSource(StrEnum):
@@ -166,12 +169,21 @@ class _K8sClientError(Exception):
 def _load_k8s_config() -> None:
     """Load the appropriate K8s config for the current environment.
 
-    In-cluster: projected SA token at the standard path.
+    In-cluster: load the pod CA/server config, then prefer the projected
+    ``selva-secret-writer`` token over the pod's default ServiceAccount token.
     Local dev: kubeconfig from ``KUBECONFIG`` env var or ``~/.kube/config``.
     """
+    from kubernetes import client
     from kubernetes import config as k8s_config
 
     if os.path.exists(SERVICEACCOUNT_TOKEN_PATH):
+        k8s_config.load_incluster_config()
+        with open(SERVICEACCOUNT_TOKEN_PATH, encoding="utf-8") as token_file:
+            writer_token = token_file.read().strip()
+        configuration = client.Configuration.get_default_copy()
+        configuration.api_key["authorization"] = f"Bearer {writer_token}"
+        client.Configuration.set_default(configuration)
+    elif os.path.exists(DEFAULT_SERVICEACCOUNT_TOKEN_PATH):
         k8s_config.load_incluster_config()
     else:
         # load_kube_config respects KUBECONFIG env var itself.

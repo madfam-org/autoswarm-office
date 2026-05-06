@@ -40,6 +40,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from kubernetes import client as k8s_client  # type: ignore[import-not-found]
+from kubernetes import config as k8s_config  # type: ignore[import-not-found]
 from kubernetes.client.rest import ApiException  # type: ignore[import-not-found]
 
 from selva_tools.base import ToolResult
@@ -644,3 +645,52 @@ def test_allowed_clusters_and_namespaces_are_frozenset() -> None:
     assert isinstance(ALLOWED_NAMESPACES, frozenset)
     assert "madfam-prod" in ALLOWED_CLUSTERS
     assert "autoswarm-office" in ALLOWED_NAMESPACES
+
+
+def test_load_k8s_config_prefers_projected_writer_token(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Workers run as autoswarm-sa but mount a narrower writer token.
+
+    The Kubernetes SDK still needs the pod's in-cluster CA/server config, but
+    write calls must authenticate with the projected selva-secret-writer token.
+    """
+    projected_token = tmp_path / "selva-secret-writer-token"
+    default_token = tmp_path / "default-token"
+    projected_token.write_text("writer-token\n")
+    default_token.write_text("autoswarm-token\n")
+
+    calls: list[str] = []
+
+    class FakeConfiguration:
+        def __init__(self) -> None:
+            self.api_key: dict[str, str] = {"authorization": "Bearer autoswarm-token"}
+
+        @staticmethod
+        def get_default_copy() -> "FakeConfiguration":
+            calls.append("get_default_copy")
+            return FakeConfiguration()
+
+        @staticmethod
+        def set_default(configuration: "FakeConfiguration") -> None:
+            calls.append(configuration.api_key["authorization"])
+
+    monkeypatch.setattr(
+        k8s_secret_mod,
+        "SERVICEACCOUNT_TOKEN_PATH",
+        str(projected_token),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        k8s_secret_mod,
+        "DEFAULT_SERVICEACCOUNT_TOKEN_PATH",
+        str(default_token),
+        raising=True,
+    )
+    monkeypatch.setattr(k8s_config, "load_incluster_config", lambda: calls.append("incluster"))
+    monkeypatch.setattr(k8s_config, "load_kube_config", lambda: calls.append("kubeconfig"))
+    monkeypatch.setattr(k8s_client, "Configuration", FakeConfiguration, raising=True)
+
+    k8s_secret_mod._load_k8s_config()
+
+    assert calls == ["incluster", "get_default_copy", "Bearer writer-token"]

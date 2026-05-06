@@ -43,7 +43,7 @@ try:
     )
     _HAS_PROMETHEUS = True
 except ImportError:
-    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4"  # type: ignore[assignment]
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4"
     _HAS_PROMETHEUS = False
 
 

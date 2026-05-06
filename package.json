@@ -27,7 +27,8 @@
   },
   "pnpm": {
     "overrides": {
-      "@janua/nextjs-sdk": "workspace:*"
+      "@janua/nextjs-sdk": "workspace:*",
+      "path-to-regexp": "0.1.13"
     }
   },
   "devDependencies": {

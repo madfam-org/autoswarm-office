@@ -207,7 +207,8 @@ async def get_idempotency_context(
                 # Redis returns bytes; decode then JSON-parse.
                 if isinstance(raw, bytes):
                     raw = raw.decode("utf-8")
-                cached = json.loads(raw)
+                parsed = json.loads(raw) if isinstance(raw, str) else raw
+                cached = parsed if isinstance(parsed, dict) else None
                 logger.info(
                     "Idempotency replay for org=%s method=%s path=%s",
                     user.get("org_id"),

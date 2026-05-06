@@ -135,7 +135,7 @@ class EncliiAdapter:
             }
         )
 
-    async def deploy_dirty_pod(self, target_url: str) -> dict[str, Any]:
+    async def deploy_dirty_pod(self, target_url: str) -> EncliiOperationResult:
         """
         Deploys Phase I Analyst pod with full internet egress.
         """
@@ -153,7 +153,7 @@ class EncliiAdapter:
         except httpx.HTTPError as e:
             return self._failure_result("deploy_dirty", e, run_id)
 
-    async def deploy_clean_pod(self, sanitized_spec: str) -> dict[str, Any]:
+    async def deploy_clean_pod(self, sanitized_spec: str) -> EncliiOperationResult:
         """
         Deploys Phase III Clean Swarm pod in a strictly airgapped network.
         Mounts the sanitized PRD as an environment variable or via tmpfs.

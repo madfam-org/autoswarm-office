@@ -61,7 +61,6 @@ export function EggDetail({ eggId, onClose, onChanged }: EggDetailProps) {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eggId]);
 
   async function onExecute(action: WarmupAction) {

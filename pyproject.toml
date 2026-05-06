@@ -66,6 +66,7 @@ dev-dependencies = [
   "mypy>=1.14.1",
   "aiosqlite>=0.22.1",
   "fakeredis>=2.35.1",
+  "psycopg2-binary>=2.9.10",
 ]
 
 [tool.ruff]

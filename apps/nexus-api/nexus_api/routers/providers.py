@@ -139,11 +139,15 @@ async def get_provider_balances(
 
     try:
         pool = get_redis_pool(url=settings.redis_url)
-        raw = await pool.get(REDIS_BALANCE_KEY)
+        raw = await pool.execute_with_retry("get", REDIS_BALANCE_KEY)
         if raw is not None:
             if isinstance(raw, bytes):
                 raw = raw.decode("utf-8")
-            cached = json.loads(raw) if isinstance(raw, str) else dict(raw)
+            if isinstance(raw, str):
+                parsed = json.loads(raw)
+                cached = parsed if isinstance(parsed, dict) else {}
+            elif isinstance(raw, dict):
+                cached = raw
     except Exception:
         logger.warning("Provider balance read from Redis failed", exc_info=True)
         cached = {}

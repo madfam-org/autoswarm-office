@@ -564,7 +564,7 @@ async def process_task(task_data: dict) -> None:
             api_status = "failed"
         else:
             api_status = "failed"
-        api_result = _state_dict(result, "result")
+        api_result = _state_dict(result, "result") or {}
         if graph_type == "deployment":
             api_result = {
                 **api_result,

@@ -418,8 +418,9 @@ async def dispatch_task(
     """
     # Idempotency replay short-circuit. Must run before any DB work so
     # the second call doesn't even hit the compute-budget ledger.
-    if idem.is_replay and idem.cached is not None:
-        return SwarmTaskResponse.model_validate(idem.cached)
+    cached_response = getattr(idem, "cached", None)
+    if getattr(idem, "is_replay", False) and cached_response is not None:
+        return SwarmTaskResponse.model_validate(cached_response)
 
     settings = get_settings()
 
@@ -638,11 +639,10 @@ async def dispatch_task(
             detail="Compute token budget exceeded for today",
         )
 
-    idempotency_key = (
-        body.idempotency_key
-        or request.headers.get("Idempotency-Key")
-        or str(uuid.uuid4())
-    )
+    header_idempotency_key = request.headers.get("Idempotency-Key")
+    if not isinstance(header_idempotency_key, str):
+        header_idempotency_key = None
+    idempotency_key = body.idempotency_key or header_idempotency_key or str(uuid.uuid4())
     task_audience = caller_audience.value
     canonical_envelope: dict[str, Any] = {
         "schema": "selva.task-envelope/v1",
@@ -802,7 +802,8 @@ async def dispatch_task(
     # Cache the response BEFORE returning so a network blip mid-response
     # on the first call still gives the second call something to replay.
     # No-op when the caller didn't send Idempotency-Key.
-    await idem.save(response.model_dump(mode="json"))
+    if isinstance(idem, IdempotencyContext):
+        await idem.save(response.model_dump(mode="json"))
 
     return response
 

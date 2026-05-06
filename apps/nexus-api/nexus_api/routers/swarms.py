@@ -120,6 +120,16 @@ class ManifestDispatchRequest(BaseModel):
     idempotency_key: str | None = Field(default=None, max_length=200)
 
 
+class ManifestVerifyResponse(BaseModel):
+    ok: bool
+    kind: str | None
+    api_version: str | None
+    manifest_hash: str | None
+    derived: dict[str, Any]
+    gaps: list[str]
+    unsupported_placeholders: list[str]
+
+
 class SwarmTaskResponse(BaseModel):
     id: str
     description: str
@@ -382,6 +392,138 @@ def _deployment_dispatch_from_ecosystem_app(
             or f"ecosystem-app:{app_identity}:{environment}:{desired_state_hash}"
         ),
         desired_state_hash=desired_state_hash,
+    )
+
+
+def _verify_ecosystem_app_manifest(manifest: dict[str, Any]) -> ManifestVerifyResponse:
+    """Validate and derive canonical EcosystemApp/AppSpec fields without dispatching."""
+    raw_kind = manifest.get("kind")
+    raw_api_version = manifest.get("apiVersion")
+    kind = raw_kind if isinstance(raw_kind, str) else None
+    api_version = raw_api_version if isinstance(raw_api_version, str) else None
+    gaps: list[str] = []
+    unsupported_placeholders: list[str] = []
+
+    if kind != "EcosystemApp":
+        gaps.append("manifest.kind must be EcosystemApp")
+    if api_version != "madfam.io/v1alpha1":
+        gaps.append("manifest.apiVersion must be madfam.io/v1alpha1")
+
+    metadata = manifest.get("metadata") or {}
+    spec = manifest.get("spec") or {}
+    deployment = spec.get("deployment") if isinstance(spec, dict) else {}
+    deployment = deployment or {}
+
+    if not isinstance(metadata, dict):
+        gaps.append("metadata must be an object")
+        metadata = {}
+    if not isinstance(spec, dict):
+        gaps.append("spec must be an object")
+        spec = {}
+    if not isinstance(deployment, dict):
+        gaps.append("spec.deployment must be an object")
+        deployment = {}
+
+    labels = metadata.get("labels")
+    if not isinstance(labels, dict):
+        labels = {}
+    metadata_app_id = _pick_first(metadata.get("app_id"), metadata.get("name"))
+
+    service = _pick_first(
+        deployment.get("service"),
+        deployment.get("service_id"),
+        deployment.get("app_id"),
+        spec.get("service"),
+        spec.get("service_id"),
+        spec.get("app_id"),
+        spec.get("id"),
+        metadata_app_id,
+    )
+    app_id = _pick_first(
+        deployment.get("app_id"),
+        spec.get("app_id"),
+        spec.get("id"),
+        metadata_app_id,
+        service,
+    )
+    environment = str(
+        _pick_first(
+            deployment.get("environment"),
+            spec.get("environment"),
+            metadata.get("environment"),
+            labels.get("environment"),
+            "staging",
+        )
+    ).lower()
+
+    for path, value in (
+        ("metadata.app_id", metadata_app_id),
+        ("metadata.environment", metadata.get("environment")),
+        ("metadata.idempotency_key", metadata.get("idempotency_key")),
+        ("metadata.desired_state_hash", metadata.get("desired_state_hash")),
+        ("spec.identity", spec.get("identity")),
+        ("spec.runtime", spec.get("runtime")),
+        ("spec.deployment.gitops_app", deployment.get("gitops_app")),
+        ("spec.orchestration", spec.get("orchestration")),
+        ("spec.observability", spec.get("observability")),
+    ):
+        if not value:
+            gaps.append(path)
+
+    smoke_checks = deployment.get("smoke_checks") or []
+    current_pointer = deployment.get("current_pointer") or {}
+    rollback_pointer = deployment.get("rollback_pointer") or {}
+    if environment == "production":
+        if not smoke_checks:
+            gaps.append("spec.deployment.smoke_checks")
+        if not rollback_pointer:
+            gaps.append("spec.deployment.rollback_pointer")
+
+    for path in (
+        "spec.janua",
+        "spec.auth",
+        "spec.enclii",
+        "spec.gitops",
+        "spec.deployment.janua",
+        "spec.deployment.enclii",
+    ):
+        cursor: Any = manifest
+        for part in path.split("."):
+            cursor = cursor.get(part) if isinstance(cursor, dict) else None
+        if cursor:
+            unsupported_placeholders.append(path)
+
+    manifest_hash = _canonical_manifest_hash(manifest)
+    derived = {
+        "graph_type": "deployment",
+        "service": str(service or ""),
+        "app_id": str(app_id or ""),
+        "environment": environment,
+        "gitops_app": deployment.get("gitops_app") or "",
+        "branch": deployment.get("branch") or spec.get("branch") or "",
+        "manifest_path": deployment.get("manifest_path") or spec.get("manifest_path") or "",
+        "overlay_path": deployment.get("overlay_path") or deployment.get("manifest_path") or "",
+        "repo_path": (
+            deployment.get("repo_path")
+            or deployment.get("repo")
+            or spec.get("repo_path")
+            or ""
+        ),
+        "smoke_checks": smoke_checks if isinstance(smoke_checks, list) else [smoke_checks],
+        "current_pointer": current_pointer,
+        "rollback_pointer": rollback_pointer,
+        "desired_state_hash": manifest_hash,
+        "idempotency_key": f"ecosystem-app:{app_id or service or ''}:{environment}:{manifest_hash}",
+    }
+
+    return ManifestVerifyResponse(
+        ok=not gaps and not unsupported_placeholders,
+        kind=kind,
+        api_version=api_version,
+        manifest_hash=manifest_hash,
+        derived=derived,
+        gaps=gaps,
+        unsupported_placeholders=unsupported_placeholders,
     )
 
 
@@ -848,6 +990,33 @@ async def dispatch_ecosystem_app_manifest(
         idempotency_key=manifest_body.idempotency_key or request.headers.get("Idempotency-Key"),
     )
     return await dispatch_task(dispatch_body, request, db=db, tenant=tenant, idem=idem)
+
+
+@router.post(
+    "/dispatch/ecosystem-app/verify",
+    response_model=ManifestVerifyResponse,
+    dependencies=[
+        Depends(require_non_guest),
+        Depends(require_non_demo),
+    ],
+)
+async def verify_ecosystem_app_manifest(
+    request: Request,
+    body: Any = Body(None),
+) -> ManifestVerifyResponse:
+    """Read-only EcosystemApp/AppSpec verification; never dispatches or mutates."""
+    if body is None:
+        body = await request.body()
+
+    if isinstance(body, ManifestDispatchRequest):
+        manifest_body = body
+    elif isinstance(body, dict) and "manifest" in body:
+        manifest_body = ManifestDispatchRequest.model_validate(body)
+    else:
+        manifest_body = ManifestDispatchRequest(manifest=body)
+
+    manifest = _parse_ecosystem_app_manifest(manifest_body.manifest)
+    return _verify_ecosystem_app_manifest(manifest)
 
 
 @router.get("/tasks", response_model=list[SwarmTaskResponse])

@@ -34,6 +34,7 @@ from nexus_api.routers.swarms import (
     _deployment_status_from_evidence,
     _parse_ecosystem_app_manifest,
     _pick_first,
+    _verify_ecosystem_app_manifest,
 )
 
 # ---------------------------------------------------------------------------
@@ -86,6 +87,56 @@ class TestDispatchRequestSchema:
 
     def test_ecosystem_app_manifest_maps_to_deployment_dispatch(self) -> None:
         manifest = {
+            "apiVersion": "madfam.io/v1alpha1",
+            "kind": "EcosystemApp",
+            "metadata": {
+                "app_id": "forgesight",
+                "environment": "production",
+                "idempotency_key": "forgesight-production-v1",
+                "desired_state_hash": "sha256:"
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                "labels": {"environment": "production"},
+            },
+            "spec": {
+                "identity": {"issuer": "https://auth.madfam.io"},
+                "runtime": {"namespace": "forgesight"},
+                "id": "forgesight",
+                "deployment": {
+                    "gitops_app": "forgesight-production",
+                    "branch": "main",
+                    "manifest_path": "apps/forgesight/app.yaml",
+                    "repo_path": "madfam-org/forgesight",
+                    "smoke_checks": [
+                        {"url": "https://forgesight.quest/health", "expect_status": 200}
+                    ],
+                    "current_pointer": {"git_sha": "abc123"},
+                    "rollback_pointer": {"git_sha": "def456"},
+                },
+                "orchestration": {"audience": "platform"},
+                "observability": {"evidence_retention_days": 365},
+            },
+        }
+
+        req = _deployment_dispatch_from_ecosystem_app(
+            manifest,
+            assigned_agent_ids=["agent-1"],
+            required_skills=["deployment"],
+            source="ecosystem-app",
+            idempotency_key=None,
+        )
+
+        assert req.graph_type == "deployment"
+        assert req.assigned_agent_ids == ["agent-1"]
+        assert req.required_skills == ["deployment"]
+        assert req.payload["service"] == "forgesight"
+        assert req.payload["environment"] == "production"
+        assert req.payload["gitops_app"] == "forgesight-production"
+        assert req.payload["rollback_pointer"] == {"git_sha": "def456"}
+        assert req.idempotency_key is not None
+        assert req.idempotency_key.startswith("ecosystem-app:forgesight:production:")
+
+    def test_ecosystem_app_verify_returns_derived_read_only_surface(self) -> None:
+        manifest = {
             "apiVersion": "madfam.io/v1",
             "kind": "EcosystemApp",
             "metadata": {
@@ -108,23 +159,46 @@ class TestDispatchRequestSchema:
             },
         }
 
-        req = _deployment_dispatch_from_ecosystem_app(
-            manifest,
-            assigned_agent_ids=["agent-1"],
-            required_skills=["deployment"],
-            source="ecosystem-app",
-            idempotency_key=None,
+        out = _verify_ecosystem_app_manifest(manifest)
+
+        assert out.ok is True
+        assert out.kind == "EcosystemApp"
+        assert out.gaps == []
+        assert out.unsupported_placeholders == []
+        assert out.derived["graph_type"] == "deployment"
+        assert out.derived["app_id"] == "forgesight"
+        assert out.derived["environment"] == "production"
+        assert out.derived["desired_state_hash"] == out.manifest_hash
+        assert out.derived["idempotency_key"].startswith(
+            "ecosystem-app:forgesight:production:"
         )
 
-        assert req.graph_type == "deployment"
-        assert req.assigned_agent_ids == ["agent-1"]
-        assert req.required_skills == ["deployment"]
-        assert req.payload["service"] == "forgesight"
-        assert req.payload["environment"] == "production"
-        assert req.payload["gitops_app"] == "forgesight-production"
-        assert req.payload["rollback_pointer"] == {"git_sha": "def456"}
-        assert req.idempotency_key is not None
-        assert req.idempotency_key.startswith("ecosystem-app:forgesight:production:")
+    def test_ecosystem_app_verify_reports_gaps_and_unsupported_placeholders(self) -> None:
+        out = _verify_ecosystem_app_manifest(
+            {
+                "apiVersion": "madfam.io/v1",
+                "kind": "EcosystemApp",
+                "metadata": {"labels": {"environment": "production"}},
+                "spec": {
+                    "deployment": {"enclii": {"mode": "future"}},
+                    "janua": {"client": "future"},
+                },
+            }
+        )
+
+        assert out.ok is False
+        assert "metadata.app_id" in out.gaps
+        assert "metadata.environment" in out.gaps
+        assert "metadata.idempotency_key" in out.gaps
+        assert "metadata.desired_state_hash" in out.gaps
+        assert "spec.identity" in out.gaps
+        assert "spec.runtime" in out.gaps
+        assert "spec.deployment.gitops_app" in out.gaps
+        assert "spec.deployment.smoke_checks" in out.gaps
+        assert "spec.deployment.rollback_pointer" in out.gaps
+        assert "spec.orchestration" in out.gaps
+        assert "spec.observability" in out.gaps
+        assert out.unsupported_placeholders == ["spec.janua", "spec.deployment.enclii"]
 
     def test_production_ecosystem_app_requires_safety_fields(self) -> None:
         from fastapi import HTTPException

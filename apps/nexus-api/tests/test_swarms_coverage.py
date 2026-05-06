@@ -137,14 +137,19 @@ class TestDispatchRequestSchema:
 
     def test_ecosystem_app_verify_returns_derived_read_only_surface(self) -> None:
         manifest = {
-            "apiVersion": "madfam.io/v1",
+            "apiVersion": "madfam.io/v1alpha1",
             "kind": "EcosystemApp",
             "metadata": {
-                "name": "forgesight",
+                "app_id": "forgesight",
+                "environment": "production",
+                "idempotency_key": "ecosystem-app:forgesight:production:abc123",
+                "desired_state_hash": "sha256:abc123",
                 "labels": {"environment": "production"},
             },
             "spec": {
                 "id": "forgesight",
+                "identity": {"janua_client_id": "forgesight-app"},
+                "runtime": {"namespace": "forgesight"},
                 "deployment": {
                     "gitops_app": "forgesight-production",
                     "branch": "main",
@@ -156,6 +161,8 @@ class TestDispatchRequestSchema:
                     "current_pointer": {"git_sha": "abc123"},
                     "rollback_pointer": {"git_sha": "def456"},
                 },
+                "orchestration": {"selva_graph": "deployment"},
+                "observability": {"health_url": "https://forgesight.quest/health"},
             },
         }
 
@@ -163,11 +170,14 @@ class TestDispatchRequestSchema:
 
         assert out.ok is True
         assert out.kind == "EcosystemApp"
+        assert out.api_version == "madfam.io/v1alpha1"
         assert out.gaps == []
         assert out.unsupported_placeholders == []
         assert out.derived["graph_type"] == "deployment"
         assert out.derived["app_id"] == "forgesight"
         assert out.derived["environment"] == "production"
+        assert out.derived["current_pointer"] == {"git_sha": "abc123"}
+        assert out.derived["rollback_pointer"] == {"git_sha": "def456"}
         assert out.derived["desired_state_hash"] == out.manifest_hash
         assert out.derived["idempotency_key"].startswith(
             "ecosystem-app:forgesight:production:"

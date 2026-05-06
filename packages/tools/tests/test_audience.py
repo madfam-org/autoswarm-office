@@ -96,10 +96,10 @@ class TestCanAccess:
     def test_tenant_swarm_does_not_see_platform_tools(self) -> None:
         assert not can_access(Audience.PLATFORM, Audience.TENANT)
 
-    def test_unbound_audience_is_permissive(self) -> None:
-        # Backward compat: code that never binds an audience must still
-        # work (tests, CLIs, early migration).
-        assert can_access(Audience.PLATFORM, None)
+    def test_unbound_audience_fails_closed_for_platform_tools(self) -> None:
+        # Enforcement-on mode mirrors production: platform mutation tools
+        # require an explicit platform binding.
+        assert not can_access(Audience.PLATFORM, None)
         assert can_access(Audience.TENANT, None)
 
 
@@ -147,10 +147,10 @@ class TestEnforceAudience:
             with pytest.raises(AudienceMismatch):
                 await _FakePlatformTool().execute()
 
-    async def test_platform_tool_unbound_is_permissive(self) -> None:
-        # No with_audience block — backward compat.
-        res = await _FakePlatformTool().execute()
-        assert res.success is True
+    async def test_platform_tool_unbound_raises_when_enforced(self) -> None:
+        # No with_audience block in enforcement-on mode must fail closed.
+        with pytest.raises(AudienceMismatch):
+            await _FakePlatformTool().execute()
 
 
 # ---------------------------------------------------------------------------

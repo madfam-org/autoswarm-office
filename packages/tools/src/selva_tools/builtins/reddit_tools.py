@@ -283,7 +283,7 @@ def _build_reddit_client(creds: dict[str, str]) -> Any:
     :class:`ToolNotConfiguredError` so ops gets a clear signal.
     """
     try:
-        import praw  # type: ignore[import-untyped]
+        import praw  # type: ignore[import-not-found]
     except ImportError as exc:
         raise ToolNotConfiguredError(
             "praw not installed — `pip install praw>=7.7` in the worker image"

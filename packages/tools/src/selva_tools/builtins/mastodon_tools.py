@@ -381,7 +381,7 @@ def _build_mastodon_client(creds: dict[str, str]) -> Any:
     :class:`ToolNotConfiguredError` so ops gets a clear signal.
     """
     try:
-        from mastodon import Mastodon  # type: ignore[import-untyped]
+        from mastodon import Mastodon  # type: ignore[import-not-found]
     except ImportError as exc:
         raise ToolNotConfiguredError(
             "Mastodon.py not installed — `pip install Mastodon.py>=1.8` "

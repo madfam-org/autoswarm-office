@@ -74,6 +74,7 @@ ALLOWED_NAMESPACES = frozenset(
         "janua",
         "janua-staging",
         "autoswarm",
+        "autoswarm-office",
         "phyne-crm",
         "phyne-crm-staging",
     }

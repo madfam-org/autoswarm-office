@@ -24,9 +24,9 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: autoswarm-office
+  project: default
   source:
-    repoURL: https://github.com/madfam-org/autoswarm-office
+    repoURL: https://github.com/madfam-org/selva-office.git
     targetRevision: main
     path: infra/k8s/overlays/staging
   destination:

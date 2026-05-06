@@ -45,8 +45,46 @@ env:
   ORG: madfam-org
 
 jobs:
+  preflight:
+    name: Staging provisioning preflight
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          STAGING_ENABLED: ${{ vars.STAGING_ENABLED }}
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+          STAGING_UI_URL: ${{ vars.STAGING_UI_URL }}
+          STAGING_ADMIN_URL: ${{ vars.STAGING_ADMIN_URL }}
+          STAGING_WS_URL: ${{ vars.STAGING_WS_URL }}
+          STAGING_GW_URL: ${{ vars.STAGING_GW_URL }}
+        run: |
+          set -euo pipefail
+          if [[ "${STAGING_ENABLED:-}" != "true" ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Staging deploy skipped: set STAGING_ENABLED=true after provisioning autoswarm-staging ArgoCD app, secrets, DNS, and tunnel routes."
+            exit 0
+          fi
+
+          missing=()
+          for name in STAGING_API_URL STAGING_UI_URL STAGING_ADMIN_URL STAGING_WS_URL STAGING_GW_URL; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::error::Staging enabled but required URL variables are missing: ${missing[*]}"
+            exit 1
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build ${{ matrix.service }} staging image
+    needs: preflight
+    if: needs.preflight.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -208,11 +246,11 @@ jobs:
 
       - name: Run staging smoke script
         env:
-          STAGING_API_URL: ${{ vars.STAGING_API_URL || 'https://staging-api.selva.town' }}
-          STAGING_UI_URL: ${{ vars.STAGING_UI_URL || 'https://staging.selva.town' }}
-          STAGING_ADMIN_URL: ${{ vars.STAGING_ADMIN_URL || 'https://staging-admin.selva.town' }}
-          STAGING_WS_URL: ${{ vars.STAGING_WS_URL || 'https://staging-ws.selva.town' }}
-          STAGING_GW_URL: ${{ vars.STAGING_GW_URL || 'https://staging-gw.selva.town' }}
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+          STAGING_UI_URL: ${{ vars.STAGING_UI_URL }}
+          STAGING_ADMIN_URL: ${{ vars.STAGING_ADMIN_URL }}
+          STAGING_WS_URL: ${{ vars.STAGING_WS_URL }}
+          STAGING_GW_URL: ${{ vars.STAGING_GW_URL }}
         run: |
           chmod +x scripts/staging-smoke.sh
           scripts/staging-smoke.sh

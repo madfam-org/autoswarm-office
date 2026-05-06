@@ -14,8 +14,8 @@ TENANT-tagged tools. No separate SHARED bucket — platform is a superset.
 
 Default for ``BaseTool.audience`` is ``TENANT`` so new tools don't
 accidentally reserve themselves to platform. Dangerous tools must be
-opted-in to PLATFORM explicitly. A regression test enumerates the
-known-dangerous tools and asserts they're tagged.
+opted-in to PLATFORM explicitly. In production, enforcement defaults
+on and unbound callers fail closed for PLATFORM tools.
 """
 
 from __future__ import annotations
@@ -37,9 +37,34 @@ logger = logging.getLogger(__name__)
 _AUDIENCE_FILTER_ENABLED_ENV = "AUDIENCE_FILTER_ENABLED"
 
 
-def _enforcement_enabled() -> bool:
-    raw = os.environ.get(_AUDIENCE_FILTER_ENABLED_ENV, "")
+def _truthy(raw: str) -> bool:
     return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _falsey(raw: str) -> bool:
+    return raw.strip().lower() in ("0", "false", "no", "off")
+
+
+def _production_environment() -> bool:
+    """Best-effort production detection shared by API, workers, and CLIs."""
+    for key in ("SELVA_ENV", "APP_ENV", "ENVIRONMENT", "NODE_ENV"):
+        if os.environ.get(key, "").strip().lower() == "production":
+            return True
+    return False
+
+
+def _enforcement_enabled() -> bool:
+    raw = os.environ.get(_AUDIENCE_FILTER_ENABLED_ENV)
+    if raw is None:
+        return _production_environment()
+    if _falsey(raw):
+        return False
+    return _truthy(raw)
+
+
+def _fail_closed_unbound() -> bool:
+    """Production callers must bind an audience before using platform tools."""
+    return _enforcement_enabled()
 
 
 class Audience(enum.StrEnum):
@@ -86,12 +111,12 @@ def can_access(tool_audience: Audience, swarm_audience: Audience | None) -> bool
     Rules:
     - Platform swarms see everything.
     - Tenant swarms see only TENANT-tagged tools.
-    - If the swarm audience is not bound (None), be permissive — this
-      preserves backward compatibility for callers that never set up
-      audience (tests, CLI, early migration).
+    - If the swarm audience is not bound (None), development stays
+      permissive for backward compatibility. Production/enforced mode
+      fails closed for PLATFORM tools and permits only TENANT tools.
     """
     if swarm_audience is None:
-        return True
+        return tool_audience is Audience.TENANT if _fail_closed_unbound() else True
     if swarm_audience is Audience.PLATFORM:
         return True
     return tool_audience is Audience.TENANT

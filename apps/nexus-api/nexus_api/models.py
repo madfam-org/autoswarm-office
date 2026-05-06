@@ -141,6 +141,61 @@ class SwarmTask(Base):
     )
 
 
+class DeploymentEvidenceRecord(Base):
+    """Minimal append-only evidence ledger for deployment task status updates."""
+
+    __tablename__ = "deployment_evidence_records"
+    __table_args__ = (
+        Index("ix_deployment_evidence_records_task_created", "task_id", "created_at"),
+        Index("ix_deployment_evidence_records_org_created", "org_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("swarm_tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    org_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    graph_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    deployment_status: Mapped[str] = mapped_column(String(50), nullable=False)
+    evidence: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class SwarmTaskOutbox(Base):
+    """Durable Redis publication record for a SwarmTask."""
+
+    __tablename__ = "swarm_task_outbox"
+    __table_args__ = (
+        Index("ix_swarm_task_outbox_due", "status", "next_attempt_at", "created_at"),
+        Index("ix_swarm_task_outbox_task_id", "task_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("swarm_tasks.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    org_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    stream_name: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="autoswarm:task-stream"
+    )
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stream_message_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
 class Workflow(Base):
     """A custom workflow definition stored as YAML."""
 

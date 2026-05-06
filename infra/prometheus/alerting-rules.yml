@@ -189,3 +189,84 @@ groups:
             tool failure. Per-graph-type breakdown lives on the dashboard.
           slo: "docs/SLOS.md §6 (Overall task success rate — ≥ 95% over 7 days)"
           runbook_url: "https://runbooks.selva.town/slo/task-success-rate"  # TODO operator: replace with real runbook
+
+  # ────────────────────────────────────────────────────────────────
+  # Recursive deployment reliability
+  # ────────────────────────────────────────────────────────────────
+  - name: selva.slo.recursive_deploy
+    rules:
+      - alert: SelvaSwarmTaskOutboxBacklogHigh
+        expr: selva:swarm_task_outbox:retryable_pending_depth > 25
+        for: 10m
+        labels:
+          severity: notify
+          tier: "2"
+        annotations:
+          summary: "Swarm task outbox retryable/pending depth is high on {{ $labels.service }}"
+          description: |
+            swarm_task_outbox has more than 25 pending or retryable rows for
+            10 minutes. Recursive deploy dispatch may be lagging or Redis
+            publication may be failing.
+          runbook_url: "https://runbooks.selva.town/deploy/outbox-backlog"  # TODO operator: replace with real runbook
+
+      - alert: SelvaSwarmTaskOutboxRowsStale
+        expr: selva:swarm_task_outbox:stale_rows > 0
+        for: 15m
+        labels:
+          severity: page
+          tier: "1"
+        annotations:
+          summary: "Stale swarm_task_outbox rows on {{ $labels.service }}"
+          description: |
+            At least one pending/retryable outbox row has been due for
+            publication for more than 10 minutes. Recursive deploy tasks may
+            be stuck before workers can observe them.
+          runbook_url: "https://runbooks.selva.town/deploy/outbox-stale"  # TODO operator: replace with real runbook
+
+      - alert: SelvaDeploymentEvidencePolicyFailures
+        expr: selva:deployment:evidence_policy_failures:15m > 0
+        for: 2m
+        labels:
+          severity: notify
+          tier: "2"
+        annotations:
+          summary: "Deployment evidence policy failures for {{ $labels.graph_type }}"
+          description: |
+            Deployment evidence policy rejected one or more deploys in the
+            last 15 minutes. Reason: {{ $labels.reason }}. Investigate
+            missing proof phases before retrying recursive production deploys.
+          runbook_url: "https://runbooks.selva.town/deploy/evidence-policy"  # TODO operator: replace with real runbook
+
+      - alert: SelvaProductionDeploymentEvidenceIncomplete
+        expr: |
+          (
+            selva:deployment:production_evidence_incomplete:30m > 0
+            or
+            selva:deployment:production_missing_evidence_rows > 0
+          )
+        for: 5m
+        labels:
+          severity: page
+          tier: "1"
+        annotations:
+          summary: "Missing or incomplete production deployment evidence"
+          description: |
+            A production deployment completed or failed without complete
+            evidence, or a terminal production deployment task has no evidence
+            ledger row. Treat production deploy state as untrusted until proof
+            is reconciled.
+          runbook_url: "https://runbooks.selva.town/deploy/production-evidence"  # TODO operator: replace with real runbook
+
+      - alert: SelvaProductionDeployFailedAfterPolicyGate
+        expr: selva:deployment:production_failures_after_policy_gate:30m > 0
+        for: 2m
+        labels:
+          severity: page
+          tier: "1"
+        annotations:
+          summary: "Production deploy failed after evidence policy gate passed"
+          description: |
+            A production deployment reported failure after passing the evidence
+            policy gate in the last 30 minutes. This points to a post-gate
+            execution or convergence regression.
+          runbook_url: "https://runbooks.selva.town/deploy/post-policy-failure"  # TODO operator: replace with real runbook

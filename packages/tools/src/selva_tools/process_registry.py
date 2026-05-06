@@ -11,6 +11,7 @@ import subprocess
 import time
 from typing import Any
 
+from .audience import Audience
 from .base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ def _collect_zombies() -> None:
 class StartBackgroundProcessTool(BaseTool):
     name = "start_background_process"
     description = "Start a shell command as a persistent background process."
+    audience = Audience.PLATFORM
 
     def parameters_schema(self) -> dict[str, Any]:
         return {
@@ -95,6 +97,7 @@ class ListBackgroundProcessesTool(BaseTool):
 class KillBackgroundProcessTool(BaseTool):
     name = "kill_background_process"
     description = "Terminate a background process by name or PID."
+    audience = Audience.PLATFORM
 
     def parameters_schema(self) -> dict[str, Any]:
         return {

@@ -27,6 +27,11 @@ const NAV_LINKS = [
   },
   { href: '/billing', label: 'Billing', description: 'Subscription & tokens' },
   { href: '/health', label: 'Health', description: 'System status' },
+  {
+    href: '/evidence',
+    label: 'Evidence',
+    description: 'Deployment evidence ledger',
+  },
 ] as const;
 
 export default function AdminDashboard() {
@@ -157,7 +162,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Navigation cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}

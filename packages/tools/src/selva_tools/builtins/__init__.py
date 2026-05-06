@@ -136,10 +136,12 @@ from .product_catalog import ProductCatalogTool
 from .prometheus import get_prometheus_tools
 from .reddit_tools import RedditPostTool
 from .resend_domain import get_resend_domain_tools
+from .rollback_evidence import get_rollback_evidence_tools
 from .selva_office_provisioning import get_selva_office_provisioning_tools
 from .sentry import get_sentry_tools
 from .skill_performance import get_skill_performance_tools
 from .slack import SlackMessageTool
+from .smoke import get_smoke_tools
 from .stripe_connect import get_stripe_connect_tools
 from .stt import SpeechToTextTool
 from .telegram import get_telegram_tools
@@ -188,6 +190,8 @@ def get_builtin_tools() -> list[BaseTool]:
         TestCoverageForDiffTool(),
         # Deployment pre-flight
         DeployPreflightTool(),
+        *get_smoke_tools(),
+        *get_rollback_evidence_tools(),
         # Web (original)
         WebSearchTool(),
         WebFetchTool(),

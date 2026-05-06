@@ -10,8 +10,14 @@ import hashlib
 import hmac
 import json
 import logging
+import os
+import uuid
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+
+from selva_permissions import resolve_audience
+from selva_redis_pool import get_redis_pool
 
 from ..attribution import (
     domain_of,
@@ -19,6 +25,8 @@ from ..attribution import (
     extract_lead_id,
 )
 from ..config import get_settings
+from ..database import tenant_session
+from ..models import SwarmTask, SwarmTaskOutbox
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/gateway/phyne-crm", tags=["gateway"])
@@ -40,6 +48,37 @@ def _verify_signature(payload: bytes, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+def _webhook_secret(settings: Any) -> str:
+    """Return the configured PhyneCRM webhook secret, if any.
+
+    ``phyne_crm_webhook_secret`` is intentionally resolved with an env
+    fallback because older Settings classes did not declare the field, but
+    production operators may already provide PHYNE_CRM_WEBHOOK_SECRET.
+    """
+    return (
+        getattr(settings, "phyne_crm_webhook_secret", "")
+        or os.getenv("PHYNE_CRM_WEBHOOK_SECRET", "")
+    )
+
+
+def _idempotency_key(request: Request, payload: dict[str, Any], event_type: str) -> str:
+    """Build a stable idempotency key for the durable task envelope."""
+    header_key = request.headers.get("Idempotency-Key")
+    if header_key:
+        return header_key
+
+    provider_key = (
+        request.headers.get("X-PhyneCRM-Event-Id")
+        or str(payload.get("idempotency_key") or "")
+        or str(payload.get("event_id") or "")
+        or str(payload.get("id") or "")
+    )
+    if provider_key:
+        return provider_key
+
+    return f"crm:{event_type}:{uuid.uuid4()}"
+
+
 @router.post("")
 async def phyne_crm_webhook(request: Request):
     """Receive webhook events from PhyneCRM and auto-dispatch agent tasks.
@@ -56,7 +95,9 @@ async def phyne_crm_webhook(request: Request):
 
     # Verify signature
     signature = request.headers.get("X-PhyneCRM-Signature", "")
-    webhook_secret = getattr(settings, "phyne_crm_webhook_secret", "")
+    webhook_secret = _webhook_secret(settings)
+    if settings.environment == "production" and webhook_secret and not signature:
+        raise HTTPException(status_code=401, detail="Missing webhook signature")
     if webhook_secret and not _verify_signature(body, signature, webhook_secret):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
@@ -122,20 +163,67 @@ async def phyne_crm_webhook(request: Request):
             "utm_campaign": data.get("utm_campaign", "hot_lead_auto"),
         }
 
-        # Use Redis to enqueue directly (same pattern as swarms.py)
-        import uuid
+        org_id = str(
+            payload.get("org_id")
+            or data.get("org_id")
+            or matching_playbook.get("org_id")
+            or "madfam-default"
+        )
+        audience = resolve_audience(org_id).value
+        idempotency_key = _idempotency_key(request, payload, event_type)
+        request_id = getattr(request.state, "request_id", None)
 
-        from selva_redis_pool import get_redis_pool
+        canonical_envelope: dict[str, Any] = {
+            "schema": "selva.task-envelope/v1",
+            "task_id": None,
+            "org_id": org_id,
+            "audience": audience,
+            "graph_type": graph_type,
+            "idempotency_key": idempotency_key,
+            "source": "crm-webhook",
+            "desired_state_hash": None,
+            "request_id": request_id,
+        }
+        task_payload = {
+            **task_payload,
+            "_selva_envelope": canonical_envelope,
+        }
 
-        task_id = str(uuid.uuid4())
-        task_msg = json.dumps(
-            {
+        async with tenant_session(org_id) as db:
+            task = SwarmTask(
+                description=description,
+                graph_type=graph_type,
+                assigned_agent_ids=[],
+                payload=task_payload,
+                status="queued",
+                org_id=org_id,
+            )
+            db.add(task)
+            await db.flush()
+            await db.refresh(task)
+
+            task_id = str(task.id)
+            canonical_envelope["task_id"] = task_id
+            task.payload = {
+                **(task.payload or {}),
+                "_selva_envelope": canonical_envelope,
+            }
+            await db.flush()
+
+            task_msg_data: dict[str, Any] = {
+                "schema": "selva.task-envelope/v1",
                 "task_id": task_id,
+                "org_id": org_id,
+                "audience": audience,
                 "graph_type": graph_type,
+                "idempotency_key": idempotency_key,
+                "source": "crm-webhook",
+                "desired_state_hash": None,
                 "description": description,
                 "assigned_agent_ids": [],
                 "required_skills": ["crm-outreach"],
-                "payload": task_payload,
+                "payload": task.payload,
+                "request_id": request_id,
                 "playbook_id": matching_playbook["id"],
                 "playbook": matching_playbook,
                 # Promote lead_id to a top-level field for downstream consumers
@@ -143,10 +231,55 @@ async def phyne_crm_webhook(request: Request):
                 # want to reach into payload.
                 "lead_id": lead_id,
             }
-        )
 
-        pool = get_redis_pool(url=settings.redis_url)
-        await pool.execute_with_retry("xadd", "autoswarm:task-stream", {"data": task_msg})
+            outbox = SwarmTaskOutbox(
+                task_id=task.id,
+                org_id=org_id,
+                stream_name="autoswarm:task-stream",
+                payload=task_msg_data,
+            )
+            db.add(outbox)
+            await db.flush()
+
+            pool = get_redis_pool(url=settings.redis_url)
+            try:
+                msg_id = await pool.execute_with_retry(
+                    "xadd",
+                    "autoswarm:task-stream",
+                    {"data": json.dumps(task_msg_data)},
+                )
+                task.stream_message_id = str(msg_id)
+                outbox.status = "sent"
+                outbox.stream_message_id = str(msg_id)
+                outbox.sent_at = datetime.now(UTC)
+                await db.flush()
+            except Exception as exc:
+                task.status = "pending"
+                outbox.status = "retryable"
+                outbox.retry_count += 1
+                outbox.last_error = str(exc)[:2000]
+                await db.flush()
+                logger.warning(
+                    "Redis unavailable; CRM task %s persisted as pending",
+                    task_id,
+                    exc_info=True,
+                )
+
+            try:
+                from .events import emit_event_db
+
+                await emit_event_db(
+                    db,
+                    event_type="task.dispatched",
+                    event_category="task",
+                    task_id=task.id,
+                    graph_type=task.graph_type,
+                    org_id=org_id,
+                    request_id=request_id,
+                    payload={"description": description[:200], "graph_type": graph_type},
+                )
+            except Exception:
+                logger.debug("Failed to emit task.dispatched event", exc_info=True)
 
         logger.info(
             "CRM auto-dispatch: task=%s event=%s playbook=%s",

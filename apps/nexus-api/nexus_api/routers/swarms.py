@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import hashlib
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -25,7 +26,17 @@ from ..billing_tiers import get_daily_limit
 from ..config import get_settings
 from ..database import get_db
 from ..idempotency import IdempotencyContext, get_idempotency_context
-from ..models import Agent, ComputeTokenLedger, SwarmTask, TaskEvent, TenantConfig, Workflow
+from ..models import (
+    Agent,
+    ComputeTokenLedger,
+    DeploymentEvidenceRecord,
+    SwarmTask,
+    SwarmTaskOutbox,
+    TaskEvent,
+    TenantConfig,
+    Workflow,
+)
+from ..operational_metrics import record_deployment_status_update
 from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter
 
@@ -80,6 +91,33 @@ class DispatchRequest(BaseModel):
         default=None,
         description="UUID of a custom workflow definition (required for graph_type='custom')",
     )
+    source: str = Field(
+        default="api",
+        min_length=1,
+        max_length=80,
+        description="Canonical task source such as api, webhook, scheduler, or selva-recursive.",
+    )
+    idempotency_key: str | None = Field(
+        default=None,
+        max_length=200,
+        description="Consumer-supplied idempotency key copied into the canonical task envelope.",
+    )
+    desired_state_hash: str | None = Field(
+        default=None,
+        max_length=200,
+        description="Optional desired-state hash for provisioning/deployment tasks.",
+    )
+
+
+class ManifestDispatchRequest(BaseModel):
+    manifest: dict[str, Any] | str = Field(
+        ...,
+        description="EcosystemApp manifest as a parsed object, JSON string, or YAML string.",
+    )
+    assigned_agent_ids: list[str] = Field(default_factory=list)
+    required_skills: list[str] = Field(default_factory=list)
+    source: str = Field(default="ecosystem-app-manifest", min_length=1, max_length=80)
+    idempotency_key: str | None = Field(default=None, max_length=200)
 
 
 class SwarmTaskResponse(BaseModel):
@@ -100,6 +138,25 @@ class TaskStatusUpdate(BaseModel):
     result: dict[str, Any] | None = None
     started_at: str | None = None
     error_message: str | None = None
+    deployment_evidence: dict[str, Any] | None = None
+
+
+class DeploymentEvidenceRecordResponse(BaseModel):
+    id: str
+    task_id: str
+    graph_type: str
+    deployment_status: str
+    evidence: dict[str, Any]
+    created_at: str
+
+    model_config = {"from_attributes": True}
+
+
+class DeploymentEvidenceRecordListResponse(BaseModel):
+    evidence_records: list[DeploymentEvidenceRecordResponse]
+    total: int
+    limit: int
+    offset: int
 
 
 # -- Helpers ------------------------------------------------------------------
@@ -133,6 +190,177 @@ def _task_to_response(task: SwarmTask) -> SwarmTaskResponse:
         status=task.status,
         created_at=task.created_at.isoformat(),
         completed_at=task.completed_at.isoformat() if task.completed_at else None,
+    )
+
+
+def _deployment_status_from_evidence(
+    evidence: dict[str, Any],
+    result: dict[str, Any] | None,
+    fallback_status: str,
+) -> str:
+    status_value = (
+        evidence.get("deployment_status")
+        or evidence.get("deploy_status")
+        or evidence.get("status")
+        or (result or {}).get("deploy_status")
+        or fallback_status
+    )
+    return str(status_value)[:50]
+
+
+def _evidence_record_to_response(
+    record: DeploymentEvidenceRecord,
+) -> DeploymentEvidenceRecordResponse:
+    return DeploymentEvidenceRecordResponse(
+        id=str(record.id),
+        task_id=str(record.task_id),
+        graph_type=record.graph_type,
+        deployment_status=record.deployment_status,
+        evidence=record.evidence or {},
+        created_at=record.created_at.isoformat(),
+    )
+
+
+def _parse_ecosystem_app_manifest(raw_manifest: dict[str, Any] | str | bytes) -> dict[str, Any]:
+    if isinstance(raw_manifest, dict):
+        return raw_manifest
+    if isinstance(raw_manifest, bytes):
+        raw_manifest = raw_manifest.decode("utf-8")
+
+    try:
+        parsed = json.loads(raw_manifest)
+    except json.JSONDecodeError:
+        try:
+            import yaml
+
+            parsed = yaml.safe_load(raw_manifest)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="manifest must be valid EcosystemApp JSON or YAML",
+            ) from exc
+
+    if not isinstance(parsed, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="manifest must parse to an object",
+        )
+    return parsed
+
+
+def _pick_first(*values: Any) -> Any:
+    for value in values:
+        if value not in (None, "", [], {}):
+            return value
+    return None
+
+
+def _canonical_manifest_hash(manifest: dict[str, Any]) -> str:
+    canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _deployment_dispatch_from_ecosystem_app(
+    manifest: dict[str, Any],
+    *,
+    assigned_agent_ids: list[str],
+    required_skills: list[str],
+    source: str,
+    idempotency_key: str | None,
+) -> DispatchRequest:
+    kind = manifest.get("kind")
+    if kind != "EcosystemApp":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="manifest.kind must be EcosystemApp",
+        )
+
+    metadata = manifest.get("metadata") or {}
+    spec = manifest.get("spec") or {}
+    deployment = spec.get("deployment") or {}
+    if not isinstance(metadata, dict) or not isinstance(spec, dict) or not isinstance(deployment, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="manifest metadata, spec, and spec.deployment must be objects",
+        )
+
+    service = _pick_first(
+        deployment.get("service"),
+        deployment.get("service_id"),
+        deployment.get("app_id"),
+        spec.get("service"),
+        spec.get("service_id"),
+        spec.get("app_id"),
+        spec.get("id"),
+        metadata.get("name"),
+    )
+    environment = _pick_first(
+        deployment.get("environment"),
+        spec.get("environment"),
+        metadata.get("labels", {}).get("environment") if isinstance(metadata.get("labels"), dict) else None,
+        "staging",
+    )
+    environment = str(environment).lower()
+
+    gitops_app = deployment.get("gitops_app")
+    smoke_checks = deployment.get("smoke_checks") or []
+    current_pointer = deployment.get("current_pointer") or {}
+    rollback_pointer = deployment.get("rollback_pointer") or {}
+
+    if environment == "production":
+        missing = []
+        if not gitops_app:
+            missing.append("spec.deployment.gitops_app")
+        if not smoke_checks:
+            missing.append("spec.deployment.smoke_checks")
+        if not rollback_pointer:
+            missing.append("spec.deployment.rollback_pointer")
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "production_manifest_missing_safety_fields",
+                    "missing": missing,
+                },
+            )
+
+    desired_state_hash = _canonical_manifest_hash(manifest)
+    deployment_payload = {
+        "service": str(service or ""),
+        "app_id": str(_pick_first(deployment.get("app_id"), spec.get("app_id"), spec.get("id"), service) or ""),
+        "environment": environment,
+        "gitops_app": gitops_app or "",
+        "branch": deployment.get("branch") or spec.get("branch") or "",
+        "manifest_path": deployment.get("manifest_path") or spec.get("manifest_path") or "",
+        "overlay_path": deployment.get("overlay_path") or deployment.get("manifest_path") or "",
+        "repo_path": deployment.get("repo_path") or deployment.get("repo") or spec.get("repo_path") or "",
+        "smoke_checks": smoke_checks if isinstance(smoke_checks, list) else [smoke_checks],
+        "current_pointer": current_pointer if isinstance(current_pointer, dict) else {},
+        "rollback_pointer": rollback_pointer if isinstance(rollback_pointer, dict) else {},
+        "ecosystem_app": {
+            "apiVersion": manifest.get("apiVersion"),
+            "kind": kind,
+            "metadata": metadata,
+            "spec": spec,
+        },
+        "manifest_hash": desired_state_hash,
+    }
+
+    return DispatchRequest(
+        description=(
+            f"Deploy EcosystemApp {deployment_payload['app_id'] or deployment_payload['service']}"
+            f" to {environment}"
+        ),
+        graph_type="deployment",
+        assigned_agent_ids=assigned_agent_ids,
+        required_skills=required_skills,
+        payload=deployment_payload,
+        source=source,
+        idempotency_key=(
+            idempotency_key
+            or f"ecosystem-app:{deployment_payload['app_id'] or deployment_payload['service']}:{environment}:{desired_state_hash}"
+        ),
+        desired_state_hash=desired_state_hash,
     )
 
 
@@ -389,6 +617,24 @@ async def dispatch_task(
             detail="Compute token budget exceeded for today",
         )
 
+    idempotency_key = body.idempotency_key or request.headers.get("Idempotency-Key") or str(uuid.uuid4())
+    task_audience = caller_audience.value
+    canonical_envelope: dict[str, Any] = {
+        "schema": "selva.task-envelope/v1",
+        "task_id": None,
+        "org_id": tenant.org_id,
+        "audience": task_audience,
+        "graph_type": body.graph_type,
+        "idempotency_key": idempotency_key,
+        "source": body.source,
+        "desired_state_hash": body.desired_state_hash,
+        "request_id": request_id,
+    }
+    task_payload = {
+        **(body.payload or {}),
+        "_selva_envelope": canonical_envelope,
+    }
+
     # Record the debit in the ledger (the in-memory ComputeTokenManager lives
     # in the orchestrator package; the ledger is the durable record).
     wf_uid_value = wf_uid if body.graph_type == "custom" else None
@@ -396,7 +642,7 @@ async def dispatch_task(
         description=body.description,
         graph_type=body.graph_type,
         assigned_agent_ids=assigned_agent_ids,
-        payload=body.payload,
+        payload=task_payload,
         status="queued",
         org_id=tenant.org_id,
         workflow_id=wf_uid_value,
@@ -404,6 +650,12 @@ async def dispatch_task(
     db.add(task)
     await db.flush()
     await db.refresh(task)
+    canonical_envelope["task_id"] = str(task.id)
+    task.payload = {
+        **(task.payload or {}),
+        "_selva_envelope": canonical_envelope,
+    }
+    await db.flush()
 
     ledger_entry = ComputeTokenLedger(
         action="dispatch_task",
@@ -414,47 +666,72 @@ async def dispatch_task(
     db.add(ledger_entry)
     await db.flush()
 
-    # -- Publish to Redis queue for workers -----------------------------------
+    # -- Durable outbox for Redis queue publication ---------------------------
+    task_msg_data: dict[str, Any] = {
+        "schema": "selva.task-envelope/v1",
+        "task_id": str(task.id),
+        "org_id": tenant.org_id,
+        "audience": task_audience,
+        "graph_type": task.graph_type,
+        "idempotency_key": idempotency_key,
+        "source": body.source,
+        "desired_state_hash": body.desired_state_hash,
+        "description": task.description,
+        "assigned_agent_ids": task.assigned_agent_ids,
+        "required_skills": body.required_skills,
+        "payload": task.payload,
+        "request_id": request_id,
+    }
+    if workflow_yaml is not None:
+        task_msg_data["workflow_yaml"] = workflow_yaml
+
+    # Resolve matching playbook for autonomous execution (Axiom IV)
+    try:
+        from .playbooks import _playbooks
+
+        trigger_event = (task.payload or {}).get("trigger_event", "")
+        if trigger_event:
+            for pb in _playbooks.values():
+                if (
+                    pb["trigger_event"] == trigger_event
+                    and pb["enabled"]
+                    and not pb["require_approval"]
+                ):
+                    task_msg_data["playbook_id"] = pb["id"]
+                    task_msg_data["playbook"] = pb
+                    break
+    except Exception:
+        logging.getLogger(__name__).debug(
+            "Failed to resolve autonomous playbook for trigger_event",
+            exc_info=True,
+        )
+
+    outbox = SwarmTaskOutbox(
+        task_id=task.id,
+        org_id=tenant.org_id,
+        stream_name="autoswarm:task-stream",
+        payload=task_msg_data,
+    )
+    db.add(outbox)
+    await db.flush()
+
+    # Existing best-effort Redis publish path remains for compatibility.
+    # The outbox row above is durable and committed with the SwarmTask;
+    # if Redis fails, the legacy DB-pending worker reclaim still applies.
     try:
         pool = get_redis_pool(url=settings.redis_url)
-        task_msg_data: dict[str, Any] = {
-            "task_id": str(task.id),
-            "graph_type": task.graph_type,
-            "description": task.description,
-            "assigned_agent_ids": task.assigned_agent_ids,
-            "required_skills": body.required_skills,
-            "payload": task.payload,
-            "request_id": request_id,
-        }
-        if workflow_yaml is not None:
-            task_msg_data["workflow_yaml"] = workflow_yaml
-
-        # Resolve matching playbook for autonomous execution (Axiom IV)
-        try:
-            from .playbooks import _playbooks
-
-            trigger_event = (task.payload or {}).get("trigger_event", "")
-            if trigger_event:
-                for pb in _playbooks.values():
-                    if (
-                        pb["trigger_event"] == trigger_event
-                        and pb["enabled"]
-                        and not pb["require_approval"]
-                    ):
-                        task_msg_data["playbook_id"] = pb["id"]
-                        task_msg_data["playbook"] = pb
-                        break
-        except Exception:
-            logging.getLogger(__name__).debug(
-                "Failed to resolve autonomous playbook for trigger_event",
-                exc_info=True,
-            )
         task_msg = json.dumps(task_msg_data)
-        await pool.execute_with_retry("xadd", "autoswarm:task-stream", {"data": task_msg})
-    except Exception:
-        # If Redis is unavailable the task is still persisted in the DB.
-        # Workers can fall back to polling the database.
+        msg_id = await pool.execute_with_retry("xadd", "autoswarm:task-stream", {"data": task_msg})
+        task.stream_message_id = str(msg_id)
+        outbox.status = "sent"
+        outbox.stream_message_id = str(msg_id)
+        outbox.sent_at = datetime.now(UTC)
+        await db.flush()
+    except Exception as exc:
         task.status = "pending"
+        outbox.status = "retryable"
+        outbox.retry_count += 1
+        outbox.last_error = str(exc)[:2000]
         await db.flush()
 
     # Emit task.dispatched event (direct DB insert, no HTTP)
@@ -503,6 +780,48 @@ async def dispatch_task(
     await idem.save(response.model_dump(mode="json"))
 
     return response
+
+
+@router.post(
+    "/dispatch/ecosystem-app",
+    response_model=SwarmTaskResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_non_guest),
+        Depends(require_non_demo),
+        Depends(require_dispatch_rate_limit),
+    ],
+)
+async def dispatch_ecosystem_app_manifest(
+    request: Request,
+    body: Any = Body(None),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
+) -> SwarmTaskResponse:
+    """Dispatch an EcosystemApp manifest as a canonical deployment task."""
+    if idem.is_replay and idem.cached is not None:
+        return SwarmTaskResponse.model_validate(idem.cached)
+
+    if body is None:
+        body = await request.body()
+
+    if isinstance(body, ManifestDispatchRequest):
+        manifest_body = body
+    elif isinstance(body, dict) and "manifest" in body:
+        manifest_body = ManifestDispatchRequest.model_validate(body)
+    else:
+        manifest_body = ManifestDispatchRequest(manifest=body)
+
+    manifest = _parse_ecosystem_app_manifest(manifest_body.manifest)
+    dispatch_body = _deployment_dispatch_from_ecosystem_app(
+        manifest,
+        assigned_agent_ids=manifest_body.assigned_agent_ids,
+        required_skills=manifest_body.required_skills,
+        source=manifest_body.source,
+        idempotency_key=manifest_body.idempotency_key or request.headers.get("Idempotency-Key"),
+    )
+    return await dispatch_task(dispatch_body, request, db=db, tenant=tenant, idem=idem)
 
 
 @router.get("/tasks", response_model=list[SwarmTaskResponse])
@@ -664,6 +983,76 @@ async def get_task(
     return _task_to_response(task)
 
 
+@router.get("/evidence", response_model=DeploymentEvidenceRecordListResponse)
+async def list_deployment_evidence_records(
+    task_id: str | None = Query(default=None),  # noqa: B008
+    graph_type: str | None = Query(default=None),  # noqa: B008
+    limit: int = Query(default=50, ge=1, le=200),  # noqa: B008
+    offset: int = Query(default=0, ge=0),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> DeploymentEvidenceRecordListResponse:
+    """List deployment evidence records, newest first. Tenant-scoped."""
+    query = select(DeploymentEvidenceRecord).where(
+        DeploymentEvidenceRecord.org_id == tenant.org_id
+    )
+
+    if task_id:
+        try:
+            task_uid = uuid.UUID(task_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid task_id UUID",
+            ) from exc
+        query = query.where(DeploymentEvidenceRecord.task_id == task_uid)
+
+    if graph_type:
+        query = query.where(DeploymentEvidenceRecord.graph_type == graph_type)
+
+    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+    total = count_result.scalar_one()
+
+    result = await db.execute(
+        query.order_by(DeploymentEvidenceRecord.created_at.desc()).limit(limit).offset(offset)
+    )
+    records = result.scalars().all()
+
+    return DeploymentEvidenceRecordListResponse(
+        evidence_records=[_evidence_record_to_response(record) for record in records],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/evidence/{evidence_id}", response_model=DeploymentEvidenceRecordResponse)
+async def get_deployment_evidence_record(
+    evidence_id: str,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> DeploymentEvidenceRecordResponse:
+    """Retrieve one deployment evidence record by ID. Tenant-scoped."""
+    try:
+        uid = uuid.UUID(evidence_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid UUID") from exc
+
+    result = await db.execute(
+        select(DeploymentEvidenceRecord)
+        .where(DeploymentEvidenceRecord.id == uid)
+        .where(DeploymentEvidenceRecord.org_id == tenant.org_id)
+    )
+    record = result.scalar_one_or_none()
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deployment evidence record not found",
+        )
+
+    return _evidence_record_to_response(record)
+
+
 @router.patch("/tasks/{task_id}", response_model=SwarmTaskResponse)
 async def update_task_status(
     task_id: str,
@@ -702,6 +1091,28 @@ async def update_task_status(
 
     if body.status in ("completed", "failed"):
         task.completed_at = datetime.now(UTC)
+
+    deployment_evidence = body.deployment_evidence
+    if deployment_evidence is None and body.result is not None:
+        result_evidence = body.result.get("deployment_evidence")
+        if isinstance(result_evidence, dict):
+            deployment_evidence = result_evidence
+
+    if deployment_evidence is not None:
+        db.add(
+            DeploymentEvidenceRecord(
+                task_id=task.id,
+                org_id=task.org_id,
+                graph_type=task.graph_type,
+                deployment_status=_deployment_status_from_evidence(
+                    deployment_evidence,
+                    body.result,
+                    body.status,
+                ),
+                evidence=deployment_evidence,
+            )
+        )
+    record_deployment_status_update(task, deployment_evidence)
 
     await db.flush()
     await db.refresh(task)

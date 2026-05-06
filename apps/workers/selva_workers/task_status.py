@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from .auth import get_worker_auth_headers
 from .http_retry import fire_and_forget_request
@@ -17,6 +18,7 @@ async def update_task_status(
     result: dict | None = None,
     started_at: str | None = None,
     error_message: str | None = None,
+    deployment_evidence: dict[str, Any] | None = None,
     org_id: str | None = None,
 ) -> None:
     """PATCH task status to the nexus-api.
@@ -35,10 +37,16 @@ async def update_task_status(
     body: dict = {"status": status}
     if result is not None:
         body["result"] = result
+        if deployment_evidence is None:
+            result_evidence = result.get("deployment_evidence")
+            if isinstance(result_evidence, dict):
+                deployment_evidence = result_evidence
     if started_at is not None:
         body["started_at"] = started_at
     if error_message is not None:
         body["error_message"] = error_message
+    if deployment_evidence is not None:
+        body["deployment_evidence"] = deployment_evidence
 
     url = f"{nexus_url}/api/v1/swarms/tasks/{task_id}"
     success = await fire_and_forget_request(

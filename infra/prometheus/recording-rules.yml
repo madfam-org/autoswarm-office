@@ -321,3 +321,45 @@ groups:
               rate(selva_approval_pending_age_seconds_bucket[1h])
             )
           )
+
+  # ────────────────────────────────────────────────────────────────
+  # Recursive deployment reliability SLIs
+  # ────────────────────────────────────────────────────────────────
+  - name: selva.sli.recursive_deploy
+    interval: 1m
+    rules:
+      - record: selva:swarm_task_outbox:retryable_pending_depth
+        expr: |
+          sum by (service) (
+            selva_swarm_task_outbox_depth{status=~"pending|retryable"}
+          )
+
+      - record: selva:swarm_task_outbox:stale_rows
+        expr: |
+          max by (service) (
+            selva_swarm_task_outbox_stale_rows
+          )
+
+      - record: selva:deployment:evidence_policy_failures:15m
+        expr: |
+          sum by (service, graph_type, reason) (
+            increase(selva_deployment_evidence_policy_failures_total[15m])
+          )
+
+      - record: selva:deployment:production_evidence_incomplete:30m
+        expr: |
+          sum by (service, graph_type, reason) (
+            increase(selva_production_deployment_evidence_incomplete_total[30m])
+          )
+
+      - record: selva:deployment:production_missing_evidence_rows
+        expr: |
+          max by (service) (
+            selva_production_deployment_missing_evidence_rows
+          )
+
+      - record: selva:deployment:production_failures_after_policy_gate:30m
+        expr: |
+          sum by (service, graph_type) (
+            increase(selva_production_deploy_failures_after_policy_gate_total[30m])
+          )

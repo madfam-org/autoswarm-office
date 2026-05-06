@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..audience import Audience
 from ..base import BaseTool, ToolResult
 
 
 class DeployTool(BaseTool):
     name = "deploy_trigger"
     description = "Trigger a deployment via the Enclii platform"
+    audience = Audience.PLATFORM
 
     def parameters_schema(self) -> dict[str, Any]:
         return {

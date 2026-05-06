@@ -10,7 +10,7 @@ import shutil
 import signal
 import sys
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -90,6 +90,8 @@ _AGENT_CACHE_MAXSIZE: int = 256
 # Seconds in one hour — used both as a multiplier (stale_hours → seconds)
 # and as the periodic worktree-cleanup interval.
 _SECONDS_PER_HOUR: int = 3600
+_OUTBOX_MAX_BACKOFF_SECONDS: int = 60
+_OUTBOX_ERROR_MAX_LENGTH: int = 2000
 
 # Agent skill cache: avoids HTTP GET per task (Phase 4.2)
 _skill_cache: TTLCache[str, list[str]] = TTLCache(
@@ -410,6 +412,12 @@ async def process_task(task_data: dict) -> None:
         initial_state["service"] = payload.get("service", "")
         initial_state["environment"] = payload.get("environment", "staging")
         initial_state["image_tag"] = payload.get("image_tag", "latest")
+        initial_state["overlay_path"] = payload.get("overlay_path", "")
+        initial_state["repo_path"] = payload.get("repo_path") or settings.repo_base_path
+        initial_state["gitops_app"] = payload.get("gitops_app", "")
+        initial_state["smoke_checks"] = payload.get("smoke_checks", [])
+        initial_state["current_pointer"] = payload.get("current_pointer", {})
+        initial_state["rollback_pointer"] = payload.get("rollback_pointer", {})
     elif graph_type == "puppeteer":
         payload = task_data.get("payload", {})
         initial_state["subtasks"] = []
@@ -555,12 +563,23 @@ async def process_task(task_data: dict) -> None:
         elif graph_status in ("blocked", "error", "denied", "timeout"):
             api_status = "failed"
         else:
-            api_status = "completed"
+            api_status = "failed"
+        api_result = _state_dict(result, "result")
+        if graph_type == "deployment":
+            api_result = {
+                **api_result,
+                "deploy_status": _state_str(result, "deploy_status"),
+                "argo_sync_status": _state_str(result, "argo_sync_status"),
+                "argo_health_status": _state_str(result, "argo_health_status"),
+                "smoke_status": _state_str(result, "smoke_status"),
+                "rollback_evidence_artifact": _state_dict(result, "rollback_evidence_artifact"),
+                "deployment_evidence": _state_dict(result, "deployment_evidence"),
+            }
         await _update_task_status(
             settings.nexus_api_url,
             task_id,
             api_status,
-            _state_dict(result, "result"),
+            api_result,
             org_id=task_org_id or None,
         )
         await _emit_event(
@@ -867,6 +886,279 @@ async def _process_with_semaphore(
                 await consumer.move_to_dlq(msg_id, task_data, error_msg)
 
 
+def _coerce_json_field(value: object, fallback: object) -> object:
+    if value is None:
+        return fallback
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return fallback
+    return value
+
+
+async def _claim_pending_db_tasks(settings, limit: int) -> list[dict[str, object]]:
+    """Claim DB-pending tasks that missed Redis publication.
+
+    Nexus marks tasks as ``pending`` when the database write succeeded but
+    Redis Stream publication failed. This worker-side reclaim loop treats
+    ``swarm_tasks`` as a minimal durable outbox until a dedicated outbox table
+    exists.
+    """
+    if not settings.database_url:
+        return []
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+    worker_id = f"db-reclaim:{id(asyncio.current_task())}"
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(
+                text(
+                    """
+                    WITH claimed AS (
+                        SELECT id
+                        FROM swarm_tasks
+                        WHERE status = 'pending'
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM swarm_task_outbox o
+                              WHERE o.task_id = swarm_tasks.id
+                                AND o.status IN ('pending', 'retryable')
+                          )
+                        ORDER BY created_at
+                        LIMIT :limit
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    UPDATE swarm_tasks AS t
+                    SET status = 'queued',
+                        retry_count = retry_count + 1,
+                        worker_id = :worker_id
+                    FROM claimed
+                    WHERE t.id = claimed.id
+                    RETURNING
+                        t.id::text AS id,
+                        t.description AS description,
+                        t.graph_type AS graph_type,
+                        t.assigned_agent_ids AS assigned_agent_ids,
+                        t.payload AS payload,
+                        t.org_id AS org_id,
+                        t.workflow_id::text AS workflow_id,
+                        (
+                            SELECT yaml_content
+                            FROM workflows
+                            WHERE workflows.id = t.workflow_id
+                        ) AS workflow_yaml
+                    """
+                ),
+                {"limit": limit, "worker_id": worker_id},
+            )
+            rows = result.mappings().all()
+    except Exception:
+        logger.warning("Failed to reclaim DB-pending swarm tasks", exc_info=True)
+        return []
+    finally:
+        await engine.dispose()
+
+    reclaimed: list[dict[str, object]] = []
+    for row in rows:
+        payload = _coerce_json_field(row.get("payload"), {})
+        assigned_agent_ids = _coerce_json_field(row.get("assigned_agent_ids"), [])
+        if not isinstance(payload, dict):
+            payload = {}
+        if not isinstance(assigned_agent_ids, list):
+            assigned_agent_ids = []
+        envelope = payload.get("_selva_envelope") if isinstance(payload, dict) else None
+        if not isinstance(envelope, dict):
+            envelope = {}
+
+        org_id = str(row.get("org_id") or envelope.get("org_id") or "")
+        graph_type = str(row.get("graph_type") or envelope.get("graph_type") or "sequential")
+        task_data: dict[str, object] = {
+            "schema": "selva.task-envelope/v1",
+            "task_id": str(row["id"]),
+            "org_id": org_id,
+            "audience": envelope.get("audience") or resolve_audience(org_id).value,
+            "graph_type": graph_type,
+            "idempotency_key": envelope.get("idempotency_key") or str(row["id"]),
+            "source": envelope.get("source") or "db-reclaim",
+            "desired_state_hash": envelope.get("desired_state_hash"),
+            "description": str(row.get("description") or ""),
+            "assigned_agent_ids": assigned_agent_ids,
+            "required_skills": payload.get("required_skills", []) if isinstance(payload, dict) else [],
+            "payload": payload,
+            "request_id": envelope.get("request_id"),
+        }
+        workflow_yaml = row.get("workflow_yaml")
+        if workflow_yaml:
+            task_data["workflow_yaml"] = str(workflow_yaml)
+        reclaimed.append(task_data)
+
+    if reclaimed:
+        logger.warning("Reclaimed %d DB-pending swarm task(s)", len(reclaimed))
+    return reclaimed
+
+
+async def _publish_retryable_outbox(settings, limit: int) -> int:
+    """Publish pending/retryable swarm task outbox rows to Redis Streams."""
+    if not settings.database_url:
+        return 0
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    pool = get_redis_pool()
+    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+    published = 0
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(
+                text(
+                    """
+                    SELECT
+                        id::text AS id,
+                        task_id::text AS task_id,
+                        stream_name,
+                        payload,
+                        retry_count
+                    FROM swarm_task_outbox
+                    WHERE status IN ('pending', 'retryable')
+                      AND (next_attempt_at IS NULL OR next_attempt_at <= NOW())
+                    ORDER BY created_at
+                    LIMIT :limit
+                    FOR UPDATE SKIP LOCKED
+                    """
+                ),
+                {"limit": limit},
+            )
+            rows = result.mappings().all()
+
+            for row in rows:
+                outbox_id = str(row["id"])
+                task_id = str(row["task_id"])
+                stream_name = str(row["stream_name"] or "autoswarm:task-stream")
+                payload = _coerce_json_field(row.get("payload"), {})
+                if not isinstance(payload, dict):
+                    payload = {}
+
+                try:
+                    msg_id = await pool.execute_with_retry(
+                        "xadd",
+                        stream_name,
+                        {"data": json.dumps(payload)},
+                    )
+                    stream_message_id = str(msg_id)
+                    await conn.execute(
+                        text(
+                            """
+                            UPDATE swarm_task_outbox
+                            SET status = 'sent',
+                                stream_message_id = :stream_message_id,
+                                last_error = NULL,
+                                sent_at = NOW(),
+                                updated_at = NOW()
+                            WHERE id = CAST(:outbox_id AS uuid)
+                            """
+                        ),
+                        {
+                            "outbox_id": outbox_id,
+                            "stream_message_id": stream_message_id,
+                        },
+                    )
+                    await conn.execute(
+                        text(
+                            """
+                            UPDATE swarm_tasks
+                            SET status = 'queued',
+                                stream_message_id = :stream_message_id
+                            WHERE id = CAST(:task_id AS uuid)
+                              AND status = 'pending'
+                            """
+                        ),
+                        {
+                            "task_id": task_id,
+                            "stream_message_id": stream_message_id,
+                        },
+                    )
+                    published += 1
+                except Exception as exc:
+                    retry_count = int(row.get("retry_count") or 0) + 1
+                    backoff_seconds = min(
+                        _OUTBOX_MAX_BACKOFF_SECONDS,
+                        2 ** min(retry_count, 6),
+                    )
+                    next_attempt_at = datetime.now(UTC) + timedelta(seconds=backoff_seconds)
+                    await conn.execute(
+                        text(
+                            """
+                            UPDATE swarm_task_outbox
+                            SET status = 'retryable',
+                                retry_count = retry_count + 1,
+                                last_error = :last_error,
+                                next_attempt_at = :next_attempt_at,
+                                updated_at = NOW()
+                            WHERE id = CAST(:outbox_id AS uuid)
+                            """
+                        ),
+                        {
+                            "outbox_id": outbox_id,
+                            "last_error": str(exc)[:_OUTBOX_ERROR_MAX_LENGTH],
+                            "next_attempt_at": next_attempt_at,
+                        },
+                    )
+                    logger.warning(
+                        "Failed to publish swarm_task_outbox row %s for task %s",
+                        outbox_id,
+                        task_id,
+                        exc_info=True,
+                    )
+    except Exception:
+        logger.warning("Failed to drain swarm task outbox", exc_info=True)
+        return published
+    finally:
+        await engine.dispose()
+
+    if published:
+        logger.info("Published %d swarm task outbox row(s)", published)
+    return published
+
+
+async def _process_db_task_with_semaphore(task_data: dict[str, object]) -> None:
+    assert _task_semaphore is not None
+    task_id = task_data.get("task_id", "unknown")
+    async with _task_semaphore:
+        try:
+            await process_task(task_data)
+        except Exception:
+            logger.exception("DB-reclaimed task %s failed before status update", task_id)
+
+
+async def _periodic_pending_db_reclaim(settings) -> None:
+    interval = max(settings.redis_block_timeout_ms / 1000, 5.0)
+    while not _shutdown.is_set():
+        await asyncio.sleep(interval)
+        if _shutdown.is_set() or _task_semaphore is None:
+            continue
+        tasks = await _claim_pending_db_tasks(settings, settings.max_concurrent_tasks)
+        for task_data in tasks:
+            if _shutdown.is_set():
+                break
+            task = asyncio.create_task(_process_db_task_with_semaphore(task_data))
+            _active_tasks.add(task)
+            task.add_done_callback(_active_tasks.discard)
+
+
+async def _periodic_outbox_publish(settings) -> None:
+    interval = max(settings.redis_block_timeout_ms / 1000, 5.0)
+    while not _shutdown.is_set():
+        await asyncio.sleep(interval)
+        if _shutdown.is_set():
+            continue
+        await _publish_retryable_outbox(settings, settings.max_concurrent_tasks)
+
+
 async def main() -> None:
     """Entry point: connect to Redis and consume the task stream."""
     global _task_semaphore  # noqa: PLW0603
@@ -954,6 +1246,14 @@ async def main() -> None:
 
     # Initialize concurrency semaphore
     _task_semaphore = asyncio.Semaphore(settings.max_concurrent_tasks)
+
+    pending_db_reclaim_task = asyncio.create_task(_periodic_pending_db_reclaim(settings))
+    _active_tasks.add(pending_db_reclaim_task)
+    pending_db_reclaim_task.add_done_callback(_active_tasks.discard)
+
+    outbox_publish_task = asyncio.create_task(_periodic_outbox_publish(settings))
+    _active_tasks.add(outbox_publish_task)
+    outbox_publish_task.add_done_callback(_active_tasks.discard)
 
     # Exponential backoff state for connection errors
     backoff_delay = 1.0

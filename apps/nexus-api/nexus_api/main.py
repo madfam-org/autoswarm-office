@@ -6,7 +6,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from selva_observability import init_sentry, init_tracing
@@ -23,6 +23,7 @@ from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.security import SecurityHeadersMiddleware, TenantRLSMiddleware
 from .middleware.tracing import TraceContextMiddleware
+from .operational_metrics import render_prometheus_metrics
 from .routers import (
     admin,
     admin_consent,
@@ -131,9 +132,14 @@ def create_app() -> FastAPI:
     try:
         from prometheus_fastapi_instrumentator import Instrumentator
 
-        Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+        Instrumentator().instrument(app)
     except ImportError:
         pass  # prometheus-fastapi-instrumentator not installed
+
+    @app.get("/metrics", include_in_schema=False)
+    async def prometheus_metrics() -> Response:
+        body, content_type = await render_prometheus_metrics()
+        return Response(content=body, media_type=content_type)
 
     # -- CORS -----------------------------------------------------------------
     app.add_middleware(

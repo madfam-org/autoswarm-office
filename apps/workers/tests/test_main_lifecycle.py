@@ -198,8 +198,8 @@ class TestProcessTaskStatusMapping:
         assert mock_status.await_args_list[-1][0][2] == "failed"
 
     @pytest.mark.asyncio
-    async def test_unknown_status_falls_through_to_completed(self) -> None:
-        """graph_status outside the known set defaults to completed."""
+    async def test_unknown_status_fails_closed(self) -> None:
+        """graph_status outside the known set defaults to failed."""
         from selva_workers.__main__ import process_task
 
         cms = _patch_io(graph_result={"status": "weird-unknown-status"})
@@ -210,7 +210,7 @@ class TestProcessTaskStatusMapping:
         finally:
             _exit_all(cms)
 
-        assert mock_status.await_args_list[-1][0][2] == "completed"
+        assert mock_status.await_args_list[-1][0][2] == "failed"
 
 
 # ===========================================================================

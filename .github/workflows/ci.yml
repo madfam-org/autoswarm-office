@@ -528,6 +528,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_URL: https://staging.selva.town
+          NEXT_PUBLIC_MARKETING_URL: https://staging.selva.town
 
   security:
     name: Security Scan

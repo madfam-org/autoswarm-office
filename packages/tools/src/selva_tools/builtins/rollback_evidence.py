@@ -31,15 +31,22 @@ class RollbackEvidenceRecordTool(BaseTool):
             "properties": {
                 "service": {"type": "string", "description": "Service or app name."},
                 "environment": {"type": "string", "description": "Target environment."},
-                "deployment_id": {"type": "string", "description": "Deploy/run/change identifier."},
+                "deployment_id": {
+                    "type": "string",
+                    "description": "Deploy/run/change identifier.",
+                },
                 "current_pointer": {
                     "type": "object",
-                    "description": "Current deployment pointer, e.g. git_sha/image_digest/chart/app revision.",
+                    "description": (
+                        "Current deployment pointer, e.g. git_sha/image_digest/chart/app revision."
+                    ),
                     "default": {},
                 },
                 "rollback_pointer": {
                     "type": "object",
-                    "description": "Known-good pointer to roll back to. Required for a ready record.",
+                    "description": (
+                        "Known-good pointer to roll back to. Required for a ready record."
+                    ),
                     "default": {},
                 },
                 "smoke_result": {
@@ -50,23 +57,35 @@ class RollbackEvidenceRecordTool(BaseTool):
                 "evidence": {
                     "type": "array",
                     "items": {"type": "object"},
-                    "description": "Supporting observations, links, alert IDs, logs, metrics, or operator notes.",
+                    "description": (
+                        "Supporting observations, links, alert IDs, logs, metrics, or operator notes."
+                    ),
                     "default": [],
                 },
                 "rollback_requested": {
                     "type": "boolean",
-                    "description": "Must remain false. This recorder does not execute destructive rollback actions.",
+                    "description": (
+                        "Must remain false. This recorder does not execute destructive rollback actions."
+                    ),
                     "default": False,
                 },
             },
-            "required": ["service", "environment", "deployment_id", "current_pointer", "rollback_pointer"],
+            "required": [
+                "service",
+                "environment",
+                "deployment_id",
+                "current_pointer",
+                "rollback_pointer",
+            ],
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
         if kwargs.get("rollback_requested") is True:
             return ToolResult(
                 success=False,
-                error="rollback execution is not supported by this non-destructive evidence recorder",
+                error=(
+                    "rollback execution is not supported by this non-destructive evidence recorder"
+                ),
             )
 
         service = str(kwargs.get("service") or "").strip()
@@ -92,7 +111,11 @@ class RollbackEvidenceRecordTool(BaseTool):
         if not isinstance(evidence, list):
             return ToolResult(success=False, error="evidence must be a list")
 
-        smoke_verdict = str(smoke_result.get("verdict") or "not_provided") if smoke_result else "not_provided"
+        smoke_verdict = (
+            str(smoke_result.get("verdict") or "not_provided")
+            if smoke_result
+            else "not_provided"
+        )
         record = {
             "schema_version": "rollback-evidence/v1",
             "recorded_at": datetime.now(UTC).isoformat(),
@@ -106,7 +129,10 @@ class RollbackEvidenceRecordTool(BaseTool):
             "rollback_execution": {
                 "performed": False,
                 "supported_by_tool": False,
-                "note": "Evidence capture only; caller must use an explicit rollback executor if policy allows.",
+                "note": (
+                    "Evidence capture only; caller must use an explicit rollback executor "
+                    "if policy allows."
+                ),
             },
         }
         content = json.dumps(record, sort_keys=True, indent=2)

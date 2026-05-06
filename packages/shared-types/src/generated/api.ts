@@ -11,26 +11,6 @@
 
 /* eslint-disable */
 export interface paths {
-    "/metrics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Metrics
-         * @description Endpoint that serves Prometheus metrics.
-         */
-        get: operations["metrics_metrics_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/health": {
         parameters: {
             query?: never;
@@ -194,6 +174,49 @@ export interface paths {
          *     Returns 503 when the invariant does not hold.
          */
         get: operations["consent_ledger_grants_api_v1_health_consent_ledger_grants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/rls-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rls Status
+         * @description Verify the RLS Phase 1.5 strict-mode migration has landed on this DB.
+         *
+         *     Returns the runtime RLS posture so ops can confirm migration 0028
+         *     applied cleanly on a live cluster:
+         *
+         *         - ``strict_mode_enabled``: True iff every tenant table has FORCE
+         *           ROW LEVEL SECURITY AND its policy lacks the Phase 1 ``IS NULL``
+         *           escape-hatch leg. False means the cluster is still on Phase 1
+         *           (migration 0025) policies, OR the rollout is partial.
+         *         - ``policies``: per-table snapshot of the policy definition
+         *           (name + USING clause). Lets ops eyeball that the strict form
+         *           is in place.
+         *         - ``force_rls_tables``: list of tables that have ``FORCE ROW
+         *           LEVEL SECURITY`` enabled. Should equal the tenant-table list
+         *           when strict mode is on.
+         *         - ``app_admin_role_present``: True iff the ``app_admin``
+         *           BYPASSRLS role exists. Required for ``admin_session()`` to
+         *           actually bypass.
+         *
+         *     Open endpoint (no auth) -- matches the rest of `/health/*`.
+         *
+         *     Returns 503 when strict mode is NOT enabled, so the endpoint can
+         *     drive a CI gate or ops dashboard alarm. SQLite test paths return a
+         *     static "not_postgres" response with 200.
+         */
+        get: operations["rls_status_api_v1_health_rls_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -416,6 +439,13 @@ export interface paths {
         /**
          * Approve Request
          * @description Approve a pending request (the Tactician presses 'A').
+         *
+         *     Idempotency: when the caller sends ``Idempotency-Key`` header, a
+         *     successful approval response is cached for 24h scoped by (org_id,
+         *     POST, /api/v1/approvals/{id}/approve, key). Retries with the same
+         *     key replay the cached response. Only the success path is cached —
+         *     a 404 (not found) or 409 (already resolved) leaves the cache empty
+         *     so the next retry can re-evaluate.
          */
         post: operations["approve_request_api_v1_approvals__request_id__approve_post"];
         delete?: never;
@@ -436,8 +466,46 @@ export interface paths {
         /**
          * Deny Request
          * @description Deny a pending request with optional feedback (the Tactician presses 'B').
+         *
+         *     Idempotency: same contract as ``approve_request``. Only the success
+         *     path is cached — a 404 (not found) or 409 (already resolved) leaves
+         *     the cache empty so the next retry can re-evaluate.
          */
         post: operations["deny_request_api_v1_approvals__request_id__deny_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/bulk-expire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Expire
+         * @description Mark long-pending approval requests as ``expired`` (cross-tenant ops).
+         *
+         *     Mirrors the ``swarms.reap-stale`` reaper for approvals: any approval
+         *     that has stayed in ``pending`` for more than ``older_than_hours``
+         *     (default 24 h) is flipped to ``expired``. Same access-control gate
+         *     as ``reap-stale`` — only ``service`` / ``worker`` / ``platform`` /
+         *     ``admin`` roles may invoke it.
+         *
+         *     Audit trail: a single ``approval.bulk_expired`` summary event is
+         *     emitted (NOT one event per row — see PR description) carrying the
+         *     ``affected_count`` and the list of expired approval IDs. The event
+         *     is recorded under the caller's JWT-derived ``org_id`` (or
+         *     ``"platform"`` when the caller is the cross-tenant worker token)
+         *     rather than each tenant's org_id, because the operation itself is a
+         *     platform-level sweep.
+         */
+        post: operations["bulk_expire_api_v1_approvals_bulk_expire_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -459,8 +527,34 @@ export interface paths {
          *
          *     Validates compute token budget, persists the task, and publishes a
          *     message to the Redis task queue for worker consumption.
+         *
+         *     Idempotency: when the caller sends ``Idempotency-Key`` header, a
+         *     successful response is cached for 24h scoped by (org_id, POST,
+         *     /api/v1/swarms/dispatch, key). Retries with the same key replay the
+         *     cached response instead of dispatching a duplicate task. Header
+         *     absent → endpoint behaves exactly as before (no caching).
          */
         post: operations["dispatch_task_api_v1_swarms_dispatch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/dispatch/ecosystem-app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dispatch Ecosystem App Manifest
+         * @description Dispatch an EcosystemApp manifest as a canonical deployment task.
+         */
+        post: operations["dispatch_ecosystem_app_manifest_api_v1_swarms_dispatch_ecosystem_app_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -534,6 +628,46 @@ export interface paths {
         patch: operations["update_task_status_api_v1_swarms_tasks__task_id__patch"];
         trace?: never;
     };
+    "/api/v1/swarms/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Deployment Evidence Records
+         * @description List deployment evidence records, newest first. Tenant-scoped.
+         */
+        get: operations["list_deployment_evidence_records_api_v1_swarms_evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/evidence/{evidence_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Deployment Evidence Record
+         * @description Retrieve one deployment evidence record by ID. Tenant-scoped.
+         */
+        get: operations["get_deployment_evidence_record_api_v1_swarms_evidence__evidence_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/swarms/tasks/reap-stale": {
         parameters: {
             query?: never;
@@ -552,20 +686,23 @@ export interface paths {
          *     access control: only callers carrying ``service``, ``worker``,
          *     ``platform``, or ``admin`` roles may invoke it.
          *
-         *     Tenancy bypass:
-         *         ``Depends(get_db)`` already set ``app.current_org_id`` to the
-         *         caller's JWT-derived ``org_id`` (or ``"default"`` for the dev
-         *         bypass). Because RLS policies on ``swarm_tasks`` filter by that
-         *         session var, leaving it set would scope the reaper to ONE org
-         *         and silently skip stale tasks in every other tenant -- the
-         *         exact bug fixed here (see ``docs/RLS_PHASE_1_5_AUDIT.md`` §2.C).
+         *     Tenancy bypass (Phase 1.5 -- migration 0028):
+         *         Uses ``admin_session()`` which opens a session against the
+         *         ``app_admin`` BYPASSRLS connection pool. This is the canonical
+         *         way to express "I genuinely need to read/mutate rows belonging
+         *         to multiple tenants in one query" under the strict RLS policies
+         *         installed by migration 0028.
          *
-         *         We explicitly reset the var to the empty string so the Phase 1
-         *         permissive policy (``IS NULL OR = '' OR = $org``) returns rows
-         *         from every tenant. After Phase 1.5 (migration 0027) tightens
-         *         the policy, this endpoint MUST switch to ``admin_session()``
-         *         (BYPASSRLS connection pool) -- the audit doc tracks this
-         *         follow-up.
+         *         Pre-migration-0028 this endpoint relied on the Phase 1 permissive
+         *         policy (``IS NULL OR = '' OR = $org``) and manually reset the
+         *         session var to ``""`` to fall through to the IS NULL leg. That
+         *         leg no longer exists -- under the strict policies a reset
+         *         session var would return zero rows. ``admin_session()`` logs at
+         *         WARNING on every entry, so the cross-tenant access is visible in
+         *         structured logs without needing to parse pg_stat_activity.
+         *
+         *         See ``docs/RLS_PHASE_1_5_AUDIT.md`` §2.C and §3 for the full
+         *         rationale.
          */
         post: operations["reap_stale_tasks_api_v1_swarms_tasks_reap_stale_post"];
         delete?: never;
@@ -960,7 +1097,26 @@ export interface paths {
         /**
          * Email Inbound
          * @description Accepts inbound email parse payloads from SendGrid or Postmark.
-         *     Routes commands from whitelisted sender addresses.
+         *     Routes commands from allow-listed sender addresses.
+         *
+         *     SECURITY (Phase 1 hardening): Unlike the other 14 webhook handlers,
+         *     this endpoint does NOT use a shared HMAC secret -- inbound-email
+         *     parse providers don't share a common signing contract. The trust
+         *     signal is the ``From:`` address that the upstream provider has
+         *     already validated via SPF/DKIM/DMARC at MX time, checked against
+         *     the operator-controlled ``GATEWAY_EMAIL_WHITELIST`` allow-list.
+         *
+         *     Fail-closed contract:
+         *     - 503 when ``GATEWAY_EMAIL_WHITELIST`` is unset (endpoint disabled).
+         *       Pre-hardening this would 200 and dispatch an ACP task with an
+         *       attacker-supplied URL because empty allow-list short-circuited
+         *       the membership check.
+         *     - 401 when the parsed ``From:`` address is not on the allow-list.
+         *     - 200 + ``status: ignored`` when the body has no ``initiate_acp:``
+         *       command (so spam / out-of-band mail from allow-listed senders
+         *       doesn't error-loop the upstream provider).
+         *
+         *     See ``_require_inbound_allowlist`` for the full threat model.
          */
         post: operations["email_inbound_api_v1_gateway_gateway_email_inbound_post"];
         delete?: never;
@@ -1287,6 +1443,9 @@ export interface paths {
         /**
          * Create Workflow
          * @description Create a new workflow definition.
+         *
+         *     Idempotency: replay-safe via the ``Idempotency-Key`` header. A retried
+         *     create should NOT produce a duplicate Workflow row.
          */
         post: operations["create_workflow_api_v1_workflows_post"];
         delete?: never;
@@ -1395,6 +1554,9 @@ export interface paths {
         /**
          * Import Workflow
          * @description Import a workflow from YAML content.
+         *
+         *     Idempotency: replay-safe via the ``Idempotency-Key`` header. A retried
+         *     upload should NOT produce a duplicate Workflow row.
          */
         post: operations["import_workflow_api_v1_workflows_import_post"];
         delete?: never;
@@ -1575,6 +1737,15 @@ export interface paths {
          *     ``packages/skills/community-skills/{name}/`` and increments the download
          *     counter.  After writing, the skill registry is refreshed so the new skill
          *     becomes discoverable immediately.
+         *
+         *     Idempotency: replay-safe via the ``Idempotency-Key`` header. The cache is
+         *     populated ONLY AFTER the SKILL.md file has been successfully written —
+         *     if a replay arrives but the install file was deleted out-of-band, the
+         *     cached InstallResponse may point to a missing file. We accept that
+         *     trade-off rather than re-running ``write_text`` on every replay
+         *     (which would silently re-install). Operators that want strict
+         *     file-presence guarantees should not delete community-skills/<name>/
+         *     behind the API's back.
          */
         post: operations["install_skill_api_v1_marketplace_skills__entry_id__install_post"];
         delete?: never;
@@ -1599,6 +1770,11 @@ export interface paths {
         /**
          * Create Map
          * @description Create a new map definition.
+         *
+         *     Idempotency: replay-safe via the ``Idempotency-Key`` header. A retry
+         *     after a network blip should NOT produce a second Map row with the
+         *     same content. The cached response (containing the original map id)
+         *     is returned on replay.
          */
         post: operations["create_map_api_v1_maps_post"];
         delete?: never;
@@ -1667,6 +1843,9 @@ export interface paths {
         /**
          * Import Map
          * @description Import a TMJ file as a new map.
+         *
+         *     Idempotency: replay-safe via the ``Idempotency-Key`` header. A retried
+         *     upload should NOT produce a duplicate Map row.
          */
         post: operations["import_map_api_v1_maps_import_post"];
         delete?: never;
@@ -1712,6 +1891,12 @@ export interface paths {
          * @description Store a calendar connection for the current user.
          *
          *     If a connection already exists it is updated with the new tokens.
+         *
+         *     Idempotency: replay-safe via the ``Idempotency-Key`` header. A retry
+         *     after a network blip should NOT re-store the same OAuth tokens twice
+         *     (which would emit a duplicate ``calendar.connected`` audit event and
+         *     potentially trigger downstream re-syncs). The cached response is
+         *     returned without touching the DB on replay.
          */
         post: operations["connect_calendar_api_v1_calendar_connect_post"];
         delete?: never;
@@ -2039,6 +2224,47 @@ export interface paths {
          * @description Update room configuration via Redis pub/sub.
          */
         post: operations["update_room_config_api_v1_admin_room_config_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consent-ledger/promote-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Promote Signing Key
+         * @description Promote a new HMAC key for the consent ledger (atomic rotation).
+         *
+         *     Flow inside a single transaction:
+         *
+         *     1. Find the currently-active key row (``is_current=true``). May be
+         *        NULL on a fresh install where the bootstrap inserted a
+         *        placeholder. That's OK — we just promote without a retiring step.
+         *     2. Mark it ``is_current=false`` + ``retired_at=NOW()``.
+         *     3. Insert a new row with ``is_current=true`` and the next
+         *        ``key_version`` (max + 1; falls back to 2 when only the v1
+         *        bootstrap exists, which is the common case).
+         *     4. Emit a ``consent_ledger.key_promoted`` audit event. The new
+         *        version is in the payload; the key value is NEVER.
+         *
+         *     The Postgres partial unique index would catch step 3 attempting to
+         *     insert while step 2's flip hasn't committed (would raise
+         *     IntegrityError). On SQLite (test backend) the index is skipped
+         *     and the test relies on the in-transaction ordering instead.
+         *
+         *     Returns 503 when the registry is in an unexpected state (e.g. >1
+         *     current row before the flip — shouldn't happen with the partial
+         *     unique index, but we surface it rather than silently overwrite).
+         */
+        post: operations["promote_signing_key_api_v1_admin_consent_ledger_promote_key_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2560,6 +2786,15 @@ export interface paths {
          *
          *     Fails with 409 if the tenant has already chosen a mode — use
          *     PUT /settings/outbound-voice to change it.
+         *
+         *     Idempotency: when the caller sends ``Idempotency-Key`` header, a
+         *     successful first-run selection is cached for 24h scoped by (org_id,
+         *     POST, /api/v1/onboarding/voice-mode, key). Without this, a network
+         *     blip on the first call would have the second call hit the 409
+         *     "already selected" branch (because the first call did persist the
+         *     consent ledger row + tenant_config update before the response was
+         *     lost). Only the success path is cached — a 400 (typed-confirmation
+         *     mismatch) or 409 (already resolved) leaves the cache empty.
          */
         post: operations["select_voice_mode_api_v1_onboarding_voice_mode_post"];
         delete?: never;
@@ -2631,6 +2866,134 @@ export interface paths {
          * @description Cancel (delete) a schedule. Users may only cancel their own; admins may cancel any.
          */
         delete: operations["cancel_schedule_api_v1_schedules__schedule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dragon-eggs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Eggs
+         * @description List eggs, optionally filtered by status / platform / owner_org_id.
+         */
+        get: operations["list_eggs_api_v1_dragon_eggs_get"];
+        put?: never;
+        /**
+         * Lay Egg
+         * @description Lay a new egg + generate its 7-day warmup action plan.
+         *
+         *     Returns the full egg detail (egg + actions) so the UI doesn't
+         *     need a follow-up GET to render the timeline.
+         */
+        post: operations["lay_egg_api_v1_dragon_eggs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dragon-eggs/{egg_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Egg
+         * @description Show a single egg with its full action timeline + computed progress.
+         */
+        get: operations["get_egg_api_v1_dragon_eggs__egg_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Release Egg
+         * @description Release the egg — either force-promote to a status or delete entirely.
+         */
+        delete: operations["release_egg_api_v1_dragon_eggs__egg_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dragon-eggs/{egg_id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transition Egg
+         * @description Manually advance the egg's status based on completed actions.
+         *
+         *     Useful when the worker is paused or when the operator wants to
+         *     sanity-check the state machine after a manual action update.
+         */
+        post: operations["transition_egg_api_v1_dragon_eggs__egg_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dragon-eggs/{egg_id}/actions/{action_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Action
+         * @description Mark an action ready for immediate worker dispatch.
+         *
+         *     Phase 1 semantics: this flips ``status`` from
+         *     ``planned``/``pending_human`` → ``in_flight`` and updates
+         *     ``scheduled_for`` to NOW. The worker's drain query picks it up
+         *     on the next tick and dispatches the matching social tool. The
+         *     response is the *pre-dispatch* row state — the operator polls
+         *     ``GET /{egg_id}`` to watch the action complete.
+         *
+         *     HITL action types (``profile_setup``, ``follow_curated``,
+         *     ``boost_high_signal``, ``reply_substantive``) are documented as
+         *     Phase 1.5 — calling execute on them flips them to ``in_flight``
+         *     but the worker will currently NOT dispatch them; ops marks them
+         *     completed by hand. Phase 1.5 wires the HITL-approval queue at
+         *     that step.
+         */
+        post: operations["execute_action_api_v1_dragon_eggs__egg_id__actions__action_id__execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dragon-eggs/{egg_id}/actions/{action_id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Skip Action
+         * @description Operator override: mark an action ``skipped`` (counts toward progress).
+         */
+        post: operations["skip_action_api_v1_dragon_eggs__egg_id__actions__action_id__skip_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3117,6 +3480,35 @@ export interface paths {
          *     mini sparkline showing the ok/fail pattern across recent hours.
          */
         get: operations["get_probe_history_api_v1_probe_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Provider Balances
+         * @description Return the most recent cached balance for every known LLM provider.
+         *
+         *     The cache is populated by the 15-min cron at
+         *     ``apps/workers/selva_workers/jobs/provider_balance_probe.py``.
+         *
+         *     Behaviour when the cache is empty / Redis is unreachable:
+         *     - Returns one entry per provider in ``KNOWN_PROVIDERS`` with
+         *       ``source='unknown'`` and ``alert='critical'``.
+         *     - 200 OK, never 5xx — the goal is to surface the missing signal,
+         *       not hide it behind a server error.
+         */
+        get: operations["get_provider_balances_api_v1_providers_balance_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3688,6 +4080,18 @@ export interface components {
             over_budget: boolean;
         };
         /**
+         * BulkExpireResponse
+         * @description Response from the bulk-expire endpoint.
+         */
+        BulkExpireResponse: {
+            /**
+             * Expired
+             * @description Number of approvals marked expired
+             * @default 0
+             */
+            expired: number;
+        };
+        /**
          * CalendarEventResponse
          * @description Public representation of a calendar event.
          */
@@ -4095,6 +4499,34 @@ export interface components {
             /** Position Y */
             position_y?: number | null;
         };
+        /** DeploymentEvidenceRecordListResponse */
+        DeploymentEvidenceRecordListResponse: {
+            /** Evidence Records */
+            evidence_records: components["schemas"]["DeploymentEvidenceRecordResponse"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** DeploymentEvidenceRecordResponse */
+        DeploymentEvidenceRecordResponse: {
+            /** Id */
+            id: string;
+            /** Task Id */
+            task_id: string;
+            /** Graph Type */
+            graph_type: string;
+            /** Deployment Status */
+            deployment_status: string;
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at: string;
+        };
         /**
          * DisconnectResponse
          * @description Response after disconnecting a calendar.
@@ -4128,6 +4560,22 @@ export interface components {
              * @description UUID of a custom workflow definition (required for graph_type='custom')
              */
             workflow_id?: string | null;
+            /**
+             * Source
+             * @description Canonical task source such as api, webhook, scheduler, or selva-recursive.
+             * @default api
+             */
+            source: string;
+            /**
+             * Idempotency Key
+             * @description Consumer-supplied idempotency key copied into the canonical task envelope.
+             */
+            idempotency_key?: string | null;
+            /**
+             * Desired State Hash
+             * @description Optional desired-state hash for provisioning/deployment tasks.
+             */
+            desired_state_hash?: string | null;
         };
         /** DraftRequest */
         DraftRequest: {
@@ -4151,6 +4599,83 @@ export interface components {
             model: string;
             /** Token Count */
             token_count: number;
+        };
+        /**
+         * EggDetailResponse
+         * @description Egg + its full action timeline.
+         */
+        EggDetailResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Persona Id */
+            persona_id: string;
+            /** Platform */
+            platform: string;
+            /** Display Name */
+            display_name: string;
+            /** Handle */
+            handle: string;
+            /** Instance Url */
+            instance_url: string | null;
+            /** Status */
+            status: string;
+            /** Progress */
+            progress: number;
+            /** Laid At */
+            laid_at: string;
+            /** Hatched At */
+            hatched_at: string | null;
+            /** Matured At */
+            matured_at: string | null;
+            /** Owner Org Id */
+            owner_org_id: string;
+            /** Created By */
+            created_by: string;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** Actions */
+            actions?: components["schemas"]["WarmupActionResponse"][];
+        };
+        /** EggResponse */
+        EggResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Persona Id */
+            persona_id: string;
+            /** Platform */
+            platform: string;
+            /** Display Name */
+            display_name: string;
+            /** Handle */
+            handle: string;
+            /** Instance Url */
+            instance_url: string | null;
+            /** Status */
+            status: string;
+            /** Progress */
+            progress: number;
+            /** Laid At */
+            laid_at: string;
+            /** Hatched At */
+            hatched_at: string | null;
+            /** Matured At */
+            matured_at: string | null;
+            /** Owner Org Id */
+            owner_org_id: string;
+            /** Created By */
+            created_by: string;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
         };
         /** EmailSendRequest */
         EmailSendRequest: {
@@ -4368,6 +4893,35 @@ export interface components {
              * @default
              */
             reason: string;
+        };
+        /**
+         * LayEggRequest
+         * @description Lay a new egg (create a social-account warmup plan).
+         */
+        LayEggRequest: {
+            /**
+             * Persona Id
+             * @description Selva persona id; matches the existing MASTODON_ACCESS_TOKEN_<PERSONA_ID> env-var convention.
+             */
+            persona_id: string;
+            /**
+             * Platform
+             * @description One of 'mastodon' | 'bluesky' | 'reddit' (Phase 1 scope).
+             */
+            platform: string;
+            /** Handle */
+            handle: string;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Instance Url
+             * @description Required for Mastodon-style federated platforms; ignored otherwise.
+             */
+            instance_url?: string | null;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
         };
         /** MapCreateRequest */
         MapCreateRequest: {
@@ -4728,6 +5282,71 @@ export interface components {
             stages: components["schemas"]["StageReport"][];
         };
         /**
+         * PromoteKeyRequest
+         * @description Body for POST /admin/consent-ledger/promote-key.
+         */
+        PromoteKeyRequest: {
+            /**
+             * New Key Value
+             * @description New HMAC key value. Recommended shape: 64 hex chars (32 random bytes from `openssl rand -hex 32`). Must be at least 16 chars to reject obvious typos.
+             */
+            new_key_value: string;
+        };
+        /**
+         * PromoteKeyResponse
+         * @description Result of a successful key promotion.
+         */
+        PromoteKeyResponse: {
+            /**
+             * New Key Version
+             * @description Version assigned to the new key.
+             */
+            new_key_version: number;
+            /**
+             * Previous Key Version
+             * @description The version that was active before promotion. NULL if no previous key was current (placeholder-bootstrap state).
+             */
+            previous_key_version?: number | null;
+            /**
+             * Promoted At
+             * Format: date-time
+             * @description UTC timestamp of the promotion.
+             */
+            promoted_at: string;
+        };
+        /**
+         * ProviderBalance
+         * @description Cached balance state for a single provider.
+         */
+        ProviderBalance: {
+            /**
+             * Balance Usd
+             * @description Estimated USD balance / remaining quota. -1 when unknown (degraded path: no API + no PostHog history).
+             */
+            balance_usd: number;
+            /**
+             * Currency
+             * @description Always USD at MVP.
+             * @default USD
+             */
+            currency: string;
+            /**
+             * Source
+             * @description How the value was derived: 'api' (direct provider balance API), 'estimated' (max_known_balance - PostHog usage sum), or 'unknown' (no signal — treat as critical for alerting).
+             */
+            source: string;
+            /**
+             * Updated At
+             * @description ISO-8601 UTC timestamp when the probe last refreshed this entry.
+             */
+            updated_at: string;
+            /**
+             * Alert
+             * @description One of 'ok' / 'low' / 'critical' / 'unknown'.
+             */
+            alert: string;
+        };
+        /**
          * ProviderSummary
          * @description Provider info with api_key_env redacted.
          */
@@ -4924,7 +5543,7 @@ export interface components {
          * @description Actions that can be scheduled via cron expressions.
          * @enum {string}
          */
-        ScheduledAction: "acp_initiate" | "skill_refine" | "memory_compact";
+        ScheduledAction: "acp_initiate" | "skill_refine" | "memory_compact" | "social_post";
         /**
          * SkillCompactResponse
          * @description Level-0: compact skill metadata (~3k tokens for full catalogue).
@@ -4966,6 +5585,14 @@ export interface components {
             tier: string;
             /** Allowed Tools */
             allowed_tools: string[];
+        };
+        /** SkipActionRequest */
+        SkipActionRequest: {
+            /**
+             * Notes
+             * @description Operator note explaining the skip.
+             */
+            notes?: string | null;
         };
         /** StageReport */
         StageReport: {
@@ -5147,6 +5774,10 @@ export interface components {
             started_at?: string | null;
             /** Error Message */
             error_message?: string | null;
+            /** Deployment Evidence */
+            deployment_evidence?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * TenantCreate
@@ -5333,6 +5964,15 @@ export interface components {
             /** Language */
             language: string;
         };
+        /** TransitionResponse */
+        TransitionResponse: {
+            egg: components["schemas"]["EggResponse"];
+            /**
+             * Transitioned
+             * @description True when status changed; false when already at target.
+             */
+            transitioned: boolean;
+        };
         /** TrendPoint */
         TrendPoint: {
             /** Timestamp */
@@ -5478,6 +6118,37 @@ export interface components {
              * @description Verbatim typed phrase matching the mode's clause.
              */
             typed_confirmation: string;
+        };
+        /** WarmupActionResponse */
+        WarmupActionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Egg Id
+             * Format: uuid
+             */
+            egg_id: string;
+            /** Action Type */
+            action_type: string;
+            /** Status */
+            status: string;
+            /** Scheduled For */
+            scheduled_for: string;
+            /** Executed At */
+            executed_at: string | null;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            } | null;
+            /** Day Offset */
+            day_offset: number;
+            /** Notes */
+            notes: string | null;
+            /** Content Brief */
+            content_brief: string | null;
         };
         /** WorkflowCreateRequest */
         WorkflowCreateRequest: {
@@ -5732,26 +6403,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    metrics_metrics_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
     root_health_health_get: {
         parameters: {
             query?: never;
@@ -5907,6 +6558,28 @@ export interface operations {
         };
     };
     consent_ledger_grants_api_v1_health_consent_ledger_grants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    rls_status_api_v1_health_rls_status_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -6389,7 +7062,9 @@ export interface operations {
     approve_request_api_v1_approvals__request_id__approve_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 request_id: string;
             };
@@ -6424,7 +7099,9 @@ export interface operations {
     deny_request_api_v1_approvals__request_id__deny_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 request_id: string;
             };
@@ -6456,16 +7133,84 @@ export interface operations {
             };
         };
     };
+    bulk_expire_api_v1_approvals_bulk_expire_post: {
+        parameters: {
+            query?: {
+                older_than_hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkExpireResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dispatch_task_api_v1_swarms_dispatch_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DispatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dispatch_ecosystem_app_manifest_api_v1_swarms_dispatch_ecosystem_app_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": unknown;
             };
         };
         responses: {
@@ -6582,6 +7327,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deployment_evidence_records_api_v1_swarms_evidence_get: {
+        parameters: {
+            query?: {
+                task_id?: string | null;
+                graph_type?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeploymentEvidenceRecordListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_deployment_evidence_record_api_v1_swarms_evidence__evidence_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeploymentEvidenceRecordResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7535,7 +8345,9 @@ export interface operations {
     create_workflow_api_v1_workflows_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7749,7 +8561,9 @@ export interface operations {
     import_workflow_api_v1_workflows_import_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8106,7 +8920,9 @@ export interface operations {
     install_skill_api_v1_marketplace_skills__entry_id__install_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 entry_id: string;
             };
@@ -8169,7 +8985,9 @@ export interface operations {
     create_map_api_v1_maps_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8332,7 +9150,9 @@ export interface operations {
     import_map_api_v1_maps_import_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8396,7 +9216,9 @@ export interface operations {
     connect_calendar_api_v1_calendar_connect_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8864,6 +9686,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    promote_signing_key_api_v1_admin_consent_ledger_promote_key_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromoteKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromoteKeyResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9611,7 +10466,9 @@ export interface operations {
     select_voice_mode_api_v1_onboarding_voice_mode_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -9744,6 +10601,235 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_eggs_api_v1_dragon_eggs_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by egg status (laid/incubating/hatching/hatched/matured). */
+                status?: string | null;
+                platform?: string | null;
+                owner_org_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EggResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lay_egg_api_v1_dragon_eggs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LayEggRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EggDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_egg_api_v1_dragon_eggs__egg_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                egg_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EggDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_egg_api_v1_dragon_eggs__egg_id__delete: {
+        parameters: {
+            query?: {
+                /** @description When set, force the egg to that status (e.g. 'matured' to skip warmup for a manually-warmed account). Otherwise, delete the egg + cascade actions. */
+                force_status?: string | null;
+            };
+            header?: never;
+            path: {
+                egg_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transition_egg_api_v1_dragon_eggs__egg_id__transition_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                egg_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_action_api_v1_dragon_eggs__egg_id__actions__action_id__execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                egg_id: string;
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarmupActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    skip_action_api_v1_dragon_eggs__egg_id__actions__action_id__skip_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                egg_id: string;
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SkipActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WarmupActionResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -10492,6 +11578,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_provider_balances_api_v1_providers_balance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: components["schemas"]["ProviderBalance"];
+                    };
                 };
             };
         };

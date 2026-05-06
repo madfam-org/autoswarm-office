@@ -49,12 +49,16 @@ class EndpointSmokeCheckTool(BaseTool):
                             },
                             "body_contains": {
                                 "type": "string",
-                                "description": "Optional substring that must appear in the response body.",
+                                "description": (
+                                    "Optional substring that must appear in the response body."
+                                ),
                                 "default": "",
                             },
                             "body_not_contains": {
                                 "type": "string",
-                                "description": "Optional substring that must not appear in the response body.",
+                                "description": (
+                                    "Optional substring that must not appear in the response body."
+                                ),
                                 "default": "",
                             },
                             "timeout": {"type": "number", "default": 10},
@@ -84,9 +88,12 @@ class EndpointSmokeCheckTool(BaseTool):
 
         failed = [c for c in checks if c["verdict"] != "passed"]
         verdict = "blocked" if failed else "passed"
+        passed_count = len(checks) - len(failed)
         return ToolResult(
             success=not failed,
-            output=f"{verdict}: {len(checks) - len(failed)}/{len(checks)} endpoint smoke check(s) passed",
+            output=(
+                f"{verdict}: {passed_count}/{len(checks)} endpoint smoke check(s) passed"
+            ),
             data={
                 "verdict": verdict,
                 "checks": checks,

@@ -55,7 +55,7 @@ commonLabels:
 images:
   - name: ghcr.io/madfam-org/autoswarm-nexus-api
     newName: ghcr.io/madfam-org/autoswarm-nexus-api
-    digest: sha256:b644bf7d766b8b54266eb9ec42a24e3d52458079329c679a490abd1d961d48ae
+    digest: sha256:e5d85ec5eb800ce70eaa491a8ddd86c9450418e80d3873a34e20d556f93ab754
   - name: ghcr.io/madfam-org/autoswarm-office-ui
     newName: ghcr.io/madfam-org/autoswarm-office-ui
     digest: sha256:57e77bac2ab49d84427afe101feb64c7841bb2a902680ec7b690e94a695a4acb

@@ -269,7 +269,7 @@ class TestLayEgg:
 
 @pytest.mark.asyncio
 class TestTransitions:
-    async def _lay(self, db: AsyncSession, persona: str = "p1") -> "svc.SocialAccountEgg":
+    async def _lay(self, db: AsyncSession, persona: str = "p1") -> svc.SocialAccountEgg:
         egg = await svc.lay_egg(
             db,
             persona_id=persona,

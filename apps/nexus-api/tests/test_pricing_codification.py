@@ -108,9 +108,9 @@ class TestBillingTiersLoaderMatchesJson:
     def test_default_tier_matches_json(self, pricing_data: dict) -> None:
         from nexus_api.billing_tiers import DEFAULT_TIER
 
-        assert DEFAULT_TIER == pricing_data["dhanam_subscription_daily_limits"][
+        assert pricing_data["dhanam_subscription_daily_limits"][
             "default_tier"
-        ]
+        ] == DEFAULT_TIER
 
     def test_external_a2a_limit_matches_json(self, pricing_data: dict) -> None:
         from nexus_api.billing_tiers import (

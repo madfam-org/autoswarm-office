@@ -170,7 +170,8 @@ def validate(state: DeploymentState) -> DeploymentState:
     validate_msg = AIMessage(
         content=(
             f"Deployment validated: service={service}, "
-            f"environment={environment}, image_tag={image_tag}, overlay_path={overlay_path or 'unset'}."
+            f"environment={environment}, image_tag={image_tag}, "
+            f"overlay_path={overlay_path or 'unset'}."
         ),
         additional_kwargs={"action_category": "deploy"},
     )
@@ -668,7 +669,10 @@ def smoke(state: DeploymentState) -> DeploymentState:
         smoke_status = str(smoke_data.get("verdict") or ("passed" if result.success else "blocked"))
         if result.success:
             msg = AIMessage(
-                content=f"Smoke checks passed: {smoke_data.get('passed_count', 0)}/{len(smoke_checks)}.",
+                content=(
+                    f"Smoke checks passed: {smoke_data.get('passed_count', 0)}/"
+                    f"{len(smoke_checks)}."
+                ),
                 additional_kwargs={"action_category": "deploy"},
             )
             return {
@@ -827,7 +831,9 @@ def rollback_evidence(state: DeploymentState) -> DeploymentState:
 
     if not rollback_pointer:
         if environment == "production":
-            msg = AIMessage(content="Rollback evidence failed: production requires rollback_pointer.")
+            msg = AIMessage(
+                content="Rollback evidence failed: production requires rollback_pointer."
+            )
             return {
                 **state,
                 "messages": [*messages, msg],
@@ -1025,7 +1031,9 @@ def build_deployment_graph() -> StateGraph:
 
     Flow::
 
-        validate -> preflight -> deploy_gate -> deploy -> argo_sync -> argo_health -> smoke -> monitor -> rollback_evidence -> evidence_policy -> END
+        validate -> preflight -> deploy_gate -> deploy -> argo_sync ->
+        argo_health -> smoke -> monitor -> rollback_evidence ->
+        evidence_policy -> END
     """
     graph = StateGraph(DeploymentState)
 

@@ -107,7 +107,7 @@ async def _fetch_event_types_for_org(db: AsyncSession, org_id: str) -> list[Task
 def _assert_no_pii(payload: dict | None) -> None:
     """Pin the PII contract — no email / name-email / phone / author keys."""
     assert payload is not None, "event payload should not be None"
-    for key in payload.keys():
+    for key in payload:
         assert key.lower() not in _PII_KEYS, (
             f"PII key '{key}' leaked into event payload: {payload}"
         )
@@ -145,7 +145,9 @@ async def test_create_workflow_emits_workflow_created(
 
     events = await _fetch_event_types_for_org(db_session, _CALLER_ORG_ID)
     matching = [e for e in events if e.event_type == "workflow.created"]
-    assert len(matching) == 1, f"expected 1 workflow.created event, got {[e.event_type for e in events]}"
+    assert len(matching) == 1, (
+        f"expected 1 workflow.created event, got {[e.event_type for e in events]}"
+    )
     event = matching[0]
     assert event.org_id == _CALLER_ORG_ID
     assert event.event_category == "workflow"

@@ -667,12 +667,12 @@ def test_load_k8s_config_prefers_projected_writer_token(
             self.api_key: dict[str, str] = {"authorization": "Bearer autoswarm-token"}
 
         @staticmethod
-        def get_default_copy() -> "FakeConfiguration":
+        def get_default_copy() -> FakeConfiguration:
             calls.append("get_default_copy")
             return FakeConfiguration()
 
         @staticmethod
-        def set_default(configuration: "FakeConfiguration") -> None:
+        def set_default(configuration: FakeConfiguration) -> None:
             calls.append(configuration.api_key["authorization"])
 
     monkeypatch.setattr(

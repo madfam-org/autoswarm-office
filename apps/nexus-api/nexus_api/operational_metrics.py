@@ -11,7 +11,7 @@ from .database import async_session_factory
 from .models import DeploymentEvidenceRecord, SwarmTask, SwarmTaskOutbox
 
 try:
-    from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, REGISTRY, generate_latest
+    from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, Counter, Gauge, generate_latest
 
     OUTBOX_DEPTH = Gauge(
         "selva_swarm_task_outbox_depth",

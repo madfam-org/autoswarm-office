@@ -262,7 +262,9 @@ def _stripe_create_webhook_endpoint(
         "Content-Type": "application/x-www-form-urlencoded",
     }
     owned = client is None
-    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = (
+        client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    )
     try:
         resp = http.post(
             f"{STRIPE_API_BASE}/webhook_endpoints",
@@ -288,7 +290,9 @@ def _stripe_list_webhook_endpoints(
     """
     headers = {"Authorization": f"Bearer {api_key}"}
     owned = client is None
-    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = (
+        client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    )
     try:
         resp = http.get(
             f"{STRIPE_API_BASE}/webhook_endpoints",
@@ -311,7 +315,9 @@ def _stripe_delete_webhook_endpoint(
     False if already absent (404). Raises on other errors."""
     headers = {"Authorization": f"Bearer {api_key}"}
     owned = client is None
-    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = (
+        client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    )
     try:
         resp = http.delete(
             f"{STRIPE_API_BASE}/webhook_endpoints/{webhook_id}",
@@ -347,7 +353,9 @@ def _resend_create_webhook(
         "Content-Type": "application/json",
     }
     owned = client is None
-    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = (
+        client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    )
     try:
         resp = http.post(
             f"{RESEND_API_BASE}/webhooks",
@@ -377,7 +385,9 @@ def _janua_register_redirect(
     }
     body = {"add_redirect_uri": redirect_uri}
     owned = client is None
-    http: httpx.Client = client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    http: httpx.Client = (
+        client if client is not None else httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+    )
     try:
         resp = http.patch(
             f"{base}/admin/clients/{client_id}",

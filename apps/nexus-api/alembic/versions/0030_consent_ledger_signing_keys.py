@@ -59,6 +59,7 @@ Create Date: 2026-05-03
 from __future__ import annotations
 
 import os
+from contextlib import suppress
 
 import sqlalchemy as sa
 from alembic import op
@@ -260,13 +261,11 @@ def downgrade() -> None:
 
     if _has_column("consent_ledger", "signing_key_version"):
         with op.batch_alter_table("consent_ledger") as batch:
-            try:
+            # FK may not exist on older partial-applied DBs.
+            with suppress(Exception):
                 batch.drop_constraint(
                     "fk_consent_ledger_signing_key", type_="foreignkey"
                 )
-            except Exception:
-                # FK may not exist on older partial-applied DBs.
-                pass
             batch.drop_column("signing_key_version")
 
     if is_postgres:

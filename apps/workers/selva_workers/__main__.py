@@ -987,7 +987,11 @@ async def _claim_pending_db_tasks(settings, limit: int) -> list[dict[str, object
             "desired_state_hash": envelope.get("desired_state_hash"),
             "description": str(row.get("description") or ""),
             "assigned_agent_ids": assigned_agent_ids,
-            "required_skills": payload.get("required_skills", []) if isinstance(payload, dict) else [],
+            "required_skills": (
+                payload.get("required_skills", [])
+                if isinstance(payload, dict)
+                else []
+            ),
             "payload": payload,
             "request_id": envelope.get("request_id"),
         }

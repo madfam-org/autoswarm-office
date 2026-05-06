@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Module-level pool holder so close_checkpointer() can release it.
-_pg_pool: "ConnectionPool | None" = None
+_pg_pool: ConnectionPool | None = None
 
 
 def create_checkpointer() -> BaseCheckpointSaver:

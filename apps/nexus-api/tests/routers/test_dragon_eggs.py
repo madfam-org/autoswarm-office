@@ -19,7 +19,6 @@ import pytest
 from nexus_api.auth import get_current_user
 from nexus_api.main import app
 
-
 # ---------------------------------------------------------------------------
 # CRUD endpoints — happy paths
 # ---------------------------------------------------------------------------

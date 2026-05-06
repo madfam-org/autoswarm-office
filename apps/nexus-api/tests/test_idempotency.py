@@ -291,7 +291,7 @@ class TestUserOrgIdResolution:
         with patch(
             "selva_redis_pool.get_redis_pool", return_value=mock_redis
         ):
-            ctx = await get_idempotency_context(
+            await get_idempotency_context(
                 request=_mock_request(),
                 idempotency_key="k",
                 user={"sub": "u"},  # no org_id

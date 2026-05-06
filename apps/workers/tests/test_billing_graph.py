@@ -269,7 +269,6 @@ class TestGenerateCfdi:
         import sys
 
         from madfam_inference.adapters.karafiel import CFDIResult
-
         from selva_workers.graphs.billing import generate_cfdi
 
         # KarafielAdapter.generate_cfdi returns a CFDIResult pydantic model,
@@ -350,7 +349,6 @@ class TestStampCfdi:
         import sys
 
         from madfam_inference.adapters.karafiel import StampResult
-
         from selva_workers.graphs.billing import stamp_cfdi
 
         # Adapter returns StampResult; billing.py normalizes via .model_dump()

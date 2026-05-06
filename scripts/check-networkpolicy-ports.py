@@ -57,11 +57,10 @@ repo's CI verbatim.
 """
 from __future__ import annotations
 
-import os
 import sys
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Iterator
 
 try:
     import yaml

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
-import hashlib
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -278,7 +278,11 @@ def _deployment_dispatch_from_ecosystem_app(
     metadata = manifest.get("metadata") or {}
     spec = manifest.get("spec") or {}
     deployment = spec.get("deployment") or {}
-    if not isinstance(metadata, dict) or not isinstance(spec, dict) or not isinstance(deployment, dict):
+    if (
+        not isinstance(metadata, dict)
+        or not isinstance(spec, dict)
+        or not isinstance(deployment, dict)
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="manifest metadata, spec, and spec.deployment must be objects",
@@ -294,10 +298,13 @@ def _deployment_dispatch_from_ecosystem_app(
         spec.get("id"),
         metadata.get("name"),
     )
+    labels = metadata.get("labels")
+    if not isinstance(labels, dict):
+        labels = {}
     environment = _pick_first(
         deployment.get("environment"),
         spec.get("environment"),
-        metadata.get("labels", {}).get("environment") if isinstance(metadata.get("labels"), dict) else None,
+        labels.get("environment"),
         "staging",
     )
     environment = str(environment).lower()
@@ -327,13 +334,26 @@ def _deployment_dispatch_from_ecosystem_app(
     desired_state_hash = _canonical_manifest_hash(manifest)
     deployment_payload = {
         "service": str(service or ""),
-        "app_id": str(_pick_first(deployment.get("app_id"), spec.get("app_id"), spec.get("id"), service) or ""),
+        "app_id": str(
+            _pick_first(
+                deployment.get("app_id"),
+                spec.get("app_id"),
+                spec.get("id"),
+                service,
+            )
+            or ""
+        ),
         "environment": environment,
         "gitops_app": gitops_app or "",
         "branch": deployment.get("branch") or spec.get("branch") or "",
         "manifest_path": deployment.get("manifest_path") or spec.get("manifest_path") or "",
         "overlay_path": deployment.get("overlay_path") or deployment.get("manifest_path") or "",
-        "repo_path": deployment.get("repo_path") or deployment.get("repo") or spec.get("repo_path") or "",
+        "repo_path": (
+            deployment.get("repo_path")
+            or deployment.get("repo")
+            or spec.get("repo_path")
+            or ""
+        ),
         "smoke_checks": smoke_checks if isinstance(smoke_checks, list) else [smoke_checks],
         "current_pointer": current_pointer if isinstance(current_pointer, dict) else {},
         "rollback_pointer": rollback_pointer if isinstance(rollback_pointer, dict) else {},
@@ -345,6 +365,7 @@ def _deployment_dispatch_from_ecosystem_app(
         },
         "manifest_hash": desired_state_hash,
     }
+    app_identity = deployment_payload["app_id"] or deployment_payload["service"]
 
     return DispatchRequest(
         description=(
@@ -358,7 +379,7 @@ def _deployment_dispatch_from_ecosystem_app(
         source=source,
         idempotency_key=(
             idempotency_key
-            or f"ecosystem-app:{deployment_payload['app_id'] or deployment_payload['service']}:{environment}:{desired_state_hash}"
+            or f"ecosystem-app:{app_identity}:{environment}:{desired_state_hash}"
         ),
         desired_state_hash=desired_state_hash,
     )
@@ -617,7 +638,11 @@ async def dispatch_task(
             detail="Compute token budget exceeded for today",
         )
 
-    idempotency_key = body.idempotency_key or request.headers.get("Idempotency-Key") or str(uuid.uuid4())
+    idempotency_key = (
+        body.idempotency_key
+        or request.headers.get("Idempotency-Key")
+        or str(uuid.uuid4())
+    )
     task_audience = caller_audience.value
     canonical_envelope: dict[str, Any] = {
         "schema": "selva.task-envelope/v1",

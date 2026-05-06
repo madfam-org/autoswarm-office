@@ -148,7 +148,12 @@ WARMUP_PLAN: tuple[tuple[int, str, str, str], ...] = (
     # requires human taste in Phase 1.
     (2, "boost_high_signal", "pending_human", "Boost / repost 3-5 high-quality items. Like 10."),
     # Day 3 — first substantive reply (HITL) + first original post (worker-dispatchable).
-    (3, "reply_substantive", "pending_human", "Reply substantively to 3 conversations (not promotional)."),
+    (
+        3,
+        "reply_substantive",
+        "pending_human",
+        "Reply substantively to 3 conversations (not promotional).",
+    ),
     (3, "original_post_no_link", "planned", "Short original observation post. No link."),
     # Day 4 — two originals + one reply + boost 5.
     (4, "original_post_no_link", "planned", "Original post #1. No link."),

@@ -35,7 +35,9 @@ class TestBuildExperienceContext:
         mock_store = MagicMock()
         mock_store.search_similar = AsyncMock(
             return_value=[
-                _make_experience_record(0.95, "Built REST endpoint", "status=completed, duration=30s"),
+                _make_experience_record(
+                    0.95, "Built REST endpoint", "status=completed, duration=30s"
+                ),
                 _make_experience_record(0.4, "Used GraphQL", "status=failed, error=timeout"),
             ]
         )

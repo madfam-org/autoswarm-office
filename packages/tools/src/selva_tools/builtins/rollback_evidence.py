@@ -58,14 +58,16 @@ class RollbackEvidenceRecordTool(BaseTool):
                     "type": "array",
                     "items": {"type": "object"},
                     "description": (
-                        "Supporting observations, links, alert IDs, logs, metrics, or operator notes."
+                        "Supporting observations, links, alert IDs, logs, "
+                        "metrics, or operator notes."
                     ),
                     "default": [],
                 },
                 "rollback_requested": {
                     "type": "boolean",
                     "description": (
-                        "Must remain false. This recorder does not execute destructive rollback actions."
+                        "Must remain false. This recorder does not execute "
+                        "destructive rollback actions."
                     ),
                     "default": False,
                 },

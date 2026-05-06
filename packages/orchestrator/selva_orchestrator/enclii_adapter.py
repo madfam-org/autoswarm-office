@@ -4,7 +4,6 @@ from typing import Any, Literal, TypedDict
 
 import httpx  # Assuming httpx is available for internal HTTP requests
 
-
 EncliiStatus = Literal["success", "failed", "retryable", "unknown", "unsafe"]
 
 

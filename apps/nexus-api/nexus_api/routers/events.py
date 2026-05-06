@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, verify_jwt
 from ..config import get_settings
-from ..database import async_session_factory, get_db, tenant_session
+from ..database import get_db, tenant_session
 from ..models import TaskEvent
 from ..tenant import TenantContext, get_tenant
 from ..ws import MessageRateLimiter, event_manager

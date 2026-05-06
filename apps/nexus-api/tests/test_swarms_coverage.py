@@ -27,7 +27,14 @@ import pytest
 from sqlalchemy import select
 
 from nexus_api.models import Agent, SwarmTask, TaskEvent
-from nexus_api.routers.swarms import DispatchRequest, _compute_perf_weight
+from nexus_api.routers.swarms import (
+    DispatchRequest,
+    _compute_perf_weight,
+    _deployment_dispatch_from_ecosystem_app,
+    _deployment_status_from_evidence,
+    _parse_ecosystem_app_manifest,
+    _pick_first,
+)
 
 # ---------------------------------------------------------------------------
 # Reset module-level dispatch rate limiter between tests so we never spill
@@ -76,6 +83,126 @@ class TestDispatchRequestSchema:
 
         with pytest.raises(ValidationError):
             DispatchRequest(description="x" * 2001, graph_type="research")
+
+    def test_ecosystem_app_manifest_maps_to_deployment_dispatch(self) -> None:
+        manifest = {
+            "apiVersion": "madfam.io/v1",
+            "kind": "EcosystemApp",
+            "metadata": {
+                "name": "forgesight",
+                "labels": {"environment": "production"},
+            },
+            "spec": {
+                "id": "forgesight",
+                "deployment": {
+                    "gitops_app": "forgesight-production",
+                    "branch": "main",
+                    "manifest_path": "apps/forgesight/app.yaml",
+                    "repo_path": "madfam-org/forgesight",
+                    "smoke_checks": [
+                        {"url": "https://forgesight.quest/health", "expect_status": 200}
+                    ],
+                    "current_pointer": {"git_sha": "abc123"},
+                    "rollback_pointer": {"git_sha": "def456"},
+                },
+            },
+        }
+
+        req = _deployment_dispatch_from_ecosystem_app(
+            manifest,
+            assigned_agent_ids=["agent-1"],
+            required_skills=["deployment"],
+            source="ecosystem-app",
+            idempotency_key=None,
+        )
+
+        assert req.graph_type == "deployment"
+        assert req.assigned_agent_ids == ["agent-1"]
+        assert req.required_skills == ["deployment"]
+        assert req.payload["service"] == "forgesight"
+        assert req.payload["environment"] == "production"
+        assert req.payload["gitops_app"] == "forgesight-production"
+        assert req.payload["rollback_pointer"] == {"git_sha": "def456"}
+        assert req.idempotency_key is not None
+        assert req.idempotency_key.startswith("ecosystem-app:forgesight:production:")
+
+    def test_production_ecosystem_app_requires_safety_fields(self) -> None:
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc:
+            _deployment_dispatch_from_ecosystem_app(
+                {
+                    "kind": "EcosystemApp",
+                    "metadata": {"name": "unsafe", "labels": {"environment": "production"}},
+                    "spec": {"deployment": {}},
+                },
+                assigned_agent_ids=[],
+                required_skills=[],
+                source="ecosystem-app",
+                idempotency_key=None,
+            )
+
+        assert exc.value.status_code == 400
+        assert exc.value.detail["error"] == "production_manifest_missing_safety_fields"
+
+    def test_manifest_helpers_cover_json_yaml_and_error_paths(self) -> None:
+        from fastapi import HTTPException
+
+        assert _parse_ecosystem_app_manifest(b'{"kind":"EcosystemApp"}') == {
+            "kind": "EcosystemApp"
+        }
+        assert _parse_ecosystem_app_manifest("kind: EcosystemApp\nmetadata:\n  name: yaml") == {
+            "kind": "EcosystemApp",
+            "metadata": {"name": "yaml"},
+        }
+
+        with pytest.raises(HTTPException) as scalar_exc:
+            _parse_ecosystem_app_manifest("[1, 2, 3]")
+        assert scalar_exc.value.detail == "manifest must parse to an object"
+
+        with pytest.raises(HTTPException) as invalid_exc:
+            _parse_ecosystem_app_manifest("kind: [")
+        assert invalid_exc.value.detail == "manifest must be valid EcosystemApp JSON or YAML"
+
+    def test_ecosystem_app_rejects_wrong_kind_and_non_object_sections(self) -> None:
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as kind_exc:
+            _deployment_dispatch_from_ecosystem_app(
+                {"kind": "ConfigMap"},
+                assigned_agent_ids=[],
+                required_skills=[],
+                source="ecosystem-app",
+                idempotency_key=None,
+            )
+        assert kind_exc.value.detail == "manifest.kind must be EcosystemApp"
+
+        with pytest.raises(HTTPException) as shape_exc:
+            _deployment_dispatch_from_ecosystem_app(
+                {
+                    "kind": "EcosystemApp",
+                    "metadata": ["not-an-object"],
+                    "spec": {"deployment": ["not-an-object"]},
+                },
+                assigned_agent_ids=[],
+                required_skills=[],
+                source="ecosystem-app",
+                idempotency_key=None,
+            )
+        assert shape_exc.value.detail == (
+            "manifest metadata, spec, and spec.deployment must be objects"
+        )
+
+    def test_small_deployment_helpers(self) -> None:
+        assert _deployment_status_from_evidence(
+            {"deployment_status": "healthy"}, None, "fallback"
+        ) == "healthy"
+        assert _deployment_status_from_evidence(
+            {}, {"deploy_status": "rolled-out"}, "fallback"
+        ) == "rolled-out"
+        assert _deployment_status_from_evidence({}, None, "fallback") == "fallback"
+        assert _pick_first(None, "", [], {}, "first", "second") == "first"
+        assert _pick_first(None, "", [], {}) is None
 
 
 # ---------------------------------------------------------------------------

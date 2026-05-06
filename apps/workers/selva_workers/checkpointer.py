@@ -42,7 +42,7 @@ Lifecycle:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
@@ -86,16 +86,19 @@ def create_checkpointer() -> BaseCheckpointSaver:
         # min_size=1 / max_size=4 sized for one worker pod.
         # autocommit / prepare_threshold=0 / dict_row mirror what
         # langgraph's own from_conn_string contextmanager uses internally.
-        pool = ConnectionPool(
-            conninfo=db_url,
-            min_size=1,
-            max_size=4,
-            kwargs={
-                "autocommit": True,
-                "prepare_threshold": 0,
-                "row_factory": dict_row,
-            },
-            open=True,
+        pool = cast(
+            Any,
+            ConnectionPool(
+                conninfo=db_url,
+                min_size=1,
+                max_size=4,
+                kwargs={
+                    "autocommit": True,
+                    "prepare_threshold": 0,
+                    "row_factory": dict_row,
+                },
+                open=True,
+            ),
         )
         # Fail-fast at boot rather than on first task.
         pool.wait(timeout=10.0)

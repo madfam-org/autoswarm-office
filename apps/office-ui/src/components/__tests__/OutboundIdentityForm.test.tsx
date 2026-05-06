@@ -135,9 +135,14 @@ describe('OutboundIdentityForm', () => {
     const nameInput = screen.getByLabelText(/Display name/i) as HTMLInputElement;
     const slugSelect = screen.getByLabelText(/Pinned agent slug/i) as HTMLSelectElement;
 
-    fireEvent.change(emailInput, { target: { value: 'ceo@tenant.example' } });
-    fireEvent.change(nameInput, { target: { value: 'Tenant CEO' } });
-    fireEvent.change(slugSelect, { target: { value: 'growth' } });
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'ceo@tenant.example' } });
+      fireEvent.change(nameInput, { target: { value: 'Tenant CEO' } });
+      fireEvent.change(slugSelect, { target: { value: 'growth' } });
+    });
+    await waitFor(() => expect(emailInput.value).toBe('ceo@tenant.example'));
+    expect(nameInput.value).toBe('Tenant CEO');
+    expect(slugSelect.value).toBe('growth');
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));

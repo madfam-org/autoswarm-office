@@ -516,6 +516,7 @@ async def _emit_dispatch_event(
     nexus-api outage doesn't block the drain.
     """
     try:
+        from selva_workers.config import get_settings
         from selva_workers.event_emitter import emit_event
     except Exception:
         logger.info(
@@ -541,6 +542,7 @@ async def _emit_dispatch_event(
 
     try:
         await emit_event(
+            get_settings().nexus_api_url,
             event_type="dragon_egg_action_dispatched",
             event_category="dragon_eggs",
             payload=payload,

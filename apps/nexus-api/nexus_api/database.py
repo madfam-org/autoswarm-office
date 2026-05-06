@@ -21,12 +21,21 @@ from .config import get_settings
 logger = logging.getLogger(__name__)
 
 
+def _normalize_async_database_url(url: str) -> str:
+    """Ensure bare PostgreSQL URLs use SQLAlchemy's asyncpg driver."""
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    return url
+
+
 @lru_cache(maxsize=1)
 def get_engine() -> AsyncEngine:
     """Return a cached async engine configured from settings."""
     settings = get_settings()
     return create_async_engine(
-        settings.database_url,
+        _normalize_async_database_url(settings.database_url),
         echo=False,
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,

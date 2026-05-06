@@ -561,6 +561,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/swarms/dispatch/ecosystem-app/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Ecosystem App Manifest
+         * @description Read-only EcosystemApp/AppSpec verification; never dispatches or mutates.
+         */
+        post: operations["verify_ecosystem_app_manifest_api_v1_swarms_dispatch_ecosystem_app_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/swarms/tasks": {
         parameters: {
             query?: never;
@@ -4923,6 +4943,25 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** ManifestVerifyResponse */
+        ManifestVerifyResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Kind */
+            kind: string | null;
+            /** Api Version */
+            api_version: string | null;
+            /** Manifest Hash */
+            manifest_hash: string | null;
+            /** Derived */
+            derived: {
+                [key: string]: unknown;
+            };
+            /** Gaps */
+            gaps: string[];
+            /** Unsupported Placeholders */
+            unsupported_placeholders: string[];
+        };
         /** MapCreateRequest */
         MapCreateRequest: {
             /** Name */
@@ -7221,6 +7260,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_ecosystem_app_manifest_api_v1_swarms_dispatch_ecosystem_app_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManifestVerifyResponse"];
                 };
             };
             /** @description Validation Error */

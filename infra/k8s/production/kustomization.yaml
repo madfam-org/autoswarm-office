@@ -46,14 +46,12 @@ commonLabels:
 #   office-ui : run 24480880306 / 2026-04-15T22:09Z
 #   colyseus  : run 24879593455 / 2026-04-24T08:18Z
 #   admin     : run 24616588100 / 2026-04-18T23:48Z
-#   gateway   : run 22935418424 / 2026-03-11T03:33Z
+#   gateway   : live ready ReplicaSet gateway-85fc69c6b6 / 2026-05-04
 #
-# Older gateway/office-ui digests reflect change-detection skipping
-# their builds for unrelated commits — these are still the most-recently
-# pushed `:latest` content for those images. ArgoCD will roll the
-# pods to the explicitly pinned digest on next sync; this may or may
-# not match the currently-running content. That's the desired
-# forward state — explicit > whatever-`:latest`-resolved-to-this-morning.
+# Older office-ui digests reflect change-detection skipping its builds
+# for unrelated commits. Gateway is pinned to the most recent digest
+# observed in a ready production ReplicaSet after the newer audit-derived
+# digest failed to pull.
 images:
   - name: ghcr.io/madfam-org/autoswarm-nexus-api
     newName: ghcr.io/madfam-org/autoswarm-nexus-api
@@ -69,4 +67,4 @@ images:
     digest: sha256:f1898f32fa197c3e68253a723a907477ff209c1c99490a04b2a8886846a66920
   - name: ghcr.io/madfam-org/autoswarm-gateway
     newName: ghcr.io/madfam-org/autoswarm-gateway
-    digest: sha256:bfdfbcb33f6dc9d624f5f863eaeb915d987f87e6a809898788dabda355f8cd6a
+    digest: sha256:7815f1accd169e765bb4c663ff686aca9a4f73ce2584dd3d420a8a2773b4d06a

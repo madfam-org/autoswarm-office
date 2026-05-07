@@ -9,12 +9,16 @@ import json
 import logging
 import socket
 import urllib.parse
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request, status
+from sqlalchemy import select
 
 from ..config import get_settings
+from ..database import tenant_session
 from ..memory_store.db import memory_store
+from ..models import ApprovalRequest, GatewayOperatorIdentity
 from ..tasks.acp_tasks import run_acp_workflow_task
 
 logger = logging.getLogger(__name__)
@@ -233,7 +237,103 @@ def _trigger_acp_from_gateway(channel: str, actor: str, target_url: str) -> dict
     return {"status": "success", "action": "acp_triggered", "task_id": task.id}
 
 
-def _route_harness_command(
+async def _resolve_gateway_operator(channel: str, actor: str) -> GatewayOperatorIdentity | None:
+    """Resolve a channel actor to a tenant-bound Selva operator identity."""
+    subject = (actor or "").strip()
+    if not subject or subject == "unknown":
+        return None
+
+    async with tenant_session("platform") as db:
+        result = await db.execute(
+            select(GatewayOperatorIdentity).where(
+                GatewayOperatorIdentity.channel == channel,
+                GatewayOperatorIdentity.external_subject == subject,
+                GatewayOperatorIdentity.is_active.is_(True),
+            )
+        )
+        return result.scalar_one_or_none()
+
+
+def _approval_payload(req: ApprovalRequest) -> dict[str, Any]:
+    """Small approval envelope suitable for chat-channel responses."""
+    return {
+        "id": str(req.id),
+        "agent_id": str(req.agent_id),
+        "action_category": req.action_category,
+        "action_type": req.action_type,
+        "urgency": req.urgency,
+        "reasoning": req.reasoning,
+        "created_at": req.created_at.isoformat(),
+    }
+
+
+async def _list_gateway_pending_approvals(
+    operator: GatewayOperatorIdentity,
+    *,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """List pending approvals for a mapped gateway operator's tenant."""
+    async with tenant_session(operator.org_id) as db:
+        result = await db.execute(
+            select(ApprovalRequest)
+            .where(
+                ApprovalRequest.status == "pending",
+                ApprovalRequest.org_id == operator.org_id,
+            )
+            .order_by(ApprovalRequest.created_at.desc())
+            .limit(limit)
+        )
+        items = [_approval_payload(req) for req in result.scalars().all()]
+    return {"status": "success", "action": "hitl_pending", "items": items, "limit": limit}
+
+
+async def _resolve_gateway_approval(
+    operator: GatewayOperatorIdentity,
+    *,
+    request_id: str,
+    decision: str,
+    feedback: str | None,
+) -> dict[str, Any]:
+    """Resolve a tenant-scoped approval from an authenticated gateway operator."""
+    try:
+        approval_id = uuid.UUID(request_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid approval UUID") from exc
+
+    async with tenant_session(operator.org_id) as db:
+        result = await db.execute(
+            select(ApprovalRequest).where(
+                ApprovalRequest.id == approval_id,
+                ApprovalRequest.org_id == operator.org_id,
+            )
+        )
+        approval = result.scalar_one_or_none()
+        if approval is None:
+            raise HTTPException(status_code=404, detail="Approval request not found")
+        if approval.status != "pending":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Request already resolved with status '{approval.status}'",
+            )
+
+        from .approvals import _respond_to_request
+
+        response = await _respond_to_request(
+            request_id,
+            decision,
+            feedback,
+            db,
+            responded_by=operator.user_sub,
+            tenant_org_id=operator.org_id,
+        )
+    return {
+        "status": "success",
+        "action": f"hitl_{decision}",
+        "approval": response.model_dump(mode="json"),
+    }
+
+
+async def _route_harness_command(
     channel: str, text: str, actor: str = "unknown"
 ) -> dict[str, Any] | None:
     """Route common Harness commands across chat-style gateway adapters.
@@ -286,17 +386,53 @@ def _route_harness_command(
             return {"status": "success", "action": "remembered", "run_id": run_id}
 
     if lowered in {"/pending", "pending", "/approvals", "approvals"}:
-        return {
-            "status": "needs_authenticated_bridge",
-            "action": "hitl_pending",
-            "detail": (
-                "HITL approval actions require a tenant-bound authenticated bridge. "
-                "Use the Office UI today; the Harness command bridge should bind "
-                "channel identities to Janua/Selva users before approving or denying."
-            ),
-        }
+        operator = await _resolve_gateway_operator(channel, actor)
+        if operator is None:
+            return _gateway_identity_required("hitl_pending", channel, actor)
+        return await _list_gateway_pending_approvals(operator)
+
+    if lowered.startswith("/approve ") or lowered.startswith("approve "):
+        operator = await _resolve_gateway_operator(channel, actor)
+        if operator is None:
+            return _gateway_identity_required("hitl_approve", channel, actor)
+        request_id = command.split(maxsplit=1)[1].strip()
+        return await _resolve_gateway_approval(
+            operator,
+            request_id=request_id,
+            decision="approved",
+            feedback=None,
+        )
+
+    if lowered.startswith("/deny ") or lowered.startswith("deny "):
+        operator = await _resolve_gateway_operator(channel, actor)
+        if operator is None:
+            return _gateway_identity_required("hitl_deny", channel, actor)
+        parts = command.split(maxsplit=2)
+        request_id = parts[1].strip()
+        feedback = parts[2].strip() if len(parts) > 2 else None
+        return await _resolve_gateway_approval(
+            operator,
+            request_id=request_id,
+            decision="denied",
+            feedback=feedback,
+        )
 
     return None
+
+
+def _gateway_identity_required(action: str, channel: str, actor: str) -> dict[str, Any]:
+    """Return explicit refusal when a channel actor is not tenant-bound."""
+    return {
+        "status": "needs_authenticated_bridge",
+        "action": action,
+        "channel": channel,
+        "actor": actor,
+        "detail": (
+            "HITL approval actions require a tenant-bound gateway operator identity. "
+            "Create a gateway_operator_identities row that maps this channel actor "
+            "to a Janua/Selva user and org before approving or denying."
+        ),
+    }
 
 
 def _verify_signed_relay_request(body: bytes, request: Request, secret: str) -> None:
@@ -375,7 +511,7 @@ async def _signed_relay_inbound(
 
     text = _extract_gateway_text(payload)
     actor = _extract_gateway_actor(payload)
-    routed = _route_harness_command(channel, text, actor)
+    routed = await _route_harness_command(channel, text, actor)
     if routed:
         return routed
     return {"status": "ignored", "channel": channel}
@@ -415,7 +551,7 @@ async def telegram_webhook(
     text = message.get("text", "").strip()
     chat_id = message.get("chat", {}).get("id", "unknown")
 
-    routed = _route_harness_command("telegram", text, str(chat_id))
+    routed = await _route_harness_command("telegram", text, str(chat_id))
     if routed:
         return routed
 
@@ -473,7 +609,7 @@ async def discord_webhook(
     payload = json.loads(body)
     content = payload.get("content", "").strip()
 
-    routed = _route_harness_command("discord", content, payload.get("author", "unknown"))
+    routed = await _route_harness_command("discord", content, _extract_gateway_actor(payload))
     if routed:
         return routed
 
@@ -560,6 +696,10 @@ async def slack_webhook(
         command = payload.get("command", "")
         user_name = payload.get("user_name", "unknown")
 
+    routed = await _route_harness_command("slack", f"{command} {text}".strip(), user_name)
+    if routed:
+        return routed
+
     if "/initiate_acp" in command or text.startswith("initiate_acp"):
         target_url = text.strip().split()[0] if text.strip() else ""
         if not target_url:
@@ -629,6 +769,9 @@ async def email_inbound(request: Request) -> dict[str, Any]:
 
     for line in body_text.splitlines():
         line = line.strip()
+        routed = await _route_harness_command("email", line, sender)
+        if routed:
+            return routed
         if line.lower().startswith("initiate_acp:"):
             target_url = line.split(":", 1)[1].strip()
             target_url = _validate_webhook_url(target_url)
@@ -705,6 +848,10 @@ async def whatsapp_inbound(request: Request) -> dict[str, Any]:
     except Exception:
         return {"status": "ignored"}
 
+    routed = await _route_harness_command("whatsapp", text, from_number)
+    if routed:
+        return routed
+
     if text.lower().startswith("acp "):
         target_url = text[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -756,6 +903,10 @@ async def matrix_inbound(
         text = content.get("body", "")
         sender = event.get("sender", "unknown")
 
+        routed = await _route_harness_command("matrix", text, sender)
+        if routed:
+            return routed
+
         if text.lower().startswith("acp "):
             target_url = text[4:].strip()
             target_url = _validate_webhook_url(target_url)
@@ -797,6 +948,10 @@ async def mattermost_inbound(request: Request) -> dict[str, Any]:
 
     if not hmac.compare_digest(token, settings.mattermost_token):
         raise HTTPException(status_code=401, detail="Invalid Mattermost token")
+
+    routed = await _route_harness_command("mattermost", text, user_name)
+    if routed:
+        return routed
 
     target_url = text.strip()
     if not target_url:
@@ -841,6 +996,10 @@ async def signal_inbound(request: Request) -> dict[str, Any]:
     if allowed and source not in allowed:
         logger.warning("Gateway (Signal): rejected message from non-whitelisted source %s", source)
         raise HTTPException(status_code=403, detail="Signal source not in allowlist")
+
+    routed = await _route_harness_command("signal", text, source)
+    if routed:
+        return routed
 
     if text.lower().startswith("acp "):
         target_url = text[4:].strip()
@@ -908,6 +1067,10 @@ async def sms_inbound(
     except Exception:
         return {"status": "ignored"}
 
+    routed = await _route_harness_command("sms", sms_body, from_number)
+    if routed:
+        return routed
+
     if sms_body.lower().startswith("acp "):
         target_url = sms_body[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -956,6 +1119,9 @@ async def dingtalk_webhook(request: Request) -> dict[str, Any]:
         sender = data.get("senderNick", "unknown")
     except Exception:
         return {"msgtype": "text", "text": {"content": "Parse error"}}
+    routed = await _route_harness_command("dingtalk", text, sender)
+    if routed:
+        return {"msgtype": "text", "text": {"content": json.dumps(routed)}}
     if text.lower().startswith("acp "):
         target_url = text[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -999,6 +1165,15 @@ async def feishu_webhook(request: Request) -> dict[str, Any]:
         text = _j.loads(content_str).get("text", "").strip()
     except Exception:
         text = ""
+    sender = event.get("sender", {})
+    actor = "unknown"
+    if isinstance(sender, dict):
+        sender_id = sender.get("sender_id", {})
+        if isinstance(sender_id, dict):
+            actor = str(sender_id.get("open_id") or sender_id.get("union_id") or "unknown")
+    routed = await _route_harness_command("feishu", text, actor)
+    if routed:
+        return {"code": 0, "data": routed}
     if text.lower().startswith("/acp "):
         target_url = text[5:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -1020,6 +1195,9 @@ async def wecom_webhook(request: Request) -> dict[str, Any]:
         text = data.get("text", {}).get("content", "").strip()
     except Exception:
         return {"errcode": 1, "errmsg": "parse error"}
+    routed = await _route_harness_command("wecom", text, data.get("FromUserName", "unknown"))
+    if routed:
+        return {"errcode": 0, "errmsg": json.dumps(routed)}
     if text.lower().startswith("acp "):
         target_url = text[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -1051,6 +1229,9 @@ async def weixin_webhook(request: Request) -> dict[str, Any]:
         content = data.get("content", "").strip()
     except Exception:
         return {"success": False}
+    routed = await _route_harness_command("weixin", content, data.get("uid", "unknown"))
+    if routed:
+        return {"success": True, "data": routed}
     if content.lower().startswith("acp "):
         target_url = content[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -1073,6 +1254,13 @@ async def bluebubbles_webhook(request: Request) -> dict[str, Any]:
         text = data.get("data", {}).get("text", "").strip()
     except Exception:
         return {"status": "ignored"}
+    routed = await _route_harness_command(
+        "bluebubbles",
+        text,
+        data.get("data", {}).get("chatGuid", "unknown"),
+    )
+    if routed:
+        return routed
     if text.lower().startswith("acp "):
         target_url = text[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -1144,6 +1332,9 @@ async def homeassistant_webhook(request: Request) -> dict[str, Any]:
         entity_id = data.get("entity_id", "unknown")
     except Exception:
         return {"result": "ignored"}
+    routed = await _route_harness_command("homeassistant", message, entity_id)
+    if routed:
+        return routed
     if message.lower().startswith("acp "):
         target_url = message[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -1185,7 +1376,7 @@ async def generic_webhook(
     except Exception:
         data = {}
     text = (data.get("text") or data.get("message") or data.get("content") or "").strip()
-    routed = _route_harness_command(channel_id, text, data.get("actor", "unknown"))
+    routed = await _route_harness_command(channel_id, text, data.get("actor", "unknown"))
     if routed:
         routed["channel_id"] = channel_id
         return routed

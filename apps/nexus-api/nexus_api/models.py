@@ -388,6 +388,33 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class GatewayOperatorIdentity(Base):
+    """Tenant-bound operator identity for external Harness gateway channels."""
+
+    __tablename__ = "gateway_operator_identities"
+    __table_args__ = (
+        UniqueConstraint(
+            "channel",
+            "external_subject",
+            name="uq_gateway_operator_identities_channel_subject",
+        ),
+        Index("ix_gateway_operator_identities_org_channel", "org_id", "channel"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    org_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    channel: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    external_subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    user_sub: Mapped[str] = mapped_column(String(255), nullable=False)
+    user_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
 # ---------------------------------------------------------------------------
 # Wave 4 models (Gap 2: Command Approvals, Gap 3: Cron Scheduler)
 # ---------------------------------------------------------------------------

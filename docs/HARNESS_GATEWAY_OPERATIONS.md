@@ -536,3 +536,21 @@ Relay payload text is read from `text`, `message`, `content`, or `body`. Actor l
 ### HITL bridge requirement
 
 Approval actions must not be accepted from chat channels until a channel identity maps to a Janua-authenticated Selva user and tenant. The current safe behavior for `pending` is explicit refusal with `needs_authenticated_bridge`. The next implementation step is a tenant-bound operator identity table plus command handlers for `pending`, `approve <id>`, and `deny <id> <reason>` that call the existing `/api/v1/approvals` APIs with idempotency keys.
+
+### Tenant-bound HITL command bridge
+
+HITL commands are enabled only for mapped operator identities in `gateway_operator_identities`:
+
+- `channel`: lower-case adapter id such as `slack`, `telegram`, `sms`, `teams`, `irc`, `qq`, or `yuanbao`.
+- `external_subject`: stable channel actor id, for example Slack user id/name, Telegram chat id, Matrix sender id, SMS phone number, or signed relay actor.
+- `org_id`: Selva tenant org allowed to see/resolve approvals.
+- `user_sub`: Janua subject recorded as the approval responder.
+- `is_active`: set false to revoke channel access without deleting audit context.
+
+Supported HITL commands after mapping:
+
+- `pending` or `approvals` returns the latest pending approvals for the mapped tenant.
+- `approve <approval_id>` approves a tenant-scoped approval and records `user_sub` as the responder.
+- `deny <approval_id> <reason>` denies a tenant-scoped approval with optional feedback.
+
+Do not seed broad shared-channel identities. Prefer one mapping per human operator and platform account so approval audit rows preserve individual accountability.

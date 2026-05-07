@@ -132,7 +132,9 @@ class JanuaOauthClientCreateTool(BaseTool):
                 "is_confidential": {
                     "type": "boolean",
                     "default": True,
-                    "description": "False for browser PKCE clients; true for server/machine clients.",
+                    "description": (
+                        "False for browser PKCE clients; true for server/machine clients."
+                    ),
                 },
                 "scopes": {
                     "type": "array",

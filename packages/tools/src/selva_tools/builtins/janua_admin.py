@@ -6,8 +6,9 @@ client for the tenant's app, manage its secrets, and provision the Janua
 organization that the tenant's users sign in against.
 
 API base: ``JANUA_API_URL`` (default ``https://auth.madfam.io``).
-Auth: ``JANUA_ADMIN_TOKEN`` — a service token with ``admin`` role.
-Router surfaces cover ``/api/v1/oauth-clients/*`` and ``/api/v1/organizations/*``.
+Auth: ``JANUA_INTERNAL_API_KEY`` for zero-touch client registration. Legacy
+``JANUA_ADMIN_TOKEN`` remains accepted by older admin routes.
+Router surfaces cover ``/api/v1/oauth/clients/*`` and ``/api/v1/organizations/*``.
 """
 
 from __future__ import annotations
@@ -24,28 +25,42 @@ from ..base import BaseTool, ToolResult
 logger = logging.getLogger(__name__)
 
 JANUA_API_URL = os.environ.get("JANUA_API_URL", "https://auth.madfam.io")
+JANUA_INTERNAL_API_KEY = os.environ.get("JANUA_INTERNAL_API_KEY", "")
 JANUA_ADMIN_TOKEN = os.environ.get("JANUA_ADMIN_TOKEN", "")
 
 
-def _headers() -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {JANUA_ADMIN_TOKEN}",
-        "Content-Type": "application/json",
-    }
+def _headers(*, internal: bool = False) -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    if internal and JANUA_INTERNAL_API_KEY:
+        headers["X-Internal-API-Key"] = JANUA_INTERNAL_API_KEY
+    elif JANUA_ADMIN_TOKEN:
+        headers["Authorization"] = f"Bearer {JANUA_ADMIN_TOKEN}"
+    return headers
 
 
-def _creds_check() -> str | None:
-    if not JANUA_ADMIN_TOKEN:
+def _creds_check(*, internal: bool = False) -> str | None:
+    if internal and not (JANUA_INTERNAL_API_KEY or JANUA_ADMIN_TOKEN):
+        return "JANUA_INTERNAL_API_KEY or JANUA_ADMIN_TOKEN must be set."
+    if not internal and not JANUA_ADMIN_TOKEN:
         return "JANUA_ADMIN_TOKEN must be set (service-role token)."
     return None
 
 
 async def _request(
-    method: str, path: str, json_body: dict[str, Any] | None = None
+    method: str,
+    path: str,
+    json_body: dict[str, Any] | None = None,
+    *,
+    internal: bool = False,
 ) -> tuple[int, Any]:
     url = f"{JANUA_API_URL.rstrip('/')}{path}"
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.request(method, url, headers=_headers(), json=json_body)
+        resp = await client.request(
+            method,
+            url,
+            headers=_headers(internal=internal),
+            json=json_body,
+        )
         try:
             return resp.status_code, resp.json()
         except Exception:
@@ -96,6 +111,29 @@ class JanuaOauthClientCreateTool(BaseTool):
                     "items": {"type": "string"},
                     "default": ["authorization_code", "refresh_token"],
                 },
+                "client_key": {
+                    "type": "string",
+                    "description": "Stable AppSpec logical key for idempotent reconciliation.",
+                },
+                "audience": {
+                    "type": "string",
+                    "description": "JWT audience for access tokens minted to this client.",
+                },
+                "allowed_origins": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Browser origins allowed for CORS/OIDC flows.",
+                },
+                "post_logout_redirect_uris": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Allowed logout redirect URIs.",
+                },
+                "is_confidential": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "False for browser PKCE clients; true for server/machine clients.",
+                },
                 "scopes": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -110,7 +148,7 @@ class JanuaOauthClientCreateTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
-        err = _creds_check()
+        err = _creds_check(internal=True)
         if err:
             return ToolResult(success=False, error=err)
         payload = {
@@ -118,12 +156,19 @@ class JanuaOauthClientCreateTool(BaseTool):
             "description": kwargs.get("description") or "",
             "redirect_uris": kwargs["redirect_uris"],
             "grant_types": kwargs.get("grant_types", ["authorization_code", "refresh_token"]),
-            "scopes": kwargs.get("scopes", ["openid", "profile", "email"]),
+            "allowed_scopes": kwargs.get("scopes", ["openid", "profile", "email"]),
+            "client_key": kwargs.get("client_key") or kwargs["name"],
+            "audience": kwargs.get("audience"),
+            "allowed_origins": kwargs.get("allowed_origins") or [],
+            "post_logout_redirect_uris": kwargs.get("post_logout_redirect_uris") or [],
+            "is_confidential": kwargs.get("is_confidential", True),
         }
         if kwargs.get("organization_id"):
             payload["organization_id"] = kwargs["organization_id"]
         try:
-            status, body = await _request("POST", "/api/v1/oauth-clients", json_body=payload)
+            status, body = await _request(
+                "POST", "/api/v1/oauth/clients/register", json_body=payload, internal=True
+            )
             if not _ok(status) or not isinstance(body, dict):
                 return ToolResult(success=False, error=_err(status, body))
             return ToolResult(
@@ -134,8 +179,8 @@ class JanuaOauthClientCreateTool(BaseTool):
                     "client_secret": body.get("client_secret"),
                     "issuer": JANUA_API_URL,
                     "jwks_uri": f"{JANUA_API_URL}/.well-known/jwks.json",
-                    "token_endpoint": f"{JANUA_API_URL}/oauth/token",
-                    "authorization_endpoint": f"{JANUA_API_URL}/oauth/authorize",
+                    "token_endpoint": f"{JANUA_API_URL}/api/v1/oauth/token",
+                    "authorization_endpoint": f"{JANUA_API_URL}/api/v1/oauth/authorize",
                 },
             )
         except Exception as e:

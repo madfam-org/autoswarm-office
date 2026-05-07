@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import json
 import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -32,7 +34,9 @@ from ..models import (
     DeploymentEvidenceRecord,
     SwarmTask,
     SwarmTaskOutbox,
+    TaskComment,
     TaskEvent,
+    TaskHistory,
     TenantConfig,
     Workflow,
 )
@@ -79,6 +83,7 @@ async def require_dispatch_rate_limit(
 
 
 class DispatchRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
     description: str = Field(..., min_length=1, max_length=2000)
     graph_type: str = Field(
         default="sequential",
@@ -87,6 +92,15 @@ class DispatchRequest(BaseModel):
     assigned_agent_ids: list[str] = Field(default_factory=list)
     required_skills: list[str] = Field(default_factory=list)
     payload: dict[str, Any] = Field(default_factory=dict)
+    kanban_status: str = Field(
+        default="todo",
+        pattern=r"^(todo|in_progress|review|done|blocked)$",
+    )
+    priority: str = Field(default="medium", pattern=r"^(low|medium|high|critical)$")
+    labels: list[str] = Field(default_factory=list)
+    due_date: str | None = None
+    parent_task_id: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
     workflow_id: str | None = Field(
         default=None,
         description="UUID of a custom workflow definition (required for graph_type='custom')",
@@ -132,12 +146,21 @@ class ManifestVerifyResponse(BaseModel):
 
 class SwarmTaskResponse(BaseModel):
     id: str
+    title: str | None
     description: str
     graph_type: str
     assigned_agent_ids: list[str]
     payload: dict[str, Any]
     status: str
+    kanban_status: str
+    priority: str
+    labels: list[str]
+    due_date: str | None
+    creator_id: str | None
+    parent_task_id: str | None
+    depends_on: list[str]
     created_at: str
+    updated_at: str | None
     completed_at: str | None
 
     model_config = {"from_attributes": True}
@@ -149,6 +172,95 @@ class TaskStatusUpdate(BaseModel):
     started_at: str | None = None
     error_message: str | None = None
     deployment_evidence: dict[str, Any] | None = None
+
+
+class KanbanTaskUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    kanban_status: str | None = Field(
+        default=None,
+        pattern=r"^(todo|in_progress|review|done|blocked)$",
+    )
+    priority: str | None = Field(default=None, pattern=r"^(low|medium|high|critical)$")
+    labels: list[str] | None = None
+    due_date: str | None = None
+    parent_task_id: str | None = None
+    depends_on: list[str] | None = None
+
+
+class TaskCommentCreate(BaseModel):
+    body: str = Field(..., min_length=1, max_length=5000)
+
+
+class TaskCommentResponse(BaseModel):
+    id: str
+    task_id: str
+    author_id: str | None
+    body: str
+    created_at: str
+
+    model_config = {"from_attributes": True}
+
+
+class TaskHistoryResponse(BaseModel):
+    id: str
+    task_id: str
+    event_type: str
+    actor_id: str | None
+    payload: dict[str, Any]
+    created_at: str
+
+    model_config = {"from_attributes": True}
+
+
+class TaskClaimRequest(BaseModel):
+    agent_id: str | None = None
+    graph_type: str | None = None
+    labels: list[str] = Field(default_factory=list)
+
+
+class TaskClaimResponse(BaseModel):
+    claimed: bool
+    task: SwarmTaskResponse | None = None
+
+
+class OverdueNotificationResponse(BaseModel):
+    scanned: int
+    notified: int
+
+
+class KanbanTaskImportItem(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    description: str = Field(..., min_length=1, max_length=5000)
+    graph_type: str = Field(default="sequential", max_length=50)
+    kanban_status: str = Field(default="todo", pattern=r"^(todo|in_progress|review|done|blocked)$")
+    priority: str = Field(default="medium", pattern=r"^(low|medium|high|critical)$")
+    labels: list[str] = Field(default_factory=list)
+    assigned_agent_ids: list[str] = Field(default_factory=list)
+    due_date: str | None = None
+    parent_task_id: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+
+
+class KanbanTaskImportRequest(BaseModel):
+    items: list[KanbanTaskImportItem]
+
+
+class KanbanTaskImportResponse(BaseModel):
+    created: int
+    tasks: list[SwarmTaskResponse]
+
+
+class KanbanMetricsResponse(BaseModel):
+    total: int
+    status_counts: dict[str, int]
+    blocked_count: int
+    dependency_blocked_count: int
+    overdue_count: int
+    wip_count: int
+    avg_wip_age_seconds: float | None
+    avg_cycle_time_seconds: float | None
+    throughput_by_label: dict[str, int]
+    workload_by_assignee: dict[str, int]
 
 
 class DeploymentEvidenceRecordResponse(BaseModel):
@@ -193,14 +305,303 @@ def _compute_perf_weight(agent: Agent) -> float:
 def _task_to_response(task: SwarmTask) -> SwarmTaskResponse:
     return SwarmTaskResponse(
         id=str(task.id),
+        title=task.title,
         description=task.description,
         graph_type=task.graph_type,
         assigned_agent_ids=task.assigned_agent_ids or [],
         payload=task.payload or {},
         status=task.status,
+        kanban_status=task.kanban_status or _execution_status_to_kanban(task.status),
+        priority=task.priority or "medium",
+        labels=task.labels or [],
+        due_date=task.due_date.isoformat() if task.due_date else None,
+        creator_id=task.creator_id,
+        parent_task_id=str(task.parent_task_id) if task.parent_task_id else None,
+        depends_on=[str(dep) for dep in (task.depends_on or [])],
         created_at=task.created_at.isoformat(),
+        updated_at=task.updated_at.isoformat() if task.updated_at else None,
         completed_at=task.completed_at.isoformat() if task.completed_at else None,
     )
+
+
+def _task_comment_to_response(comment: TaskComment) -> TaskCommentResponse:
+    return TaskCommentResponse(
+        id=str(comment.id),
+        task_id=str(comment.task_id),
+        author_id=comment.author_id,
+        body=comment.body,
+        created_at=comment.created_at.isoformat(),
+    )
+
+
+def _task_history_to_response(history: TaskHistory) -> TaskHistoryResponse:
+    return TaskHistoryResponse(
+        id=str(history.id),
+        task_id=str(history.task_id),
+        event_type=history.event_type,
+        actor_id=history.actor_id,
+        payload=history.payload or {},
+        created_at=history.created_at.isoformat(),
+    )
+
+
+def _derive_task_title(description: str) -> str:
+    title = " ".join(description.strip().splitlines()[0].split())
+    return title[:200] if title else "Untitled task"
+
+
+def _execution_status_to_kanban(runtime_status: str | None) -> str:
+    return {
+        "queued": "todo",
+        "pending": "todo",
+        "running": "in_progress",
+        "completed": "done",
+        "failed": "blocked",
+        "cancelled": "blocked",
+    }.get(runtime_status or "", "todo")
+
+
+def _parse_optional_datetime(value: str | None, field_name: str) -> datetime | None:
+    if value in (None, ""):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {field_name}; expected ISO-8601 datetime",
+        ) from exc
+
+
+def _parse_optional_uuid(value: str | None, field_name: str) -> uuid.UUID | None:
+    if value in (None, ""):
+        return None
+    try:
+        return uuid.UUID(value)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {field_name} UUID",
+        ) from exc
+
+
+def _normalise_id_list(values: list[str] | None, field_name: str) -> list[str]:
+    if values is None:
+        return []
+    normalised: list[str] = []
+    for value in values:
+        if value in (None, ""):
+            continue
+        normalised.append(str(_parse_optional_uuid(value, field_name)))
+    return normalised
+
+
+def _actor_id_from_user(user: dict | None) -> str | None:
+    if not user:
+        return None
+    sub = user.get("sub")
+    return str(sub) if sub else None
+
+
+def _add_task_history(
+    db: AsyncSession,
+    *,
+    task: SwarmTask,
+    event_type: str,
+    actor_id: str | None,
+    payload: dict[str, Any],
+) -> None:
+    db.add(
+        TaskHistory(
+            task_id=task.id,
+            org_id=task.org_id,
+            event_type=event_type,
+            actor_id=actor_id,
+            payload=payload,
+        )
+    )
+
+
+def _notification_sent_key(kind: str, dedupe_key: str | None = None) -> str:
+    return f"{kind}:{dedupe_key}" if dedupe_key else kind
+
+
+def _has_task_notification(task: SwarmTask, key: str) -> bool:
+    notifications = (task.payload or {}).get("_selva_notifications")
+    return isinstance(notifications, dict) and key in notifications
+
+
+def _record_task_notification(task: SwarmTask, key: str) -> None:
+    payload = dict(task.payload or {})
+    notifications = payload.get("_selva_notifications")
+    if not isinstance(notifications, dict):
+        notifications = {}
+    notifications[key] = datetime.now(UTC).isoformat()
+    payload["_selva_notifications"] = notifications
+    task.payload = payload
+
+
+async def _emit_task_lifecycle_notification(
+    db: AsyncSession,
+    *,
+    task: SwarmTask,
+    kind: str,
+    actor_id: str | None,
+    payload: dict[str, Any] | None = None,
+    dedupe_key: str | None = None,
+) -> bool:
+    """Emit a durable lifecycle notification event and history row."""
+    key = _notification_sent_key(kind, dedupe_key)
+    if _has_task_notification(task, key):
+        return False
+
+    notification_payload = {
+        "task_id": str(task.id),
+        "title": task.title,
+        "description": task.description,
+        "kanban_status": task.kanban_status,
+        "runtime_status": task.status,
+        "priority": task.priority,
+        "labels": task.labels or [],
+        "assigned_agent_ids": task.assigned_agent_ids or [],
+        "due_date": task.due_date.isoformat() if task.due_date else None,
+        **(payload or {}),
+    }
+    _add_task_history(
+        db,
+        task=task,
+        event_type=f"task.notification.{kind}",
+        actor_id=actor_id,
+        payload=notification_payload,
+    )
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type=f"task.notification.{kind}",
+            event_category="notification",
+            task_id=task.id,
+            graph_type=task.graph_type,
+            org_id=task.org_id,
+            payload=notification_payload,
+        )
+    except Exception:
+        logging.getLogger(__name__).debug(
+            "Failed to emit task notification event",
+            exc_info=True,
+        )
+    try:
+        from ..task_notification_notifier import publish_task_notification
+
+        await publish_task_notification(
+            org_id=task.org_id,
+            event_type=f"task.notification.{kind}",
+            payload=notification_payload,
+        )
+    except Exception:
+        logging.getLogger(__name__).debug(
+            "Failed to fan out task notification",
+            exc_info=True,
+        )
+    _record_task_notification(task, key)
+    return True
+
+
+def _notification_kind_for_kanban_status(kanban_status: str | None) -> str | None:
+    return {
+        "review": "review_needed",
+        "done": "completed",
+        "blocked": "blocked",
+    }.get(kanban_status or "")
+
+
+def _encode_csv_list(values: list[str] | None) -> str:
+    return "|".join(values or [])
+
+
+def _decode_csv_list(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    separator = "|" if "|" in raw else ","
+    return [part.strip() for part in raw.split(separator) if part.strip()]
+
+
+def _task_to_export_item(task: SwarmTask) -> dict[str, Any]:
+    return {
+        "id": str(task.id),
+        "title": task.title,
+        "description": task.description,
+        "graph_type": task.graph_type,
+        "status": task.status,
+        "kanban_status": task.kanban_status,
+        "priority": task.priority,
+        "labels": task.labels or [],
+        "assigned_agent_ids": task.assigned_agent_ids or [],
+        "due_date": task.due_date.isoformat() if task.due_date else None,
+        "parent_task_id": str(task.parent_task_id) if task.parent_task_id else None,
+        "depends_on": [str(dep) for dep in (task.depends_on or [])],
+        "created_at": task.created_at.isoformat(),
+        "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+        "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+    }
+
+
+def _task_export_csv(items: list[dict[str, Any]]) -> str:
+    output = io.StringIO()
+    fieldnames = [
+        "id",
+        "title",
+        "description",
+        "graph_type",
+        "status",
+        "kanban_status",
+        "priority",
+        "labels",
+        "assigned_agent_ids",
+        "due_date",
+        "parent_task_id",
+        "depends_on",
+        "created_at",
+        "updated_at",
+        "completed_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in items:
+        row = dict(item)
+        row["labels"] = _encode_csv_list(row.get("labels"))
+        row["assigned_agent_ids"] = _encode_csv_list(row.get("assigned_agent_ids"))
+        row["depends_on"] = _encode_csv_list(row.get("depends_on"))
+        writer.writerow(row)
+    return output.getvalue()
+
+
+def _import_items_from_csv(raw_csv: str) -> list[KanbanTaskImportItem]:
+    reader = csv.DictReader(io.StringIO(raw_csv))
+    items: list[KanbanTaskImportItem] = []
+    for row in reader:
+        items.append(
+            KanbanTaskImportItem(
+                title=row.get("title") or None,
+                description=row.get("description") or "",
+                graph_type=row.get("graph_type") or "sequential",
+                kanban_status=row.get("kanban_status") or "todo",
+                priority=row.get("priority") or "medium",
+                labels=_decode_csv_list(row.get("labels")),
+                assigned_agent_ids=_decode_csv_list(row.get("assigned_agent_ids")),
+                due_date=row.get("due_date") or None,
+                parent_task_id=row.get("parent_task_id") or None,
+                depends_on=_decode_csv_list(row.get("depends_on")),
+            )
+        )
+    return items
+
+
+def _seconds_between(start: datetime | None, end: datetime | None) -> float | None:
+    if start is None or end is None:
+        return None
+    return max(0.0, (end - start).total_seconds())
 
 
 def _deployment_status_from_evidence(
@@ -806,11 +1207,18 @@ async def dispatch_task(
     # in the orchestrator package; the ledger is the durable record).
     wf_uid_value = wf_uid if body.graph_type == "custom" else None
     task = SwarmTask(
+        title=body.title or _derive_task_title(body.description),
         description=body.description,
         graph_type=body.graph_type,
         assigned_agent_ids=assigned_agent_ids,
         payload=task_payload,
         status="queued",
+        kanban_status=body.kanban_status,
+        priority=body.priority,
+        labels=body.labels,
+        due_date=_parse_optional_datetime(body.due_date, "due_date"),
+        parent_task_id=_parse_optional_uuid(body.parent_task_id, "parent_task_id"),
+        depends_on=_normalise_id_list(body.depends_on, "depends_on"),
         org_id=tenant.org_id,
         workflow_id=wf_uid_value,
     )
@@ -822,6 +1230,27 @@ async def dispatch_task(
         **(task.payload or {}),
         "_selva_envelope": canonical_envelope,
     }
+    _add_task_history(
+        db,
+        task=task,
+        event_type="task.created",
+        actor_id=task.creator_id,
+        payload={
+            "title": task.title,
+            "kanban_status": task.kanban_status,
+            "priority": task.priority,
+            "labels": task.labels or [],
+        },
+    )
+    if assigned_agent_ids:
+        await _emit_task_lifecycle_notification(
+            db,
+            task=task,
+            kind="assigned",
+            actor_id=task.creator_id,
+            payload={"assigned_agent_ids": assigned_agent_ids},
+            dedupe_key="dispatch",
+        )
     await db.flush()
 
     ledger_entry = ComputeTokenLedger(
@@ -1037,16 +1466,25 @@ async def list_active_tasks(
 
 class TaskBoardItem(BaseModel):
     id: str
+    title: str | None
     description: str
     graph_type: str
     status: str
+    kanban_status: str
+    priority: str
+    labels: list[str]
+    due_date: str | None
+    parent_task_id: str | None
+    depends_on: list[str]
     agent_names: list[str]
     created_at: str
+    updated_at: str | None
     started_at: str | None
     completed_at: str | None
     duration_ms: int | None
     total_tokens: int | None
     event_count: int
+    comment_count: int
 
     model_config = {"from_attributes": True}
 
@@ -1118,40 +1556,53 @@ async def get_task_board(
                     exc_info=True,
                 )
 
+    comment_counts: dict[str, int] = {}
+    if task_ids:
+        comment_result = await db.execute(
+            select(TaskComment.task_id, func.count(TaskComment.id))
+            .where(TaskComment.task_id.in_(task_ids))
+            .group_by(TaskComment.task_id)
+        )
+        for row in comment_result:
+            comment_counts[str(row[0])] = row[1]
+
     # Build columns
     columns: dict[str, list[TaskBoardItem]] = {
-        "queued": [],
-        "running": [],
-        "completed": [],
-        "failed": [],
-    }
-
-    status_map = {
-        "queued": "queued",
-        "pending": "queued",
-        "running": "running",
-        "completed": "completed",
-        "failed": "failed",
-        "cancelled": "failed",
+        "todo": [],
+        "in_progress": [],
+        "review": [],
+        "done": [],
+        "blocked": [],
     }
 
     for t in tasks:
         task_id_str = str(t.id)
         agg = event_agg.get(task_id_str, {})
-        col = status_map.get(t.status, "queued")
+        col = t.kanban_status or _execution_status_to_kanban(t.status)
+        if col not in columns:
+            col = "todo"
 
         item = TaskBoardItem(
             id=task_id_str,
+            title=t.title,
             description=t.description,
             graph_type=t.graph_type,
             status=t.status,
+            kanban_status=col,
+            priority=t.priority or "medium",
+            labels=t.labels or [],
+            due_date=t.due_date.isoformat() if t.due_date else None,
+            parent_task_id=str(t.parent_task_id) if t.parent_task_id else None,
+            depends_on=[str(dep) for dep in (t.depends_on or [])],
             agent_names=[agent_names.get(aid, aid[:8]) for aid in (t.assigned_agent_ids or [])],
             created_at=t.created_at.isoformat(),
+            updated_at=t.updated_at.isoformat() if t.updated_at else None,
             started_at=t.started_at.isoformat() if t.started_at else None,
             completed_at=t.completed_at.isoformat() if t.completed_at else None,
             duration_ms=agg.get("duration_ms"),
             total_tokens=agg.get("total_tokens"),
             event_count=agg.get("event_count", 0),
+            comment_count=comment_counts.get(task_id_str, 0),
         )
         columns[col].append(item)
 
@@ -1160,10 +1611,345 @@ async def get_task_board(
     return TaskBoardResponse(columns=columns, totals=totals)
 
 
+@router.get("/tasks/export")
+async def export_kanban_tasks(
+    format: str = Query(default="json", pattern=r"^(json|csv)$"),  # noqa: A002, B008
+    kanban_status: str | None = Query(default=None),  # noqa: B008
+    limit: int = Query(default=1000, ge=1, le=5000),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> Response:
+    """Export kanban tasks as JSON or CSV."""
+    query = (
+        select(SwarmTask)
+        .where(SwarmTask.org_id == tenant.org_id)
+        .order_by(SwarmTask.updated_at.desc(), SwarmTask.created_at.desc())
+        .limit(limit)
+    )
+    if kanban_status:
+        query = query.where(SwarmTask.kanban_status == kanban_status)
+
+    result = await db.execute(query)
+    items = [_task_to_export_item(task) for task in result.scalars().all()]
+
+    if format == "csv":
+        return Response(
+            content=_task_export_csv(items),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="selva-kanban-tasks.csv"'},
+        )
+
+    return Response(
+        content=json.dumps({"items": items}, default=str),
+        media_type="application/json",
+    )
+
+
+@router.post(
+    "/tasks/import",
+    response_model=KanbanTaskImportResponse,
+    dependencies=[Depends(require_non_guest)],
+)
+async def import_kanban_tasks(
+    request: Request,
+    format: str = Query(default="json", pattern=r"^(json|csv)$"),  # noqa: A002, B008
+    user: dict = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> KanbanTaskImportResponse:
+    """Import kanban tasks from JSON or CSV without enqueuing execution."""
+    if format == "csv":
+        body = (await request.body()).decode("utf-8")
+        items = _import_items_from_csv(body)
+    else:
+        payload = await request.json()
+        if isinstance(payload, list):
+            payload = {"items": payload}
+        import_request = KanbanTaskImportRequest.model_validate(payload)
+        items = import_request.items
+
+    actor_id = _actor_id_from_user(user)
+    created_tasks: list[SwarmTask] = []
+    for item in items:
+        task = SwarmTask(
+            title=item.title or _derive_task_title(item.description),
+            description=item.description,
+            graph_type=item.graph_type,
+            assigned_agent_ids=item.assigned_agent_ids,
+            payload={"source": "kanban_import"},
+            status="backlog",
+            kanban_status=item.kanban_status,
+            priority=item.priority,
+            labels=item.labels,
+            due_date=_parse_optional_datetime(item.due_date, "due_date"),
+            parent_task_id=_parse_optional_uuid(item.parent_task_id, "parent_task_id"),
+            depends_on=_normalise_id_list(item.depends_on, "depends_on"),
+            creator_id=actor_id,
+            org_id=tenant.org_id,
+        )
+        db.add(task)
+        await db.flush()
+        _add_task_history(
+            db,
+            task=task,
+            event_type="task.imported",
+            actor_id=actor_id,
+            payload={
+                "source": "kanban_import",
+                "kanban_status": task.kanban_status,
+                "priority": task.priority,
+            },
+        )
+        if task.assigned_agent_ids:
+            await _emit_task_lifecycle_notification(
+                db,
+                task=task,
+                kind="assigned",
+                actor_id=actor_id,
+                payload={"assigned_agent_ids": task.assigned_agent_ids, "source": "import"},
+                dedupe_key="import",
+            )
+        created_tasks.append(task)
+
+    await db.flush()
+    for task in created_tasks:
+        await db.refresh(task)
+    return KanbanTaskImportResponse(
+        created=len(created_tasks),
+        tasks=[_task_to_response(task) for task in created_tasks],
+    )
+
+
+@router.get("/tasks/kanban-metrics", response_model=KanbanMetricsResponse)
+async def get_kanban_metrics(
+    limit: int = Query(default=1000, ge=1, le=5000),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> KanbanMetricsResponse:
+    """Return kanban-specific throughput, WIP, blocked, and overdue metrics."""
+    result = await db.execute(
+        select(SwarmTask)
+        .where(SwarmTask.org_id == tenant.org_id)
+        .order_by(SwarmTask.updated_at.desc(), SwarmTask.created_at.desc())
+        .limit(limit)
+    )
+    tasks = result.scalars().all()
+    now = datetime.now(UTC)
+    status_counts = {
+        status_key: 0
+        for status_key in ["todo", "in_progress", "review", "done", "blocked"]
+    }
+    throughput_by_label: dict[str, int] = {}
+    workload_by_assignee: dict[str, int] = {}
+    wip_ages: list[float] = []
+    cycle_times: list[float] = []
+    overdue_count = 0
+    dependency_blocked_count = 0
+    status_by_task_id = {
+        str(task.id): task.kanban_status or _execution_status_to_kanban(task.status)
+        for task in tasks
+    }
+
+    for task in tasks:
+        kanban_status = task.kanban_status or _execution_status_to_kanban(task.status)
+        status_counts[kanban_status] = status_counts.get(kanban_status, 0) + 1
+        if kanban_status in {"in_progress", "review"}:
+            age = _seconds_between(task.updated_at or task.created_at, now)
+            if age is not None:
+                wip_ages.append(age)
+        if kanban_status == "done":
+            finished_at = task.completed_at or task.updated_at
+            cycle_time = _seconds_between(task.created_at, finished_at)
+            if cycle_time is not None:
+                cycle_times.append(cycle_time)
+            for label in task.labels or []:
+                throughput_by_label[label] = throughput_by_label.get(label, 0) + 1
+        for assignee in task.assigned_agent_ids or []:
+            workload_by_assignee[assignee] = workload_by_assignee.get(assignee, 0) + 1
+        if (
+            task.due_date is not None
+            and task.due_date < now
+            and kanban_status not in {"done", "blocked"}
+        ):
+            overdue_count += 1
+        unresolved_dependencies = [
+            dep_id
+            for dep_id in task.depends_on or []
+            if status_by_task_id.get(str(dep_id)) != "done"
+        ]
+        if unresolved_dependencies:
+            dependency_blocked_count += 1
+
+    return KanbanMetricsResponse(
+        total=len(tasks),
+        status_counts=status_counts,
+        blocked_count=status_counts.get("blocked", 0),
+        dependency_blocked_count=dependency_blocked_count,
+        overdue_count=overdue_count,
+        wip_count=status_counts.get("in_progress", 0) + status_counts.get("review", 0),
+        avg_wip_age_seconds=(sum(wip_ages) / len(wip_ages)) if wip_ages else None,
+        avg_cycle_time_seconds=(sum(cycle_times) / len(cycle_times)) if cycle_times else None,
+        throughput_by_label=throughput_by_label,
+        workload_by_assignee=workload_by_assignee,
+    )
+
+
+@router.post(
+    "/tasks/claim",
+    response_model=TaskClaimResponse,
+    dependencies=[Depends(require_non_guest)],
+)
+async def claim_available_task(
+    body: TaskClaimRequest,
+    user: dict = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> TaskClaimResponse:
+    """Claim the next available kanban task for an agent/operator.
+
+    This is the benchmark-style worker claiming primitive. It updates only
+    kanban ownership/progress state; runtime workers still drive execution
+    through the existing status PATCH endpoint.
+    """
+    query = (
+        select(SwarmTask)
+        .where(SwarmTask.org_id == tenant.org_id)
+        .where(SwarmTask.kanban_status == "todo")
+        .order_by(
+            SwarmTask.due_date.asc().nullsfirst(),
+            SwarmTask.created_at.asc(),
+        )
+        .limit(1)
+    )
+    if body.graph_type:
+        query = query.where(SwarmTask.graph_type == body.graph_type)
+    if body.labels:
+        for label in body.labels:
+            query = query.where(SwarmTask.labels.contains([label]))
+
+    try:
+        query = query.with_for_update(skip_locked=True)
+    except Exception:
+        logging.getLogger(__name__).debug("Database dialect does not support SKIP LOCKED")
+
+    result = await db.execute(query)
+    task = result.scalar_one_or_none()
+    if task is None:
+        return TaskClaimResponse(claimed=False)
+
+    actor_id = body.agent_id or _actor_id_from_user(user)
+    if body.agent_id and body.agent_id not in (task.assigned_agent_ids or []):
+        task.assigned_agent_ids = [*(task.assigned_agent_ids or []), body.agent_id]
+    task.kanban_status = "in_progress"
+    _add_task_history(
+        db,
+        task=task,
+        event_type="task.claimed",
+        actor_id=actor_id,
+        payload={
+            "agent_id": body.agent_id,
+            "kanban_status": task.kanban_status,
+        },
+    )
+    await _emit_task_lifecycle_notification(
+        db,
+        task=task,
+        kind="assigned",
+        actor_id=actor_id,
+        payload={"agent_id": body.agent_id, "source": "claim"},
+        dedupe_key=f"claim:{body.agent_id or actor_id or 'unknown'}",
+    )
+    await db.flush()
+    await db.refresh(task)
+    return TaskClaimResponse(claimed=True, task=_task_to_response(task))
+
+
+@router.post(
+    "/tasks/notify-overdue",
+    response_model=OverdueNotificationResponse,
+    dependencies=[Depends(require_non_guest)],
+)
+async def notify_overdue_tasks(
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> OverdueNotificationResponse:
+    """Emit lifecycle notifications for overdue active kanban tasks."""
+    now = datetime.now(UTC)
+    result = await db.execute(
+        select(SwarmTask)
+        .where(SwarmTask.org_id == tenant.org_id)
+        .where(SwarmTask.due_date.is_not(None))
+        .where(SwarmTask.due_date < now)
+        .where(SwarmTask.kanban_status.not_in(["done", "blocked"]))
+        .order_by(SwarmTask.due_date.asc())
+        .limit(200)
+    )
+    tasks = result.scalars().all()
+    notified = 0
+    for task in tasks:
+        emitted = await _emit_task_lifecycle_notification(
+            db,
+            task=task,
+            kind="overdue",
+            actor_id=None,
+            payload={"source": "overdue_scan"},
+            dedupe_key=task.due_date.isoformat() if task.due_date else None,
+        )
+        if emitted:
+            notified += 1
+    await db.flush()
+    return OverdueNotificationResponse(scanned=len(tasks), notified=notified)
+
+
+@router.post("/tasks/notify-overdue-all", response_model=OverdueNotificationResponse)
+async def notify_overdue_tasks_all(
+    user: dict = Depends(get_current_user),  # noqa: B008
+) -> OverdueNotificationResponse:
+    """Emit overdue notifications across all tenants for worker/platform callers."""
+    from ..database import admin_session
+
+    roles = user.get("roles", [])
+    if not any(r in _REAP_STALE_ALLOWED_ROLES for r in roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "notify-overdue-all is a platform-only endpoint; caller must hold "
+                "service, worker, platform, or admin role"
+            ),
+        )
+
+    now = datetime.now(UTC)
+    async with admin_session() as db:
+        result = await db.execute(
+            select(SwarmTask)
+            .where(SwarmTask.due_date.is_not(None))
+            .where(SwarmTask.due_date < now)
+            .where(SwarmTask.kanban_status.not_in(["done", "blocked"]))
+            .order_by(SwarmTask.org_id.asc(), SwarmTask.due_date.asc())
+            .limit(2000)
+        )
+        tasks = result.scalars().all()
+        notified = 0
+        for task in tasks:
+            emitted = await _emit_task_lifecycle_notification(
+                db,
+                task=task,
+                kind="overdue",
+                actor_id=None,
+                payload={"source": "overdue_cross_tenant_scan"},
+                dedupe_key=task.due_date.isoformat() if task.due_date else None,
+            )
+            if emitted:
+                notified += 1
+        await db.flush()
+    return OverdueNotificationResponse(scanned=len(tasks), notified=notified)
+
+
 @router.get("/tasks/{task_id}", response_model=SwarmTaskResponse)
 async def get_task(
     task_id: str,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> SwarmTaskResponse:
     """Retrieve a single task by ID."""
     try:
@@ -1171,11 +1957,194 @@ async def get_task(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid UUID") from exc
 
-    result = await db.execute(select(SwarmTask).where(SwarmTask.id == uid))
+    result = await db.execute(
+        select(SwarmTask).where(SwarmTask.id == uid).where(SwarmTask.org_id == tenant.org_id)
+    )
     task = result.scalar_one_or_none()
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return _task_to_response(task)
+
+
+@router.patch(
+    "/tasks/{task_id}/kanban",
+    response_model=SwarmTaskResponse,
+    dependencies=[Depends(require_non_guest)],
+)
+async def update_task_kanban(
+    task_id: str,
+    body: KanbanTaskUpdate,
+    user: dict = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> SwarmTaskResponse:
+    """Update first-class kanban metadata for a task."""
+    uid = _parse_optional_uuid(task_id, "task_id")
+    result = await db.execute(
+        select(SwarmTask).where(SwarmTask.id == uid).where(SwarmTask.org_id == tenant.org_id)
+    )
+    task = result.scalar_one_or_none()
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    actor_id = _actor_id_from_user(user)
+    before = _task_to_response(task).model_dump()
+
+    if body.title is not None:
+        task.title = body.title
+    if body.kanban_status is not None:
+        task.kanban_status = body.kanban_status
+    if body.priority is not None:
+        task.priority = body.priority
+    if body.labels is not None:
+        task.labels = body.labels
+    if body.due_date is not None:
+        task.due_date = _parse_optional_datetime(body.due_date, "due_date")
+    if body.parent_task_id is not None:
+        task.parent_task_id = _parse_optional_uuid(body.parent_task_id, "parent_task_id")
+    if body.depends_on is not None:
+        task.depends_on = _normalise_id_list(body.depends_on, "depends_on")
+
+    after = {
+        "title": task.title,
+        "kanban_status": task.kanban_status,
+        "priority": task.priority,
+        "labels": task.labels or [],
+        "due_date": task.due_date.isoformat() if task.due_date else None,
+        "parent_task_id": str(task.parent_task_id) if task.parent_task_id else None,
+        "depends_on": [str(dep) for dep in (task.depends_on or [])],
+    }
+    _add_task_history(
+        db,
+        task=task,
+        event_type="task.kanban_updated",
+        actor_id=actor_id,
+        payload={"before": before, "after": after},
+    )
+
+    try:
+        from .events import emit_event_db
+
+        await emit_event_db(
+            db,
+            event_type="task.kanban_updated",
+            event_category="task",
+            task_id=task.id,
+            graph_type=task.graph_type,
+            org_id=task.org_id,
+            payload=after,
+        )
+    except Exception:
+        logging.getLogger(__name__).debug(
+            "Failed to emit task.kanban_updated event",
+            exc_info=True,
+        )
+
+    notification_kind = _notification_kind_for_kanban_status(task.kanban_status)
+    if notification_kind and before.get("kanban_status") != task.kanban_status:
+        await _emit_task_lifecycle_notification(
+            db,
+            task=task,
+            kind=notification_kind,
+            actor_id=actor_id,
+            payload={
+                "source": "kanban_update",
+                "old_kanban_status": before.get("kanban_status"),
+            },
+            dedupe_key=task.kanban_status,
+        )
+
+    if (
+        task.due_date is not None
+        and task.due_date < datetime.now(UTC)
+        and task.kanban_status not in {"done", "blocked"}
+    ):
+        await _emit_task_lifecycle_notification(
+            db,
+            task=task,
+            kind="overdue",
+            actor_id=actor_id,
+            payload={"source": "kanban_update"},
+            dedupe_key=task.due_date.isoformat(),
+        )
+
+    await db.flush()
+    await db.refresh(task)
+    return _task_to_response(task)
+
+
+@router.get("/tasks/{task_id}/comments", response_model=list[TaskCommentResponse])
+async def list_task_comments(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> list[TaskCommentResponse]:
+    uid = _parse_optional_uuid(task_id, "task_id")
+    result = await db.execute(
+        select(TaskComment)
+        .where(TaskComment.task_id == uid)
+        .where(TaskComment.org_id == tenant.org_id)
+        .order_by(TaskComment.created_at.asc())
+    )
+    return [_task_comment_to_response(comment) for comment in result.scalars().all()]
+
+
+@router.post(
+    "/tasks/{task_id}/comments",
+    response_model=TaskCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_non_guest)],
+)
+async def create_task_comment(
+    task_id: str,
+    body: TaskCommentCreate,
+    user: dict = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> TaskCommentResponse:
+    uid = _parse_optional_uuid(task_id, "task_id")
+    task_result = await db.execute(
+        select(SwarmTask).where(SwarmTask.id == uid).where(SwarmTask.org_id == tenant.org_id)
+    )
+    task = task_result.scalar_one_or_none()
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    actor_id = _actor_id_from_user(user)
+    comment = TaskComment(
+        task_id=task.id,
+        org_id=task.org_id,
+        author_id=actor_id,
+        body=body.body,
+    )
+    db.add(comment)
+    await db.flush()
+    _add_task_history(
+        db,
+        task=task,
+        event_type="task.comment_added",
+        actor_id=actor_id,
+        payload={"comment_id": str(comment.id)},
+    )
+    await db.flush()
+    await db.refresh(comment)
+    return _task_comment_to_response(comment)
+
+
+@router.get("/tasks/{task_id}/history", response_model=list[TaskHistoryResponse])
+async def list_task_history(
+    task_id: str,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> list[TaskHistoryResponse]:
+    uid = _parse_optional_uuid(task_id, "task_id")
+    result = await db.execute(
+        select(TaskHistory)
+        .where(TaskHistory.task_id == uid)
+        .where(TaskHistory.org_id == tenant.org_id)
+        .order_by(TaskHistory.created_at.asc())
+    )
+    return [_task_history_to_response(item) for item in result.scalars().all()]
 
 
 @router.get("/evidence", response_model=DeploymentEvidenceRecordListResponse)
@@ -1274,6 +2243,10 @@ async def update_task_status(
     old_status = task.status
 
     task.status = body.status
+    old_kanban_status = task.kanban_status or _execution_status_to_kanban(old_status)
+    new_kanban_status = _execution_status_to_kanban(body.status)
+    if body.status in {"running", "completed", "failed", "cancelled"}:
+        task.kanban_status = new_kanban_status
 
     if body.result is not None:
         task.payload = {**(task.payload or {}), "result": body.result}
@@ -1308,6 +2281,25 @@ async def update_task_status(
             )
         )
     record_deployment_status_update(task, deployment_evidence)
+
+    runtime_notification_kind = {
+        "completed": "completed",
+        "failed": "blocked",
+        "cancelled": "blocked",
+    }.get(body.status)
+    if runtime_notification_kind:
+        await _emit_task_lifecycle_notification(
+            db,
+            task=task,
+            kind=runtime_notification_kind,
+            actor_id=None,
+            payload={
+                "source": "runtime_status",
+                "old_status": old_status,
+                "new_status": body.status,
+            },
+            dedupe_key=body.status,
+        )
 
     await db.flush()
     await db.refresh(task)
@@ -1344,6 +2336,19 @@ async def update_task_status(
         logging.getLogger(__name__).debug(
             "Failed to emit task.status_changed event",
             exc_info=True,
+        )
+
+    if old_kanban_status != task.kanban_status:
+        _add_task_history(
+            db,
+            task=task,
+            event_type="task.kanban_status_changed",
+            actor_id=None,
+            payload={
+                "old_kanban_status": old_kanban_status,
+                "new_kanban_status": task.kanban_status,
+                "runtime_status": task.status,
+            },
         )
 
     return _task_to_response(task)

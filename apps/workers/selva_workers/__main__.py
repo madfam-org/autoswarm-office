@@ -1223,6 +1223,17 @@ async def main() -> None:
     _active_tasks.add(dragon_egg_task)
     dragon_egg_task.add_done_callback(_active_tasks.discard)
 
+    # Start kanban overdue-notification scan loop. This calls the Nexus
+    # cross-tenant, role-gated notify-overdue endpoint and emits durable
+    # task.notification.overdue events for active overdue kanban work.
+    from .jobs.kanban_overdue import (
+        periodic_loop as _kanban_overdue_periodic_loop,
+    )
+
+    kanban_overdue_task = asyncio.create_task(_kanban_overdue_periodic_loop(_shutdown))
+    _active_tasks.add(kanban_overdue_task)
+    kanban_overdue_task.add_done_callback(_active_tasks.discard)
+
     # Log available inference providers at startup.
     from .inference import validate_providers
 

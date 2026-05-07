@@ -59,6 +59,7 @@ const CATEGORY_COLORS: Record<EventCategory, string> = {
   git: 'border-l-green-500',
   permission: 'border-l-rose-500',
   webhook: 'border-l-orange-500',
+  notification: 'border-l-emerald-500',
   system: 'border-l-slate-500',
 };
 
@@ -70,11 +71,12 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   git: 'Git',
   permission: 'Perm',
   webhook: 'Hook',
+  notification: 'Notify',
   system: 'Sys',
 };
 
 const ALL_CATEGORIES: EventCategory[] = [
-  'task', 'node', 'llm', 'approval', 'git', 'webhook', 'system',
+  'task', 'node', 'llm', 'approval', 'git', 'webhook', 'notification', 'system',
 ];
 
 function formatDuration(ms: number | null): string {

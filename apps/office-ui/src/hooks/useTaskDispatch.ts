@@ -4,19 +4,27 @@ import { useState, useCallback } from 'react';
 import { apiFetch, isDemo } from '@/lib/api';
 
 export interface DispatchRequest {
+  title?: string;
   description: string;
   graph_type: 'coding' | 'research' | 'crm' | 'deployment' | 'sequential' | 'parallel' | 'custom' | 'puppeteer' | 'meeting';
   assigned_agent_ids?: string[];
   required_skills?: string[];
   payload?: Record<string, unknown>;
   workflow_id?: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  labels?: string[];
+  due_date?: string;
 }
 
 export interface DispatchResponse {
   id: string;
+  title?: string | null;
   description: string;
   graph_type: string;
   status: string;
+  kanban_status?: string;
+  priority?: string;
+  labels?: string[];
   assigned_agent_ids: string[];
   created_at: string;
 }
@@ -43,9 +51,13 @@ export function useTaskDispatch(): {
       await new Promise((r) => setTimeout(r, 800));
       const mock: DispatchResponse = {
         id: `demo-task-${Date.now()}`,
+        title: request.title ?? null,
         description: request.description,
         graph_type: request.graph_type,
         status: 'queued',
+        kanban_status: 'todo',
+        priority: request.priority ?? 'medium',
+        labels: request.labels ?? [],
         assigned_agent_ids: [],
         created_at: new Date().toISOString(),
       };

@@ -36,8 +36,12 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
   onReset,
 }) => {
   const [visible, setVisible] = useState(false);
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [graphType, setGraphType] = useState<DispatchRequest['graph_type']>('sequential');
+  const [priority, setPriority] = useState<NonNullable<DispatchRequest['priority']>>('medium');
+  const [labelsInput, setLabelsInput] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const [skillsInput, setSkillsInput] = useState('');
   const [repoPath, setRepoPath] = useState('');
@@ -96,8 +100,10 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
     if (!description.trim() || status === 'submitting') return;
 
     const request: DispatchRequest = {
+      title: title.trim() || undefined,
       description: description.trim(),
       graph_type: graphType,
+      priority,
     };
     if (selectedAgents.length > 0) {
       request.assigned_agent_ids = selectedAgents;
@@ -112,15 +118,28 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
     if (repoPath.trim()) {
       request.payload = { ...request.payload, repo_path: repoPath.trim() };
     }
+    const labels = labelsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (labels.length > 0) {
+      request.labels = labels;
+    }
+    if (dueDate.trim()) {
+      request.due_date = dueDate.trim();
+    }
 
     const result = await onDispatch(request);
     if (result) {
+      setTitle('');
       setDescription('');
       setSelectedAgents([]);
       setSkillsInput('');
+      setLabelsInput('');
+      setDueDate('');
       setRepoPath('');
     }
-  }, [description, graphType, selectedAgents, skillsInput, repoPath, status, onDispatch]);
+  }, [title, description, graphType, priority, labelsInput, dueDate, selectedAgents, skillsInput, repoPath, status, onDispatch]);
 
   const toggleAgent = useCallback((agentId: string) => {
     setSelectedAgents((prev) =>
@@ -158,6 +177,23 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+          {/* Title */}
+          <div>
+            <label className="block font-mono text-[8px] uppercase text-slate-500 mb-1">
+              Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              maxLength={200}
+              className="w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              placeholder="Short kanban card title..."
+            />
+          </div>
+
           {/* Description */}
           <div>
             <label className="block font-mono text-[8px] uppercase text-slate-500 mb-1">
@@ -178,6 +214,55 @@ export const TaskDispatchPanel: FC<TaskDispatchPanelProps> = ({
             <p className="mt-0.5 font-mono text-[7px] text-slate-600 text-right">
               {description.length}/2000
             </p>
+          </div>
+
+          {/* Kanban metadata */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block font-mono text-[8px] uppercase text-slate-500 mb-1">
+                Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as NonNullable<DispatchRequest['priority']>)}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                className="w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div>
+              <label className="block font-mono text-[8px] uppercase text-slate-500 mb-1">
+                Due Date
+              </label>
+              <input
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                className="w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-mono text-[8px] uppercase text-slate-500 mb-1">
+              Labels
+            </label>
+            <input
+              type="text"
+              value={labelsInput}
+              onChange={(e) => setLabelsInput(e.target.value)}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              className="w-full rounded bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              placeholder="client, blocked-by-vendor, infra..."
+            />
           </div>
 
           {/* Graph Type */}

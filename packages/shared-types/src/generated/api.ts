@@ -621,6 +621,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/swarms/tasks/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Kanban Tasks
+         * @description Export kanban tasks as JSON or CSV.
+         */
+        get: operations["export_kanban_tasks_api_v1_swarms_tasks_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Kanban Tasks
+         * @description Import kanban tasks from JSON or CSV without enqueuing execution.
+         */
+        post: operations["import_kanban_tasks_api_v1_swarms_tasks_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/kanban-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Kanban Metrics
+         * @description Return kanban-specific throughput, WIP, blocked, and overdue metrics.
+         */
+        get: operations["get_kanban_metrics_api_v1_swarms_tasks_kanban_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim Available Task
+         * @description Claim the next available kanban task for an agent/operator.
+         *
+         *     This is the benchmark-style worker claiming primitive. It updates only
+         *     kanban ownership/progress state; runtime workers still drive execution
+         *     through the existing status PATCH endpoint.
+         */
+        post: operations["claim_available_task_api_v1_swarms_tasks_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/notify-overdue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Notify Overdue Tasks
+         * @description Emit lifecycle notifications for overdue active kanban tasks.
+         */
+        post: operations["notify_overdue_tasks_api_v1_swarms_tasks_notify_overdue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/notify-overdue-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Notify Overdue Tasks All
+         * @description Emit overdue notifications across all tenants for worker/platform callers.
+         */
+        post: operations["notify_overdue_tasks_all_api_v1_swarms_tasks_notify_overdue_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/swarms/tasks/{task_id}": {
         parameters: {
             query?: never;
@@ -646,6 +770,61 @@ export interface paths {
          *     ``completed_at`` timestamp is set automatically.
          */
         patch: operations["update_task_status_api_v1_swarms_tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/{task_id}/kanban": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Task Kanban
+         * @description Update first-class kanban metadata for a task.
+         */
+        patch: operations["update_task_kanban_api_v1_swarms_tasks__task_id__kanban_patch"];
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/{task_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Task Comments */
+        get: operations["list_task_comments_api_v1_swarms_tasks__task_id__comments_get"];
+        put?: never;
+        /** Create Task Comment */
+        post: operations["create_task_comment_api_v1_swarms_tasks__task_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/swarms/tasks/{task_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Task History */
+        get: operations["list_task_history_api_v1_swarms_tasks__task_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/swarms/evidence": {
@@ -1031,7 +1210,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/telegram/webhook": {
+    "/api/v1/gateway/telegram/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1042,20 +1221,20 @@ export interface paths {
         put?: never;
         /**
          * Telegram Webhook
-         * @description Hermes-style multi-channel gateway — Telegram.
+         * @description Harness communication gateway — Telegram.
          *
          *     Validates the ``X-Telegram-Bot-Api-Secret-Token`` header (set when
          *     registering the webhook via ``setWebhook?secret_token=...``) and routes
          *     the ``/initiate_acp <url>`` slash command to a Celery ACP task.
          */
-        post: operations["telegram_webhook_api_v1_gateway_gateway_telegram_webhook_post"];
+        post: operations["telegram_webhook_api_v1_gateway_telegram_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/discord/webhook": {
+    "/api/v1/gateway/discord/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1066,7 +1245,7 @@ export interface paths {
         put?: never;
         /**
          * Discord Webhook
-         * @description Hermes-style multi-channel gateway — Discord.
+         * @description Harness communication gateway — Discord.
          *
          *     Validates HMAC-SHA256 signature and handles:
          *     - ``/status``: returns recent swarm transcript hits from EdgeMemoryDB.
@@ -1075,14 +1254,14 @@ export interface paths {
          *     Requires ``DISCORD_WEBHOOK_SECRET`` env var. Endpoint refuses requests
          *     when the secret is unset (no fail-open).
          */
-        post: operations["discord_webhook_api_v1_gateway_gateway_discord_webhook_post"];
+        post: operations["discord_webhook_api_v1_gateway_discord_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/slack/webhook": {
+    "/api/v1/gateway/slack/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1093,19 +1272,19 @@ export interface paths {
         put?: never;
         /**
          * Slack Webhook
-         * @description Hermes-style multi-channel gateway — Slack.
+         * @description Harness communication gateway — Slack.
          *
          *     Validates Slack's v0 HMAC-SHA256 signature with timestamp replay protection
          *     (rejects requests older than 5 minutes), then routes slash commands.
          */
-        post: operations["slack_webhook_api_v1_gateway_gateway_slack_webhook_post"];
+        post: operations["slack_webhook_api_v1_gateway_slack_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/email/inbound": {
+    "/api/v1/gateway/email/inbound": {
         parameters: {
             query?: never;
             header?: never;
@@ -1138,14 +1317,14 @@ export interface paths {
          *
          *     See ``_require_inbound_allowlist`` for the full threat model.
          */
-        post: operations["email_inbound_api_v1_gateway_gateway_email_inbound_post"];
+        post: operations["email_inbound_api_v1_gateway_email_inbound_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/whatsapp/webhook": {
+    "/api/v1/gateway/whatsapp/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1157,7 +1336,7 @@ export interface paths {
          * @description Responds to the Meta webhook verification challenge (GET request).
          *     Required during webhook registration in Meta Developer Portal.
          */
-        get: operations["whatsapp_webhook_verify_api_v1_gateway_gateway_whatsapp_webhook_get"];
+        get: operations["whatsapp_webhook_verify_api_v1_gateway_whatsapp_webhook_get"];
         put?: never;
         /**
          * Whatsapp Inbound
@@ -1167,14 +1346,14 @@ export interface paths {
          *     Requires ``WHATSAPP_ACCESS_TOKEN`` env var (used as the HMAC secret).
          *     Endpoint refuses requests when the secret is unset.
          */
-        post: operations["whatsapp_inbound_api_v1_gateway_gateway_whatsapp_webhook_post"];
+        post: operations["whatsapp_inbound_api_v1_gateway_whatsapp_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/matrix/webhook": {
+    "/api/v1/gateway/matrix/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1187,20 +1366,20 @@ export interface paths {
          * @description Receive events from a Matrix appservice registration.
          *     Validates the Authorization: Bearer <token> header.
          */
-        put: operations["matrix_inbound_api_v1_gateway_gateway_matrix_webhook_put"];
+        put: operations["matrix_inbound_api_v1_gateway_matrix_webhook_put"];
         /**
          * Matrix Inbound
          * @description Receive events from a Matrix appservice registration.
          *     Validates the Authorization: Bearer <token> header.
          */
-        post: operations["matrix_inbound_api_v1_gateway_gateway_matrix_webhook_post"];
+        post: operations["matrix_inbound_api_v1_gateway_matrix_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/mattermost/webhook": {
+    "/api/v1/gateway/mattermost/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1214,14 +1393,14 @@ export interface paths {
          * @description Receive Mattermost slash command: /initiate_acp <url>.
          *     Validates the shared mattermost_token from the request body.
          */
-        post: operations["mattermost_inbound_api_v1_gateway_gateway_mattermost_webhook_post"];
+        post: operations["mattermost_inbound_api_v1_gateway_mattermost_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/signal/webhook": {
+    "/api/v1/gateway/signal/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1235,14 +1414,14 @@ export interface paths {
          * @description Receive inbound Signal messages via signal-cli REST API envelope format.
          *     Validates source number against the configured whitelist.
          */
-        post: operations["signal_inbound_api_v1_gateway_gateway_signal_webhook_post"];
+        post: operations["signal_inbound_api_v1_gateway_signal_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/sms/inbound": {
+    "/api/v1/gateway/sms/inbound": {
         parameters: {
             query?: never;
             header?: never;
@@ -1256,14 +1435,14 @@ export interface paths {
          * @description Accepts Twilio SMS webhook payloads.
          *     Validates the X-Twilio-Signature HMAC and routes commands.
          */
-        post: operations["sms_inbound_api_v1_gateway_gateway_sms_inbound_post"];
+        post: operations["sms_inbound_api_v1_gateway_sms_inbound_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/dingtalk/webhook": {
+    "/api/v1/gateway/dingtalk/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1276,14 +1455,14 @@ export interface paths {
          * Dingtalk Webhook
          * @description DingTalk inbound webhook — HMAC-SHA256 validated.
          */
-        post: operations["dingtalk_webhook_api_v1_gateway_gateway_dingtalk_webhook_post"];
+        post: operations["dingtalk_webhook_api_v1_gateway_dingtalk_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/feishu/webhook": {
+    "/api/v1/gateway/feishu/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1296,14 +1475,14 @@ export interface paths {
          * Feishu Webhook
          * @description Feishu (Lark) event webhook — challenge verification + ACP routing.
          */
-        post: operations["feishu_webhook_api_v1_gateway_gateway_feishu_webhook_post"];
+        post: operations["feishu_webhook_api_v1_gateway_feishu_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/wecom/webhook": {
+    "/api/v1/gateway/wecom/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1316,14 +1495,14 @@ export interface paths {
          * Wecom Webhook
          * @description WeCom outgoing webhook — token-validated.
          */
-        post: operations["wecom_webhook_api_v1_gateway_gateway_wecom_webhook_post"];
+        post: operations["wecom_webhook_api_v1_gateway_wecom_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/wecom/callback": {
+    "/api/v1/gateway/wecom/callback": {
         parameters: {
             query?: never;
             header?: never;
@@ -1336,14 +1515,14 @@ export interface paths {
          * Wecom Callback
          * @description WeCom server-mode callback — echoes challenge, logs encrypted messages.
          */
-        post: operations["wecom_callback_api_v1_gateway_gateway_wecom_callback_post"];
+        post: operations["wecom_callback_api_v1_gateway_wecom_callback_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/weixin/webhook": {
+    "/api/v1/gateway/weixin/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1356,14 +1535,14 @@ export interface paths {
          * Weixin Webhook
          * @description Weixin via WxPusher — appToken validated.
          */
-        post: operations["weixin_webhook_api_v1_gateway_gateway_weixin_webhook_post"];
+        post: operations["weixin_webhook_api_v1_gateway_weixin_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/bluebubbles/webhook": {
+    "/api/v1/gateway/bluebubbles/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1376,14 +1555,94 @@ export interface paths {
          * Bluebubbles Webhook
          * @description BlueBubbles iMessage bridge webhook — password validated.
          */
-        post: operations["bluebubbles_webhook_api_v1_gateway_gateway_bluebubbles_webhook_post"];
+        post: operations["bluebubbles_webhook_api_v1_gateway_bluebubbles_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/homeassistant/webhook": {
+    "/api/v1/gateway/teams/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Teams Webhook
+         * @description Microsoft Teams inbound webhook or bridge relay — signed and command-routed.
+         */
+        post: operations["teams_webhook_api_v1_gateway_teams_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/irc/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Irc Webhook
+         * @description IRC bridge relay — signed and routed into the Harness command surface.
+         */
+        post: operations["irc_webhook_api_v1_gateway_irc_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/qq/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Qq Webhook
+         * @description QQ Bot bridge relay — signed and routed into the Harness command surface.
+         */
+        post: operations["qq_webhook_api_v1_gateway_qq_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/yuanbao/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Yuanbao Webhook
+         * @description Yuanbao bridge relay — signed and routed into the Harness command surface.
+         */
+        post: operations["yuanbao_webhook_api_v1_gateway_yuanbao_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateway/homeassistant/webhook": {
         parameters: {
             query?: never;
             header?: never;
@@ -1396,14 +1655,14 @@ export interface paths {
          * Homeassistant Webhook
          * @description Home Assistant webhook — Bearer long-lived token validated.
          */
-        post: operations["homeassistant_webhook_api_v1_gateway_gateway_homeassistant_webhook_post"];
+        post: operations["homeassistant_webhook_api_v1_gateway_homeassistant_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/webhook/{channel_id}": {
+    "/api/v1/gateway/webhook/{channel_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1420,14 +1679,14 @@ export interface paths {
          *     when the secret is unset OR when the X-Webhook-Signature header is missing
          *     (no fail-open).
          */
-        post: operations["generic_webhook_api_v1_gateway_gateway_webhook__channel_id__post"];
+        post: operations["generic_webhook_api_v1_gateway_webhook__channel_id__post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/gateway/gateway/api/complete": {
+    "/api/v1/gateway/api/complete": {
         parameters: {
             query?: never;
             header?: never;
@@ -1438,9 +1697,9 @@ export interface paths {
         put?: never;
         /**
          * Api Complete
-         * @description Direct API completion — fire-and-forget ACP dispatch. Mirrors Hermes api_server mode.
+         * @description Direct API completion — fire-and-forget ACP dispatch for Harness API mode.
          */
-        post: operations["api_complete_api_v1_gateway_gateway_api_complete_post"];
+        post: operations["api_complete_api_v1_gateway_api_complete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4560,6 +4819,8 @@ export interface components {
         };
         /** DispatchRequest */
         DispatchRequest: {
+            /** Title */
+            title?: string | null;
             /** Description */
             description: string;
             /**
@@ -4575,6 +4836,24 @@ export interface components {
             payload?: {
                 [key: string]: unknown;
             };
+            /**
+             * Kanban Status
+             * @default todo
+             */
+            kanban_status: string;
+            /**
+             * Priority
+             * @default medium
+             */
+            priority: string;
+            /** Labels */
+            labels?: string[];
+            /** Due Date */
+            due_date?: string | null;
+            /** Parent Task Id */
+            parent_task_id?: string | null;
+            /** Depends On */
+            depends_on?: string[];
             /**
              * Workflow Id
              * @description UUID of a custom workflow definition (required for graph_type='custom')
@@ -4904,6 +5183,59 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** KanbanMetricsResponse */
+        KanbanMetricsResponse: {
+            /** Total */
+            total: number;
+            /** Status Counts */
+            status_counts: {
+                [key: string]: number;
+            };
+            /** Blocked Count */
+            blocked_count: number;
+            /** Dependency Blocked Count */
+            dependency_blocked_count: number;
+            /** Overdue Count */
+            overdue_count: number;
+            /** Wip Count */
+            wip_count: number;
+            /** Avg Wip Age Seconds */
+            avg_wip_age_seconds: number | null;
+            /** Avg Cycle Time Seconds */
+            avg_cycle_time_seconds: number | null;
+            /** Throughput By Label */
+            throughput_by_label: {
+                [key: string]: number;
+            };
+            /** Workload By Assignee */
+            workload_by_assignee: {
+                [key: string]: number;
+            };
+        };
+        /** KanbanTaskImportResponse */
+        KanbanTaskImportResponse: {
+            /** Created */
+            created: number;
+            /** Tasks */
+            tasks: components["schemas"]["SwarmTaskResponse"][];
+        };
+        /** KanbanTaskUpdate */
+        KanbanTaskUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Kanban Status */
+            kanban_status?: string | null;
+            /** Priority */
+            priority?: string | null;
+            /** Labels */
+            labels?: string[] | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Parent Task Id */
+            parent_task_id?: string | null;
+            /** Depends On */
+            depends_on?: string[] | null;
+        };
         /** KickRequest */
         KickRequest: {
             /** Session Id */
@@ -5224,6 +5556,13 @@ export interface components {
              * @description Tenant-pinned agent slug for agent_identified mode. Must be one of: sales, support, growth, ops, research.
              */
             outbound_agent_slug?: string | null;
+        };
+        /** OverdueNotificationResponse */
+        OverdueNotificationResponse: {
+            /** Scanned */
+            scanned: number;
+            /** Notified */
+            notified: number;
         };
         /** PlaybookCreate */
         PlaybookCreate: {
@@ -5673,6 +6012,8 @@ export interface components {
         SwarmTaskResponse: {
             /** Id */
             id: string;
+            /** Title */
+            title: string | null;
             /** Description */
             description: string;
             /** Graph Type */
@@ -5685,8 +6026,24 @@ export interface components {
             };
             /** Status */
             status: string;
+            /** Kanban Status */
+            kanban_status: string;
+            /** Priority */
+            priority: string;
+            /** Labels */
+            labels: string[];
+            /** Due Date */
+            due_date: string | null;
+            /** Creator Id */
+            creator_id: string | null;
+            /** Parent Task Id */
+            parent_task_id: string | null;
+            /** Depends On */
+            depends_on: string[];
             /** Created At */
             created_at: string;
+            /** Updated At */
+            updated_at: string | null;
             /** Completed At */
             completed_at: string | null;
         };
@@ -5694,16 +6051,32 @@ export interface components {
         TaskBoardItem: {
             /** Id */
             id: string;
+            /** Title */
+            title: string | null;
             /** Description */
             description: string;
             /** Graph Type */
             graph_type: string;
             /** Status */
             status: string;
+            /** Kanban Status */
+            kanban_status: string;
+            /** Priority */
+            priority: string;
+            /** Labels */
+            labels: string[];
+            /** Due Date */
+            due_date: string | null;
+            /** Parent Task Id */
+            parent_task_id: string | null;
+            /** Depends On */
+            depends_on: string[];
             /** Agent Names */
             agent_names: string[];
             /** Created At */
             created_at: string;
+            /** Updated At */
+            updated_at: string | null;
             /** Started At */
             started_at: string | null;
             /** Completed At */
@@ -5714,6 +6087,8 @@ export interface components {
             total_tokens: number | null;
             /** Event Count */
             event_count: number;
+            /** Comment Count */
+            comment_count: number;
         };
         /** TaskBoardResponse */
         TaskBoardResponse: {
@@ -5725,6 +6100,39 @@ export interface components {
             totals: {
                 [key: string]: number;
             };
+        };
+        /** TaskClaimRequest */
+        TaskClaimRequest: {
+            /** Agent Id */
+            agent_id?: string | null;
+            /** Graph Type */
+            graph_type?: string | null;
+            /** Labels */
+            labels?: string[];
+        };
+        /** TaskClaimResponse */
+        TaskClaimResponse: {
+            /** Claimed */
+            claimed: boolean;
+            task?: components["schemas"]["SwarmTaskResponse"] | null;
+        };
+        /** TaskCommentCreate */
+        TaskCommentCreate: {
+            /** Body */
+            body: string;
+        };
+        /** TaskCommentResponse */
+        TaskCommentResponse: {
+            /** Id */
+            id: string;
+            /** Task Id */
+            task_id: string;
+            /** Author Id */
+            author_id: string | null;
+            /** Body */
+            body: string;
+            /** Created At */
+            created_at: string;
         };
         /** TaskEventResponse */
         TaskEventResponse: {
@@ -5760,6 +6168,23 @@ export interface components {
             request_id: string | null;
             /** Org Id */
             org_id: string;
+            /** Created At */
+            created_at: string;
+        };
+        /** TaskHistoryResponse */
+        TaskHistoryResponse: {
+            /** Id */
+            id: string;
+            /** Task Id */
+            task_id: string;
+            /** Event Type */
+            event_type: string;
+            /** Actor Id */
+            actor_id: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
             /** Created At */
             created_at: string;
         };
@@ -7346,6 +7771,174 @@ export interface operations {
             };
         };
     };
+    export_kanban_tasks_api_v1_swarms_tasks_export_get: {
+        parameters: {
+            query?: {
+                format?: string;
+                kanban_status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_kanban_tasks_api_v1_swarms_tasks_import_post: {
+        parameters: {
+            query?: {
+                format?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KanbanTaskImportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_kanban_metrics_api_v1_swarms_tasks_kanban_metrics_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KanbanMetricsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_available_task_api_v1_swarms_tasks_claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskClaimResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    notify_overdue_tasks_api_v1_swarms_tasks_notify_overdue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverdueNotificationResponse"];
+                };
+            };
+        };
+    };
+    notify_overdue_tasks_all_api_v1_swarms_tasks_notify_overdue_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverdueNotificationResponse"];
+                };
+            };
+        };
+    };
     get_task_api_v1_swarms_tasks__task_id__get: {
         parameters: {
             query?: never;
@@ -7399,6 +7992,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_task_kanban_api_v1_swarms_tasks__task_id__kanban_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KanbanTaskUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwarmTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_task_comments_api_v1_swarms_tasks__task_id__comments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCommentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_task_comment_api_v1_swarms_tasks__task_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCommentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_task_history_api_v1_swarms_tasks__task_id__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskHistoryResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -7855,7 +8580,7 @@ export interface operations {
             };
         };
     };
-    telegram_webhook_api_v1_gateway_gateway_telegram_webhook_post: {
+    telegram_webhook_api_v1_gateway_telegram_webhook_post: {
         parameters: {
             query?: never;
             header?: {
@@ -7888,7 +8613,7 @@ export interface operations {
             };
         };
     };
-    discord_webhook_api_v1_gateway_gateway_discord_webhook_post: {
+    discord_webhook_api_v1_gateway_discord_webhook_post: {
         parameters: {
             query?: never;
             header?: {
@@ -7921,7 +8646,7 @@ export interface operations {
             };
         };
     };
-    slack_webhook_api_v1_gateway_gateway_slack_webhook_post: {
+    slack_webhook_api_v1_gateway_slack_webhook_post: {
         parameters: {
             query?: never;
             header?: {
@@ -7955,7 +8680,7 @@ export interface operations {
             };
         };
     };
-    email_inbound_api_v1_gateway_gateway_email_inbound_post: {
+    email_inbound_api_v1_gateway_email_inbound_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -7977,7 +8702,7 @@ export interface operations {
             };
         };
     };
-    whatsapp_webhook_verify_api_v1_gateway_gateway_whatsapp_webhook_get: {
+    whatsapp_webhook_verify_api_v1_gateway_whatsapp_webhook_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -7997,7 +8722,7 @@ export interface operations {
             };
         };
     };
-    whatsapp_inbound_api_v1_gateway_gateway_whatsapp_webhook_post: {
+    whatsapp_inbound_api_v1_gateway_whatsapp_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8019,7 +8744,7 @@ export interface operations {
             };
         };
     };
-    matrix_inbound_api_v1_gateway_gateway_matrix_webhook_put: {
+    matrix_inbound_api_v1_gateway_matrix_webhook_put: {
         parameters: {
             query?: never;
             header?: {
@@ -8052,7 +8777,7 @@ export interface operations {
             };
         };
     };
-    matrix_inbound_api_v1_gateway_gateway_matrix_webhook_post: {
+    matrix_inbound_api_v1_gateway_matrix_webhook_post: {
         parameters: {
             query?: never;
             header?: {
@@ -8085,7 +8810,7 @@ export interface operations {
             };
         };
     };
-    mattermost_inbound_api_v1_gateway_gateway_mattermost_webhook_post: {
+    mattermost_inbound_api_v1_gateway_mattermost_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8107,7 +8832,7 @@ export interface operations {
             };
         };
     };
-    signal_inbound_api_v1_gateway_gateway_signal_webhook_post: {
+    signal_inbound_api_v1_gateway_signal_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8129,7 +8854,7 @@ export interface operations {
             };
         };
     };
-    sms_inbound_api_v1_gateway_gateway_sms_inbound_post: {
+    sms_inbound_api_v1_gateway_sms_inbound_post: {
         parameters: {
             query?: never;
             header?: {
@@ -8162,7 +8887,7 @@ export interface operations {
             };
         };
     };
-    dingtalk_webhook_api_v1_gateway_gateway_dingtalk_webhook_post: {
+    dingtalk_webhook_api_v1_gateway_dingtalk_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8184,7 +8909,7 @@ export interface operations {
             };
         };
     };
-    feishu_webhook_api_v1_gateway_gateway_feishu_webhook_post: {
+    feishu_webhook_api_v1_gateway_feishu_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8206,7 +8931,7 @@ export interface operations {
             };
         };
     };
-    wecom_webhook_api_v1_gateway_gateway_wecom_webhook_post: {
+    wecom_webhook_api_v1_gateway_wecom_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8228,7 +8953,7 @@ export interface operations {
             };
         };
     };
-    wecom_callback_api_v1_gateway_gateway_wecom_callback_post: {
+    wecom_callback_api_v1_gateway_wecom_callback_post: {
         parameters: {
             query?: {
                 echostr?: string | null;
@@ -8259,7 +8984,7 @@ export interface operations {
             };
         };
     };
-    weixin_webhook_api_v1_gateway_gateway_weixin_webhook_post: {
+    weixin_webhook_api_v1_gateway_weixin_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8281,7 +9006,7 @@ export interface operations {
             };
         };
     };
-    bluebubbles_webhook_api_v1_gateway_gateway_bluebubbles_webhook_post: {
+    bluebubbles_webhook_api_v1_gateway_bluebubbles_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8303,7 +9028,7 @@ export interface operations {
             };
         };
     };
-    homeassistant_webhook_api_v1_gateway_gateway_homeassistant_webhook_post: {
+    teams_webhook_api_v1_gateway_teams_webhook_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8325,7 +9050,95 @@ export interface operations {
             };
         };
     };
-    generic_webhook_api_v1_gateway_gateway_webhook__channel_id__post: {
+    irc_webhook_api_v1_gateway_irc_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    qq_webhook_api_v1_gateway_qq_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    yuanbao_webhook_api_v1_gateway_yuanbao_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    homeassistant_webhook_api_v1_gateway_homeassistant_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    generic_webhook_api_v1_gateway_webhook__channel_id__post: {
         parameters: {
             query?: {
                 x_webhook_signature?: string | null;
@@ -8360,7 +9173,7 @@ export interface operations {
             };
         };
     };
-    api_complete_api_v1_gateway_gateway_api_complete_post: {
+    api_complete_api_v1_gateway_api_complete_post: {
         parameters: {
             query?: never;
             header?: never;

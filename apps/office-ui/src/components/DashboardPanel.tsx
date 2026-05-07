@@ -4,7 +4,8 @@ import { useState, useEffect, type FC } from 'react';
 import type {
   Department,
   Agent,
-  WireTaskBoardItem,
+  KanbanStatus,
+  TaskBoardItem,
   WireTaskTimeline,
 } from '@autoswarm/shared-types';
 import { useTaskBoard } from '@/hooks/useTaskBoard';
@@ -27,11 +28,17 @@ const DEPARTMENT_ICONS: Record<string, string> = {
   blueprint: '\uD83D\uDCD0',
 };
 
-const STATUS_COLUMNS: { key: string; label: string; color: string; borderColor: string }[] = [
-  { key: 'queued', label: 'QUEUED', color: 'text-slate-400', borderColor: '#64748b' },
-  { key: 'running', label: 'RUNNING', color: 'text-blue-400', borderColor: '#3b82f6' },
-  { key: 'completed', label: 'COMPLETED', color: 'text-emerald-400', borderColor: '#10b981' },
-  { key: 'failed', label: 'FAILED', color: 'text-red-400', borderColor: '#ef4444' },
+const STATUS_COLUMNS: {
+  key: KanbanStatus;
+  label: string;
+  color: string;
+  borderColor: string;
+}[] = [
+  { key: 'todo', label: 'TODO', color: 'text-slate-400', borderColor: '#64748b' },
+  { key: 'in_progress', label: 'IN PROGRESS', color: 'text-blue-400', borderColor: '#3b82f6' },
+  { key: 'review', label: 'REVIEW', color: 'text-amber-400', borderColor: '#f59e0b' },
+  { key: 'done', label: 'DONE', color: 'text-emerald-400', borderColor: '#10b981' },
+  { key: 'blocked', label: 'BLOCKED', color: 'text-red-400', borderColor: '#ef4444' },
 ];
 
 function formatDuration(ms: number | null | undefined): string {
@@ -94,12 +101,15 @@ const TaskTimelineView: FC<{
 );
 
 const TaskCard: FC<{
-  task: WireTaskBoardItem;
+  task: TaskBoardItem;
   borderColor: string;
   index: number;
   onSelect: (id: string) => void;
-}> = ({ task, borderColor, index, onSelect }) => (
+  onDragStart: (id: string) => void;
+}> = ({ task, borderColor, index, onSelect, onDragStart }) => (
   <div
+    draggable
+    onDragStart={() => onDragStart(task.id)}
     onClick={() => onSelect(task.id)}
     className="bg-slate-800/60 px-2 py-1.5 font-mono text-[8px] shadow-[0_0_0_1px_#334155] transition-all duration-150 hover:bg-slate-700/60 hover:translate-x-1 cursor-pointer animate-fade-in-up"
     style={{
@@ -109,15 +119,21 @@ const TaskCard: FC<{
   >
     <div className="flex items-center justify-between">
       <p className="truncate text-slate-200 flex-1 min-w-0">
-        {task.description.length > 50
-          ? task.description.substring(0, 50) + '...'
-          : task.description}
+        {(task.title || task.description).length > 50
+          ? (task.title || task.description).substring(0, 50) + '...'
+          : task.title || task.description}
       </p>
       <span className="ml-1 rounded bg-slate-700 px-1 text-[6px] text-slate-400 uppercase">
         {task.graph_type}
       </span>
     </div>
     <div className="flex items-center gap-2 mt-0.5">
+      <span className="text-amber-300 uppercase">{task.priority}</span>
+      {task.labels.slice(0, 2).map((label) => (
+        <span key={label} className="rounded bg-slate-700 px-1 text-[6px] text-slate-300">
+          {label}
+        </span>
+      ))}
       {task.agent_names.length > 0 && (
         <span className="text-cyan-400">{task.agent_names.join(', ')}</span>
       )}
@@ -129,6 +145,9 @@ const TaskCard: FC<{
       )}
       {task.event_count > 0 && (
         <span className="text-slate-600">{task.event_count} events</span>
+      )}
+      {task.comment_count > 0 && (
+        <span className="text-slate-500">{task.comment_count} comments</span>
       )}
     </div>
   </div>
@@ -143,7 +162,8 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
   onOpenMapEditor,
 }) => {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
-  const { board, selectedTimeline, timelineLoading, selectTask, clearSelection } = useTaskBoard();
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const { board, selectedTimeline, timelineLoading, selectTask, clearSelection, moveTask } = useTaskBoard();
 
   // Listen for postMessage events from other components
   useEffect(() => {
@@ -158,6 +178,12 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
 
   const handleSelectTask = (taskId: string) => {
     void selectTask(taskId);
+  };
+
+  const handleDropTask = (statusKey: KanbanStatus) => {
+    if (!draggedTaskId) return;
+    void moveTask(draggedTaskId, statusKey);
+    setDraggedTaskId(null);
   };
 
   return (
@@ -359,7 +385,12 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
                 const columnTasks = board?.columns[column.key] ?? [];
 
                 return (
-                  <div key={column.key}>
+                  <div
+                    key={column.key}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => handleDropTask(column.key)}
+                    className="rounded border border-transparent px-1 py-1 transition-colors hover:border-slate-700/60"
+                  >
                     <div className="mb-1 flex items-center gap-2">
                       <h3
                         className={`pixel-text text-[7px] uppercase ${column.color}`}
@@ -384,6 +415,7 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
                             borderColor={column.borderColor}
                             index={taskIdx}
                             onSelect={handleSelectTask}
+                            onDragStart={setDraggedTaskId}
                           />
                         ))}
                       </div>

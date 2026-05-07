@@ -49,8 +49,16 @@ HITL_TIERS = (
 
 
 def upgrade() -> None:
-    hitl_outcome = sa.Enum(*HITL_OUTCOMES, name="hitloutcome")
-    hitl_tier = sa.Enum(*HITL_TIERS, name="hitlconfidencetier")
+    hitl_outcome = sa.dialects.postgresql.ENUM(
+        *HITL_OUTCOMES,
+        name="hitloutcome",
+        create_type=False,
+    )
+    hitl_tier = sa.dialects.postgresql.ENUM(
+        *HITL_TIERS,
+        name="hitlconfidencetier",
+        create_type=False,
+    )
     hitl_outcome.create(op.get_bind(), checkfirst=True)
     hitl_tier.create(op.get_bind(), checkfirst=True)
 

@@ -13,6 +13,7 @@ export type EventCategory =
   | 'git'
   | 'permission'
   | 'webhook'
+  | 'notification'
   | 'system';
 
 /** All known event types. */
@@ -36,6 +37,11 @@ export type EventType =
   | 'permission.denied'
   | 'webhook.received'
   | 'webhook.processed'
+  | 'task.notification.assigned'
+  | 'task.notification.review_needed'
+  | 'task.notification.completed'
+  | 'task.notification.blocked'
+  | 'task.notification.overdue'
   | 'system.worker_started'
   | 'system.worker_stopped';
 
@@ -67,24 +73,37 @@ export interface TaskTimeline {
   total_tokens: number | null;
 }
 
+export type KanbanStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'blocked';
+
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+
 /** Task board item with aggregated event data. */
 export interface TaskBoardItem {
   id: string;
+  title: string | null;
   description: string;
   graph_type: string;
   status: string;
+  kanban_status: KanbanStatus;
+  priority: TaskPriority;
+  labels: string[];
+  due_date: string | null;
+  parent_task_id: string | null;
+  depends_on: string[];
   agent_names: string[];
   created_at: string;
+  updated_at: string | null;
   started_at: string | null;
   completed_at: string | null;
   duration_ms: number | null;
   total_tokens: number | null;
   event_count: number;
+  comment_count: number;
 }
 
 /** Task board columns response. */
 export interface TaskBoardResponse {
-  columns: Record<string, TaskBoardItem[]>;
+  columns: Record<KanbanStatus, TaskBoardItem[]>;
   totals: Record<string, number>;
 }
 

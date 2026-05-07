@@ -119,15 +119,33 @@ class SwarmTask(Base):
     """A task dispatched to one or more agents in the swarm."""
 
     __tablename__ = "swarm_tasks"
+    __table_args__ = (
+        Index("ix_swarm_tasks_kanban_status_updated_at", "kanban_status", "updated_at"),
+        Index("ix_swarm_tasks_priority_due_date", "priority", "due_date"),
+        Index("ix_swarm_tasks_parent_task_id", "parent_task_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     graph_type: Mapped[str] = mapped_column(String(50), nullable=False, default="sequential")
     assigned_agent_ids: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    kanban_status: Mapped[str] = mapped_column(String(50), nullable=False, default="todo")
+    priority: Mapped[str] = mapped_column(String(20), nullable=False, default="medium")
+    labels: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    creator_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    parent_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("swarm_tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    depends_on: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     org_id: Mapped[str] = mapped_column(String(255), nullable=False, default="default", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Queue tracking (migration 0004)
     stream_message_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -139,6 +157,51 @@ class SwarmTask(Base):
     workflow_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("workflows.id", ondelete="SET NULL"), nullable=True
     )
+
+
+class TaskComment(Base):
+    """Durable per-task discussion/comment stream."""
+
+    __tablename__ = "task_comments"
+    __table_args__ = (
+        Index("ix_task_comments_task_created", "task_id", "created_at"),
+        Index("ix_task_comments_org_created", "org_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("swarm_tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    org_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    author_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class TaskHistory(Base):
+    """Append-only kanban/task-management history."""
+
+    __tablename__ = "task_history"
+    __table_args__ = (
+        Index("ix_task_history_task_created", "task_id", "created_at"),
+        Index("ix_task_history_org_created", "org_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("swarm_tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    org_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    actor_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
 class DeploymentEvidenceRecord(Base):

@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     # path in event_emitter._fire when an instrumented LangGraph node
     # emits its node.entered/exited/error events from a sync context.
     event_emit_timeout_seconds: int = 3
+    # Cross-tenant kanban overdue-notification scan cadence. Set to 0 to disable.
+    kanban_overdue_scan_interval_seconds: int = 300
 
     # -- Learning / Memory ----------------------------------------------------
     memory_persist_dir: str = "/tmp/autoswarm-memory"

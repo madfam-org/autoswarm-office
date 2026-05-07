@@ -18,7 +18,7 @@ from sqlalchemy import select
 from ..config import get_settings
 from ..database import tenant_session
 from ..memory_store.db import memory_store
-from ..models import ApprovalRequest, GatewayOperatorIdentity
+from ..models import ApprovalRequest, GatewayOperatorIdentity, SwarmTask, TaskComment, TaskHistory
 from ..tasks.acp_tasks import run_acp_workflow_task
 
 logger = logging.getLogger(__name__)
@@ -333,6 +333,239 @@ async def _resolve_gateway_approval(
     }
 
 
+def _task_summary(task: SwarmTask) -> dict[str, Any]:
+    return {
+        "id": str(task.id),
+        "title": task.title,
+        "description": task.description,
+        "status": task.status,
+        "kanban_status": task.kanban_status,
+        "priority": task.priority,
+        "labels": task.labels or [],
+        "assigned_agent_ids": task.assigned_agent_ids or [],
+        "due_date": task.due_date.isoformat() if task.due_date else None,
+        "created_at": task.created_at.isoformat(),
+        "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+    }
+
+
+def _task_title_from_text(text: str) -> str:
+    title = " ".join(text.strip().splitlines()[0].split())
+    return (title[:200] if title else "Untitled task")
+
+
+def _parse_gateway_task_id(raw: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid task UUID") from exc
+
+
+def _add_gateway_task_history(
+    task: SwarmTask,
+    *,
+    event_type: str,
+    actor_id: str,
+    payload: dict[str, Any],
+) -> TaskHistory:
+    return TaskHistory(
+        task_id=task.id,
+        org_id=task.org_id,
+        event_type=event_type,
+        actor_id=actor_id,
+        payload=payload,
+    )
+
+
+async def _handle_gateway_task_command(
+    operator: GatewayOperatorIdentity,
+    command: str,
+) -> dict[str, Any]:
+    """Execute tenant-bound `/task ...` commands from Harness channels."""
+    parts = command.split(maxsplit=2)
+    subcommand = parts[1].lower() if len(parts) > 1 else "list"
+    rest = parts[2].strip() if len(parts) > 2 else ""
+
+    async with tenant_session(operator.org_id) as db:
+        if subcommand in {"list", "ls"}:
+            status_filter = rest or None
+            query = (
+                select(SwarmTask)
+                .where(SwarmTask.org_id == operator.org_id)
+                .order_by(SwarmTask.updated_at.desc(), SwarmTask.created_at.desc())
+                .limit(20)
+            )
+            if status_filter:
+                query = query.where(SwarmTask.kanban_status == status_filter)
+            result = await db.execute(query)
+            return {
+                "status": "success",
+                "action": "task_list",
+                "tasks": [_task_summary(task) for task in result.scalars().all()],
+            }
+
+        if subcommand == "create":
+            if not rest:
+                return {
+                    "status": "error",
+                    "action": "task_create",
+                    "detail": "usage: /task create <title or title | description>",
+                }
+            raw_title, sep, raw_description = rest.partition("|")
+            title = _task_title_from_text(raw_title)
+            description = raw_description.strip() if sep else raw_title.strip()
+            task = SwarmTask(
+                title=title,
+                description=description,
+                graph_type="sequential",
+                assigned_agent_ids=[],
+                payload={"source": "harness", "channel": operator.channel},
+                status="pending",
+                kanban_status="todo",
+                priority="medium",
+                labels=["harness"],
+                creator_id=operator.user_sub,
+                org_id=operator.org_id,
+            )
+            db.add(task)
+            await db.flush()
+            db.add(
+                _add_gateway_task_history(
+                    task,
+                    event_type="task.created",
+                    actor_id=operator.user_sub,
+                    payload={"source": "harness", "title": task.title},
+                )
+            )
+            await db.flush()
+            await db.refresh(task)
+            return {"status": "success", "action": "task_create", "task": _task_summary(task)}
+
+        if subcommand in {"show", "get"}:
+            if not rest:
+                return {"status": "error", "action": "task_show", "detail": "task id is required"}
+            task_id = _parse_gateway_task_id(rest.split()[0])
+            result = await db.execute(
+                select(SwarmTask).where(
+                    SwarmTask.id == task_id,
+                    SwarmTask.org_id == operator.org_id,
+                )
+            )
+            task = result.scalar_one_or_none()
+            if task is None:
+                raise HTTPException(status_code=404, detail="Task not found")
+            return {"status": "success", "action": "task_show", "task": _task_summary(task)}
+
+        if subcommand in {"start", "review", "complete", "done", "block", "move"}:
+            tokens = rest.split(maxsplit=2)
+            if not tokens:
+                return {"status": "error", "action": "task_move", "detail": "task id is required"}
+            task_id = _parse_gateway_task_id(tokens[0])
+            status_map = {
+                "start": "in_progress",
+                "review": "review",
+                "complete": "done",
+                "done": "done",
+                "block": "blocked",
+            }
+            next_status = status_map.get(subcommand)
+            note = None
+            if subcommand == "move":
+                if len(tokens) < 2:
+                    return {
+                        "status": "error",
+                        "action": "task_move",
+                        "detail": (
+                            "usage: /task move <task_id> "
+                            "<todo|in_progress|review|done|blocked>"
+                        ),
+                    }
+                next_status = tokens[1]
+                note = tokens[2] if len(tokens) > 2 else None
+            elif len(tokens) > 1:
+                note = tokens[1] if len(tokens) == 2 else " ".join(tokens[1:])
+            if next_status not in {"todo", "in_progress", "review", "done", "blocked"}:
+                return {"status": "error", "action": "task_move", "detail": "invalid kanban status"}
+            result = await db.execute(
+                select(SwarmTask).where(
+                    SwarmTask.id == task_id,
+                    SwarmTask.org_id == operator.org_id,
+                )
+            )
+            task = result.scalar_one_or_none()
+            if task is None:
+                raise HTTPException(status_code=404, detail="Task not found")
+            old_status = task.kanban_status
+            task.kanban_status = next_status
+            db.add(
+                _add_gateway_task_history(
+                    task,
+                    event_type="task.kanban_status_changed",
+                    actor_id=operator.user_sub,
+                    payload={"old_kanban_status": old_status, "new_kanban_status": next_status},
+                )
+            )
+            if note:
+                db.add(
+                    TaskComment(
+                        task_id=task.id,
+                        org_id=task.org_id,
+                        author_id=operator.user_sub,
+                        body=note,
+                    )
+                )
+            await db.flush()
+            await db.refresh(task)
+            return {"status": "success", "action": "task_move", "task": _task_summary(task)}
+
+        if subcommand in {"comment", "note"}:
+            tokens = rest.split(maxsplit=1)
+            if len(tokens) < 2:
+                return {
+                    "status": "error",
+                    "action": "task_comment",
+                    "detail": "usage: /task comment <task_id> <body>",
+                }
+            task_id = _parse_gateway_task_id(tokens[0])
+            result = await db.execute(
+                select(SwarmTask).where(
+                    SwarmTask.id == task_id,
+                    SwarmTask.org_id == operator.org_id,
+                )
+            )
+            task = result.scalar_one_or_none()
+            if task is None:
+                raise HTTPException(status_code=404, detail="Task not found")
+            comment = TaskComment(
+                task_id=task.id,
+                org_id=task.org_id,
+                author_id=operator.user_sub,
+                body=tokens[1],
+            )
+            db.add(comment)
+            await db.flush()
+            db.add(
+                _add_gateway_task_history(
+                    task,
+                    event_type="task.comment_added",
+                    actor_id=operator.user_sub,
+                    payload={"comment_id": str(comment.id)},
+                )
+            )
+            await db.flush()
+            return {
+                "status": "success",
+                "action": "task_comment",
+                "comment": {"id": str(comment.id), "task_id": str(task.id), "body": comment.body},
+            }
+
+    return {
+        "status": "error",
+        "action": "task",
+        "detail": "unknown task subcommand",
+    }
+
+
 async def _route_harness_command(
     channel: str, text: str, actor: str = "unknown"
 ) -> dict[str, Any] | None:
@@ -358,6 +591,11 @@ async def _route_harness_command(
                 "recall <query>",
                 "remember <note>",
                 "pending",
+                "/task list [status]",
+                "/task create <title | description>",
+                "/task show <id>",
+                "/task move <id> <status>",
+                "/task comment <id> <body>",
             ],
         }
 
@@ -390,6 +628,18 @@ async def _route_harness_command(
         if operator is None:
             return _gateway_identity_required("hitl_pending", channel, actor)
         return await _list_gateway_pending_approvals(operator)
+
+    if (
+        lowered == "/task"
+        or lowered == "task"
+        or lowered.startswith("/task ")
+        or lowered.startswith("task ")
+    ):
+        operator = await _resolve_gateway_operator(channel, actor)
+        if operator is None:
+            return _gateway_identity_required("task", channel, actor)
+        task_command = command[1:] if lowered.startswith("/task") else command
+        return await _handle_gateway_task_command(operator, task_command)
 
     if lowered.startswith("/approve ") or lowered.startswith("approve "):
         operator = await _resolve_gateway_operator(channel, actor)

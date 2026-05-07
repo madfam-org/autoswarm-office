@@ -2067,8 +2067,10 @@ async def update_task_kanban(
             dedupe_key=task.kanban_status,
         )
 
+    due_date = task.due_date
     if (
-        _datetime_before(task.due_date, datetime.now(UTC))
+        due_date is not None
+        and _datetime_before(due_date, datetime.now(UTC))
         and task.kanban_status not in {"done", "blocked"}
     ):
         await _emit_task_lifecycle_notification(
@@ -2077,7 +2079,7 @@ async def update_task_kanban(
             kind="overdue",
             actor_id=actor_id,
             payload={"source": "kanban_update"},
-            dedupe_key=task.due_date.isoformat(),
+            dedupe_key=due_date.isoformat(),
         )
 
     await db.flush()

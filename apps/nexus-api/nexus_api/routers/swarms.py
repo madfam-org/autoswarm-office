@@ -362,7 +362,7 @@ def _execution_status_to_kanban(runtime_status: str | None) -> str:
 
 
 def _parse_optional_datetime(value: str | None, field_name: str) -> datetime | None:
-    if value in (None, ""):
+    if value is None or value == "":
         return None
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -601,7 +601,21 @@ def _import_items_from_csv(raw_csv: str) -> list[KanbanTaskImportItem]:
 def _seconds_between(start: datetime | None, end: datetime | None) -> float | None:
     if start is None or end is None:
         return None
+    start = _normalise_datetime_for_compare(start)
+    end = _normalise_datetime_for_compare(end)
     return max(0.0, (end - start).total_seconds())
+
+
+def _normalise_datetime_for_compare(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
+def _datetime_before(value: datetime | None, cutoff: datetime) -> bool:
+    if value is None:
+        return False
+    return _normalise_datetime_for_compare(value) < _normalise_datetime_for_compare(cutoff)
 
 
 def _deployment_status_from_evidence(
@@ -1563,8 +1577,8 @@ async def get_task_board(
             .where(TaskComment.task_id.in_(task_ids))
             .group_by(TaskComment.task_id)
         )
-        for row in comment_result:
-            comment_counts[str(row[0])] = row[1]
+        for comment_row in comment_result:
+            comment_counts[str(comment_row[0])] = comment_row[1]
 
     # Build columns
     columns: dict[str, list[TaskBoardItem]] = {
@@ -1767,8 +1781,7 @@ async def get_kanban_metrics(
         for assignee in task.assigned_agent_ids or []:
             workload_by_assignee[assignee] = workload_by_assignee.get(assignee, 0) + 1
         if (
-            task.due_date is not None
-            and task.due_date < now
+            _datetime_before(task.due_date, now)
             and kanban_status not in {"done", "blocked"}
         ):
             overdue_count += 1
@@ -2055,8 +2068,7 @@ async def update_task_kanban(
         )
 
     if (
-        task.due_date is not None
-        and task.due_date < datetime.now(UTC)
+        _datetime_before(task.due_date, datetime.now(UTC))
         and task.kanban_status not in {"done", "blocked"}
     ):
         await _emit_task_lifecycle_notification(

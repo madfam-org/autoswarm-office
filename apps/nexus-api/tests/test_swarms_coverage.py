@@ -18,6 +18,7 @@ Targets endpoints not exercised by ``test_swarm_task_lifecycle.py`` or
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
@@ -548,10 +549,10 @@ class TestTaskBoard:
         resp = await client.get("/api/v1/swarms/tasks/board", headers=auth_headers)
         assert resp.status_code == 200
         body = resp.json()
-        assert set(body["columns"].keys()) == {"queued", "running", "completed", "failed"}
+        assert set(body["columns"].keys()) == {"todo", "in_progress", "review", "done", "blocked"}
         assert all(len(items) == 0 for items in body["columns"].values())
         assert body["totals"] == {
-            "queued": 0, "running": 0, "completed": 0, "failed": 0,
+            "todo": 0, "in_progress": 0, "review": 0, "done": 0, "blocked": 0,
         }
 
     async def test_board_aggregates_events_and_resolves_agent_names(
@@ -573,6 +574,7 @@ class TestTaskBoard:
             assigned_agent_ids=[str(agent.id)],
             payload={},
             status="running",
+            kanban_status="in_progress",
             org_id="dev-org",
         )
         db_session.add(task)
@@ -595,9 +597,9 @@ class TestTaskBoard:
         resp = await client.get("/api/v1/swarms/tasks/board", headers=auth_headers)
         assert resp.status_code == 200
         body = resp.json()
-        running_items = body["columns"]["running"]
-        assert len(running_items) == 1
-        item = running_items[0]
+        in_progress_items = body["columns"]["in_progress"]
+        assert len(in_progress_items) == 1
+        item = in_progress_items[0]
         # Aggregates
         assert item["duration_ms"] == 1000
         assert item["total_tokens"] == 200
@@ -619,6 +621,7 @@ class TestTaskBoard:
             assigned_agent_ids=[ghost_id],
             payload={},
             status="completed",
+            kanban_status="done",
             org_id="dev-org",
         )
         db_session.add(task)
@@ -627,10 +630,10 @@ class TestTaskBoard:
         resp = await client.get("/api/v1/swarms/tasks/board", headers=auth_headers)
         assert resp.status_code == 200
         body = resp.json()
-        completed_items = body["columns"]["completed"]
-        assert len(completed_items) == 1
+        done_items = body["columns"]["done"]
+        assert len(done_items) == 1
         # Falls back to first 8 chars of the agent UUID when name not found.
-        assert completed_items[0]["agent_names"][0] == ghost_id[:8]
+        assert done_items[0]["agent_names"][0] == ghost_id[:8]
 
 
 # ---------------------------------------------------------------------------
@@ -740,17 +743,21 @@ class TestEndpointsDirect:
             assigned_agent_ids=[str(agent.id)],
             payload={},
             status="completed",
+            kanban_status="done",
             org_id="dev-org",
         )
         db_session.add(task)
         await db_session.commit()
 
         out = await get_task_board(db=db_session, tenant=tenant)
-        assert "completed" in out.columns
-        assert any(it.id == str(task.id) for it in out.columns["completed"])
+        assert "done" in out.columns
+        assert any(it.id == str(task.id) for it in out.columns["done"])
 
     async def test_get_task_direct(self, db_session) -> None:
         from nexus_api.routers.swarms import get_task
+        from nexus_api.tenant import TenantContext
+
+        tenant = TenantContext(org_id="dev-org")
 
         task = SwarmTask(
             description="direct-get", graph_type="research",
@@ -759,26 +766,220 @@ class TestEndpointsDirect:
         db_session.add(task)
         await db_session.flush()
         await db_session.refresh(task)
-        out = await get_task(task_id=str(task.id), db=db_session)
+        out = await get_task(task_id=str(task.id), db=db_session, tenant=tenant)
         assert out.id == str(task.id)
 
     async def test_get_task_invalid_uuid_direct(self, db_session) -> None:
         from fastapi import HTTPException
 
         from nexus_api.routers.swarms import get_task
+        from nexus_api.tenant import TenantContext
+
+        tenant = TenantContext(org_id="dev-org")
 
         with pytest.raises(HTTPException) as exc:
-            await get_task(task_id="not-a-uuid", db=db_session)
+            await get_task(task_id="not-a-uuid", db=db_session, tenant=tenant)
         assert exc.value.status_code == 400
 
     async def test_get_task_404_direct(self, db_session) -> None:
         from fastapi import HTTPException
 
         from nexus_api.routers.swarms import get_task
+        from nexus_api.tenant import TenantContext
+
+        tenant = TenantContext(org_id="dev-org")
 
         with pytest.raises(HTTPException) as exc:
-            await get_task(task_id=str(uuid.uuid4()), db=db_session)
+            await get_task(task_id=str(uuid.uuid4()), db=db_session, tenant=tenant)
         assert exc.value.status_code == 404
+
+    async def test_kanban_management_paths_direct(self, db_session) -> None:
+        from nexus_api.routers.swarms import (
+            KanbanTaskImportRequest,
+            KanbanTaskUpdate,
+            TaskClaimRequest,
+            TaskCommentCreate,
+            claim_available_task,
+            create_task_comment,
+            export_kanban_tasks,
+            get_kanban_metrics,
+            import_kanban_tasks,
+            list_task_comments,
+            list_task_history,
+            notify_overdue_tasks,
+            update_task_kanban,
+        )
+        from nexus_api.tenant import TenantContext
+
+        class JsonRequest:
+            def __init__(self, payload: dict[str, object]) -> None:
+                self.payload = payload
+
+            async def json(self) -> dict[str, object]:
+                return self.payload
+
+            async def body(self) -> bytes:
+                return json.dumps(self.payload).encode("utf-8")
+
+        tenant = TenantContext(org_id="dev-org")
+        user = {"sub": "operator-1", "email": "operator@example.com", "roles": ["admin"]}
+        now = datetime.now(UTC)
+        due_date = now - timedelta(hours=1)
+
+        dependency = SwarmTask(
+            description="dependency",
+            graph_type="research",
+            assigned_agent_ids=[],
+            payload={},
+            status="completed",
+            kanban_status="done",
+            completed_at=now,
+            created_at=now,
+            updated_at=now,
+            labels=["ops"],
+            org_id="dev-org",
+        )
+        task = SwarmTask(
+            description="kanban-direct",
+            graph_type="research",
+            assigned_agent_ids=[],
+            payload={},
+            status="queued",
+            kanban_status="todo",
+            priority="medium",
+            labels=[],
+            created_at=now,
+            updated_at=now,
+            org_id="dev-org",
+        )
+        claimable = SwarmTask(
+            description="claimable",
+            graph_type="research",
+            assigned_agent_ids=[],
+            payload={},
+            status="backlog",
+            kanban_status="todo",
+            priority="low",
+            labels=[],
+            created_at=now,
+            updated_at=now,
+            org_id="dev-org",
+        )
+        db_session.add_all([dependency, task, claimable])
+        await db_session.flush()
+        await db_session.refresh(dependency)
+        await db_session.refresh(task)
+        await db_session.refresh(claimable)
+
+        with patch(
+            "nexus_api.routers.swarms._emit_task_lifecycle_notification",
+            new=AsyncMock(return_value=True),
+        ) as notify:
+            updated = await update_task_kanban(
+                task_id=str(task.id),
+                body=KanbanTaskUpdate(
+                    title="Kanban Direct",
+                    kanban_status="review",
+                    priority="high",
+                    labels=["ops", "urgent"],
+                    due_date=due_date.isoformat().replace("+00:00", "Z"),
+                    parent_task_id=str(dependency.id),
+                    depends_on=[str(dependency.id)],
+                ),
+                user=user,
+                db=db_session,
+                tenant=tenant,
+            )
+            assert updated.kanban_status == "review"
+            assert updated.priority == "high"
+
+            comment = await create_task_comment(
+                task_id=str(task.id),
+                body=TaskCommentCreate(body="needs review"),
+                user=user,
+                db=db_session,
+                tenant=tenant,
+            )
+            assert comment.body == "needs review"
+            comments = await list_task_comments(
+                task_id=str(task.id),
+                db=db_session,
+                tenant=tenant,
+            )
+            assert [item.body for item in comments] == ["needs review"]
+
+            history = await list_task_history(
+                task_id=str(task.id),
+                db=db_session,
+                tenant=tenant,
+            )
+            assert {item.event_type for item in history} >= {
+                "task.kanban_updated",
+                "task.comment_added",
+            }
+
+            claim = await claim_available_task(
+                body=TaskClaimRequest(agent_id="agent-1"),
+                user=user,
+                db=db_session,
+                tenant=tenant,
+            )
+            assert claim.claimed is True
+            assert claim.task is not None
+            assert claim.task.kanban_status == "in_progress"
+
+            overdue = await notify_overdue_tasks(db=db_session, tenant=tenant)
+            assert overdue.scanned >= 1
+            assert overdue.notified >= 1
+            assert notify.await_count >= 1
+
+        metrics = await get_kanban_metrics(limit=1000, db=db_session, tenant=tenant)
+        assert metrics.total >= 3
+        assert metrics.status_counts["review"] >= 1
+        assert metrics.workload_by_assignee["agent-1"] >= 1
+
+        exported_json = await export_kanban_tasks(
+            format="json",
+            kanban_status=None,
+            limit=1000,
+            db=db_session,
+            tenant=tenant,
+        )
+        exported = json.loads(exported_json.body)
+        assert any(item["description"] == "kanban-direct" for item in exported["items"])
+
+        exported_csv = await export_kanban_tasks(
+            format="csv",
+            kanban_status="review",
+            limit=1000,
+            db=db_session,
+            tenant=tenant,
+        )
+        assert b"kanban-direct" in exported_csv.body
+
+        import_request = JsonRequest(
+            KanbanTaskImportRequest(
+                items=[
+                    {
+                        "title": "Imported task",
+                        "description": "imported direct",
+                        "graph_type": "research",
+                        "kanban_status": "todo",
+                        "priority": "medium",
+                        "labels": ["imported"],
+                    }
+                ]
+            ).model_dump()
+        )
+        imported = await import_kanban_tasks(
+            request=import_request,  # type: ignore[arg-type]
+            format="json",
+            user=user,
+            db=db_session,
+            tenant=tenant,
+        )
+        assert imported.created == 1
+        assert imported.tasks[0].status == "backlog"
 
     async def test_update_task_status_direct(self, db_session) -> None:
         from nexus_api.routers.swarms import TaskStatusUpdate, update_task_status

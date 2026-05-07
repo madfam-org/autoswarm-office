@@ -451,10 +451,10 @@ async def _handle_gateway_task_command(
                     SwarmTask.org_id == operator.org_id,
                 )
             )
-            task = result.scalar_one_or_none()
-            if task is None:
+            task_obj = result.scalar_one_or_none()
+            if task_obj is None:
                 raise HTTPException(status_code=404, detail="Task not found")
-            return {"status": "success", "action": "task_show", "task": _task_summary(task)}
+            return {"status": "success", "action": "task_show", "task": _task_summary(task_obj)}
 
         if subcommand in {"start", "review", "complete", "done", "block", "move"}:
             tokens = rest.split(maxsplit=2)
@@ -492,14 +492,14 @@ async def _handle_gateway_task_command(
                     SwarmTask.org_id == operator.org_id,
                 )
             )
-            task = result.scalar_one_or_none()
-            if task is None:
+            task_obj = result.scalar_one_or_none()
+            if task_obj is None:
                 raise HTTPException(status_code=404, detail="Task not found")
-            old_status = task.kanban_status
-            task.kanban_status = next_status
+            old_status = task_obj.kanban_status
+            task_obj.kanban_status = next_status
             db.add(
                 _add_gateway_task_history(
-                    task,
+                    task_obj,
                     event_type="task.kanban_status_changed",
                     actor_id=operator.user_sub,
                     payload={"old_kanban_status": old_status, "new_kanban_status": next_status},
@@ -508,15 +508,15 @@ async def _handle_gateway_task_command(
             if note:
                 db.add(
                     TaskComment(
-                        task_id=task.id,
-                        org_id=task.org_id,
+                        task_id=task_obj.id,
+                        org_id=task_obj.org_id,
                         author_id=operator.user_sub,
                         body=note,
                     )
                 )
             await db.flush()
-            await db.refresh(task)
-            return {"status": "success", "action": "task_move", "task": _task_summary(task)}
+            await db.refresh(task_obj)
+            return {"status": "success", "action": "task_move", "task": _task_summary(task_obj)}
 
         if subcommand in {"comment", "note"}:
             tokens = rest.split(maxsplit=1)
@@ -533,12 +533,12 @@ async def _handle_gateway_task_command(
                     SwarmTask.org_id == operator.org_id,
                 )
             )
-            task = result.scalar_one_or_none()
-            if task is None:
+            task_obj = result.scalar_one_or_none()
+            if task_obj is None:
                 raise HTTPException(status_code=404, detail="Task not found")
             comment = TaskComment(
-                task_id=task.id,
-                org_id=task.org_id,
+                task_id=task_obj.id,
+                org_id=task_obj.org_id,
                 author_id=operator.user_sub,
                 body=tokens[1],
             )
@@ -546,7 +546,7 @@ async def _handle_gateway_task_command(
             await db.flush()
             db.add(
                 _add_gateway_task_history(
-                    task,
+                    task_obj,
                     event_type="task.comment_added",
                     actor_id=operator.user_sub,
                     payload={"comment_id": str(comment.id)},

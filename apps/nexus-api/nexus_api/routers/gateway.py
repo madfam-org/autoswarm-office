@@ -219,6 +219,168 @@ def _verify_hmac(body: bytes, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, signature.removeprefix("sha256="))
 
 
+def _trigger_acp_from_gateway(channel: str, actor: str, target_url: str) -> dict[str, Any]:
+    """Dispatch an ACP task from a secured gateway channel."""
+    target_url = _validate_webhook_url(target_url)
+    task = run_acp_workflow_task.delay(target_url)
+    memory_store.insert_transcript(
+        run_id=task.id,
+        agent_role=f"gateway-{channel}",
+        role="user",
+        content=f"ACP triggered via {channel} from {actor or 'unknown'} for {target_url}",
+    )
+    logger.info("Gateway (%s): ACP triggered for %s -> task %s", channel, target_url, task.id)
+    return {"status": "success", "action": "acp_triggered", "task_id": task.id}
+
+
+def _route_harness_command(
+    channel: str, text: str, actor: str = "unknown"
+) -> dict[str, Any] | None:
+    """Route common Harness commands across chat-style gateway adapters.
+
+    This is intentionally small and deterministic. It gives every secured
+    channel the same basic control plane while keeping provider-specific
+    signature/auth handling inside each adapter.
+    """
+    command = (text or "").strip()
+    if not command:
+        return None
+
+    lowered = command.lower()
+    if lowered in {"/help", "help"}:
+        return {
+            "status": "success",
+            "action": "help",
+            "commands": [
+                "acp <url>",
+                "/initiate_acp <url>",
+                "status [query]",
+                "recall <query>",
+                "remember <note>",
+                "pending",
+            ],
+        }
+
+    for prefix in ("/initiate_acp ", "initiate_acp ", "/acp ", "acp "):
+        if lowered.startswith(prefix):
+            return _trigger_acp_from_gateway(channel, actor, command[len(prefix) :].strip())
+
+    for prefix in ("/status", "status", "/recall ", "recall "):
+        if lowered == prefix or lowered.startswith(prefix + " ") or lowered.startswith(prefix):
+            query = command[len(prefix) :].strip() or "acp"
+            hits = memory_store.fts_search(query, limit=5)
+            return {"status": "success", "action": "memory_recall", "query": query, "results": hits}
+
+    for prefix in ("/remember ", "remember "):
+        if lowered.startswith(prefix):
+            note = command[len(prefix) :].strip()
+            if not note:
+                return {"status": "error", "action": "remember", "detail": "note is required"}
+            run_id = f"gateway-{channel}"
+            memory_store.insert_transcript(
+                run_id=run_id,
+                agent_role=f"gateway-{channel}",
+                role="user",
+                content=f"Operator note from {actor or 'unknown'}: {note}",
+            )
+            return {"status": "success", "action": "remembered", "run_id": run_id}
+
+    if lowered in {"/pending", "pending", "/approvals", "approvals"}:
+        return {
+            "status": "needs_authenticated_bridge",
+            "action": "hitl_pending",
+            "detail": (
+                "HITL approval actions require a tenant-bound authenticated bridge. "
+                "Use the Office UI today; the Harness command bridge should bind "
+                "channel identities to Janua/Selva users before approving or denying."
+            ),
+        }
+
+    return None
+
+
+def _verify_signed_relay_request(body: bytes, request: Request, secret: str) -> None:
+    """Validate a generic signed relay used by platforms without native code here.
+
+    Accepted forms:
+    - Authorization: Bearer <secret>
+    - Authorization: HMAC <base64(hmac_sha256(body, secret))>
+    - X-Webhook-Signature: sha256=<hex hmac> or bare hex hmac
+    """
+    authorization = request.headers.get("Authorization", "").strip()
+    bearer = authorization.removeprefix("Bearer ").strip()
+    if bearer and hmac.compare_digest(bearer, secret):
+        return
+
+    if authorization.startswith("HMAC "):
+        provided = authorization.removeprefix("HMAC ").strip()
+        expected = base64.b64encode(
+            hmac.new(secret.encode(), body, hashlib.sha256).digest()
+        ).decode()
+        if hmac.compare_digest(expected, provided):
+            return
+
+    signature = request.headers.get("X-Webhook-Signature", "")
+    if signature and _verify_hmac(body, signature, secret):
+        return
+
+    raise HTTPException(status_code=401, detail="Invalid gateway relay signature")
+
+
+def _extract_gateway_text(payload: dict[str, Any]) -> str:
+    """Extract text from common webhook/relay payload shapes."""
+    for key in ("text", "message", "content", "body"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    nested_message = payload.get("message")
+    if isinstance(nested_message, dict):
+        for key in ("text", "content", "body"):
+            value = nested_message.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+    return ""
+
+
+def _extract_gateway_actor(payload: dict[str, Any]) -> str:
+    """Extract a best-effort actor label for transcript/audit context."""
+    for key in ("actor", "user", "username", "sender", "from"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if isinstance(value, dict):
+            nested = value.get("name") or value.get("id") or value.get("username")
+            if isinstance(nested, str) and nested.strip():
+                return nested.strip()
+    return "unknown"
+
+
+async def _signed_relay_inbound(
+    request: Request,
+    *,
+    channel: str,
+    env_name: str,
+    secret: str,
+) -> dict[str, Any]:
+    """Shared Harness relay adapter for Teams, IRC, QQ, Yuanbao, and peers."""
+    _require_secret(env_name, secret)
+    body = await request.body()
+    _verify_signed_relay_request(body, request, secret)
+    try:
+        payload = json.loads(body)
+    except Exception:
+        payload = {}
+
+    text = _extract_gateway_text(payload)
+    actor = _extract_gateway_actor(payload)
+    routed = _route_harness_command(channel, text, actor)
+    if routed:
+        return routed
+    return {"status": "ignored", "channel": channel}
+
+
 # ---------------------------------------------------------------------------
 # Telegram
 # ---------------------------------------------------------------------------
@@ -230,7 +392,7 @@ async def telegram_webhook(
     x_telegram_bot_api_secret_token: str = Header(None),
 ) -> dict[str, Any]:
     """
-    Hermes-style multi-channel gateway — Telegram.
+    Harness communication gateway — Telegram.
 
     Validates the ``X-Telegram-Bot-Api-Secret-Token`` header (set when
     registering the webhook via ``setWebhook?secret_token=...``) and routes
@@ -252,6 +414,10 @@ async def telegram_webhook(
     message = payload.get("message", {})
     text = message.get("text", "").strip()
     chat_id = message.get("chat", {}).get("id", "unknown")
+
+    routed = _route_harness_command("telegram", text, str(chat_id))
+    if routed:
+        return routed
 
     if text.startswith("/initiate_acp"):
         parts = text.split()
@@ -282,7 +448,7 @@ async def discord_webhook(
     x_signature_256: str = Header(None),
 ) -> dict[str, Any]:
     """
-    Hermes-style multi-channel gateway — Discord.
+    Harness communication gateway — Discord.
 
     Validates HMAC-SHA256 signature and handles:
     - ``/status``: returns recent swarm transcript hits from EdgeMemoryDB.
@@ -306,6 +472,10 @@ async def discord_webhook(
 
     payload = json.loads(body)
     content = payload.get("content", "").strip()
+
+    routed = _route_harness_command("discord", content, payload.get("author", "unknown"))
+    if routed:
+        return routed
 
     if content.startswith("/status"):
         query = content.removeprefix("/status").strip() or "acp"
@@ -346,7 +516,7 @@ async def slack_webhook(
     x_slack_request_timestamp: str = Header(None),
 ) -> dict[str, Any]:
     """
-    Hermes-style multi-channel gateway — Slack.
+    Harness communication gateway — Slack.
 
     Validates Slack's v0 HMAC-SHA256 signature with timestamp replay protection
     (rejects requests older than 5 minutes), then routes slash commands.
@@ -756,7 +926,8 @@ async def sms_inbound(
 
 # ===========================================================================
 # Gateway Wave 3 — 9 additional platform adapters (Track C)
-# Completes 18/18 platform coverage matching Hermes Agent
+# Harness adapter coverage: native webhooks where provider contracts are
+# stable, and signed relays for platforms that require a bridge service.
 # ===========================================================================
 
 
@@ -911,6 +1082,54 @@ async def bluebubbles_webhook(request: Request) -> dict[str, Any]:
     return {"status": "ignored"}
 
 
+@router.post("/teams/webhook")
+async def teams_webhook(request: Request) -> dict[str, Any]:
+    """Microsoft Teams inbound webhook or bridge relay — signed and command-routed."""
+    settings = get_settings()
+    return await _signed_relay_inbound(
+        request,
+        channel="teams",
+        env_name="TEAMS_WEBHOOK_SECRET",
+        secret=settings.teams_webhook_secret,
+    )
+
+
+@router.post("/irc/webhook")
+async def irc_webhook(request: Request) -> dict[str, Any]:
+    """IRC bridge relay — signed and routed into the Harness command surface."""
+    settings = get_settings()
+    return await _signed_relay_inbound(
+        request,
+        channel="irc",
+        env_name="IRC_WEBHOOK_SECRET",
+        secret=settings.irc_webhook_secret,
+    )
+
+
+@router.post("/qq/webhook")
+async def qq_webhook(request: Request) -> dict[str, Any]:
+    """QQ Bot bridge relay — signed and routed into the Harness command surface."""
+    settings = get_settings()
+    return await _signed_relay_inbound(
+        request,
+        channel="qq",
+        env_name="QQ_WEBHOOK_SECRET",
+        secret=settings.qq_webhook_secret,
+    )
+
+
+@router.post("/yuanbao/webhook")
+async def yuanbao_webhook(request: Request) -> dict[str, Any]:
+    """Yuanbao bridge relay — signed and routed into the Harness command surface."""
+    settings = get_settings()
+    return await _signed_relay_inbound(
+        request,
+        channel="yuanbao",
+        env_name="YUANBAO_WEBHOOK_SECRET",
+        secret=settings.yuanbao_webhook_secret,
+    )
+
+
 @router.post("/homeassistant/webhook")
 async def homeassistant_webhook(request: Request) -> dict[str, Any]:
     """Home Assistant webhook — Bearer long-lived token validated."""
@@ -966,6 +1185,10 @@ async def generic_webhook(
     except Exception:
         data = {}
     text = (data.get("text") or data.get("message") or data.get("content") or "").strip()
+    routed = _route_harness_command(channel_id, text, data.get("actor", "unknown"))
+    if routed:
+        routed["channel_id"] = channel_id
+        return routed
     if text.lower().startswith("acp "):
         target_url = text[4:].strip()
         target_url = _validate_webhook_url(target_url)
@@ -977,7 +1200,7 @@ async def generic_webhook(
 
 @router.post("/api/complete")
 async def api_complete(request: Request) -> dict[str, Any]:
-    """Direct API completion — fire-and-forget ACP dispatch. Mirrors Hermes api_server mode."""
+    """Direct API completion — fire-and-forget ACP dispatch for Harness API mode."""
     if not request.headers.get("Authorization", "").startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Bearer token required")
     try:

@@ -1,6 +1,6 @@
-# Hermes Integration — Operations Runbook
+# Harness Integration — Operations Runbook
 
-This document is the **single source of truth** for all remaining operational steps required to bring both phases of the Hermes Agent parity integration into production. All code changes are already merged to `main` — what follows is exclusively infrastructure provisioning, secret management, and platform registration.
+This document is the **single source of truth** for all remaining operational steps required to bring both phases of the Harness Agent parity integration into production. All code changes are already merged to `main` — what follows is exclusively infrastructure provisioning, secret management, and platform registration.
 
 > [!IMPORTANT]
 > Complete steps **1 → 9** in order on a fresh deployment. On a re-deploy (e.g., upgrading from an older revision), only re-run steps that introduce new resources.
@@ -9,11 +9,11 @@ This document is the **single source of truth** for all remaining operational st
 
 ## 1. Apply Kubernetes Infrastructure
 
-All manifests are managed via Kustomize in `infra/k8s/hermes/`.
+All manifests are managed via Kustomize in `infra/k8s/harness/`.
 
 ```bash
-# Apply the full Hermes overlay (PVCs + Secret template)
-kubectl apply -k infra/k8s/hermes/
+# Apply the full Harness overlay (PVCs + Secret template)
+kubectl apply -k infra/k8s/harness/
 
 # Verify volumes are bound
 kubectl get pvc -n autoswarm
@@ -79,11 +79,11 @@ kubectl exec -n autoswarm deploy/autoswarm-nexus-api -- \
 
 ## 4. Populate All Secrets
 
-The `secret-hermes.yaml` contains **placeholder** base64 values for all credentials. Replace them before applying.
+The `secret-harness.yaml` contains **placeholder** base64 values for all credentials. Replace them before applying.
 
 ### Full Secret — Manual (dev/staging only)
 ```bash
-kubectl create secret generic autoswarm-hermes-secrets -n autoswarm \
+kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
   --from-literal=TELEGRAM_BOT_TOKEN="<token from @BotFather>" \
   --from-literal=TELEGRAM_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
   --from-literal=DISCORD_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
@@ -99,20 +99,20 @@ kubectl create secret generic autoswarm-hermes-secrets -n autoswarm \
 ```bash
 kubeseal --fetch-cert --controller-namespace=kube-system > pub-cert.pem
 
-kubectl create secret generic autoswarm-hermes-secrets -n autoswarm \
+kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
   --from-literal=SLACK_SIGNING_SECRET="..." \
   --from-literal=TWILIO_AUTH_TOKEN="..." \
   ... \
   --dry-run=client -o yaml \
   | kubeseal --cert pub-cert.pem -o yaml \
-  > infra/k8s/hermes/sealed-secret-hermes.yaml
+  > infra/k8s/harness/sealed-secret-harness.yaml
 
-kubectl apply -f infra/k8s/hermes/sealed-secret-hermes.yaml
+kubectl apply -f infra/k8s/harness/sealed-secret-harness.yaml
 ```
 
 ### ConfigMap — Non-secret values
 ```bash
-kubectl create configmap autoswarm-hermes-config -n autoswarm \
+kubectl create configmap autoswarm-harness-config -n autoswarm \
   --from-literal=AUTOSWARM_SKILLS_DIR=/var/lib/autoswarm/skills \
   --from-literal=AUTOSWARM_STATE_DB_PATH=/var/lib/autoswarm/autoswarm_state.db \
   --from-literal=GATEWAY_EMAIL_WHITELIST="ops@yourdomain.com,alerts@yourdomain.com" \
@@ -125,9 +125,9 @@ Reference both from Deployments:
 ```yaml
 envFrom:
   - secretRef:
-      name: autoswarm-hermes-secrets
+      name: autoswarm-harness-secrets
   - configMapRef:
-      name: autoswarm-hermes-config
+      name: autoswarm-harness-config
 ```
 
 ---
@@ -254,9 +254,9 @@ Ensure the following env vars reach the **Celery worker** container (sourced fro
 
 | Variable | Source | Purpose |
 |---|---|---|
-| `TAVILY_API_KEY` | `autoswarm-hermes-secrets` | Tavily web-search MCP server |
-| `GITHUB_TOKEN` | `autoswarm-hermes-secrets` | GitHub MCP server |
-| `AUTOSWARM_SKILLS_DIR` | `autoswarm-hermes-config` | Override default skills PVC path |
+| `TAVILY_API_KEY` | `autoswarm-harness-secrets` | Tavily web-search MCP server |
+| `GITHUB_TOKEN` | `autoswarm-harness-secrets` | GitHub MCP server |
+| `AUTOSWARM_SKILLS_DIR` | `autoswarm-harness-config` | Override default skills PVC path |
 
 The `mcp_config.json` in `packages/workflows/` is baked into the container image. No runtime configuration needed beyond the env vars above.
 
@@ -336,11 +336,11 @@ All variables are declared in `apps/nexus-api/nexus_api/config.py`.
 
 ## 1. Apply Kubernetes Infrastructure
 
-All manifests live in `infra/k8s/hermes/`.
+All manifests live in `infra/k8s/harness/`.
 
 ```bash
-# Apply the full Hermes overlay (PVCs + Secret template)
-kubectl apply -k infra/k8s/hermes/
+# Apply the full Harness overlay (PVCs + Secret template)
+kubectl apply -k infra/k8s/harness/
 
 # Verify volumes are bound
 kubectl get pvc -n autoswarm
@@ -383,11 +383,11 @@ volumes:
 
 ## 3. Populate Secrets
 
-The `secret-hermes.yaml` file contains **placeholder** base64 values. Replace them before applying, or better yet, use Sealed Secrets / External Secrets Operator.
+The `secret-harness.yaml` file contains **placeholder** base64 values. Replace them before applying, or better yet, use Sealed Secrets / External Secrets Operator.
 
 ### Option A — Manual (dev/staging only)
 ```bash
-kubectl create secret generic autoswarm-hermes-secrets -n autoswarm \
+kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
   --from-literal=TELEGRAM_BOT_TOKEN="<token from @BotFather>" \
   --from-literal=TELEGRAM_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
   --from-literal=DISCORD_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
@@ -401,12 +401,12 @@ kubectl create secret generic autoswarm-hermes-secrets -n autoswarm \
 # Encrypt each literal into a SealedSecret
 kubeseal --fetch-cert --controller-namespace=kube-system > pub-cert.pem
 
-kubectl create secret generic autoswarm-hermes-secrets -n autoswarm \
+kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
   --from-literal=TELEGRAM_BOT_TOKEN="..." \
   --dry-run=client -o yaml \
-  | kubeseal --cert pub-cert.pem -o yaml > infra/k8s/hermes/sealed-secret-hermes.yaml
+  | kubeseal --cert pub-cert.pem -o yaml > infra/k8s/harness/sealed-secret-harness.yaml
 
-kubectl apply -f infra/k8s/hermes/sealed-secret-hermes.yaml
+kubectl apply -f infra/k8s/harness/sealed-secret-harness.yaml
 ```
 
 ---
@@ -446,15 +446,15 @@ The Phase I Analyst bootstraps MCP servers using `packages/workflows/mcp_config.
 
 | Variable | Source | Purpose |
 |---|---|---|
-| `TAVILY_API_KEY` | `autoswarm-hermes-secrets` | Tavily web-search MCP server |
-| `GITHUB_TOKEN` | `autoswarm-hermes-secrets` | GitHub MCP server |
+| `TAVILY_API_KEY` | `autoswarm-harness-secrets` | Tavily web-search MCP server |
+| `GITHUB_TOKEN` | `autoswarm-harness-secrets` | GitHub MCP server |
 | `AUTOSWARM_SKILLS_DIR` | ConfigMap or env | Override default skills PVC path |
 
 Reference these from the Deployment `envFrom`:
 ```yaml
 envFrom:
   - secretRef:
-      name: autoswarm-hermes-secrets
+      name: autoswarm-harness-secrets
 ```
 
 ---
@@ -501,3 +501,38 @@ All new variables are declared in `apps/nexus-api/nexus_api/config.py` and read 
 | `GITHUB_TOKEN` | `""` | ✅ for MCP GitHub access | Fine-grained PAT |
 | `AUTOSWARM_SKILLS_DIR` | `/var/lib/autoswarm/skills` | ✅ | PVC mount path for skill scripts |
 | `AUTOSWARM_STATE_DB_PATH` | `/var/lib/autoswarm/autoswarm_state.db` | ✅ | SQLite edge memory location |
+
+## Harness gateway coverage addendum
+
+Canonical Nexus API route prefix: `/api/v1/gateway/<channel>/...`.
+Legacy compatibility route prefix: `/api/v1/gateway/gateway/<channel>/...` remains mounted for already-registered webhooks and should be phased out during the next provider registration pass.
+
+### Shared Harness commands
+
+The common command surface is available to native handlers where wired and to signed relay handlers:
+
+- `acp <url>` or `/initiate_acp <url>` dispatches an ACP task after SSRF-oriented URL validation.
+- `status [query]` and `recall <query>` return recent transcript hits from EdgeMemoryDB.
+- `remember <note>` stores an operator note in the transcript memory store.
+- `pending` intentionally returns `needs_authenticated_bridge` until channel identities are bound to Janua/Selva tenant users.
+
+### Signed relay contract
+
+Use the signed relay adapters for platforms where the native provider contract is unavailable, unstable, or requires a local bridge process:
+
+- Microsoft Teams: `POST /api/v1/gateway/teams/webhook`, secret `TEAMS_WEBHOOK_SECRET`.
+- IRC bridge: `POST /api/v1/gateway/irc/webhook`, secret `IRC_WEBHOOK_SECRET`.
+- QQ Bot bridge: `POST /api/v1/gateway/qq/webhook`, secret `QQ_WEBHOOK_SECRET`.
+- Yuanbao bridge: `POST /api/v1/gateway/yuanbao/webhook`, secret `YUANBAO_WEBHOOK_SECRET`.
+
+Accepted authentication forms:
+
+- `Authorization: Bearer <secret>`
+- `Authorization: HMAC <base64(hmac_sha256(body, secret))>`
+- `X-Webhook-Signature: sha256=<hex_hmac_sha256(body, secret)>`
+
+Relay payload text is read from `text`, `message`, `content`, or `body`. Actor labels are read from `actor`, `user`, `username`, `sender`, or `from`.
+
+### HITL bridge requirement
+
+Approval actions must not be accepted from chat channels until a channel identity maps to a Janua-authenticated Selva user and tenant. The current safe behavior for `pending` is explicit refusal with `needs_authenticated_bridge`. The next implementation step is a tenant-bound operator identity table plus command handlers for `pending`, `approve <id>`, and `deny <id> <reason>` that call the existing `/api/v1/approvals` APIs with idempotency keys.

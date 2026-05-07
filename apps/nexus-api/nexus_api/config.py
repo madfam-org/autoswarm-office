@@ -57,12 +57,16 @@ class Settings(BaseSettings):
     # -- Enclii (deployment webhooks) ------------------------------------------
     enclii_webhook_secret: str = ""
 
-    # -- Hermes Integration ---------------------------------------------------
-    # Multi-channel gateway tokens
+    # -- Harness communication gateway ---------------------------------------
+    # Multi-channel gateway tokens and channel-specific shared secrets.
     telegram_bot_token: str = ""
     telegram_webhook_secret: str = ""
     discord_webhook_secret: str = ""
     slack_signing_secret: str = ""  # Slack v0 HMAC signing secret
+    teams_webhook_secret: str = ""  # Microsoft Teams outgoing-webhook / relay secret
+    irc_webhook_secret: str = ""  # IRC bridge HMAC/Bearer relay secret
+    qq_webhook_secret: str = ""  # QQ Bot HMAC/Bearer relay secret
+    yuanbao_webhook_secret: str = ""  # Yuanbao HMAC/Bearer relay secret
     # Comma-separated authorised sender addresses for the inbound-email
     # parse webhook (POST /api/v1/gateway/email/inbound). Acts as the
     # equivalent of a shared HMAC secret for the other 14 gateway

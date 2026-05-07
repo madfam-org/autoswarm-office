@@ -186,7 +186,12 @@ def create_app() -> FastAPI:
     app.include_router(billing.router, prefix="/api/v1/billing")
     app.include_router(billing_internal.router, prefix="/api/v1/billing")
     app.include_router(skills.router, prefix="/api/v1/skills")
-    app.include_router(gateway.router, prefix="/api/v1/gateway")
+    # Harness communication gateway canonical routes:
+    # /api/v1/gateway/<channel>/...
+    app.include_router(gateway.router, prefix="/api/v1")
+    # Backward-compatible legacy routes for previously registered webhooks:
+    # /api/v1/gateway/gateway/<channel>/...
+    app.include_router(gateway.router, prefix="/api/v1/gateway", include_in_schema=False)
     app.include_router(workflows.router, prefix="/api/v1/workflows")
     app.include_router(artifacts.router, prefix="/api/v1/artifacts")
     app.include_router(marketplace.router, prefix="/api/v1/marketplace")

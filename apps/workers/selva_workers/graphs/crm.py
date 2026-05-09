@@ -79,7 +79,7 @@ class CRMState(BaseGraphState, TypedDict, total=False):
 def fetch_context(state: CRMState) -> CRMState:
     """Fetch CRM context for the target recipient and action.
 
-    Calls the Phyne-CRM adapter when ``PHYNE_CRM_URL`` is configured,
+    Calls the Phynd-CRM adapter when ``PHYNE_CRM_URL`` is configured,
     falling back to mock data otherwise.
     """
     messages = state.get("messages", [])
@@ -94,16 +94,16 @@ def fetch_context(state: CRMState) -> CRMState:
     }
     contact_id: str | None = None
 
-    # Try Phyne-CRM adapter for real data.
+    # Try Phynd-CRM adapter for real data.
     try:
         import os
 
         phyne_url = os.environ.get("PHYNE_CRM_URL")
         phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
         if phyne_url:
-            from madfam_inference.adapters.crm import PhyneCRMAdapter
+            from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
             profile = _run_async(adapter.get_unified_profile(recipient))
             contact_id = profile.contact.id
             activities = _run_async(adapter.list_activities("contact", contact_id))
@@ -115,7 +115,7 @@ def fetch_context(state: CRMState) -> CRMState:
         else:
             raise RuntimeError("PHYNE_CRM_URL not set")
     except Exception:
-        logger.debug("Using mock CRM context (Phyne-CRM unavailable)")
+        logger.debug("Using mock CRM context (Phynd-CRM unavailable)")
         context_data["contact_history"] = [
             {"date": "2026-03-01", "type": "email", "subject": "Follow-up on proposal"},
             {"date": "2026-02-15", "type": "meeting", "subject": "Initial discovery call"},
@@ -302,7 +302,7 @@ def approval_gate(state: CRMState) -> CRMState:
 def send(state: CRMState) -> CRMState:
     """Execute the approved outbound CRM action.
 
-    Logs the drafted communication in Phyne-CRM as an activity when
+    Logs the drafted communication in Phynd-CRM as an activity when
     configured, otherwise uses a placeholder result.
     """
     messages = state.get("messages", [])
@@ -334,7 +334,7 @@ def send(state: CRMState) -> CRMState:
         "message_id": f"msg-{state.get('task_id', 'unknown')}",
     }
 
-    # Log the activity in Phyne-CRM if available.
+    # Log the activity in Phynd-CRM if available.
     try:
         import os
 
@@ -342,9 +342,9 @@ def send(state: CRMState) -> CRMState:
         phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
         contact_uuid = state.get("contact_id")
         if phyne_url and contact_uuid:
-            from madfam_inference.adapters.crm import PhyneCRMAdapter
+            from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
             draft = state.get("draft_content", "") or ""
             activity = _run_async(
                 adapter.create_activity(
@@ -358,12 +358,12 @@ def send(state: CRMState) -> CRMState:
             send_result["phyne_activity_id"] = activity.id
         elif phyne_url and not contact_uuid:
             logger.debug(
-                "Phyne-CRM activity logging skipped: no contact_id resolved for %s "
+                "Phynd-CRM activity logging skipped: no contact_id resolved for %s "
                 "(cold outreach or unresolved profile)",
                 recipient,
             )
     except Exception:
-        logger.debug("Phyne-CRM activity logging skipped (unavailable)")
+        logger.debug("Phynd-CRM activity logging skipped (unavailable)")
 
     # Actually send the drafted email
     _email_re = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")

@@ -249,13 +249,13 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ---
 # ----------------------------------------------------------------------
-# phyne-crm (prod)
+# phynd-crm (prod)
 # ----------------------------------------------------------------------
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: selva-config-writer
-  namespace: phyne-crm
+  namespace: phynd-crm
   labels:
     app.kubernetes.io/part-of: autoswarm-office
     rfc: "0007"
@@ -268,7 +268,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: selva-config-writer
-  namespace: phyne-crm
+  namespace: phynd-crm
   labels:
     app.kubernetes.io/part-of: autoswarm-office
     rfc: "0007"
@@ -282,13 +282,13 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ---
 # ----------------------------------------------------------------------
-# phyne-crm-staging
+# phynd-crm-staging
 # ----------------------------------------------------------------------
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: selva-config-writer
-  namespace: phyne-crm-staging
+  namespace: phynd-crm-staging
   labels:
     app.kubernetes.io/part-of: autoswarm-office
     rfc: "0007"
@@ -301,7 +301,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: selva-config-writer
-  namespace: phyne-crm-staging
+  namespace: phynd-crm-staging
   labels:
     app.kubernetes.io/part-of: autoswarm-office
     rfc: "0007"

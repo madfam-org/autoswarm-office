@@ -62,7 +62,7 @@ export interface AtriumPlatform {
  *     Marketing site fortuna.tube is live and used as fallback CTA.
  *   - rondelio: admin.rondel.io returned 525 (CF SSL handshake) while
  *     play.rondel.io is healthy; only verified URLs are included.
- *   - phyne-crm, pravara-mes, sim4d, ceq: hostnames did not resolve
+ *   - phynd-crm, pravara-mes, sim4d, ceq: hostnames did not resolve
  *     during audit; embed targets dropped pending DNS / deployment
  *     confirmation.
  */
@@ -163,8 +163,8 @@ export const ATRIUM_CATALOG: readonly AtriumPlatform[] = [
     adminUrl: 'https://admin.selva.town',
   },
   {
-    slug: 'phyne-crm',
-    displayName: 'PhyneCRM',
+    slug: 'phynd-crm',
+    displayName: 'PhyndCRM',
     tagline: 'Sales CRM + funnel attribution',
     tier: 'ecosystem-service',
     // appUrl/adminUrl omitted: hostnames did not resolve during audit.

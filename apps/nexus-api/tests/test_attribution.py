@@ -165,7 +165,7 @@ class TestWebhookLeadIdPropagation:
                 },
             }
             resp = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )
@@ -238,12 +238,12 @@ class TestWebhookLeadIdPropagation:
             patch("nexus_api.attribution.track"),
         ):
             resp1 = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )
             resp2 = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )

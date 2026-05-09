@@ -45,7 +45,7 @@ make dev
 - `selva-skills`: Procedural skills registry (core + community tiers) with the
   AgentSkills SKILL.md format and locale variants.
 - `selva-tools`: 240+ built-in tools across file ops, code exec, git, web, data, comms,
-  artifacts, MCP, and Mexican-market integrations (Karafiel, Dhanam, PhyneCRM, Tezca).
+  artifacts, MCP, and Mexican-market integrations (Karafiel, Dhanam, PhyndCRM, Tezca).
 - `selva-permissions`: HITL permission engine with skill-based overrides and audience guard.
 - `selva-memory`: Per-agent FAISS vector store and Experience/Reflexion learning loop.
 - `selva-calendar`: Google + Microsoft calendar adapters.

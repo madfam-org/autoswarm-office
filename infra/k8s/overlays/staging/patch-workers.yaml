@@ -1,7 +1,7 @@
 # PP.4 — staging patch for workers (agent task execution).
 #
 # CRITICAL staging guardrails: the workers pod runs LLM-driven agents
-# with tool access (SendEmail, GitPush, Stripe, PhyneCRM, Dhanam
+# with tool access (SendEmail, GitPush, Stripe, PhyndCRM, Dhanam
 # billing). Keep the live-effect feature flags OFF in staging.
 #
 # DHANAM_API_URL points at dhanam's staging tier. YANTRA4D, COTIZA,

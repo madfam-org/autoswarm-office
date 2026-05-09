@@ -1,4 +1,4 @@
-"""Pydantic models for Phyne-CRM API responses."""
+"""Pydantic models for Phynd-CRM API responses."""
 
 from __future__ import annotations
 

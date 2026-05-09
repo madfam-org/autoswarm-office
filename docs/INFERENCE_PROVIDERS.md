@@ -276,7 +276,7 @@ passed as `model_override` to the selected provider.
 
 | Service | Config | Code changes |
 |---------|--------|-------------|
-| **PhyneCRM** | `OPENAI_BASE_URL=http://nexus-api.../v1` | None |
+| **PhyndCRM** | `OPENAI_BASE_URL=http://nexus-api.../v1` | None |
 | **Fortuna** | `OPENAI_BASE_URL=http://nexus-api.../v1` | None |
 | **Yantra4D** | `AI_BASE_URL=http://nexus-api.../v1`, `AI_PROVIDER=openai` | `ai_provider.py` passes `base_url` |
 

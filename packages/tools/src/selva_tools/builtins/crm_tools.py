@@ -24,7 +24,7 @@ def _crm_headers() -> dict[str, str]:
 
 
 class CreateLeadTool(BaseTool):
-    """Create a new lead in PhyneCRM from a contact.
+    """Create a new lead in PhyndCRM from a contact.
 
     Used by Growth Node agents (Heraldo, Nexo) to capture new prospects
     into the sales pipeline. Category: CRM_UPDATE.
@@ -32,7 +32,7 @@ class CreateLeadTool(BaseTool):
 
     name = "create_lead"
     description = (
-        "Create a new sales lead in PhyneCRM. "
+        "Create a new sales lead in PhyndCRM. "
         "Use when you identify a potential customer that should enter the pipeline."
     )
 
@@ -86,7 +86,7 @@ class CreateLeadTool(BaseTool):
 
 
 class UpdateLeadStatusTool(BaseTool):
-    """Update a lead's status in PhyneCRM.
+    """Update a lead's status in PhyndCRM.
 
     Advances leads through the pipeline: new → qualified → contacted →
     negotiation → won/lost. Category: CRM_UPDATE.
@@ -94,7 +94,7 @@ class UpdateLeadStatusTool(BaseTool):
 
     name = "update_lead_status"
     description = (
-        "Update the status of a lead in PhyneCRM. Use to advance leads through the sales pipeline."
+        "Update the status of a lead in PhyndCRM. Use to advance leads through the sales pipeline."
     )
 
     def parameters_schema(self) -> dict[str, Any]:

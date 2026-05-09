@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     nexus_api_url: str = "http://localhost:4300"
     database_url: str | None = None
 
-    # -- Phyne-CRM ------------------------------------------------------------
+    # -- Phynd-CRM ------------------------------------------------------------
     phyne_crm_url: str | None = None
     phyne_crm_token: str | None = None
 

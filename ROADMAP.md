@@ -28,7 +28,7 @@
 |--------|-------|--------|
 | Built-in tools | 240 (`selva_tools/builtins/`) | `grep -rE "^class [A-Z][A-Za-z]+Tool" packages/tools/src/selva_tools/builtins/` |
 | Workflow graphs | 12 (accounting, billing, coding, crm, deployment, intelligence, meeting, operations, project, puppeteer, research, sales) | `apps/workers/selva_workers/graphs/*.py` |
-| Ecosystem adapters | 6 (Karafiel, Dhanam, PhyneCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
+| Ecosystem adapters | 6 (Karafiel, Dhanam, PhyndCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
 | Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
 | Alembic migrations | 32 (latest 0030 — consent_ledger_signing_keys) | `apps/nexus-api/alembic/versions/*.py` |
 | Test files | 828 (pytest + vitest + playwright) | `find apps packages tests -name "test_*.py" -o -name "*.test.ts" -o -name "*.spec.ts"` |
@@ -287,7 +287,7 @@ These cannot be assessed from inside selva-office:
   selva-office expects, or also fallback-driven
 - **Enclii** — rollback success rate, staged rollout discipline, RFC
   0017 digest-pinning enforcement post-deploy
-- **PhyneCRM** — own tenant isolation enforcement; whether activities
+- **PhyndCRM** — own tenant isolation enforcement; whether activities
   from any worker are accepted or properly scoped
 - **Karafiel** — Mexican SAT compliance (CFDI, RFC validation) production
   hardening
@@ -440,7 +440,7 @@ Lead with Karafiel compliance for Mexican SMBs:
 - `[x]` Billing graph (6-node monthly close)
 - `[ ]` Karafiel public pricing page ($499 MXN/mo)
 - `[ ]` 10+ paying customers on Karafiel compliance
-- `[ ]` Referral flywheel active (PhyneCRM funnel → Dhanam rewards)
+- `[ ]` Referral flywheel active (PhyndCRM funnel → Dhanam rewards)
 
 ### Phase F3: Fabrication Bundle (GTM Wave 2)
 
@@ -498,7 +498,7 @@ Selva seats at $149-499/mo as the autonomous AI workforce:
 | `janua/` | Authentication | SSO, OIDC, enterprise connections, guest access |
 | `dhanam/` | Billing | Per-tenant subscription, compute token ledger, usage metering |
 | `enclii/` | Deployment | Tenant-isolated worker pod provisioning, scale-to-zero |
-| `phyne-crm/` | CRM | Per-tenant customer data, pipeline, activity feed |
+| `phynd-crm/` | CRM | Per-tenant customer data, pipeline, activity feed |
 
 ### Phase E2: Mexican Regulatory Compliance
 
@@ -543,7 +543,7 @@ Selva seats at $149-499/mo as the autonomous AI workforce:
 #### Ventas (Sales) ✅ Sprint 5
 - `[x]` **Sales graph**: 7-node pipeline (qualify → cotización → approval → send → pedido → billing → cobranza)
 - `[x]` **WhatsApp Business templates** (Sprint 2): factura_enviada, recordatorio_pago, confirmacion_pedido, cotizacion_lista
-- `[x]` **PhyneCRM integration**: lead scoring, pipeline management, activity logging
+- `[x]` **PhyndCRM integration**: lead scoring, pipeline management, activity logging
 - `[x]` **Sales pipeline skill**: SKILL.md + SKILL.es-MX.md
 - `[ ]` Pipeline analytics dashboard in office UI
 
@@ -630,7 +630,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 │   ├── Container orchestration, scale-to-zero, webhooks
 │   └── → Selva uses for worker pod provisioning + deployment graph
 │
-├── 📊 PhyneCRM (phyne-crm/) — Customer Relationship Management
+├── 📊 PhyndCRM (phynd-crm/) — Customer Relationship Management
 │   ├── crm.madfam.io
 │   ├── Contacts, pipeline, activities, billing profiles
 │   └── → Selva uses for CRM graph, lead data, customer context
@@ -702,7 +702,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 ### Infrastructure Deployed
 - `[x]` HeartbeatService cron (`*/30 * * * *`) with CRM scraper + auto-dispatch
 - `[x]` PlaybookGuard with conditional approval bypass + financial circuit breaker ($50/day)
-- `[x]` CRM graph: fetch_context → draft_communication → approval_gate → send (Resend + PhyneCRM log)
+- `[x]` CRM graph: fetch_context → draft_communication → approval_gate → send (Resend + PhyndCRM log)
 - `[x]` Resend Pro transactional ($20/mo, 50K emails, 10 domains). madfam.io verified
 - `[x]` MADFAM branded HTML email template (table-based, Outlook/Gmail/Apple Mail compatible)
 - `[x]` Service consumption tracking (email sends → event stream)
@@ -716,7 +716,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 - `[x]` Shared `build_router_from_env()` factory (`packages/inference/madfam_inference/factory.py`)
 - `[x]` Org-config ConfigMap deployed to K8s, mounted at `/etc/autoswarm/org-config.yaml`
 - `[x]` ServiceConfig model for tracking external accounts (Resend, Anthropic, DeepInfra, Stripe, etc.)
-- `[x]` PhyneCRM, Fortuna, Yantra4D secrets patched for Selva inference routing
+- `[x]` PhyndCRM, Fortuna, Yantra4D secrets patched for Selva inference routing
 - `[x]` 196 inference tests passing (org_config + router + factory + worker wiring)
 
 ### Blocking First Revenue
@@ -724,7 +724,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 - `[ ]` **Stripe live mode** — Verify `sk_live_` prefix (not `sk_test_`)
 - `[ ]` Resend domain verification (9 pending — DNS records added, click "Verify" in dashboard)
 - `[ ]` DeepInfra API key (optional — 13x cost reduction on volume tasks)
-- `[ ]` PhyneCRM webhook registration (CRM → Selva event flow)
+- `[ ]` PhyndCRM webhook registration (CRM → Selva event flow)
 
 ---
 
@@ -756,7 +756,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 - `[x]` Solarpunk visual overhaul complete
 - `[x]` Org-config ConfigMap deployed to K8s
 - `[x]` Inference proxy live (`/v1/chat/completions` + `/v1/embeddings`)
-- `[x]` Ecosystem inference centralized (Fortuna, Yantra4D, PhyneCRM → Selva proxy)
+- `[x]` Ecosystem inference centralized (Fortuna, Yantra4D, PhyndCRM → Selva proxy)
 - `[x]` Service resource registry (8 external accounts tracked)
 - `[x]` Email delivery verified (Resend Pro, madfam.io domain)
 - `[x]` 6 selva pods healthy (nexus-api, workers, gateway, colyseus, office-ui, admin)

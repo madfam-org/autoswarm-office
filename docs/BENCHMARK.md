@@ -95,7 +95,7 @@ No competitor has: a 10-agent AI workforce, autonomous task dispatch via CRM-dri
 
 | Capability | Competitors | **Selva** |
 |-----------|:----------:|:---------:|
-| CRM integration | ❌ | ✅ **PhyneCRM — federated CRM with 6 providers** |
+| CRM integration | ❌ | ✅ **PhyndCRM — federated CRM with 6 providers** |
 | Billing / Stripe | ❌ | ✅ **Dhanam — MXN + USD, checkout links** |
 | Legal intelligence | ❌ | ✅ **Tezca — 30K+ Mexican laws** |
 | Compliance automation | ❌ | ✅ **Karafiel — SAT/CFDI tax defense** |

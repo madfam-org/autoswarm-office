@@ -547,7 +547,7 @@ class TenantConfig(Base):
     """Per-organization configuration for multi-tenant operations.
 
     Stores business identity (RFC, razon social), localization preferences,
-    ecosystem integration references (Karafiel, Dhanam, Phyne), feature
+    ecosystem integration references (Karafiel, Dhanam, Phynd), feature
     flags, and resource limits.
     """
 
@@ -1214,7 +1214,7 @@ class TenantIdentity(Base):
     """Central cross-service ID map for a single tenant.
 
     Every onboarded MADFAM tenant has identities across Janua, Dhanam,
-    PhyneCRM, Karafiel, Resend, Cloudflare, and Selva Office. When any
+    PhyndCRM, Karafiel, Resend, Cloudflare, and Selva Office. When any
     one drifts, data orphans. This table is the canonical mapping so
     reconciliation + offboarding can enumerate every place a tenant
     exists in O(1). Canonical id is the Janua org_id.
@@ -1229,7 +1229,7 @@ class TenantIdentity(Base):
 
     janua_org_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     dhanam_space_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
-    phynecrm_tenant_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    phyndcrm_tenant_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     karafiel_org_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
 
     resend_domain_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)

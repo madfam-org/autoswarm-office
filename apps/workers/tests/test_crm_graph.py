@@ -81,11 +81,11 @@ class TestFetchContext:
         """When PHYNE_CRM_URL is set but adapter fails, falls back to mock."""
         from selva_workers.graphs.crm import fetch_context
 
-        with patch.dict("os.environ", {"PHYNE_CRM_URL": "http://fake-phyne:8080"}):
+        with patch.dict("os.environ", {"PHYNE_CRM_URL": "http://fake-phynd:8080"}):
             result = fetch_context(
                 {
                     "messages": [],
-                    "recipient": "phyne-user@test.com",
+                    "recipient": "phynd-user@test.com",
                 }
             )
 

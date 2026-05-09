@@ -30,7 +30,7 @@ def _payload(
     *,
     janua_org_id: str | None = "madfam-test-001",
     dhanam_space_id: str | None = "sp-dhn-001",
-    phynecrm_tenant_id: str | None = "madfam-test-001",
+    phyndcrm_tenant_id: str | None = "madfam-test-001",
     karafiel_org_id: str | None = "krf-001",
 ) -> dict:
     return {
@@ -39,7 +39,7 @@ def _payload(
         "primary_contact_email": "ops@madfam.test",
         "janua_org_id": janua_org_id,
         "dhanam_space_id": dhanam_space_id,
-        "phynecrm_tenant_id": phynecrm_tenant_id,
+        "phyndcrm_tenant_id": phyndcrm_tenant_id,
         "karafiel_org_id": karafiel_org_id,
         "resend_domain_ids": ["dmn_01"],
         "metadata": {"plan": "free", "voice_mode": "dyad_selva_plus_user"},
@@ -159,7 +159,7 @@ class TestValidate:
         assert resp.status_code == 200
         body = resp.json()
         assert body["canonical_id"] == "validate-me"
-        assert body["services_checked"] == 4  # janua+dhanam+phynecrm+karafiel
+        assert body["services_checked"] == 4  # janua+dhanam+phyndcrm+karafiel
         assert body["drifts"] == []
 
     async def test_validate_unknown_returns_404(self, client: httpx.AsyncClient) -> None:

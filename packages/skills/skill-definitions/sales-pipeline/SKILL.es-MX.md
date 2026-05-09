@@ -1,6 +1,6 @@
 ---
 name: sales-pipeline
-description: Gestion del pipeline de ventas de principio a fin -- calificacion de prospectos, generacion de cotizaciones, conversion a pedidos, despacho de facturacion y seguimiento de cobranza via PhyneCRM, Karafiel y Dhanam.
+description: Gestion del pipeline de ventas de principio a fin -- calificacion de prospectos, generacion de cotizaciones, conversion a pedidos, despacho de facturacion y seguimiento de cobranza via PhyndCRM, Karafiel y Dhanam.
 allowed_tools:
   - law_search
   - contract_generate
@@ -16,21 +16,21 @@ metadata:
 
 # Habilidad de Pipeline de Ventas
 
-Usted gestiona el pipeline de ventas de principio a fin, desde la calificacion de prospectos hasta el cobro. Los datos de prospectos y contactos provienen de PhyneCRM. La facturacion se maneja mediante el grafo de billing via Karafiel y Dhanam.
+Usted gestiona el pipeline de ventas de principio a fin, desde la calificacion de prospectos hasta el cobro. Los datos de prospectos y contactos provienen de PhyndCRM. La facturacion se maneja mediante el grafo de billing via Karafiel y Dhanam.
 
 ## Capacidades
 
-- Calificar prospectos de PhyneCRM basado en puntuacion y etapa del pipeline
+- Calificar prospectos de PhyndCRM basado en puntuacion y etapa del pipeline
 - Generar cotizaciones profesionales en formato de negocios mexicano
 - Enrutar cotizaciones para aprobacion humana antes de enviarlas
 - Enviar cotizaciones via plantillas de WhatsApp Business o correo electronico
-- Convertir cotizaciones aceptadas en pedidos dentro de PhyneCRM
+- Convertir cotizaciones aceptadas en pedidos dentro de PhyndCRM
 - Despachar grafo de facturacion para generacion de CFDI
 - Dar seguimiento a la cobranza y enviar recordatorios de pago
 
 ## Separacion de Responsabilidades
 
-- **PhyneCRM** (motor CRM): Prospectos, pipeline, contactos, actividades, oportunidades
+- **PhyndCRM** (motor CRM): Prospectos, pipeline, contactos, actividades, oportunidades
 - **Karafiel** (centinela de cumplimiento): Validacion RFC, generacion CFDI, soporte contractual
 - **Dhanam** (motor de facturacion): Seguimiento de pagos, registros de transacciones, recibos
 - **Selva** (orquestador): Coordinacion del flujo de pipeline, redaccion de cotizaciones, seguimiento de cobranza
@@ -38,11 +38,11 @@ Usted gestiona el pipeline de ventas de principio a fin, desde la calificacion d
 ## Flujo del Pipeline de Ventas
 
 1. Recibir ID de prospecto desde el despacho
-2. Obtener y calificar prospecto de PhyneCRM (puntuacion, etapa, datos de contacto)
+2. Obtener y calificar prospecto de PhyndCRM (puntuacion, etapa, datos de contacto)
 3. Generar cotizacion con partidas, precios y condiciones de pago
 4. Enviar cotizacion a aprobacion humana (compuerta HITL)
 5. Enviar cotizacion aprobada al cliente via WhatsApp o correo
-6. Al aceptarse: convertir en pedido dentro de PhyneCRM
+6. Al aceptarse: convertir en pedido dentro de PhyndCRM
 7. Despachar grafo de facturacion para generacion de CFDI (factura)
 8. Dar seguimiento a la cobranza con recordatorios
 
@@ -67,7 +67,7 @@ Usted gestiona el pipeline de ventas de principio a fin, desde la calificacion d
 
 ## Manejo de Errores
 
-- Si PhyneCRM no esta disponible, usar datos del prospecto del payload de despacho y marcar como no verificado
+- Si PhyndCRM no esta disponible, usar datos del prospecto del payload de despacho y marcar como no verificado
 - Si la puntuacion del prospecto esta por debajo del umbral, establecer estatus "unqualified" y detener pipeline
 - Si la cotizacion es denegada en la compuerta de aprobacion, registrar retroalimentacion y detener con estatus "denied"
 - Si el envio por WhatsApp falla, recurrir a notificacion por correo electronico

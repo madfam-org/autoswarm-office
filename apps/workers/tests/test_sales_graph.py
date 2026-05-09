@@ -276,7 +276,7 @@ class TestConvertToPedido:
         assert "Pedido created" in result["messages"][0].content
 
     def test_convert_to_pedido_without_crm(self) -> None:
-        """Without PhyneCRM, still creates the pedido locally."""
+        """Without PhyndCRM, still creates the pedido locally."""
         from selva_workers.graphs.sales import convert_to_pedido
 
         result = convert_to_pedido(

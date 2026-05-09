@@ -1,4 +1,4 @@
-"""Stage 1 — create or fetch a synthetic hot lead in PhyneCRM."""
+"""Stage 1 — create or fetch a synthetic hot lead in PhyndCRM."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ class CrmHotLeadStep(ProbeStep):
             "correlation_id": ctx.correlation_id,
             "dry_run": ctx.dry_run,
             "channel": "synthetic-probe",
-            # Pinned test lead — PhyneCRM's /v1/probe/leads endpoint is
+            # Pinned test lead — PhyndCRM's /v1/probe/leads endpoint is
             # expected to be idempotent on (tenant, correlation_id).
             "lead": {
                 "email": "probe@madfam.io",
@@ -55,7 +55,7 @@ class CrmHotLeadStep(ProbeStep):
                 name=self.name,
                 status=StageStatus.FAILED,
                 duration_ms=(time.perf_counter() - t0) * 1000.0,
-                detail=f"PhyneCRM unreachable: {type(exc).__name__}: {exc}",
+                detail=f"PhyndCRM unreachable: {type(exc).__name__}: {exc}",
             )
 
         if resp.status_code >= 400:
@@ -63,7 +63,7 @@ class CrmHotLeadStep(ProbeStep):
                 name=self.name,
                 status=StageStatus.FAILED,
                 duration_ms=(time.perf_counter() - t0) * 1000.0,
-                detail=f"PhyneCRM returned {resp.status_code}: {resp.text[:200]}",
+                detail=f"PhyndCRM returned {resp.status_code}: {resp.text[:200]}",
             )
 
         body = {}
@@ -75,7 +75,7 @@ class CrmHotLeadStep(ProbeStep):
                 name=self.name,
                 status=StageStatus.FAILED,
                 duration_ms=(time.perf_counter() - t0) * 1000.0,
-                detail="PhyneCRM response missing lead_id",
+                detail="PhyndCRM response missing lead_id",
                 facts={"raw_body": str(body)[:200]},
             )
 

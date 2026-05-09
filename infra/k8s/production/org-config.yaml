@@ -159,12 +159,12 @@ data:
         status: active
         notes: "Managed via Dhanam. Checkout allowlist: 9 ecosystem domains."
 
-      phynecrm:
-        provider: phynecrm
+      phyndcrm:
+        provider: phyndcrm
         service_type: crm
         api_key_env: PHYNE_CRM_FEDERATION_TOKEN
         plan: self_hosted
-        plan_details: "Self-hosted PhyneCRM on K3s. Federation token auth."
+        plan_details: "Self-hosted PhyndCRM on K3s. Federation token auth."
         payment_method: none
         capacity:
           contacts: unlimited

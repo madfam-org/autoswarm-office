@@ -1,4 +1,4 @@
-"""PhyneCRM webhook handler — receives CRM events and auto-dispatches tasks.
+"""PhyndCRM webhook handler — receives CRM events and auto-dispatches tasks.
 
 Maps CRM lifecycle events to SwarmTask dispatch via the playbook system.
 Only dispatches if a matching enabled playbook exists for the event.
@@ -30,7 +30,7 @@ from ..database import tenant_session
 from ..models import SwarmTask, SwarmTaskOutbox
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/gateway/phyne-crm", tags=["gateway"])
+router = APIRouter(prefix="/gateway/phynd-crm", tags=["gateway"])
 
 # CRM event → internal event key mapping
 EVENT_MAP = {
@@ -42,7 +42,7 @@ EVENT_MAP = {
 
 
 def _verify_signature(payload: bytes, signature: str, secret: str) -> bool:
-    """Verify HMAC-SHA256 webhook signature from PhyneCRM."""
+    """Verify HMAC-SHA256 webhook signature from PhyndCRM."""
     if not secret:
         return True  # skip verification if no secret configured
     expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
@@ -50,7 +50,7 @@ def _verify_signature(payload: bytes, signature: str, secret: str) -> bool:
 
 
 def _webhook_secret(settings: Any) -> str:
-    """Return the configured PhyneCRM webhook secret, if any.
+    """Return the configured PhyndCRM webhook secret, if any.
 
     ``phyne_crm_webhook_secret`` is intentionally resolved with an env
     fallback because older Settings classes did not declare the field, but
@@ -69,7 +69,7 @@ def _idempotency_key(request: Request, payload: dict[str, Any], event_type: str)
         return header_key
 
     provider_key = (
-        request.headers.get("X-PhyneCRM-Event-Id")
+        request.headers.get("X-PhyndCRM-Event-Id")
         or str(payload.get("idempotency_key") or "")
         or str(payload.get("event_id") or "")
         or str(payload.get("id") or "")
@@ -82,7 +82,7 @@ def _idempotency_key(request: Request, payload: dict[str, Any], event_type: str)
 
 @router.post("")
 async def phyne_crm_webhook(request: Request):
-    """Receive webhook events from PhyneCRM and auto-dispatch agent tasks.
+    """Receive webhook events from PhyndCRM and auto-dispatch agent tasks.
 
     Flow:
     1. Verify HMAC signature
@@ -95,7 +95,7 @@ async def phyne_crm_webhook(request: Request):
     body = await request.body()
 
     # Verify signature
-    signature = request.headers.get("X-PhyneCRM-Signature", "")
+    signature = request.headers.get("X-PhyndCRM-Signature", "")
     webhook_secret = _webhook_secret(settings)
     if settings.environment == "production" and webhook_secret and not signature:
         raise HTTPException(status_code=401, detail="Missing webhook signature")
@@ -110,7 +110,7 @@ async def phyne_crm_webhook(request: Request):
     event_type = payload.get("event", "")
     data = payload.get("data", {})
 
-    logger.info("PhyneCRM webhook received: event=%s", event_type)
+    logger.info("PhyndCRM webhook received: event=%s", event_type)
 
     # Map to internal event key
     internal_event = EVENT_MAP.get(event_type)

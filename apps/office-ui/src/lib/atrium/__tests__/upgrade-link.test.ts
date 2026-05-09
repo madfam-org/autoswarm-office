@@ -18,8 +18,8 @@ describe('buildUpgradeUrl', () => {
   });
 
   it('URL-encodes hyphens-and-special-chars in slugs without altering semantics', () => {
-    const url = buildUpgradeUrl('phyne-crm');
+    const url = buildUpgradeUrl('phynd-crm');
     // URLSearchParams keeps hyphens as-is (they don't need encoding).
-    expect(url).toContain('product=phyne-crm');
+    expect(url).toContain('product=phynd-crm');
   });
 });

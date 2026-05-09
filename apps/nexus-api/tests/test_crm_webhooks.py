@@ -1,4 +1,4 @@
-"""Tests for the PhyneCRM webhook handler.
+"""Tests for the PhyndCRM webhook handler.
 
 Covers:
 - HMAC signature verification
@@ -29,7 +29,7 @@ def _sign_payload(payload: bytes, secret: str) -> str:
 
 
 def _make_crm_event(event: str, data: dict | None = None) -> dict:
-    """Build a PhyneCRM webhook event payload."""
+    """Build a PhyndCRM webhook event payload."""
     return {
         "event": event,
         "data": data or {},
@@ -53,7 +53,7 @@ class TestCRMEventMapping:
         ):
             payload = _make_crm_event("lead.hot", {"contact_name": "Test", "email": "t@t.com"})
             resp = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )
@@ -66,7 +66,7 @@ class TestCRMEventMapping:
         """An unknown CRM event type is acknowledged but marked as ignored."""
         payload = _make_crm_event("unknown.event", {"foo": "bar"})
         resp = await client.post(
-            "/api/v1/gateway/phyne-crm",
+            "/api/v1/gateway/phynd-crm",
             content=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
         )
@@ -78,7 +78,7 @@ class TestCRMEventMapping:
     async def test_empty_event_ignored(self, client: httpx.AsyncClient) -> None:
         payload = {"event": "", "data": {}}
         resp = await client.post(
-            "/api/v1/gateway/phyne-crm",
+            "/api/v1/gateway/phynd-crm",
             content=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
         )
@@ -108,11 +108,11 @@ class TestCRMWebhookSignature:
             mock_settings.return_value = settings_obj
 
             resp = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=payload,
                 headers={
                     "Content-Type": "application/json",
-                    "X-PhyneCRM-Signature": "invalid-signature",
+                    "X-PhyndCRM-Signature": "invalid-signature",
                 },
             )
             assert resp.status_code == 401
@@ -132,11 +132,11 @@ class TestCRMWebhookSignature:
             mock_settings.return_value = settings_obj
 
             resp = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=payload,
                 headers={
                     "Content-Type": "application/json",
-                    "X-PhyneCRM-Signature": signature,
+                    "X-PhyndCRM-Signature": signature,
                 },
             )
             assert resp.status_code == 200
@@ -145,7 +145,7 @@ class TestCRMWebhookSignature:
         """When no webhook secret is configured, signature check is skipped."""
         payload = _make_crm_event("unknown.event")
         resp = await client.post(
-            "/api/v1/gateway/phyne-crm",
+            "/api/v1/gateway/phynd-crm",
             content=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
         )
@@ -162,7 +162,7 @@ class TestCRMWebhookValidation:
 
     async def test_invalid_json_returns_400(self, client: httpx.AsyncClient) -> None:
         resp = await client.post(
-            "/api/v1/gateway/phyne-crm",
+            "/api/v1/gateway/phynd-crm",
             content=b"not valid json{{{",
             headers={"Content-Type": "application/json"},
         )
@@ -171,7 +171,7 @@ class TestCRMWebhookValidation:
     async def test_missing_event_field_ignored(self, client: httpx.AsyncClient) -> None:
         """A payload without an 'event' key is treated as unknown and ignored."""
         resp = await client.post(
-            "/api/v1/gateway/phyne-crm",
+            "/api/v1/gateway/phynd-crm",
             content=json.dumps({"data": {}}).encode(),
             headers={"Content-Type": "application/json"},
         )
@@ -224,7 +224,7 @@ class TestCRMAutoDispatch:
                 },
             )
             resp = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )
@@ -284,7 +284,7 @@ class TestCRMAutoDispatch:
                 },
             )
             resp = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )
@@ -326,7 +326,7 @@ class TestCRMAutoDispatch:
         ):
             payload = _make_crm_event("activity.overdue", {"id": "act-1"})
             resp = await client.post(
-                "/api/v1/gateway/phyne-crm",
+                "/api/v1/gateway/phynd-crm",
                 content=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )

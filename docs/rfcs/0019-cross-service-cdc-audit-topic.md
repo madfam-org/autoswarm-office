@@ -228,7 +228,7 @@ via the unified audit endpoint within the same 5s budget.
 10. Janua first (most queries depend on auth events for context)
 11. Dhanam second (billing audit is the most-asked LFPDPPP question)
 12. Karafiel third (Mexican SAT submissions are the highest-stakes)
-13. Tezca, Enclii, PhyneCRM round out the set
+13. Tezca, Enclii, PhyndCRM round out the set
 
 Each sibling service follows the same pattern: stand up Debezium →
 verify per-table SMTs → ship to staging → 7-day soak → enable in prod.

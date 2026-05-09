@@ -3,7 +3,7 @@ import { getSiteConfig } from '@/lib/site-config';
 const YEAR = new Date().getFullYear();
 
 const ECOSYSTEM_LINKS = [
-  { label: 'PhyneCRM', href: 'https://crm.madfam.io' },
+  { label: 'PhyndCRM', href: 'https://crm.madfam.io' },
   { label: 'Dhanam', href: 'https://dhan.am' },
   { label: 'Karafiel', href: 'https://karafiel.mx' },
 ];

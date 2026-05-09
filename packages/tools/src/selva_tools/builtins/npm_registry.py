@@ -40,7 +40,7 @@ ECOSYSTEM_REPOS = [
     "tezca",
     "forgesight",
     "fortuna",
-    "phyne-crm",
+    "phynd-crm",
     "avala",
     "digifab-quoting",
     "forj",

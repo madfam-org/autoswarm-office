@@ -35,11 +35,11 @@ services, agents, tools, graphs, and external systems in the MADFAM ecosystem.
 |-----------|---------------|
 | Agents | Heraldo (L8, Growth Director), Nexo (L8, CRM Lead) |
 | Department | Growth & Market Syndicate |
-| Services | PhyneCRM, Resend (email), madfam-site (CMS) |
+| Services | PhyndCRM, Resend (email), madfam-site (CMS) |
 | Graphs | `crm` (qualify->outreach->follow-up), `research` (discover->analyze->report) |
 | Key Tools | SendMarketingEmailTool, CreateLeadTool, UpdateLeadStatusTool, CreateContactTool, CreateActivityTool |
 | Playbooks | Lead Response, Content Publish, Trial Retention |
-| Webhooks | `POST /api/v1/gateway/phyne-crm` (CRM event auto-dispatch via playbook matching) |
+| Webhooks | `POST /api/v1/gateway/phynd-crm` (CRM event auto-dispatch via playbook matching) |
 
 ### 4. Identity Node (Sovereign Border)
 **Purpose:** Zero-trust access, ecosystem citizenship. If not verified through Janua, it does not exist.
@@ -157,8 +157,8 @@ Actions within a playbook's `allowed_actions` execute autonomously if:
 | Database Migration Runner | `infra:migration_pending` | infrastructure_exec, database_migration, infra_monitor | 30 | $0 (HITL) |
 
 ### CRM Webhook Auto-Dispatch
-- `POST /api/v1/gateway/phyne-crm` -- receives PhyneCRM webhook events
-- HMAC-SHA256 signature verification via `X-PhyneCRM-Signature` header
+- `POST /api/v1/gateway/phynd-crm` -- receives PhyndCRM webhook events
+- HMAC-SHA256 signature verification via `X-PhyndCRM-Signature` header
 - Maps CRM events to internal event keys: `lead.hot` -> `crm:hot_lead`, `lead.created` -> `crm:lead_created`, `activity.overdue` -> `crm:support_ticket`, `opportunity.created` -> `crm:opportunity_created`
 - Automatically dispatches SwarmTasks when a matching enabled playbook exists
 - Source: `apps/nexus-api/nexus_api/routers/crm_webhooks.py`

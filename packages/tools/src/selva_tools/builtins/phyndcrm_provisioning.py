@@ -1,10 +1,10 @@
-"""PhyneCRM tenant bootstrap tools.
+"""PhyndCRM tenant bootstrap tools.
 
 Each onboarded tenant needs a ``tenant_configs`` row seeded with voice_mode
 + default pipeline + seed user. This module encapsulates that bootstrap
 sequence so a tenant isn't born half-provisioned.
 
-API base: ``PHYNE_CRM_URL`` (default ``http://phyne-crm-web.phyne-crm.svc.cluster.local``
+API base: ``PHYNE_CRM_URL`` (default ``http://phynd-crm-web.phynd-crm.svc.cluster.local``
 for in-cluster, ``https://crm.madfam.io`` from outside).
 Auth: ``PHYNE_CRM_FEDERATION_TOKEN`` — service-to-service token that bypasses
 Auth.js session check and opens service-role scopes.
@@ -24,7 +24,7 @@ from ..base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
 
-PHYNE_CRM_URL = os.environ.get("PHYNE_CRM_URL", "http://phyne-crm-web.phyne-crm.svc.cluster.local")
+PHYNE_CRM_URL = os.environ.get("PHYNE_CRM_URL", "http://phynd-crm-web.phynd-crm.svc.cluster.local")
 PHYNE_CRM_TOKEN = os.environ.get(
     "PHYNE_CRM_FEDERATION_TOKEN", os.environ.get("PHYNE_CRM_TOKEN", "")
 )
@@ -44,7 +44,7 @@ def _creds_check() -> str | None:
 
 
 async def _trpc(procedure: str, input_data: dict[str, Any] | None = None) -> tuple[int, Any]:
-    """Invoke a PhyneCRM tRPC procedure via the HTTP adapter."""
+    """Invoke a PhyndCRM tRPC procedure via the HTTP adapter."""
     url = f"{PHYNE_CRM_URL.rstrip('/')}/api/trpc/{procedure}"
     async with httpx.AsyncClient(timeout=30) as client:
         if input_data is None:
@@ -77,11 +77,11 @@ def _trpc_err(body: Any) -> str:
 class PhynecrmTenantCreateTool(BaseTool):
     """Bootstrap a tenant_configs row with voice_mode + default pipeline."""
 
-    name = "phynecrm_tenant_create"
+    name = "phyndcrm_tenant_create"
     description = (
-        "Create a PhyneCRM tenant_configs row for a new customer. Seeds "
+        "Create a PhyndCRM tenant_configs row for a new customer. Seeds "
         "voice_mode (for outbound email identity rules) and marks onboarding "
-        "incomplete. Follow with phynecrm_pipeline_bootstrap to create the "
+        "incomplete. Follow with phyndcrm_pipeline_bootstrap to create the "
         "default sales pipeline."
     )
 
@@ -127,19 +127,19 @@ class PhynecrmTenantCreateTool(BaseTool):
                 data={"tenant_id": kwargs["tenant_id"], "config": data},
             )
         except Exception as e:
-            logger.error("phynecrm_tenant_create failed: %s", e)
+            logger.error("phyndcrm_tenant_create failed: %s", e)
             return ToolResult(success=False, error=str(e))
 
 
 class PhynecrmPipelineBootstrapTool(BaseTool):
     """Create a named sales pipeline with default stages."""
 
-    name = "phynecrm_pipeline_bootstrap"
+    name = "phyndcrm_pipeline_bootstrap"
     description = (
         "Create a sales pipeline with default stages: "
         "New → Qualified → Proposal → Negotiation → Won/Lost. "
         "Every tenant needs at least one pipeline to start using the CRM. "
-        "Use phynecrm_pipeline_add_stage afterwards if the tenant needs "
+        "Use phyndcrm_pipeline_add_stage afterwards if the tenant needs "
         "a domain-specific stage (e.g. 'Design Review' for agency workflows)."
     )
 
@@ -194,14 +194,14 @@ class PhynecrmPipelineBootstrapTool(BaseTool):
                 },
             )
         except Exception as e:
-            logger.error("phynecrm_pipeline_bootstrap failed: %s", e)
+            logger.error("phyndcrm_pipeline_bootstrap failed: %s", e)
             return ToolResult(success=False, error=str(e))
 
 
 class PhynecrmTenantConfigGetTool(BaseTool):
-    """Read a tenant's full PhyneCRM config (voice_mode + onboarding state)."""
+    """Read a tenant's full PhyndCRM config (voice_mode + onboarding state)."""
 
-    name = "phynecrm_tenant_config_get"
+    name = "phyndcrm_tenant_config_get"
     description = (
         "Fetch the tenant_configs row for a tenant. Useful for detecting "
         "incomplete onboarding (voice_mode NULL) or verifying config after "
@@ -237,11 +237,11 @@ class PhynecrmTenantConfigGetTool(BaseTool):
                 data=data,
             )
         except Exception as e:
-            logger.error("phynecrm_tenant_config_get failed: %s", e)
+            logger.error("phyndcrm_tenant_config_get failed: %s", e)
             return ToolResult(success=False, error=str(e))
 
 
-def get_phynecrm_provisioning_tools() -> list[BaseTool]:
+def get_phyndcrm_provisioning_tools() -> list[BaseTool]:
     return [
         PhynecrmTenantCreateTool(),
         PhynecrmPipelineBootstrapTool(),

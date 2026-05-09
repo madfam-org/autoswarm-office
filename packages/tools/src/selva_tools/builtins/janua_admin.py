@@ -320,7 +320,7 @@ class JanuaOrgCreateTool(BaseTool):
     description = (
         "Create a Janua organization. The returned ``org_id`` becomes the "
         "``org_id`` claim on every JWT issued to users in this org, which "
-        "downstream services (nexus-api, PhyneCRM, Dhanam) use as the "
+        "downstream services (nexus-api, PhyndCRM, Dhanam) use as the "
         "row-level-security tenant boundary. ``slug`` must be globally "
         "unique and lowercase-dashed."
     )

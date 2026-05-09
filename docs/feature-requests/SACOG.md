@@ -7,7 +7,7 @@ this repo encounter the SACOG specification when they grep for "agentic
 commerce" or "orchestration gateway" within `selva-office/`.
 
 The full RFC lives in the ecosystem-wide policy repo (`internal-devops/rfcs/0018-...`)
-because the feature spans `selva-office`, `dhanam`, `janua`, `phyne-crm`, `karafiel`,
+because the feature spans `selva-office`, `dhanam`, `janua`, `phynd-crm`, `karafiel`,
 and `tezca`.
 
 ## TL;DR
@@ -27,7 +27,7 @@ pricing model:
 |---|---|---|
 | 1 | Spec + protocol-conformance fixtures | ~2w |
 | 2 | Gateway core + Forgesight reference integration | ~4w |
-| 3 | Attribution dashboards (PhyneCRM-side) | ~3w |
+| 3 | Attribution dashboards (PhyndCRM-side) | ~3w |
 | 4 | Stripe ACP integration (first paying merchant) | ~3w |
 | 5 | Tier 2 metering + UCP / x402 / B2B | ~4w |
 | 6 | Self-serve dashboards + GA | ~2w |

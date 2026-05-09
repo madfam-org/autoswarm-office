@@ -5,8 +5,8 @@ Synthetic end-to-end probe for the MADFAM autonomous revenue flywheel.
 Every hour, this probe exercises the full money-in path:
 
 ```
-PhyneCRM lead -> Nexus drafter (LLM) -> email send -> Stripe webhook ->
-Dhanam billing event -> PhyneCRM attribution
+PhyndCRM lead -> Nexus drafter (LLM) -> email send -> Stripe webhook ->
+Dhanam billing event -> PhyndCRM attribution
 ```
 
 If any stage breaks, the probe exits non-zero with a JSON report that
@@ -29,12 +29,12 @@ to make that unacceptable. If it fails, somebody is paged.
 
 | # | Name                  | What it checks                                                       |
 |---|-----------------------|-----------------------------------------------------------------------|
-| 1 | `crm.hot_lead`        | PhyneCRM accepts a synthetic hot lead                                |
+| 1 | `crm.hot_lead`        | PhyndCRM accepts a synthetic hot lead                                |
 | 2 | `drafter.first_touch` | Nexus returns a non-empty draft (not the `[LLM unavailable]` sentinel) |
 | 3 | `email.send`          | Send pipeline returns intact (list-unsubscribe, sanitized HTML, sender lockdown) |
 | 4 | `stripe.webhook`      | Dhanam accepts a signed MXN `payment_intent.succeeded`               |
 | 5 | `dhanam.billing_event`| Dhanam's ledger records the event within 30s                         |
-| 6 | `phyne.attribution`   | PhyneCRM credits the source agent within 20s                         |
+| 6 | `phynd.attribution`   | PhyndCRM credits the source agent within 20s                         |
 
 Stages run in order. A failing stage does not stop subsequent stages by
 default (we want to know what's broken, not just the first thing). Pass
@@ -57,8 +57,8 @@ default (we want to know what's broken, not just the first thing). Pass
 
 | Service    | Endpoint                                               | Purpose                               |
 |------------|--------------------------------------------------------|---------------------------------------|
-| PhyneCRM   | `POST /v1/probe/leads`                                 | Upsert synthetic hot lead (idempotent)|
-| PhyneCRM   | `GET /v1/probe/attribution?lead_id=&billing_id=`       | Has credit been written?              |
+| PhyndCRM   | `POST /v1/probe/leads`                                 | Upsert synthetic hot lead (idempotent)|
+| PhyndCRM   | `GET /v1/probe/attribution?lead_id=&billing_id=`       | Has credit been written?              |
 | Nexus API  | `POST /api/v1/probe/draft`                             | Draft with dry-run flag               |
 | Nexus API  | `POST /api/v1/probe/email/send`                        | Run send pipeline (dry-run respected) |
 | Dhanam     | `POST /v1/billing/webhooks/stripe`                     | Standard Stripe webhook target        |

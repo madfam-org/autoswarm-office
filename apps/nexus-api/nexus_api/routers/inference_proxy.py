@@ -1,7 +1,7 @@
 """OpenAI-compatible inference proxy — centralised LLM gateway for the MADFAM ecosystem.
 
 Exposes ``/v1/chat/completions`` and ``/v1/embeddings`` so every ecosystem
-service (Fortuna, Yantra4D, PhyneCRM, etc.) can route LLM calls through
+service (Fortuna, Yantra4D, PhyndCRM, etc.) can route LLM calls through
 Selva's ``ModelRouter`` for unified cost optimisation, task-type routing,
 fallback, and observability.
 

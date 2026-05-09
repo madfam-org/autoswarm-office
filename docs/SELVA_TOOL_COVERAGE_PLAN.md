@@ -139,13 +139,13 @@ Tools:
 - `dhanam_credit_ledger_query` (by tenant, period)
 - `dhanam_link_stripe_customer` (for outbound billing)
 
-### 2.3 `phynecrm_provisioning.py`
+### 2.3 `phyndcrm_provisioning.py`
 
 Tools:
-- `phynecrm_tenant_create` (creates tenant_config row with voice_mode, consent, default_pipeline_id)
-- `phynecrm_user_create`
-- `phynecrm_pipeline_bootstrap` (creates a named pipeline with default stages)
-- `phynecrm_seed_demo_data` (for onboarding demos)
+- `phyndcrm_tenant_create` (creates tenant_config row with voice_mode, consent, default_pipeline_id)
+- `phyndcrm_user_create`
+- `phyndcrm_pipeline_bootstrap` (creates a named pipeline with default stages)
+- `phyndcrm_seed_demo_data` (for onboarding demos)
 
 ### 2.4 `karafiel_provisioning.py`
 
@@ -182,7 +182,7 @@ Tools:
 
 ### 2.8 `tenant_identity_reconciliation.py`
 
-The cross-cutting headache. Every tenant has identities in Janua / Dhanam / PhyneCRM / Karafiel / Selva Office. This module owns the mapping.
+The cross-cutting headache. Every tenant has identities in Janua / Dhanam / PhyndCRM / Karafiel / Selva Office. This module owns the mapping.
 
 Tools:
 - `tenant_resolve` — given any one ID, returns all four
@@ -205,7 +205,7 @@ Orchestrates Phase 2 primitives. Canonical flow:
 2. Janua OAuth client (`janua_oauth_client_create`)
 3. Janua org group → org_id claim (`janua_org_group_map_claim`)
 4. Dhanam tenant + plan (`dhanam_tenant_create` + `dhanam_subscription_create`)
-5. PhyneCRM tenant + default pipeline (`phynecrm_tenant_create` + `phynecrm_pipeline_bootstrap`)
+5. PhyndCRM tenant + default pipeline (`phyndcrm_tenant_create` + `phyndcrm_pipeline_bootstrap`)
 6. Karafiel org + SAT cert prompt (`karafiel_org_create`; SAT upload is operator)
 7. Resend domain add + DKIM/SPF/DMARC surfaced (`resend_domain_add`)
 8. R2 bucket provisioning (`r2_bucket_create`, Phase 1)
@@ -218,11 +218,11 @@ Step 6 + step 7 have natural HITL gates (legal sig + DNS record publication). Sk
 
 ### 3.2 `skill-definitions/tenant-offboarding/SKILL.md`
 
-Reverse. Cancel Dhanam subscription, revoke Janua client, archive PhyneCRM data, delete Karafiel org (with SAT de-registration), delete Resend domain, drop R2 bucket (with retention), remove CF hostname, deactivate Selva Office seat, mark reconciliation record `offboarded`. HITL-gated at every irreversible step.
+Reverse. Cancel Dhanam subscription, revoke Janua client, archive PhyndCRM data, delete Karafiel org (with SAT de-registration), delete Resend domain, drop R2 bucket (with retention), remove CF hostname, deactivate Selva Office seat, mark reconciliation record `offboarded`. HITL-gated at every irreversible step.
 
 ### 3.3 `skill-definitions/tenant-migration/SKILL.md`
 
-Plan tier change (upgrade/downgrade), execute quota updates across Dhanam + Selva Office + PhyneCRM quotas, surface email.
+Plan tier change (upgrade/downgrade), execute quota updates across Dhanam + Selva Office + PhyndCRM quotas, surface email.
 
 ### 3.4 `skill-definitions/quota-management/SKILL.md`
 

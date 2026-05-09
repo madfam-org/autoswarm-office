@@ -1,4 +1,4 @@
-"""Phyne-CRM adapter for tRPC API integration."""
+"""Phynd-CRM adapter for tRPC API integration."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from .crm_types import (
 logger = logging.getLogger(__name__)
 
 
-class PhyneCRMAdapter:
-    """Async client wrapping the Phyne-CRM tRPC endpoints.
+class PhyndCRMAdapter:
+    """Async client wrapping the Phynd-CRM tRPC endpoints.
 
     Uses httpx.AsyncClient for HTTP calls with Bearer token auth.
     Parses SuperJSON-style responses where applicable.

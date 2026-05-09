@@ -2,16 +2,16 @@
 
 T3.2 contract (see /internal-devops/docs/attribution-contract.md):
 
-    lead.captured (phyne-crm)
+    lead.captured (phynd-crm)
         -> lead.qualified (autoswarm-office, this module)
             -> playbook.sent (autoswarm-office, this module)
                 -> checkout.completed (dhanam)
                     -> subscription.created (dhanam)
 
-The `lead_id` is an opaque string — typically a UUID4 minted by PhyneCRM
+The `lead_id` is an opaque string — typically a UUID4 minted by PhyndCRM
 when a lead is first captured. This module:
 
-1. Extracts a stable `lead_id` from inbound CRM events. When PhyneCRM
+1. Extracts a stable `lead_id` from inbound CRM events. When PhyndCRM
    does not provide one, a deterministic fallback is derived from
    (contact_email, activity_id) so retries collapse to the same id.
 2. Emits PostHog events with `distinct_id = lead_id` so the funnel is
@@ -41,9 +41,9 @@ from .analytics import track
 logger = logging.getLogger(__name__)
 
 # Event names for the attribution funnel. Centralised here so downstream
-# repos (phyne-crm, dhanam) can import the same constants once this
+# repos (phynd-crm, dhanam) can import the same constants once this
 # module is re-exported via a shared package.
-EVENT_LEAD_CAPTURED = "lead.captured"  # emitted by phyne-crm
+EVENT_LEAD_CAPTURED = "lead.captured"  # emitted by phynd-crm
 EVENT_LEAD_QUALIFIED = "lead.qualified"  # emitted here
 EVENT_PLAYBOOK_SENT = "playbook.sent"  # emitted here
 EVENT_CHECKOUT_COMPLETED = "checkout.completed"  # emitted by dhanam
@@ -61,8 +61,8 @@ def extract_lead_id(crm_event_data: dict[str, Any]) -> str:
     """Return a stable `lead_id` for a CRM event.
 
     Preference order:
-        1. `crm_event_data["lead_id"]` (preferred, PhyneCRM-minted UUID)
-        2. `crm_event_data["id"]` (PhyneCRM contact id)
+        1. `crm_event_data["lead_id"]` (preferred, PhyndCRM-minted UUID)
+        2. `crm_event_data["id"]` (PhyndCRM contact id)
         3. Deterministic SHA-256 fallback over contact_email + activity_id
         4. Freshly minted UUID4 (last resort — breaks dedup guarantees)
 

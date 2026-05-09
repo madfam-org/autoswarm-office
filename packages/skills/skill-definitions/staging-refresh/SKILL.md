@@ -1,6 +1,6 @@
 ---
 name: staging-refresh
-description: Refresh the staging database from prod with PII masked. Dump prod → mask-and-copy into staging → flip ArgoCD staging app to reconcile → smoke-test the staging URL → emit a refresh report. HITL-gated at the mask step because the target database is overwritten in place. Per the PhyneCRM PP.5 staging spec.
+description: Refresh the staging database from prod with PII masked. Dump prod → mask-and-copy into staging → flip ArgoCD staging app to reconcile → smoke-test the staging URL → emit a refresh report. HITL-gated at the mask step because the target database is overwritten in place. Per the PhyndCRM PP.5 staging spec.
 audience: platform
 allowed_tools:
   - db_dump_to_r2
@@ -55,7 +55,7 @@ adds a PII-bearing column.
 
 ```python
 TABLE_MASK_RULES = {
-    # PhyneCRM
+    # PhyndCRM
     "contacts": ["email", "phone", "whatsapp_number"],
     "leads": ["contact_email", "contact_phone"],
     # Janua
@@ -198,6 +198,6 @@ follow_ups:
   If you add a new PII column that references an un-masked id, review
   the impact on joins.
 - **Long-running dumps time out.** The 1800s timeout on
-  `db_dump_to_r2` is usually enough for the PhyneCRM-sized DBs
+  `db_dump_to_r2` is usually enough for the PhyndCRM-sized DBs
   (<5 GB) but will not be for fortuna's embedding store. For those
   databases, pre-partition by schema and dump separately.

@@ -1,6 +1,6 @@
 ---
 name: tenant-onboarding
-description: Bootstrap a brand-new MADFAM tenant end-to-end across every service the platform owns state in — Janua (auth), Dhanam (billing), PhyneCRM (ops), Karafiel (Mexican fiscal), Resend (email), Selva Office (workers), plus the central tenant_identities record. A single skill invocation advances a tenant from "signed contract" to "agents can operate on their behalf", with HITL gates on the two irreversible steps (SAT cert upload + DNS record publication). Use on every new tenant; never hand-assemble the primitives.
+description: Bootstrap a brand-new MADFAM tenant end-to-end across every service the platform owns state in — Janua (auth), Dhanam (billing), PhyndCRM (ops), Karafiel (Mexican fiscal), Resend (email), Selva Office (workers), plus the central tenant_identities record. A single skill invocation advances a tenant from "signed contract" to "agents can operate on their behalf", with HITL gates on the two irreversible steps (SAT cert upload + DNS record publication). Use on every new tenant; never hand-assemble the primitives.
 audience: platform
 allowed_tools:
   - janua_oauth_client_create
@@ -9,9 +9,9 @@ allowed_tools:
   - dhanam_space_create
   - dhanam_subscription_create
   - dhanam_credit_ledger_query
-  - phynecrm_tenant_create
-  - phynecrm_pipeline_bootstrap
-  - phynecrm_tenant_config_get
+  - phyndcrm_tenant_create
+  - phyndcrm_pipeline_bootstrap
+  - phyndcrm_tenant_config_get
   - karafiel_org_create
   - karafiel_sat_cert_upload
   - karafiel_pac_register
@@ -109,16 +109,16 @@ sub = await dhanam_subscription_create(
 )
 ```
 
-### 3. PhyneCRM tenant_config + default pipeline
+### 3. PhyndCRM tenant_config + default pipeline
 
 ```python
-await phynecrm_tenant_create(
+await phyndcrm_tenant_create(
     tenant_id=org.org_id,
     legal_name=...,
     primary_contact_email=...,
     voice_mode=<selected-voice-mode>,
 )
-await phynecrm_pipeline_bootstrap(tenant_id=org.org_id)
+await phyndcrm_pipeline_bootstrap(tenant_id=org.org_id)
 # The default 6-stage pipeline is fine for 99% of tenants; override only
 # if the tenant explicitly requested a custom pipeline pre-signing.
 ```
@@ -190,7 +190,7 @@ await tenant_create_identity_record(
     primary_contact_email=...,
     janua_org_id=org.org_id,
     dhanam_space_id=space.id,
-    phynecrm_tenant_id=org.org_id,
+    phyndcrm_tenant_id=org.org_id,
     karafiel_org_id=k_org.org_id if mexican_fiscal else None,
     resend_domain_ids=[domain.id] if byo_domain else [],
     metadata={
@@ -231,7 +231,7 @@ voice_mode: <mode>
 services:
   janua: {org_id, oauth_client_id}
   dhanam: {space_id, subscription_id}
-  phynecrm: {tenant_id, pipeline_id}
+  phyndcrm: {tenant_id, pipeline_id}
   karafiel: {org_id, sat_cert_fingerprint, pac_status, serie}  # if MX
   resend: {domain_id, verification_status}  # if BYOD
 hitl_approvals:
@@ -269,7 +269,7 @@ record. If step N fails:
 |---|---|---|
 | 1 (Janua org) | ALLOW | Reversible — orgs can be soft-deleted |
 | 2 (Dhanam space) | ALLOW | Reversible |
-| 3 (PhyneCRM tenant) | ALLOW | Reversible |
+| 3 (PhyndCRM tenant) | ALLOW | Reversible |
 | 4 (Resend domain add) | ALLOW (but surface records before step 5) | DNS records visible; no send happens yet |
 | 5 (Resend domain verify) | ALLOW | Polling; no mutation |
 | 6 (Karafiel org) | ALLOW | Reversible; no fiscal writes yet |
@@ -287,6 +287,6 @@ record. If step N fails:
 - Don't log `oauth.client_secret` or SAT cert bytes. Use Vault for the
   OAuth secret; treat cert bytes as write-once-to-Karafiel, never held
   in agent memory.
-- Don't parallelize the steps. Dhanam references Janua org_id; PhyneCRM
+- Don't parallelize the steps. Dhanam references Janua org_id; PhyndCRM
   references Janua org_id; identity record references every one. A
   parallel launch will race and leave partial state.

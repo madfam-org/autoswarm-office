@@ -1,7 +1,7 @@
 /**
- * CRM scraper for Phyne-CRM integration.
+ * CRM scraper for Phynd-CRM integration.
  *
- * Fetches open leads, overdue activities, and hot leads from the Phyne-CRM
+ * Fetches open leads, overdue activities, and hot leads from the Phynd-CRM
  * tRPC API and converts them into ExternalEvent objects for the HeartbeatService.
  */
 
@@ -24,7 +24,7 @@ interface TRPCResponse<T = unknown> {
  *   - plain: `result.data = [...items]`
  *   - superjson: `result.data = { json: { items: [...] } }` or `{ items: [...] }`
  *
- * Phyne-CRM currently runs both shapes across environments, so we accept
+ * Phynd-CRM currently runs both shapes across environments, so we accept
  * either and defer the discriminant check to runtime.
  */
 type TRPCListEnvelope<TItem> =
@@ -153,7 +153,7 @@ export class CRMScraper {
   }
 
   private async fetchActivities(): Promise<PhyneActivity[]> {
-    // PhyneCRM's `activities.listForEntity` requires {entityType, entityId:<uuid>}
+    // PhyndCRM's `activities.listForEntity` requires {entityType, entityId:<uuid>}
     // to scope to a single entity — wrong endpoint for a cross-entity scrape.
     // `activities.list` returns a paginated envelope across all entities and is
     // the right call here. The input shape is the shared `paginationInput`

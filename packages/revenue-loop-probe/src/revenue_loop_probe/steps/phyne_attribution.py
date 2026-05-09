@@ -1,4 +1,4 @@
-"""Stage 6 — verify PhyneCRM credited the source agent for the conversion.
+"""Stage 6 — verify PhyndCRM credited the source agent for the conversion.
 
 This is the final stage of the flywheel contract: money in + attribution
 recorded. If this is green, the loop is working end-to-end.
@@ -13,7 +13,7 @@ from ..probe import ProbeContext, ProbeStep, StageResult, StageStatus
 
 
 class PhyneAttributionStep(ProbeStep):
-    name = "phyne.attribution"
+    name = "phynd.attribution"
 
     async def run(self, ctx: ProbeContext) -> StageResult:
         t0 = time.perf_counter()
@@ -84,7 +84,7 @@ class PhyneAttributionStep(ProbeStep):
             status=StageStatus.FAILED,
             duration_ms=(time.perf_counter() - t0) * 1000.0,
             detail=(
-                f"PhyneCRM did not record attribution within {timeout_s:.0f}s "
+                f"PhyndCRM did not record attribution within {timeout_s:.0f}s "
                 f"(last: {last_status} {last_body})"
             ),
         )

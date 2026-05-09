@@ -45,7 +45,7 @@ names are retained from the legacy `autoswarm-office` rebrand and are not user-v
 ### Downstream consumers (this repo is consumed by)
 
 - every ecosystem service doing LLM inference — routes through `/v1`
-- phyne-crm (digital-project execution updates)
+- phynd-crm (digital-project execution updates)
 - symbiosis-hcm (human-AI dyad orchestration)
 - proton-bridge-pipeline (email classification via M2M)
 
@@ -77,7 +77,7 @@ below is embedded here so this document stands alone.
 | **Cotiza** | `madfam-org/digifab-quoting` | MADFAM's quoting engine (fabrication + services) |
 | **Forgesight** | `madfam-org/forgesight` | Digital fabrication industry intelligence (pricing/vendor feed to Cotiza) |
 | **Pravara MES** | `madfam-org/pravara-mes` | Fabrication-node routing and dispatch (physical jobs) |
-| **PhyneCRM** | `madfam-org/phyne-crm` | Client-facing deliverables portal (single pane of glass per engagement) |
+| **PhyndCRM** | `madfam-org/phynd-crm` | Client-facing deliverables portal (single pane of glass per engagement) |
 | **Fortuna** | `madfam-org/fortuna` | Problem intelligence / zeitgeist analysis |
 | **Avala** | `madfam-org/avala` | Learning verification platform |
 

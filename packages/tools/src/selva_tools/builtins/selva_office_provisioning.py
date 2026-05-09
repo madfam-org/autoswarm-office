@@ -2,7 +2,7 @@
 
 Tools for bootstrapping a tenant's Selva Office workspace once the
 tenant has been provisioned everywhere else (Janua auth + Dhanam billing
-+ PhyneCRM + Karafiel). These land a tenant's user(s) inside the office
++ PhyndCRM + Karafiel). These land a tenant's user(s) inside the office
 UI with appropriate department assignments.
 
 Three tools:

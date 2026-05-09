@@ -2890,7 +2890,7 @@ export interface paths {
          * @description Stub drift check.
          *
          *     Real implementation needs per-service probes (Janua GET /orgs/{id},
-         *     Dhanam GET /spaces/{id}, PhyneCRM tenants.config, Karafiel GET
+         *     Dhanam GET /spaces/{id}, PhyndCRM tenants.config, Karafiel GET
          *     /orgs/{id}, Resend GET /domains/{id}). Tracked as follow-up — this
          *     endpoint is a placeholder that confirms the row exists and returns
          *     services_checked based on how many per-service IDs are populated on
@@ -3596,7 +3596,7 @@ export interface paths {
         patch: operations["update_playbook_api_v1_playbooks__playbook_id__patch"];
         trace?: never;
     };
-    "/api/v1/gateway/phyne-crm": {
+    "/api/v1/gateway/phynd-crm": {
         parameters: {
             query?: never;
             header?: never;
@@ -3606,8 +3606,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Phyne Crm Webhook
-         * @description Receive webhook events from PhyneCRM and auto-dispatch agent tasks.
+         * Phynd Crm Webhook
+         * @description Receive webhook events from PhyndCRM and auto-dispatch agent tasks.
          *
          *     Flow:
          *     1. Verify HMAC signature
@@ -6297,7 +6297,7 @@ export interface components {
             /** Dhanam Space Id */
             dhanam_space_id?: string | null;
             /** Phynecrm Tenant Id */
-            phynecrm_tenant_id?: string | null;
+            phyndcrm_tenant_id?: string | null;
             /** Karafiel Org Id */
             karafiel_org_id?: string | null;
             /** Resend Domain Ids */
@@ -6338,7 +6338,7 @@ export interface components {
             karafiel_org_id?: string | null;
             /** Dhanam Space Id */
             dhanam_space_id?: string | null;
-            /** Phyne Tenant Id */
+            /** Phynd Tenant Id */
             phyne_tenant_id?: string | null;
             /** Cfdi Enabled */
             cfdi_enabled: boolean;
@@ -6832,7 +6832,7 @@ export interface components {
             /** Dhanam Space Id */
             dhanam_space_id: string | null;
             /** Phynecrm Tenant Id */
-            phynecrm_tenant_id: string | null;
+            phyndcrm_tenant_id: string | null;
             /** Karafiel Org Id */
             karafiel_org_id: string | null;
             /** Resend Domain Ids */
@@ -11111,7 +11111,7 @@ export interface operations {
     resolve_tenant_identity_api_v1_tenant_identities_resolve_get: {
         parameters: {
             query: {
-                /** @description One of: canonical_id, janua_org_id, dhanam_space_id, phynecrm_tenant_id, karafiel_org_id */
+                /** @description One of: canonical_id, janua_org_id, dhanam_space_id, phyndcrm_tenant_id, karafiel_org_id */
                 field: string;
                 value: string;
             };

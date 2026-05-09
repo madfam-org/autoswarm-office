@@ -355,7 +355,7 @@ decommission the `commit-digests` stage of `deploy.yml`.
   the staging overlay + `MIN_SOAK_MINUTES` repo var).
 - autoswarm-office is Pattern B because workers execute agent code
   that sends real customer emails (Resend), pushes real git branches
-  (GitHub API), and calls Stripe/PhyneCRM/Dhanam in production.
+  (GitHub API), and calls Stripe/PhyndCRM/Dhanam in production.
 
 ### Rollback
 
@@ -552,7 +552,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - **PII Scrubbed**: Task descriptions use `lead:<id>` not contact names.
   Email addresses masked in logs (`aaa***@domain.com`).
 - **Tick Concurrency Guard**: `_tickRunning` flag prevents overlapping ticks.
-- **CRM Fetch Timeout**: 10s `AbortController` on all PhyneCRM HTTP calls.
+- **CRM Fetch Timeout**: 10s `AbortController` on all PhyndCRM HTTP calls.
 - **Single CRM Scrape**: `scrapeTickets()` removed — ticket events extracted
   from the single `scrapeCRM()` call.
 - **Email Validation**: RFC-compliant regex (`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
@@ -950,14 +950,14 @@ and tenant (customer-org) swarms see different registries:
   ArgoCD, Kustomize, Enclii, GitHub org admin, Vault, Janua admin,
   tenant_identities CRUD, Stripe Connect (platform creates tenant
   accounts), Resend domain, Karafiel org/SAT upload/PAC register,
-  Dhanam space/subscription create, PhyneCRM tenant bootstrap, and
+  Dhanam space/subscription create, PhyndCRM tenant bootstrap, and
   the five MADFAM runbook skills (cluster-triage, dns-migration,
   incident-triage, staging-refresh, tenant-onboarding) plus meta
   skills (skill-creator, mcp-builder).
 - `Audience.TENANT` (default) — everything a tenant swarm can use:
   email send, CRM primitives, their own calendar/SMS/voice/Discord/
   Telegram, Karafiel CFDI generate/stamp, Dhanam credit-ledger query,
-  PhyneCRM tenant-config read, pricing/ops/legal/marketing tools, etc.
+  PhyndCRM tenant-config read, pricing/ops/legal/marketing tools, etc.
 
 **How it flows end-to-end**:
 
@@ -1362,7 +1362,7 @@ skill composes these four tools into a pre-submission gate.
   additional providers dynamically.
 - **Inference proxy**: OpenAI-compatible gateway at `/v1/chat/completions` and
   `/v1/embeddings` (`routers/inference_proxy.py`). Ecosystem services (Fortuna,
-  Yantra4D, PhyneCRM) point their OpenAI SDK `base_url` here to centralise all
+  Yantra4D, PhyndCRM) point their OpenAI SDK `base_url` here to centralise all
   LLM calls through the `ModelRouter`. Auth: Bearer `WORKER_API_TOKEN`. Optional
   routing headers: `X-Task-Type`, `X-Sensitivity`.
 - **Service registry**: `OrgConfig.services` tracks external accounts (Resend,

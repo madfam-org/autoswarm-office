@@ -36,7 +36,7 @@ class BillingState(BaseGraphState, TypedDict, total=False):
 
 @instrumented_node
 def fetch_context(state: BillingState) -> BillingState:
-    """Fetch transaction data from Dhanam and customer info from PhyneCRM.
+    """Fetch transaction data from Dhanam and customer info from PhyndCRM.
 
     Populates emisor/receptor RFCs, conceptos, and customer contact info.
     Falls back to state values if adapters are unavailable.
@@ -71,23 +71,23 @@ def fetch_context(state: BillingState) -> BillingState:
     except Exception:
         logger.debug("Dhanam adapter unavailable; using state/payload values")
 
-    # Try PhyneCRM adapter for customer contact info.
+    # Try PhyndCRM adapter for customer contact info.
     try:
         import os
 
         phyne_url = os.environ.get("PHYNE_CRM_URL")
         phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
         if phyne_url and receptor_rfc:
-            from madfam_inference.adapters.crm import PhyneCRMAdapter
+            from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            crm = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            crm = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
             profile = _run_async(crm.get_unified_profile(receptor_rfc))
             customer_phone = customer_phone or getattr(profile.contact, "phone", None)
             customer_email = customer_email or getattr(profile.contact, "email", None)
         else:
             raise RuntimeError("PHYNE_CRM_URL not set or receptor_rfc empty")
     except Exception:
-        logger.debug("PhyneCRM adapter unavailable; using state values for contact info")
+        logger.debug("PhyndCRM adapter unavailable; using state values for contact info")
 
     context_message = AIMessage(
         content=(

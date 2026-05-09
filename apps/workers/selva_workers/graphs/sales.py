@@ -38,7 +38,7 @@ class SalesState(BaseGraphState, TypedDict, total=False):
 
 @instrumented_node
 def qualify_lead(state: SalesState) -> SalesState:
-    """Fetch and qualify lead from PhyneCRM.
+    """Fetch and qualify lead from PhyndCRM.
 
     Retrieves lead data, checks scoring, and extracts contact info.
     Sets status to ``"unqualified"`` if the lead score is below threshold.
@@ -51,16 +51,16 @@ def qualify_lead(state: SalesState) -> SalesState:
     customer_phone = state.get("customer_phone")
     customer_email = state.get("customer_email")
 
-    # Try PhyneCRM adapter for real lead data.
+    # Try PhyndCRM adapter for real lead data.
     try:
         import os
 
         phyne_url = os.environ.get("PHYNE_CRM_URL")
         phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
         if phyne_url and lead_id:
-            from madfam_inference.adapters.crm import PhyneCRMAdapter
+            from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
             profile = _run_async(adapter.get_unified_profile(lead_id))
             lead_data = {
                 "lead_id": lead_id,
@@ -76,7 +76,7 @@ def qualify_lead(state: SalesState) -> SalesState:
         else:
             raise RuntimeError("PHYNE_CRM_URL not set or lead_id empty")
     except Exception:
-        logger.debug("PhyneCRM unavailable; using payload values for lead data")
+        logger.debug("PhyndCRM unavailable; using payload values for lead data")
         lead_data = {
             "lead_id": lead_id or payload.get("lead_id", "unknown"),
             "name": payload.get("customer_name", "Prospecto"),
@@ -316,7 +316,7 @@ def send_cotizacion(state: SalesState) -> SalesState:
     """Send the approved cotizacion to the customer via WhatsApp or email.
 
     Tries WhatsApp Business template ``cotizacion_lista`` first, then
-    falls back to email. Updates PhyneCRM activity log.
+    falls back to email. Updates PhyndCRM activity log.
     """
     messages = state.get("messages", [])
     customer_phone = state.get("customer_phone")
@@ -367,16 +367,16 @@ def send_cotizacion(state: SalesState) -> SalesState:
         notification_channel = "log_only"
         logger.info("Cotizacion ready but no notification channel available")
 
-    # Log activity in PhyneCRM.
+    # Log activity in PhyndCRM.
     try:
         import os
 
         phyne_url = os.environ.get("PHYNE_CRM_URL")
         phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
         if phyne_url:
-            from madfam_inference.adapters.crm import PhyneCRMAdapter
+            from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
             _run_async(
                 adapter.create_activity(
                     type="cotizacion",
@@ -387,7 +387,7 @@ def send_cotizacion(state: SalesState) -> SalesState:
                 )
             )
     except Exception:
-        logger.debug("PhyneCRM activity logging skipped")
+        logger.debug("PhyndCRM activity logging skipped")
 
     send_msg = AIMessage(
         content=(f"Cotizacion sent to {customer_name} via {notification_channel}. Total: {total}."),
@@ -406,7 +406,7 @@ def send_cotizacion(state: SalesState) -> SalesState:
 
 @instrumented_node
 def convert_to_pedido(state: SalesState) -> SalesState:
-    """Convert the accepted cotizacion to a pedido (order) in PhyneCRM.
+    """Convert the accepted cotizacion to a pedido (order) in PhyndCRM.
 
     Creates or updates the opportunity / pipeline stage in the CRM.
     """
@@ -423,16 +423,16 @@ def convert_to_pedido(state: SalesState) -> SalesState:
         "payment_terms": cotizacion.get("payment_terms", "contado") if cotizacion else "contado",
     }
 
-    # Try PhyneCRM to update pipeline.
+    # Try PhyndCRM to update pipeline.
     try:
         import os
 
         phyne_url = os.environ.get("PHYNE_CRM_URL")
         phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
         if phyne_url:
-            from madfam_inference.adapters.crm import PhyneCRMAdapter
+            from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyneCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
             _run_async(
                 adapter.create_activity(
                     type="pedido",
@@ -443,7 +443,7 @@ def convert_to_pedido(state: SalesState) -> SalesState:
                 )
             )
     except Exception:
-        logger.debug("PhyneCRM pipeline update skipped")
+        logger.debug("PhyndCRM pipeline update skipped")
 
     pedido_msg = AIMessage(
         content=(f"Pedido created for {pedido['customer_name']}: total={pedido['total']}."),

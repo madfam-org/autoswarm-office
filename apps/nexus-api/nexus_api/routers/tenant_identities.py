@@ -36,7 +36,7 @@ _RESOLVE_FIELDS = {
     "canonical_id",
     "janua_org_id",
     "dhanam_space_id",
-    "phynecrm_tenant_id",
+    "phyndcrm_tenant_id",
     "karafiel_org_id",
 }
 
@@ -74,7 +74,7 @@ class TenantIdentityCreate(BaseModel):
     primary_contact_email: str | None = None
     janua_org_id: str | None = None
     dhanam_space_id: str | None = None
-    phynecrm_tenant_id: str | None = None
+    phyndcrm_tenant_id: str | None = None
     karafiel_org_id: str | None = None
     resend_domain_ids: list[str] | None = None
     cloudflare_zone_ids: list[str] | None = None
@@ -90,7 +90,7 @@ class TenantIdentityResponse(BaseModel):
     primary_contact_email: str | None
     janua_org_id: str | None
     dhanam_space_id: str | None
-    phynecrm_tenant_id: str | None
+    phyndcrm_tenant_id: str | None
     karafiel_org_id: str | None
     resend_domain_ids: list[str] | None
     cloudflare_zone_ids: list[str] | None
@@ -116,7 +116,7 @@ def _to_response(row: TenantIdentity) -> TenantIdentityResponse:
         primary_contact_email=row.primary_contact_email,
         janua_org_id=row.janua_org_id,
         dhanam_space_id=row.dhanam_space_id,
-        phynecrm_tenant_id=row.phynecrm_tenant_id,
+        phyndcrm_tenant_id=row.phyndcrm_tenant_id,
         karafiel_org_id=row.karafiel_org_id,
         resend_domain_ids=row.resend_domain_ids,
         cloudflare_zone_ids=row.cloudflare_zone_ids,
@@ -154,7 +154,7 @@ async def create_tenant_identity(payload: TenantIdentityCreate) -> TenantIdentit
             primary_contact_email=payload.primary_contact_email,
             janua_org_id=payload.janua_org_id,
             dhanam_space_id=payload.dhanam_space_id,
-            phynecrm_tenant_id=payload.phynecrm_tenant_id,
+            phyndcrm_tenant_id=payload.phyndcrm_tenant_id,
             karafiel_org_id=payload.karafiel_org_id,
             resend_domain_ids=payload.resend_domain_ids,
             cloudflare_zone_ids=payload.cloudflare_zone_ids,
@@ -187,7 +187,7 @@ async def create_tenant_identity(payload: TenantIdentityCreate) -> TenantIdentit
             for f in (
                 "janua_org_id",
                 "dhanam_space_id",
-                "phynecrm_tenant_id",
+                "phyndcrm_tenant_id",
                 "karafiel_org_id",
             )
             if getattr(row, f)
@@ -219,7 +219,7 @@ async def resolve_tenant_identity(
         ...,
         description=(
             "One of: canonical_id, janua_org_id, dhanam_space_id, "
-            "phynecrm_tenant_id, karafiel_org_id"
+            "phyndcrm_tenant_id, karafiel_org_id"
         ),
     ),
     value: str = Query(..., min_length=1),
@@ -250,7 +250,7 @@ async def validate_tenant_consistency(canonical_id: str) -> ValidateConsistencyR
     """Stub drift check.
 
     Real implementation needs per-service probes (Janua GET /orgs/{id},
-    Dhanam GET /spaces/{id}, PhyneCRM tenants.config, Karafiel GET
+    Dhanam GET /spaces/{id}, PhyndCRM tenants.config, Karafiel GET
     /orgs/{id}, Resend GET /domains/{id}). Tracked as follow-up — this
     endpoint is a placeholder that confirms the row exists and returns
     services_checked based on how many per-service IDs are populated on
@@ -270,7 +270,7 @@ async def validate_tenant_consistency(canonical_id: str) -> ValidateConsistencyR
             for f in (
                 "janua_org_id",
                 "dhanam_space_id",
-                "phynecrm_tenant_id",
+                "phyndcrm_tenant_id",
                 "karafiel_org_id",
             )
             if getattr(row, f)

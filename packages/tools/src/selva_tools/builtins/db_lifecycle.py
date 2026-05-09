@@ -1,6 +1,6 @@
 """Postgres database lifecycle: dump/restore to R2, staging mask-and-copy.
 
-Staging-refresh is a recurring operator task per the PhyneCRM PP.5 spec
+Staging-refresh is a recurring operator task per the PhyndCRM PP.5 spec
 (see /Users/aldoruizluna/labspace/autoswarm-office/CLAUDE.md). Each cycle
 requires dumping prod, masking PII columns, and loading into staging. This
 module provides the four primitives the ``staging-refresh`` skill composes.

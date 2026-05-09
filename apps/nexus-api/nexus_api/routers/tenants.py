@@ -2,7 +2,7 @@
 
 Handles multi-tenant enterprise provisioning including business identity
 (RFC, razon social), localization defaults, ecosystem integration
-(Karafiel, Dhanam, Phyne), feature flags, and resource limit enforcement.
+(Karafiel, Dhanam, Phynd), feature flags, and resource limit enforcement.
 """
 
 from __future__ import annotations

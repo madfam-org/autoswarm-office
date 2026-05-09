@@ -19,7 +19,7 @@ describe('ATRIUM_CATALOG shape', () => {
       'janua',
       'enclii',
       'selva',
-      'phyne-crm',
+      'phynd-crm',
       'cotiza',
       'pravara-mes',
       'sim4d',

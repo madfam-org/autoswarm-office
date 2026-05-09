@@ -10,7 +10,7 @@ The shipped default pipeline (see ``revenue_loop_probe.cli.default_pipeline``):
     3. EmailSendStep         — sends (dry-run by default) the drafted email
     4. StripeWebhookStep     — fires a synthetic Stripe webhook into Dhanam
     5. DhanamBillingStep     — asserts the billing event landed
-    6. PhyneAttributionStep  — asserts PhyneCRM credited the source agent
+    6. PhyneAttributionStep  — asserts PhyndCRM credited the source agent
 """
 
 from .crm import CrmHotLeadStep

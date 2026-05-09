@@ -53,7 +53,7 @@ class ProbeContext:
     """Shared state threaded through every stage.
 
     ``correlation_id`` is generated per probe run and should be attached to
-    every external call — CRM, Stripe, Dhanam, PhyneCRM — so we can trace
+    every external call — CRM, Stripe, Dhanam, PhyndCRM — so we can trace
     a probe across the ecosystem.
 
     ``dry_run=True`` means stages should not perform real side-effects: no

@@ -1,7 +1,7 @@
 # PP.4 — staging patch for gateway (heartbeat daemon).
 #
 # CRITICAL staging guardrail: AUTO_DISPATCH_ENABLED=false. The gateway
-# heartbeat loop is what scrapes PhyneCRM and auto-dispatches
+# heartbeat loop is what scrapes PhyndCRM and auto-dispatches
 # SwarmTasks — turning this on in staging would send real customer
 # emails via Resend. HITL is a secondary safety net; this flag is the
 # primary cutoff.
@@ -32,7 +32,7 @@ spec:
             - name: NEXUS_API_URL
               value: "http://nexus-api.autoswarm-staging.svc.cluster.local"
             - name: PHYNE_CRM_URL
-              value: "http://phyne-crm-web.phyne-crm.svc.cluster.local"
+              value: "http://phynd-crm-web.phynd-crm.svc.cluster.local"
             - name: PHYNE_CRM_TOKEN
               valueFrom:
                 secretKeyRef:

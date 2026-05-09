@@ -180,8 +180,8 @@ PLATFORM_TOOL_NAMES: frozenset[str] = frozenset(
         "dhanam_space_create",
         "dhanam_subscription_create",
         "dhanam_subscription_update",
-        "phynecrm_tenant_create",
-        "phynecrm_pipeline_bootstrap",
+        "phyndcrm_tenant_create",
+        "phyndcrm_pipeline_bootstrap",
         "karafiel_org_create",
         "karafiel_sat_cert_upload",
         "karafiel_pac_register",
@@ -194,7 +194,7 @@ PLATFORM_TOOL_NAMES: frozenset[str] = frozenset(
 EXPECTED_TENANT_TOOLS_IN_MIXED_MODULES: frozenset[str] = frozenset(
     {
         "dhanam_credit_ledger_query",
-        "phynecrm_tenant_config_get",
+        "phyndcrm_tenant_config_get",
         "karafiel_invoice_series_create",
     }
 )

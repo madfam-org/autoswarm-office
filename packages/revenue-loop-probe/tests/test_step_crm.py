@@ -19,7 +19,7 @@ from revenue_loop_probe.probe import ProbeContext, StageStatus
 from revenue_loop_probe.steps import CrmHotLeadStep
 
 
-PHYNE_URL = "https://phyne.example"
+PHYNE_URL = "https://phynd.example"
 
 
 def _ctx(env: dict[str, str] | None = None) -> ProbeContext:

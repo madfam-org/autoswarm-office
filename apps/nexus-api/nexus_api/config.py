@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     # -- Karafiel (RFC / SAT validation) ----------------------------------------
     karafiel_api_url: str = ""
 
-    # -- Phyne-CRM ------------------------------------------------------------
+    # -- Phynd-CRM ------------------------------------------------------------
     phyne_crm_url: str | None = None
 
     # -- Worker-to-API auth ---------------------------------------------------

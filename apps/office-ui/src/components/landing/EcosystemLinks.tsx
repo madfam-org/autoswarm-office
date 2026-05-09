@@ -5,7 +5,7 @@ const SERVICES = [
   { name: 'Yantra4D', desc: '3D Design Platform', url: 'https://yantra4d.com', emoji: '\uD83C\uDFA8' },
   { name: 'Enclii', desc: 'DevOps Platform', url: 'https://enclii.dev', emoji: '\uD83D\uDE80' },
   { name: 'Cotiza Studio', desc: 'Fabrication Quoting', url: 'https://cotiza.studio', emoji: '\uD83C\uDFED' },
-  { name: 'PhyneCRM', desc: 'Phygital CRM', url: 'https://crm.madfam.io', emoji: '\uD83D\uDCCA' },
+  { name: 'PhyndCRM', desc: 'Phygital CRM', url: 'https://crm.madfam.io', emoji: '\uD83D\uDCCA' },
   { name: 'CEQ', desc: 'Creative AI Engine', url: 'https://ceq.lol', emoji: '\uD83C\uDFAC' },
 ];
 

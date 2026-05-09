@@ -124,7 +124,7 @@ from .phygital_tools import (
     GenerateQuoteTool,
     RunDFMAnalysisTool,
 )
-from .phynecrm_provisioning import get_phynecrm_provisioning_tools
+from .phyndcrm_provisioning import get_phyndcrm_provisioning_tools
 from .pricing_intel import (
     CatalogLoadTool,
     CatalogPromoStackTool,
@@ -361,9 +361,9 @@ def get_builtin_tools() -> list[BaseTool]:
         # Phase 2 — Tenant onboarding primitives: Dhanam space + subscription
         # + credit-ledger management for billing bootstrap.
         *get_dhanam_provisioning_tools(),
-        # Phase 2 — Tenant onboarding primitives: PhyneCRM tenant_config +
+        # Phase 2 — Tenant onboarding primitives: PhyndCRM tenant_config +
         # pipeline bootstrap + config read (voice_mode / onboarding state).
-        *get_phynecrm_provisioning_tools(),
+        *get_phyndcrm_provisioning_tools(),
         # Phase 2 — Tenant onboarding primitives: Karafiel org + SAT cert +
         # PAC register + invoice-serie setup (Mexican fiscal compliance).
         # SAT cert upload is explicitly HITL-gated (legal-entity signing key).
@@ -412,7 +412,7 @@ def get_builtin_tools() -> list[BaseTool]:
         # panel PNG export for incident + post-mortem reports.
         *get_grafana_tools(),
         # Phase 5 — Data lifecycle: Postgres dump-to-R2, restore-from-R2,
-        # mask-and-copy (for staging refresh per PhyneCRM PP.5), and
+        # mask-and-copy (for staging refresh per PhyndCRM PP.5), and
         # per-table size reports.
         *get_db_lifecycle_tools(),
         # Phase 6 — Communications: Twilio SMS (send, template, status,

@@ -23,7 +23,7 @@ Selva is a single-region deployment today. Concretely:
   `admin.selva.town`, `ws.selva.town`, `gw.selva.town`) routing to
   one cluster ingress.
 - One Janua issuer; one Dhanam billing endpoint; one Karafiel; one
-  PhyneCRM. The whole MADFAM ecosystem is co-resident.
+  PhyndCRM. The whole MADFAM ecosystem is co-resident.
 
 The recovery surface today:
 
@@ -583,7 +583,7 @@ configurable). This is captured in RFC 0019's open question Q1
 (cluster ownership) and should be resolved in coordination with
 this RFC.
 
-### 10.5 Janua, Dhanam, Karafiel, Tezca, Enclii, PhyneCRM
+### 10.5 Janua, Dhanam, Karafiel, Tezca, Enclii, PhyndCRM
 
 Each ecosystem service needs its own failover story. The
 cross-service contract for Selva: when Selva's primary region fails

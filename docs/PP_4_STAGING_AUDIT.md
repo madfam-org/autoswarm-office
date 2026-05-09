@@ -117,11 +117,11 @@ restore).
     Janua's `POST /api/v1/oauth/clients/register` using
     `scripts/bootstrap-ecosystem.sh` (not present yet; tracked as
     post-PR work).
-14. **No staging PhyneCRM endpoint.** Gateway + workers wire to
-    `phyne-crm-web.phyne-crm.svc.cluster.local` (prod cluster-internal).
-    For staging we either (a) point at the same prod PhyneCRM with
+14. **No staging PhyndCRM endpoint.** Gateway + workers wire to
+    `phynd-crm-web.phynd-crm.svc.cluster.local` (prod cluster-internal).
+    For staging we either (a) point at the same prod PhyndCRM with
     `AUTO_DISPATCH_ENABLED=false` so nothing actually dispatches, or
-    (b) stand up a staging PhyneCRM peer. PP.4 ships option (a) — HITL
+    (b) stand up a staging PhyndCRM peer. PP.4 ships option (a) — HITL
     gate is closed so no side effects occur. Option (b) is a
     separate cross-repo RFC.
 15. **No nightly prod → staging DB refresh.** RFC 0001 open question
@@ -166,7 +166,7 @@ operator actions, in order:
      --from-literal=RESEND_API_KEY='<staging-resend-key>' \
      --from-literal=WORKER_API_TOKEN='<rand-64>' \
      --from-literal=colyseus-secret='<rand-32>' \
-     --from-literal=PHYNE_CRM_TOKEN='<staging-phyne-token>' \
+     --from-literal=PHYNE_CRM_TOKEN='<staging-phynd-token>' \
      --from-literal=ENCLII_API_TOKEN='<staging-enclii-token>'
    kubectl create secret generic autoswarm-staging-llm-secrets -n autoswarm-staging \
      --from-literal=ANTHROPIC_API_KEY='<staging-anthropic-key>' \

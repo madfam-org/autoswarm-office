@@ -73,7 +73,7 @@ spec:
             - name: NEXUS_API_URL
               value: "http://nexus-api.autoswarm.svc.cluster.local"
             - name: PHYNE_CRM_URL
-              value: "http://phyne-crm-web.phyne-crm.svc.cluster.local"
+              value: "http://phynd-crm-web.phynd-crm.svc.cluster.local"
             - name: PHYNE_CRM_TOKEN
               valueFrom:
                 secretKeyRef:

@@ -2,7 +2,7 @@
 
 Backs the Phase 2 tenant_identity tools (``tenant_create_identity_record``,
 ``tenant_resolve``, ``tenant_validate_consistency``). Every onboarded
-MADFAM tenant has identities across Janua / Dhanam / PhyneCRM / Karafiel /
+MADFAM tenant has identities across Janua / Dhanam / PhyndCRM / Karafiel /
 Resend / Cloudflare / Selva Office; this table is the canonical map so
 reconciliation + offboarding can enumerate every place a tenant holds
 state without having to poll each service. Canonical id is the Janua
@@ -34,7 +34,7 @@ def upgrade() -> None:
         sa.Column("primary_contact_email", sa.String(320), nullable=True),
         sa.Column("janua_org_id", sa.String(128), nullable=True),
         sa.Column("dhanam_space_id", sa.String(128), nullable=True),
-        sa.Column("phynecrm_tenant_id", sa.String(128), nullable=True),
+        sa.Column("phyndcrm_tenant_id", sa.String(128), nullable=True),
         sa.Column("karafiel_org_id", sa.String(128), nullable=True),
         sa.Column("resend_domain_ids", JSON, nullable=True),
         sa.Column("cloudflare_zone_ids", JSON, nullable=True),
@@ -71,9 +71,9 @@ def upgrade() -> None:
         ["dhanam_space_id"],
     )
     op.create_index(
-        "ix_tenant_identities_phynecrm_tenant_id",
+        "ix_tenant_identities_phyndcrm_tenant_id",
         "tenant_identities",
-        ["phynecrm_tenant_id"],
+        ["phyndcrm_tenant_id"],
     )
     op.create_index(
         "ix_tenant_identities_karafiel_org_id",
@@ -84,7 +84,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_tenant_identities_karafiel_org_id", table_name="tenant_identities")
-    op.drop_index("ix_tenant_identities_phynecrm_tenant_id", table_name="tenant_identities")
+    op.drop_index("ix_tenant_identities_phyndcrm_tenant_id", table_name="tenant_identities")
     op.drop_index("ix_tenant_identities_dhanam_space_id", table_name="tenant_identities")
     op.drop_index("ix_tenant_identities_janua_org_id", table_name="tenant_identities")
     op.drop_index("ix_tenant_identities_canonical_id", table_name="tenant_identities")

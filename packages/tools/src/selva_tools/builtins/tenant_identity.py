@@ -3,7 +3,7 @@
 Every onboarded tenant has identities in multiple services:
 - Janua org_id
 - Dhanam space_id
-- PhyneCRM tenant_id
+- PhyndCRM tenant_id
 - Karafiel org_id
 - Resend domain_id(s)
 - Cloudflare zone_id(s) (for bring-your-own-domain tenants)
@@ -104,7 +104,7 @@ class TenantCreateIdentityRecordTool(BaseTool):
                 "primary_contact_email": {"type": "string"},
                 "janua_org_id": {"type": "string"},
                 "dhanam_space_id": {"type": "string"},
-                "phynecrm_tenant_id": {"type": "string"},
+                "phyndcrm_tenant_id": {"type": "string"},
                 "karafiel_org_id": {"type": "string"},
                 "resend_domain_ids": {
                     "type": "array",
@@ -158,7 +158,7 @@ class TenantResolveTool(BaseTool):
     name = "tenant_resolve"
     description = (
         "Look up a tenant_identities row by any one of its per-service ids. "
-        "Given a PhyneCRM tenant_id, returns the Janua org_id / Dhanam "
+        "Given a PhyndCRM tenant_id, returns the Janua org_id / Dhanam "
         "space_id / Karafiel org_id / etc. Essential for cross-service "
         "operations that start from one service's perspective."
     )
@@ -173,7 +173,7 @@ class TenantResolveTool(BaseTool):
                         "canonical_id",
                         "janua_org_id",
                         "dhanam_space_id",
-                        "phynecrm_tenant_id",
+                        "phyndcrm_tenant_id",
                         "karafiel_org_id",
                     ],
                 },

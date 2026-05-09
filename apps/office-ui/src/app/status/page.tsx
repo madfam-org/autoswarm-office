@@ -5,7 +5,7 @@
  * `revenue-loop-probe` CronJob uploaded via
  * `POST /api/v1/probe/runs` and renders each of the six stages
  * (crm.hot_lead, drafter.first_touch, email.send, stripe.webhook,
- * dhanam.billing_event, phyne.attribution) with a coloured status
+ * dhanam.billing_event, phynd.attribution) with a coloured status
  * chip, a duration, and the structured facts each stage surfaces.
  *
  * No auth here — the probe token stays server-side and the payload
@@ -52,7 +52,7 @@ const CANONICAL_STAGES: { key: string; label: string; description: string }[] = 
   {
     key: 'crm.hot_lead',
     label: 'CRM hot lead',
-    description: 'Synthetic lead created in PhyneCRM.',
+    description: 'Synthetic lead created in PhyndCRM.',
   },
   {
     key: 'drafter.first_touch',
@@ -75,8 +75,8 @@ const CANONICAL_STAGES: { key: string; label: string; description: string }[] = 
     description: 'Ledger row written + billing_event_id issued.',
   },
   {
-    key: 'phyne.attribution',
-    label: 'PhyneCRM attribution',
+    key: 'phynd.attribution',
+    label: 'PhyndCRM attribution',
     description: 'Conversion bound to lead + event + source agent.',
   },
 ];
@@ -222,9 +222,9 @@ export default async function StatusPage() {
             Revenue-loop probe status
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-slate-400">
-            Hourly synthetic run of the MADFAM revenue flywheel: PhyneCRM lead{' '}
+            Hourly synthetic run of the MADFAM revenue flywheel: PhyndCRM lead{' '}
             → Nexus drafter → email send contract → Dhanam Stripe webhook → billing
-            event → PhyneCRM attribution. Every stage is dry-run by design —
+            event → PhyndCRM attribution. Every stage is dry-run by design —
             no real customer ever sees this traffic.
           </p>
         </div>

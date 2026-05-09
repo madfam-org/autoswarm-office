@@ -38,7 +38,7 @@ branch_labels = None
 depends_on = None
 
 
-ALLOWED_PROVIDERS = ("stripe", "resend", "janua", "phynecrm", "dhanam", "mifiel", "facturapi")
+ALLOWED_PROVIDERS = ("stripe", "resend", "janua", "phyndcrm", "dhanam", "mifiel", "facturapi")
 ALLOWED_ACTIONS = ("create", "list", "delete", "rotate", "register_oidc_redirect")
 ALLOWED_STATUSES = (
     "pending_approval",
@@ -116,7 +116,7 @@ def upgrade() -> None:
         sa.Column("signature_sha256", sa.String(64), nullable=False),
         sa.CheckConstraint(
             (
-                "provider IN ('stripe', 'resend', 'janua', 'phynecrm', "
+                "provider IN ('stripe', 'resend', 'janua', 'phyndcrm', "
                 "'dhanam', 'mifiel', 'facturapi')"
             ),
             name="ck_webhook_audit_provider",

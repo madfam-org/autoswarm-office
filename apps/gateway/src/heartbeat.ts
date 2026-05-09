@@ -138,7 +138,7 @@ export class HeartbeatService {
     }
 
     try {
-      this.logger.info("Scraping CRM via Phyne-CRM...");
+      this.logger.info("Scraping CRM via Phynd-CRM...");
       return await this.crmScraper.scrape();
     } catch (err) {
       this.logger.error({ err }, "CRM scrape failed");
@@ -256,7 +256,7 @@ export class HeartbeatService {
   }
 
   // scrapeTickets() removed — ticket events are now extracted from the
-  // single scrapeCRM() call in tick() to avoid double-scraping PhyneCRM.
+  // single scrapeCRM() call in tick() to avoid double-scraping PhyndCRM.
 
   private compileEnemyWaves(events: ExternalEvent[]): EnemyWaveEvent[] {
     if (events.length === 0) {

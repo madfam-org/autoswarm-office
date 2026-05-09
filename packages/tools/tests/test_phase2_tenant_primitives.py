@@ -27,10 +27,10 @@ from selva_tools.builtins.karafiel_provisioning import (
     KarafielSatCertUploadTool,
     get_karafiel_provisioning_tools,
 )
-from selva_tools.builtins.phynecrm_provisioning import (
+from selva_tools.builtins.phyndcrm_provisioning import (
     PhynecrmPipelineBootstrapTool,
     PhynecrmTenantCreateTool,
-    get_phynecrm_provisioning_tools,
+    get_phyndcrm_provisioning_tools,
 )
 from selva_tools.builtins.resend_domain import (
     ResendDomainAddTool,
@@ -65,11 +65,11 @@ class TestRegistries:
             "dhanam_credit_ledger_query",
         }
 
-    def test_phynecrm_three_tools(self) -> None:
-        assert {t.name for t in get_phynecrm_provisioning_tools()} == {
-            "phynecrm_tenant_create",
-            "phynecrm_pipeline_bootstrap",
-            "phynecrm_tenant_config_get",
+    def test_phyndcrm_three_tools(self) -> None:
+        assert {t.name for t in get_phyndcrm_provisioning_tools()} == {
+            "phyndcrm_tenant_create",
+            "phyndcrm_pipeline_bootstrap",
+            "phyndcrm_tenant_config_get",
         }
 
     def test_karafiel_four_tools(self) -> None:
@@ -115,8 +115,8 @@ class TestCredentialGating:
             assert "DHANAM_ADMIN_TOKEN" in (r.error or "")
 
     @pytest.mark.asyncio
-    async def test_phynecrm_missing_token(self) -> None:
-        with patch("selva_tools.builtins.phynecrm_provisioning.PHYNE_CRM_TOKEN", ""):
+    async def test_phyndcrm_missing_token(self) -> None:
+        with patch("selva_tools.builtins.phyndcrm_provisioning.PHYNE_CRM_TOKEN", ""):
             r = await PhynecrmTenantCreateTool().execute(
                 tenant_id="t", legal_name="x", primary_contact_email="a@b.c"
             )
@@ -268,8 +268,8 @@ class TestPhynecrm:
             }
 
         with (
-            patch("selva_tools.builtins.phynecrm_provisioning.PHYNE_CRM_TOKEN", "tok"),
-            patch("selva_tools.builtins.phynecrm_provisioning._trpc", new=fake),
+            patch("selva_tools.builtins.phyndcrm_provisioning.PHYNE_CRM_TOKEN", "tok"),
+            patch("selva_tools.builtins.phyndcrm_provisioning._trpc", new=fake),
         ):
             r = await PhynecrmPipelineBootstrapTool().execute(tenant_id="t-1")
             assert r.success is True
@@ -286,8 +286,8 @@ class TestPhynecrm:
             return 200, {"result": {"data": {"json": {}}}}
 
         with (
-            patch("selva_tools.builtins.phynecrm_provisioning.PHYNE_CRM_TOKEN", "tok"),
-            patch("selva_tools.builtins.phynecrm_provisioning._trpc", new=fake),
+            patch("selva_tools.builtins.phyndcrm_provisioning.PHYNE_CRM_TOKEN", "tok"),
+            patch("selva_tools.builtins.phyndcrm_provisioning._trpc", new=fake),
         ):
             await PhynecrmTenantCreateTool().execute(
                 tenant_id="t",
@@ -410,7 +410,7 @@ class TestTenantIdentity:
                 legal_name="Tenant Inc.",
                 janua_org_id="org-janua-123",
                 dhanam_space_id="sp-1",
-                phynecrm_tenant_id="t-1",
+                phyndcrm_tenant_id="t-1",
             )
             assert r.success is True
             assert r.data["canonical_id"] == "org-janua-123"

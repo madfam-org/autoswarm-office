@@ -31,13 +31,13 @@ spec:
               value: "false"
             - name: NEXUS_API_URL
               value: "http://nexus-api.autoswarm-staging.svc.cluster.local"
-            - name: PHYNE_CRM_URL
+            - name: PHYND_CRM_URL
               value: "http://phynd-crm-web.phynd-crm.svc.cluster.local"
-            - name: PHYNE_CRM_TOKEN
+            - name: PHYND_CRM_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: autoswarm-staging-secrets
-                  key: PHYNE_CRM_TOKEN
+                  key: PHYND_CRM_TOKEN
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:

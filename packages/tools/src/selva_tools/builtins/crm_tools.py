@@ -12,14 +12,14 @@ from ..base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
 
-PHYNE_CRM_URL = os.environ.get("PHYNE_CRM_URL", "")
-PHYNE_CRM_API_KEY = os.environ.get("PHYNE_CRM_API_KEY", "")
+PHYND_CRM_URL = os.environ.get("PHYND_CRM_URL", "")
+PHYND_CRM_API_KEY = os.environ.get("PHYND_CRM_API_KEY", "")
 
 
 def _crm_headers() -> dict[str, str]:
     headers = {"Content-Type": "application/json"}
-    if PHYNE_CRM_API_KEY:
-        headers["Authorization"] = f"Bearer {PHYNE_CRM_API_KEY}"
+    if PHYND_CRM_API_KEY:
+        headers["Authorization"] = f"Bearer {PHYND_CRM_API_KEY}"
     return headers
 
 
@@ -57,13 +57,13 @@ class CreateLeadTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
-        if not PHYNE_CRM_URL:
-            return ToolResult(success=False, error="PHYNE_CRM_URL not configured")
+        if not PHYND_CRM_URL:
+            return ToolResult(success=False, error="PHYND_CRM_URL not configured")
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(
-                    f"{PHYNE_CRM_URL}/api/v1/leads",
+                    f"{PHYND_CRM_URL}/api/v1/leads",
                     headers=_crm_headers(),
                     json={
                         "contactName": kwargs.get("contact_name", ""),
@@ -117,8 +117,8 @@ class UpdateLeadStatusTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
-        if not PHYNE_CRM_URL:
-            return ToolResult(success=False, error="PHYNE_CRM_URL not configured")
+        if not PHYND_CRM_URL:
+            return ToolResult(success=False, error="PHYND_CRM_URL not configured")
 
         lead_id = kwargs.get("lead_id", "")
         status = kwargs.get("status", "")
@@ -126,7 +126,7 @@ class UpdateLeadStatusTool(BaseTool):
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.patch(
-                    f"{PHYNE_CRM_URL}/api/v1/leads/{lead_id}/status",
+                    f"{PHYND_CRM_URL}/api/v1/leads/{lead_id}/status",
                     headers=_crm_headers(),
                     json={"status": status, "notes": kwargs.get("notes", "")},
                 )
@@ -175,13 +175,13 @@ class CreateActivityTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
-        if not PHYNE_CRM_URL:
-            return ToolResult(success=False, error="PHYNE_CRM_URL not configured")
+        if not PHYND_CRM_URL:
+            return ToolResult(success=False, error="PHYND_CRM_URL not configured")
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(
-                    f"{PHYNE_CRM_URL}/api/v1/activities",
+                    f"{PHYND_CRM_URL}/api/v1/activities",
                     headers=_crm_headers(),
                     json={
                         "entityType": kwargs.get("entity_type", "lead"),

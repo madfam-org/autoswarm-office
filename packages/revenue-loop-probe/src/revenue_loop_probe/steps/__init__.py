@@ -10,7 +10,7 @@ The shipped default pipeline (see ``revenue_loop_probe.cli.default_pipeline``):
     3. EmailSendStep         — sends (dry-run by default) the drafted email
     4. StripeWebhookStep     — fires a synthetic Stripe webhook into Dhanam
     5. DhanamBillingStep     — asserts the billing event landed
-    6. PhyneAttributionStep  — asserts PhyndCRM credited the source agent
+    6. PhyndAttributionStep  — asserts PhyndCRM credited the source agent
 """
 
 from .crm import CrmHotLeadStep
@@ -18,7 +18,7 @@ from .drafter import DraftStep
 from .email_send import EmailSendStep
 from .stripe_webhook import StripeWebhookStep
 from .dhanam_billing import DhanamBillingStep
-from .phyne_attribution import PhyneAttributionStep
+from .phynd_attribution import PhyndAttributionStep
 
 __all__ = [
     "CrmHotLeadStep",
@@ -26,5 +26,5 @@ __all__ = [
     "EmailSendStep",
     "StripeWebhookStep",
     "DhanamBillingStep",
-    "PhyneAttributionStep",
+    "PhyndAttributionStep",
 ]

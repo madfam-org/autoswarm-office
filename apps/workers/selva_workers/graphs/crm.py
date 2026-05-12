@@ -79,7 +79,7 @@ class CRMState(BaseGraphState, TypedDict, total=False):
 def fetch_context(state: CRMState) -> CRMState:
     """Fetch CRM context for the target recipient and action.
 
-    Calls the Phynd-CRM adapter when ``PHYNE_CRM_URL`` is configured,
+    Calls the Phynd-CRM adapter when ``PHYND_CRM_URL`` is configured,
     falling back to mock data otherwise.
     """
     messages = state.get("messages", [])
@@ -98,12 +98,12 @@ def fetch_context(state: CRMState) -> CRMState:
     try:
         import os
 
-        phyne_url = os.environ.get("PHYNE_CRM_URL")
-        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
-        if phyne_url:
+        phynd_url = os.environ.get("PHYND_CRM_URL")
+        phynd_token = os.environ.get("PHYND_CRM_TOKEN", "")
+        if phynd_url:
             from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phynd_url, token=phynd_token)
             profile = _run_async(adapter.get_unified_profile(recipient))
             contact_id = profile.contact.id
             activities = _run_async(adapter.list_activities("contact", contact_id))
@@ -113,7 +113,7 @@ def fetch_context(state: CRMState) -> CRMState:
             context_data["account_status"] = profile.billing_status or "active"
             context_data["last_interaction_days_ago"] = 0
         else:
-            raise RuntimeError("PHYNE_CRM_URL not set")
+            raise RuntimeError("PHYND_CRM_URL not set")
     except Exception:
         logger.debug("Using mock CRM context (Phynd-CRM unavailable)")
         context_data["contact_history"] = [
@@ -338,13 +338,13 @@ def send(state: CRMState) -> CRMState:
     try:
         import os
 
-        phyne_url = os.environ.get("PHYNE_CRM_URL")
-        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
+        phynd_url = os.environ.get("PHYND_CRM_URL")
+        phynd_token = os.environ.get("PHYND_CRM_TOKEN", "")
         contact_uuid = state.get("contact_id")
-        if phyne_url and contact_uuid:
+        if phynd_url and contact_uuid:
             from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phynd_url, token=phynd_token)
             draft = state.get("draft_content", "") or ""
             activity = _run_async(
                 adapter.create_activity(
@@ -355,8 +355,8 @@ def send(state: CRMState) -> CRMState:
                     entity_id=contact_uuid,
                 )
             )
-            send_result["phyne_activity_id"] = activity.id
-        elif phyne_url and not contact_uuid:
+            send_result["phynd_activity_id"] = activity.id
+        elif phynd_url and not contact_uuid:
             logger.debug(
                 "Phynd-CRM activity logging skipped: no contact_id resolved for %s "
                 "(cold outreach or unresolved profile)",

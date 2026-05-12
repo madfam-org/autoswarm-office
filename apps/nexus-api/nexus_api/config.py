@@ -114,7 +114,7 @@ class Settings(BaseSettings):
     karafiel_api_url: str = ""
 
     # -- Phynd-CRM ------------------------------------------------------------
-    phyne_crm_url: str | None = None
+    phynd_crm_url: str | None = None
 
     # -- Worker-to-API auth ---------------------------------------------------
     worker_api_token: str = "dev-bypass"  # Shared secret for worker/gateway → API calls

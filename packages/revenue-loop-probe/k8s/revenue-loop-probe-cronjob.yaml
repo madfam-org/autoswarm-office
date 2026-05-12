@@ -39,7 +39,7 @@ spec:
                   memory: 256Mi
               env:
                 # Ecosystem URLs (public — not secret):
-                - name: PHYNE_CRM_API_URL
+                - name: PHYND_CRM_API_URL
                   value: https://crm.madfam.io
                 - name: NEXUS_API_URL
                   value: https://agents-api.madfam.io
@@ -50,13 +50,13 @@ spec:
                 # Tuning:
                 - name: DHANAM_BILLING_POLL_TIMEOUT_S
                   value: "30"
-                - name: PHYNE_ATTRIBUTION_POLL_TIMEOUT_S
+                - name: PHYND_ATTRIBUTION_POLL_TIMEOUT_S
                   value: "20"
                 - name: PROBE_PAYMENT_AMOUNT_MXN_CENTS
                   value: "4900"  # MX$49 — Karafiel Essentials-equivalent.
               envFrom:
                 # Scoped probe tokens (one secret, four keys):
-                #   PHYNE_CRM_PROBE_TOKEN
+                #   PHYND_CRM_PROBE_TOKEN
                 #   NEXUS_PROBE_TOKEN
                 #   DHANAM_STRIPE_WEBHOOK_SECRET
                 #   DHANAM_PROBE_TOKEN

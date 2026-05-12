@@ -8,11 +8,11 @@ import pytest
 
 from madfam_inference.adapters.crm import PhyndCRMAdapter
 from madfam_inference.adapters.crm_types import (
-    PhyneActivity,
-    PhyneDashboard,
-    PhyneLead,
-    PhyneLeadScore,
-    PhyneUnifiedProfile,
+    PhyndActivity,
+    PhyndDashboard,
+    PhyndLead,
+    PhyndLeadScore,
+    PhyndUnifiedProfile,
 )
 
 
@@ -63,7 +63,7 @@ class TestPhyndCRMAdapter:
             adapter = PhyndCRMAdapter(base_url="http://crm:3000", token="t")
             profile = await adapter.get_unified_profile("c1")
 
-        assert isinstance(profile, PhyneUnifiedProfile)
+        assert isinstance(profile, PhyndUnifiedProfile)
         assert profile.contact.name == "Bob"
         assert len(profile.leads) == 1
         assert profile.total_revenue == 5000.0
@@ -90,7 +90,7 @@ class TestPhyndCRMAdapter:
                 entity_id="c1",
             )
 
-        assert isinstance(activity, PhyneActivity)
+        assert isinstance(activity, PhyndActivity)
         assert activity.id == "a1"
 
     @pytest.mark.asyncio
@@ -110,7 +110,7 @@ class TestPhyndCRMAdapter:
             adapter = PhyndCRMAdapter(base_url="http://crm:3000", token="t")
             score = await adapter.compute_lead_score("l1")
 
-        assert isinstance(score, PhyneLeadScore)
+        assert isinstance(score, PhyndLeadScore)
         assert score.score == 85.5
 
     @pytest.mark.asyncio
@@ -165,7 +165,7 @@ class TestPhyndCRMAdapter:
             leads = await adapter.list_leads(status="open")
 
         assert len(leads) == 2
-        assert all(isinstance(lead, PhyneLead) for lead in leads)
+        assert all(isinstance(lead, PhyndLead) for lead in leads)
 
     @pytest.mark.asyncio
     async def test_get_dashboard(self) -> None:
@@ -184,7 +184,7 @@ class TestPhyndCRMAdapter:
             adapter = PhyndCRMAdapter(base_url="http://crm:3000")
             dashboard = await adapter.get_dashboard()
 
-        assert isinstance(dashboard, PhyneDashboard)
+        assert isinstance(dashboard, PhyndDashboard)
         assert dashboard.total_contacts == 42
 
     @pytest.mark.asyncio

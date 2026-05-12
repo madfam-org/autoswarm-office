@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class PhyneContact(BaseModel):
+class PhyndContact(BaseModel):
     id: str
     name: str
     email: str | None = None
@@ -14,7 +14,7 @@ class PhyneContact(BaseModel):
     status: str = "active"
 
 
-class PhyneLead(BaseModel):
+class PhyndLead(BaseModel):
     id: str
     contact_id: str
     stage_id: str
@@ -24,7 +24,7 @@ class PhyneLead(BaseModel):
     created_at: str | None = None
 
 
-class PhyneActivity(BaseModel):
+class PhyndActivity(BaseModel):
     id: str
     type: str  # email, call, meeting, task
     title: str
@@ -36,22 +36,22 @@ class PhyneActivity(BaseModel):
     completed_at: str | None = None
 
 
-class PhyneUnifiedProfile(BaseModel):
-    contact: PhyneContact
-    leads: list[PhyneLead] = Field(default_factory=list)
-    activities: list[PhyneActivity] = Field(default_factory=list)
+class PhyndUnifiedProfile(BaseModel):
+    contact: PhyndContact
+    leads: list[PhyndLead] = Field(default_factory=list)
+    activities: list[PhyndActivity] = Field(default_factory=list)
     billing_status: str | None = None
     total_revenue: float | None = None
 
 
-class PhyneLeadScore(BaseModel):
+class PhyndLeadScore(BaseModel):
     lead_id: str
     score: float
     factors: dict[str, float] = Field(default_factory=dict)
     recommendation: str = ""
 
 
-class PhyneDashboard(BaseModel):
+class PhyndDashboard(BaseModel):
     total_contacts: int = 0
     total_leads: int = 0
     open_activities: int = 0

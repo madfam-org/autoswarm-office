@@ -75,17 +75,17 @@ def fetch_context(state: BillingState) -> BillingState:
     try:
         import os
 
-        phyne_url = os.environ.get("PHYNE_CRM_URL")
-        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
-        if phyne_url and receptor_rfc:
+        phynd_url = os.environ.get("PHYND_CRM_URL")
+        phynd_token = os.environ.get("PHYND_CRM_TOKEN", "")
+        if phynd_url and receptor_rfc:
             from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            crm = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
+            crm = PhyndCRMAdapter(base_url=phynd_url, token=phynd_token)
             profile = _run_async(crm.get_unified_profile(receptor_rfc))
             customer_phone = customer_phone or getattr(profile.contact, "phone", None)
             customer_email = customer_email or getattr(profile.contact, "email", None)
         else:
-            raise RuntimeError("PHYNE_CRM_URL not set or receptor_rfc empty")
+            raise RuntimeError("PHYND_CRM_URL not set or receptor_rfc empty")
     except Exception:
         logger.debug("PhyndCRM adapter unavailable; using state values for contact info")
 

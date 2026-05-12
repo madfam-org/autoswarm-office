@@ -148,7 +148,7 @@ class TenantResponse(BaseModel):
     currency: str
     karafiel_org_id: str | None = None
     dhanam_space_id: str | None = None
-    phyne_tenant_id: str | None = None
+    phynd_tenant_id: str | None = None
     cfdi_enabled: bool
     intelligence_enabled: bool
     max_agents: int
@@ -195,7 +195,7 @@ def _to_response(config: TenantConfig) -> TenantResponse:
         currency=config.currency,
         karafiel_org_id=config.karafiel_org_id,
         dhanam_space_id=config.dhanam_space_id,
-        phyne_tenant_id=config.phyne_tenant_id,
+        phynd_tenant_id=config.phynd_tenant_id,
         cfdi_enabled=config.cfdi_enabled,
         intelligence_enabled=config.intelligence_enabled,
         max_agents=config.max_agents,

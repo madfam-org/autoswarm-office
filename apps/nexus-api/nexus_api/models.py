@@ -569,7 +569,7 @@ class TenantConfig(Base):
     # Ecosystem integration references
     karafiel_org_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     dhanam_space_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    phyne_tenant_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    phynd_tenant_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Feature flags
     cfdi_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

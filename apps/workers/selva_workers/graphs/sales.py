@@ -55,12 +55,12 @@ def qualify_lead(state: SalesState) -> SalesState:
     try:
         import os
 
-        phyne_url = os.environ.get("PHYNE_CRM_URL")
-        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
-        if phyne_url and lead_id:
+        phynd_url = os.environ.get("PHYND_CRM_URL")
+        phynd_token = os.environ.get("PHYND_CRM_TOKEN", "")
+        if phynd_url and lead_id:
             from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phynd_url, token=phynd_token)
             profile = _run_async(adapter.get_unified_profile(lead_id))
             lead_data = {
                 "lead_id": lead_id,
@@ -74,7 +74,7 @@ def qualify_lead(state: SalesState) -> SalesState:
             customer_phone = customer_phone or lead_data.get("phone")
             customer_email = customer_email or lead_data.get("email")
         else:
-            raise RuntimeError("PHYNE_CRM_URL not set or lead_id empty")
+            raise RuntimeError("PHYND_CRM_URL not set or lead_id empty")
     except Exception:
         logger.debug("PhyndCRM unavailable; using payload values for lead data")
         lead_data = {
@@ -371,12 +371,12 @@ def send_cotizacion(state: SalesState) -> SalesState:
     try:
         import os
 
-        phyne_url = os.environ.get("PHYNE_CRM_URL")
-        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
-        if phyne_url:
+        phynd_url = os.environ.get("PHYND_CRM_URL")
+        phynd_token = os.environ.get("PHYND_CRM_TOKEN", "")
+        if phynd_url:
             from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phynd_url, token=phynd_token)
             _run_async(
                 adapter.create_activity(
                     type="cotizacion",
@@ -427,12 +427,12 @@ def convert_to_pedido(state: SalesState) -> SalesState:
     try:
         import os
 
-        phyne_url = os.environ.get("PHYNE_CRM_URL")
-        phyne_token = os.environ.get("PHYNE_CRM_TOKEN", "")
-        if phyne_url:
+        phynd_url = os.environ.get("PHYND_CRM_URL")
+        phynd_token = os.environ.get("PHYND_CRM_TOKEN", "")
+        if phynd_url:
             from madfam_inference.adapters.crm import PhyndCRMAdapter
 
-            adapter = PhyndCRMAdapter(base_url=phyne_url, token=phyne_token)
+            adapter = PhyndCRMAdapter(base_url=phynd_url, token=phynd_token)
             _run_async(
                 adapter.create_activity(
                     type="pedido",

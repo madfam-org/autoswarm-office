@@ -16,14 +16,14 @@ class CrmHotLeadStep(ProbeStep):
     async def run(self, ctx: ProbeContext) -> StageResult:
         t0 = time.perf_counter()
 
-        base_url = ctx.env.get("PHYNE_CRM_API_URL")
-        api_token = ctx.env.get("PHYNE_CRM_PROBE_TOKEN")
+        base_url = ctx.env.get("PHYND_CRM_API_URL")
+        api_token = ctx.env.get("PHYND_CRM_PROBE_TOKEN")
         if not base_url or not api_token:
             return StageResult(
                 name=self.name,
                 status=StageStatus.SKIPPED,
                 duration_ms=(time.perf_counter() - t0) * 1000.0,
-                detail="PHYNE_CRM_API_URL or PHYNE_CRM_PROBE_TOKEN not set",
+                detail="PHYND_CRM_API_URL or PHYND_CRM_PROBE_TOKEN not set",
             )
 
         assert ctx.http is not None
@@ -84,5 +84,5 @@ class CrmHotLeadStep(ProbeStep):
             name=self.name,
             status=StageStatus.PASSED,
             duration_ms=(time.perf_counter() - t0) * 1000.0,
-            facts={"lead_id": lead_id, "phyne_status": resp.status_code},
+            facts={"lead_id": lead_id, "phynd_status": resp.status_code},
         )

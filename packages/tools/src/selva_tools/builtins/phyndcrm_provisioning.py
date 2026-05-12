@@ -4,9 +4,9 @@ Each onboarded tenant needs a ``tenant_configs`` row seeded with voice_mode
 + default pipeline + seed user. This module encapsulates that bootstrap
 sequence so a tenant isn't born half-provisioned.
 
-API base: ``PHYNE_CRM_URL`` (default ``http://phynd-crm-web.phynd-crm.svc.cluster.local``
+API base: ``PHYND_CRM_URL`` (default ``http://phynd-crm-web.phynd-crm.svc.cluster.local``
 for in-cluster, ``https://crm.madfam.io`` from outside).
-Auth: ``PHYNE_CRM_FEDERATION_TOKEN`` — service-to-service token that bypasses
+Auth: ``PHYND_CRM_FEDERATION_TOKEN`` — service-to-service token that bypasses
 Auth.js session check and opens service-role scopes.
 """
 
@@ -24,28 +24,28 @@ from ..base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
 
-PHYNE_CRM_URL = os.environ.get("PHYNE_CRM_URL", "http://phynd-crm-web.phynd-crm.svc.cluster.local")
-PHYNE_CRM_TOKEN = os.environ.get(
-    "PHYNE_CRM_FEDERATION_TOKEN", os.environ.get("PHYNE_CRM_TOKEN", "")
+PHYND_CRM_URL = os.environ.get("PHYND_CRM_URL", "http://phynd-crm-web.phynd-crm.svc.cluster.local")
+PHYND_CRM_TOKEN = os.environ.get(
+    "PHYND_CRM_FEDERATION_TOKEN", os.environ.get("PHYND_CRM_TOKEN", "")
 )
 
 
 def _headers() -> dict[str, str]:
     return {
-        "Authorization": f"Bearer {PHYNE_CRM_TOKEN}",
+        "Authorization": f"Bearer {PHYND_CRM_TOKEN}",
         "Content-Type": "application/json",
     }
 
 
 def _creds_check() -> str | None:
-    if not PHYNE_CRM_TOKEN:
-        return "PHYNE_CRM_FEDERATION_TOKEN must be set."
+    if not PHYND_CRM_TOKEN:
+        return "PHYND_CRM_FEDERATION_TOKEN must be set."
     return None
 
 
 async def _trpc(procedure: str, input_data: dict[str, Any] | None = None) -> tuple[int, Any]:
     """Invoke a PhyndCRM tRPC procedure via the HTTP adapter."""
-    url = f"{PHYNE_CRM_URL.rstrip('/')}/api/trpc/{procedure}"
+    url = f"{PHYND_CRM_URL.rstrip('/')}/api/trpc/{procedure}"
     async with httpx.AsyncClient(timeout=30) as client:
         if input_data is None:
             resp = await client.get(url, headers=_headers())
@@ -74,7 +74,7 @@ def _trpc_err(body: Any) -> str:
     return str(body)
 
 
-class PhynecrmTenantCreateTool(BaseTool):
+class PhyndcrmTenantCreateTool(BaseTool):
     """Bootstrap a tenant_configs row with voice_mode + default pipeline."""
 
     name = "phyndcrm_tenant_create"
@@ -131,7 +131,7 @@ class PhynecrmTenantCreateTool(BaseTool):
             return ToolResult(success=False, error=str(e))
 
 
-class PhynecrmPipelineBootstrapTool(BaseTool):
+class PhyndcrmPipelineBootstrapTool(BaseTool):
     """Create a named sales pipeline with default stages."""
 
     name = "phyndcrm_pipeline_bootstrap"
@@ -198,7 +198,7 @@ class PhynecrmPipelineBootstrapTool(BaseTool):
             return ToolResult(success=False, error=str(e))
 
 
-class PhynecrmTenantConfigGetTool(BaseTool):
+class PhyndcrmTenantConfigGetTool(BaseTool):
     """Read a tenant's full PhyndCRM config (voice_mode + onboarding state)."""
 
     name = "phyndcrm_tenant_config_get"
@@ -225,7 +225,7 @@ class PhynecrmTenantConfigGetTool(BaseTool):
             url = f"/api/trpc/tenants.config?input={input_enc}"
             # Use raw GET for tRPC query
             async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.get(f"{PHYNE_CRM_URL.rstrip('/')}{url}", headers=_headers())
+                resp = await client.get(f"{PHYND_CRM_URL.rstrip('/')}{url}", headers=_headers())
                 status = resp.status_code
                 body = resp.json()
             if not _ok(status):
@@ -243,16 +243,16 @@ class PhynecrmTenantConfigGetTool(BaseTool):
 
 def get_phyndcrm_provisioning_tools() -> list[BaseTool]:
     return [
-        PhynecrmTenantCreateTool(),
-        PhynecrmPipelineBootstrapTool(),
-        PhynecrmTenantConfigGetTool(),
+        PhyndcrmTenantCreateTool(),
+        PhyndcrmPipelineBootstrapTool(),
+        PhyndcrmTenantConfigGetTool(),
     ]
 
 
 # Audience tagging — platform-only tools. Tenant swarms are filtered
 # out of these at spec-generation time by ToolRegistry.get_specs(audience=...).
 for _cls in (
-    PhynecrmTenantCreateTool,
-    PhynecrmPipelineBootstrapTool,
+    PhyndcrmTenantCreateTool,
+    PhyndcrmPipelineBootstrapTool,
 ):
     _cls.audience = Audience.PLATFORM

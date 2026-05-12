@@ -28,8 +28,8 @@ from selva_tools.builtins.karafiel_provisioning import (
     get_karafiel_provisioning_tools,
 )
 from selva_tools.builtins.phyndcrm_provisioning import (
-    PhynecrmPipelineBootstrapTool,
-    PhynecrmTenantCreateTool,
+    PhyndcrmPipelineBootstrapTool,
+    PhyndcrmTenantCreateTool,
     get_phyndcrm_provisioning_tools,
 )
 from selva_tools.builtins.resend_domain import (
@@ -116,12 +116,12 @@ class TestCredentialGating:
 
     @pytest.mark.asyncio
     async def test_phyndcrm_missing_token(self) -> None:
-        with patch("selva_tools.builtins.phyndcrm_provisioning.PHYNE_CRM_TOKEN", ""):
-            r = await PhynecrmTenantCreateTool().execute(
+        with patch("selva_tools.builtins.phyndcrm_provisioning.PHYND_CRM_TOKEN", ""):
+            r = await PhyndcrmTenantCreateTool().execute(
                 tenant_id="t", legal_name="x", primary_contact_email="a@b.c"
             )
             assert r.success is False
-            assert "PHYNE_CRM_FEDERATION_TOKEN" in (r.error or "")
+            assert "PHYND_CRM_FEDERATION_TOKEN" in (r.error or "")
 
     @pytest.mark.asyncio
     async def test_karafiel_missing_token(self) -> None:
@@ -255,7 +255,7 @@ class TestDhanam:
             assert "12000" in r.output
 
 
-class TestPhynecrm:
+class TestPhyndcrm:
     @pytest.mark.asyncio
     async def test_pipeline_bootstrap_default_stages(self) -> None:
         captured: dict = {}
@@ -268,10 +268,10 @@ class TestPhynecrm:
             }
 
         with (
-            patch("selva_tools.builtins.phyndcrm_provisioning.PHYNE_CRM_TOKEN", "tok"),
+            patch("selva_tools.builtins.phyndcrm_provisioning.PHYND_CRM_TOKEN", "tok"),
             patch("selva_tools.builtins.phyndcrm_provisioning._trpc", new=fake),
         ):
-            r = await PhynecrmPipelineBootstrapTool().execute(tenant_id="t-1")
+            r = await PhyndcrmPipelineBootstrapTool().execute(tenant_id="t-1")
             assert r.success is True
             # 6 default stages
             assert r.data["stage_count"] == 6
@@ -286,10 +286,10 @@ class TestPhynecrm:
             return 200, {"result": {"data": {"json": {}}}}
 
         with (
-            patch("selva_tools.builtins.phyndcrm_provisioning.PHYNE_CRM_TOKEN", "tok"),
+            patch("selva_tools.builtins.phyndcrm_provisioning.PHYND_CRM_TOKEN", "tok"),
             patch("selva_tools.builtins.phyndcrm_provisioning._trpc", new=fake),
         ):
-            await PhynecrmTenantCreateTool().execute(
+            await PhyndcrmTenantCreateTool().execute(
                 tenant_id="t",
                 legal_name="LN",
                 primary_contact_email="a@b.c",

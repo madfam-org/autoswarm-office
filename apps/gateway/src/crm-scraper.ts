@@ -33,7 +33,7 @@ type TRPCListEnvelope<TItem> =
   | undefined
   | null;
 
-interface PhyneLead {
+interface PhyndLead {
   id: string;
   contact_id: string;
   stage_id: string;
@@ -42,7 +42,7 @@ interface PhyneLead {
   status?: string;
 }
 
-interface PhyneActivity {
+interface PhyndActivity {
   id: string;
   type: string;
   title: string;
@@ -123,7 +123,7 @@ export class CRMScraper {
     return events;
   }
 
-  private async fetchLeads(status?: string): Promise<PhyneLead[]> {
+  private async fetchLeads(status?: string): Promise<PhyndLead[]> {
     const input = status ? JSON.stringify({ status }) : undefined;
     const url = `${this.baseUrl}/api/trpc/leads.list${input ? `?input=${encodeURIComponent(input)}` : ""}`;
 
@@ -144,15 +144,15 @@ export class CRMScraper {
       return [];
     }
 
-    const json = (await response.json()) as TRPCResponse<TRPCListEnvelope<PhyneLead>>;
+    const json = (await response.json()) as TRPCResponse<TRPCListEnvelope<PhyndLead>>;
     const data = json.result?.data;
-    const leads: PhyneLead[] = Array.isArray(data)
+    const leads: PhyndLead[] = Array.isArray(data)
       ? data
       : data?.json?.items ?? data?.items ?? [];
     return leads;
   }
 
-  private async fetchActivities(): Promise<PhyneActivity[]> {
+  private async fetchActivities(): Promise<PhyndActivity[]> {
     // PhyndCRM's `activities.listForEntity` requires {entityType, entityId:<uuid>}
     // to scope to a single entity — wrong endpoint for a cross-entity scrape.
     // `activities.list` returns a paginated envelope across all entities and is
@@ -180,9 +180,9 @@ export class CRMScraper {
       return [];
     }
 
-    const json = (await response.json()) as TRPCResponse<TRPCListEnvelope<PhyneActivity>>;
+    const json = (await response.json()) as TRPCResponse<TRPCListEnvelope<PhyndActivity>>;
     const data = json.result?.data;
-    const activities: PhyneActivity[] = Array.isArray(data)
+    const activities: PhyndActivity[] = Array.isArray(data)
       ? data
       : data?.json?.items ?? data?.items ?? [];
     return activities.filter(
@@ -190,7 +190,7 @@ export class CRMScraper {
     );
   }
 
-  private isOverdue(activity: PhyneActivity): boolean {
+  private isOverdue(activity: PhyndActivity): boolean {
     if (!activity.due_date) return false;
     return new Date(activity.due_date) < new Date();
   }

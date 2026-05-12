@@ -44,11 +44,11 @@ export class HeartbeatService {
     this.cronExpression = cronExpression;
     this.logger = logger;
 
-    const phyneCrmUrl = process.env.PHYNE_CRM_URL;
-    const phyneCrmToken = process.env.PHYNE_CRM_TOKEN ?? "";
+    const phyndCrmUrl = process.env.PHYND_CRM_URL;
+    const phyndCrmToken = process.env.PHYND_CRM_TOKEN ?? "";
     const crmLogger = logger.child({ component: "crm-scraper" });
-    this.crmScraper = phyneCrmUrl
-      ? new CRMScraper(phyneCrmUrl, phyneCrmToken, crmLogger)
+    this.crmScraper = phyndCrmUrl
+      ? new CRMScraper(phyndCrmUrl, phyndCrmToken, crmLogger)
       : null;
   }
 
@@ -133,7 +133,7 @@ export class HeartbeatService {
 
   private async scrapeCRM(): Promise<ExternalEvent[]> {
     if (!this.crmScraper) {
-      this.logger.info("PHYNE_CRM_URL not set; skipping CRM scrape");
+      this.logger.info("PHYND_CRM_URL not set; skipping CRM scrape");
       return [];
     }
 

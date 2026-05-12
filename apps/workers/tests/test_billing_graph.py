@@ -84,7 +84,7 @@ class TestFetchContext:
         assert len(result["conceptos"]) == 1
 
     def test_fetch_context_without_adapters(self) -> None:
-        """Without DHANAM or PHYNE env vars, falls back to state values."""
+        """Without DHANAM or PHYND env vars, falls back to state values."""
         from selva_workers.graphs.billing import fetch_context
 
         result = fetch_context(

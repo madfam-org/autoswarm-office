@@ -1,7 +1,7 @@
 [project]
 name = "madfam-revenue-loop-probe"
 version = "0.1.0"
-description = "Synthetic end-to-end probe that exercises the MADFAM revenue flywheel: CRM -> draft -> email -> Stripe webhook -> Dhanam billing -> PhyneCRM attribution. Pages when any stage breaks."
+description = "Synthetic end-to-end probe that exercises the MADFAM revenue flywheel: CRM -> draft -> email -> Stripe webhook -> Dhanam billing -> PhyndCRM attribution. Pages when any stage breaks."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

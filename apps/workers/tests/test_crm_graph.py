@@ -39,7 +39,7 @@ class TestCRMGraphStructure:
 class TestFetchContext:
     """fetch_context() gathers CRM data for the recipient."""
 
-    def test_fallback_mock_context_without_phyne(self) -> None:
+    def test_fallback_mock_context_without_phynd(self) -> None:
         from selva_workers.graphs.crm import fetch_context
 
         result = fetch_context(
@@ -77,11 +77,11 @@ class TestFetchContext:
         assert result["recipient"] == "unknown@example.com"
         assert result["crm_action"] == "email"
 
-    def test_with_phyne_configured(self) -> None:
-        """When PHYNE_CRM_URL is set but adapter fails, falls back to mock."""
+    def test_with_phynd_configured(self) -> None:
+        """When PHYND_CRM_URL is set but adapter fails, falls back to mock."""
         from selva_workers.graphs.crm import fetch_context
 
-        with patch.dict("os.environ", {"PHYNE_CRM_URL": "http://fake-phynd:8080"}):
+        with patch.dict("os.environ", {"PHYND_CRM_URL": "http://fake-phynd:8080"}):
             result = fetch_context(
                 {
                     "messages": [],

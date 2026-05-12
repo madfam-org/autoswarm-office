@@ -12,20 +12,20 @@ import time
 from ..probe import ProbeContext, ProbeStep, StageResult, StageStatus
 
 
-class PhyneAttributionStep(ProbeStep):
+class PhyndAttributionStep(ProbeStep):
     name = "phynd.attribution"
 
     async def run(self, ctx: ProbeContext) -> StageResult:
         t0 = time.perf_counter()
 
-        base_url = ctx.env.get("PHYNE_CRM_API_URL")
-        api_token = ctx.env.get("PHYNE_CRM_PROBE_TOKEN")
+        base_url = ctx.env.get("PHYND_CRM_API_URL")
+        api_token = ctx.env.get("PHYND_CRM_PROBE_TOKEN")
         if not base_url or not api_token:
             return StageResult(
                 name=self.name,
                 status=StageStatus.SKIPPED,
                 duration_ms=(time.perf_counter() - t0) * 1000.0,
-                detail="PHYNE_CRM_API_URL or PHYNE_CRM_PROBE_TOKEN not set",
+                detail="PHYND_CRM_API_URL or PHYND_CRM_PROBE_TOKEN not set",
             )
 
         lead_id = ctx.state.get("lead_id")
@@ -38,7 +38,7 @@ class PhyneAttributionStep(ProbeStep):
                 detail="lead_id or dhanam_billing_id missing from prior stages",
             )
 
-        timeout_s = float(ctx.env.get("PHYNE_ATTRIBUTION_POLL_TIMEOUT_S", "20"))
+        timeout_s = float(ctx.env.get("PHYND_ATTRIBUTION_POLL_TIMEOUT_S", "20"))
         deadline = time.perf_counter() + timeout_s
         url = (
             f"{base_url.rstrip('/')}/v1/probe/attribution?lead_id={lead_id}&billing_id={billing_id}"

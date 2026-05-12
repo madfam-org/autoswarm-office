@@ -26,13 +26,13 @@ from .steps import (
     DhanamBillingStep,
     DraftStep,
     EmailSendStep,
-    PhyneAttributionStep,
+    PhyndAttributionStep,
     StripeWebhookStep,
 )
 
 KNOWN_ENV_KEYS = (
-    "PHYNE_CRM_API_URL",
-    "PHYNE_CRM_PROBE_TOKEN",
+    "PHYND_CRM_API_URL",
+    "PHYND_CRM_PROBE_TOKEN",
     "NEXUS_API_URL",
     "NEXUS_PROBE_TOKEN",
     "DHANAM_STRIPE_WEBHOOK_URL",
@@ -40,7 +40,7 @@ KNOWN_ENV_KEYS = (
     "DHANAM_API_URL",
     "DHANAM_PROBE_TOKEN",
     "DHANAM_BILLING_POLL_TIMEOUT_S",
-    "PHYNE_ATTRIBUTION_POLL_TIMEOUT_S",
+    "PHYND_ATTRIBUTION_POLL_TIMEOUT_S",
     "PROBE_PAYMENT_AMOUNT_MXN_CENTS",
 )
 
@@ -52,7 +52,7 @@ def default_pipeline():
         EmailSendStep(),
         StripeWebhookStep(),
         DhanamBillingStep(),
-        PhyneAttributionStep(),
+        PhyndAttributionStep(),
     ]
 
 

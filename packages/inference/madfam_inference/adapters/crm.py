@@ -7,12 +7,12 @@ import logging
 import httpx
 
 from .crm_types import (
-    PhyneActivity,
-    PhyneContact,
-    PhyneDashboard,
-    PhyneLead,
-    PhyneLeadScore,
-    PhyneUnifiedProfile,
+    PhyndActivity,
+    PhyndContact,
+    PhyndDashboard,
+    PhyndLead,
+    PhyndLeadScore,
+    PhyndUnifiedProfile,
 )
 
 logger = logging.getLogger(__name__)
@@ -72,30 +72,30 @@ class PhyndCRMAdapter:
 
     # -- Contact operations ---------------------------------------------------
 
-    async def list_contacts(self) -> list[PhyneContact]:
+    async def list_contacts(self) -> list[PhyndContact]:
         data = await self._get("contacts.list")
         if isinstance(data, list):
-            return [PhyneContact(**c) for c in data]
+            return [PhyndContact(**c) for c in data]
         return []
 
-    async def get_contact(self, contact_id: str) -> PhyneContact:
+    async def get_contact(self, contact_id: str) -> PhyndContact:
         data = await self._get("contacts.getById", {"id": contact_id})
-        return PhyneContact(**data)
+        return PhyndContact(**data)
 
     # -- Lead operations ------------------------------------------------------
 
-    async def list_leads(self, status: str | None = None) -> list[PhyneLead]:
+    async def list_leads(self, status: str | None = None) -> list[PhyndLead]:
         input_data = {}
         if status:
             input_data["status"] = status
         data = await self._get("leads.list", input_data or None)
         if isinstance(data, list):
-            return [PhyneLead(**item) for item in data]
+            return [PhyndLead(**item) for item in data]
         return []
 
-    async def move_lead_stage(self, lead_id: str, stage_id: str) -> PhyneLead:
+    async def move_lead_stage(self, lead_id: str, stage_id: str) -> PhyndLead:
         data = await self._mutate("leads.moveToStage", {"id": lead_id, "stageId": stage_id})
-        return PhyneLead(**data)
+        return PhyndLead(**data)
 
     # -- Activity operations --------------------------------------------------
 
@@ -107,7 +107,7 @@ class PhyndCRMAdapter:
         description: str = "",
         entity_type: str = "",
         entity_id: str = "",
-    ) -> PhyneActivity:
+    ) -> PhyndActivity:
         data = await self._mutate(
             "activities.create",
             {
@@ -118,35 +118,35 @@ class PhyndCRMAdapter:
                 "entityId": entity_id,
             },
         )
-        return PhyneActivity(**data)
+        return PhyndActivity(**data)
 
-    async def complete_activity(self, activity_id: str) -> PhyneActivity:
+    async def complete_activity(self, activity_id: str) -> PhyndActivity:
         data = await self._mutate("activities.complete", {"id": activity_id})
-        return PhyneActivity(**data)
+        return PhyndActivity(**data)
 
-    async def list_activities(self, entity_type: str, entity_id: str) -> list[PhyneActivity]:
+    async def list_activities(self, entity_type: str, entity_id: str) -> list[PhyndActivity]:
         data = await self._get(
             "activities.listForEntity",
             {"type": entity_type, "id": entity_id},
         )
         if isinstance(data, list):
-            return [PhyneActivity(**a) for a in data]
+            return [PhyndActivity(**a) for a in data]
         return []
 
     # -- Unified profile ------------------------------------------------------
 
-    async def get_unified_profile(self, contact_id: str) -> PhyneUnifiedProfile:
+    async def get_unified_profile(self, contact_id: str) -> PhyndUnifiedProfile:
         data = await self._get("unifiedProfile.getProfile", {"contactId": contact_id})
-        return PhyneUnifiedProfile(**data)
+        return PhyndUnifiedProfile(**data)
 
     # -- Lead scoring ---------------------------------------------------------
 
-    async def compute_lead_score(self, lead_id: str) -> PhyneLeadScore:
+    async def compute_lead_score(self, lead_id: str) -> PhyndLeadScore:
         data = await self._get("leadScoring.compute", {"leadId": lead_id})
-        return PhyneLeadScore(**data)
+        return PhyndLeadScore(**data)
 
     # -- Dashboard ------------------------------------------------------------
 
-    async def get_dashboard(self) -> PhyneDashboard:
+    async def get_dashboard(self) -> PhyndDashboard:
         data = await self._get("analytics.dashboardSummary")
-        return PhyneDashboard(**data)
+        return PhyndDashboard(**data)

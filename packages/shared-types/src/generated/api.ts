@@ -3616,7 +3616,7 @@ export interface paths {
          *     4. If playbook found and enabled → dispatch SwarmTask with playbook_id
          *     5. If no playbook → acknowledge but don't dispatch
          */
-        post: operations["phyne_crm_webhook_api_v1_gateway_phyne_crm_post"];
+        post: operations["phynd_crm_webhook_api_v1_gateway_phynd_crm_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6296,7 +6296,7 @@ export interface components {
             janua_org_id?: string | null;
             /** Dhanam Space Id */
             dhanam_space_id?: string | null;
-            /** Phynecrm Tenant Id */
+            /** Phyndcrm Tenant Id */
             phyndcrm_tenant_id?: string | null;
             /** Karafiel Org Id */
             karafiel_org_id?: string | null;
@@ -6339,7 +6339,7 @@ export interface components {
             /** Dhanam Space Id */
             dhanam_space_id?: string | null;
             /** Phynd Tenant Id */
-            phyne_tenant_id?: string | null;
+            phynd_tenant_id?: string | null;
             /** Cfdi Enabled */
             cfdi_enabled: boolean;
             /** Intelligence Enabled */
@@ -6831,7 +6831,7 @@ export interface components {
             janua_org_id: string | null;
             /** Dhanam Space Id */
             dhanam_space_id: string | null;
-            /** Phynecrm Tenant Id */
+            /** Phyndcrm Tenant Id */
             phyndcrm_tenant_id: string | null;
             /** Karafiel Org Id */
             karafiel_org_id: string | null;
@@ -12267,7 +12267,7 @@ export interface operations {
             };
         };
     };
-    phyne_crm_webhook_api_v1_gateway_phyne_crm_post: {
+    phynd_crm_webhook_api_v1_gateway_phynd_crm_post: {
         parameters: {
             query?: never;
             header?: never;

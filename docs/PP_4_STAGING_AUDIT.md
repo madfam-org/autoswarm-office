@@ -166,7 +166,7 @@ operator actions, in order:
      --from-literal=RESEND_API_KEY='<staging-resend-key>' \
      --from-literal=WORKER_API_TOKEN='<rand-64>' \
      --from-literal=colyseus-secret='<rand-32>' \
-     --from-literal=PHYNE_CRM_TOKEN='<staging-phynd-token>' \
+     --from-literal=PHYND_CRM_TOKEN='<staging-phynd-token>' \
      --from-literal=ENCLII_API_TOKEN='<staging-enclii-token>'
    kubectl create secret generic autoswarm-staging-llm-secrets -n autoswarm-staging \
      --from-literal=ANTHROPIC_API_KEY='<staging-anthropic-key>' \

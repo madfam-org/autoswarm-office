@@ -52,13 +52,13 @@ def _verify_signature(payload: bytes, signature: str, secret: str) -> bool:
 def _webhook_secret(settings: Any) -> str:
     """Return the configured PhyndCRM webhook secret, if any.
 
-    ``phyne_crm_webhook_secret`` is intentionally resolved with an env
+    ``phynd_crm_webhook_secret`` is intentionally resolved with an env
     fallback because older Settings classes did not declare the field, but
-    production operators may already provide PHYNE_CRM_WEBHOOK_SECRET.
+    production operators may already provide PHYND_CRM_WEBHOOK_SECRET.
     """
     return (
-        getattr(settings, "phyne_crm_webhook_secret", "")
-        or os.getenv("PHYNE_CRM_WEBHOOK_SECRET", "")
+        getattr(settings, "phynd_crm_webhook_secret", "")
+        or os.getenv("PHYND_CRM_WEBHOOK_SECRET", "")
     )
 
 
@@ -81,7 +81,7 @@ def _idempotency_key(request: Request, payload: dict[str, Any], event_type: str)
 
 
 @router.post("")
-async def phyne_crm_webhook(request: Request):
+async def phynd_crm_webhook(request: Request):
     """Receive webhook events from PhyndCRM and auto-dispatch agent tasks.
 
     Flow:

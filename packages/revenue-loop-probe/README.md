@@ -81,8 +81,8 @@ without `X-Probe-Correlation-Id`. They are safe to expose publicly because:
 pip install -e packages/revenue-loop-probe
 
 # Populate env (see packages/revenue-loop-probe/.env.example)
-export PHYNE_CRM_API_URL=https://crm.madfam.io
-export PHYNE_CRM_PROBE_TOKEN=...
+export PHYND_CRM_API_URL=https://crm.madfam.io
+export PHYND_CRM_PROBE_TOKEN=...
 # ... etc ...
 
 revenue-loop-probe                # dry-run, all stages
@@ -94,7 +94,7 @@ revenue-loop-probe --live         # requires typed LIVE confirmation
 
 ```bash
 kubectl create secret generic revenue-loop-probe-tokens -n autoswarm \
-  --from-literal=PHYNE_CRM_PROBE_TOKEN=... \
+  --from-literal=PHYND_CRM_PROBE_TOKEN=... \
   --from-literal=NEXUS_PROBE_TOKEN=... \
   --from-literal=DHANAM_STRIPE_WEBHOOK_SECRET=... \
   --from-literal=DHANAM_PROBE_TOKEN=...

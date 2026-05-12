@@ -72,7 +72,7 @@ spec:
                 secretKeyRef:
                   name: autoswarm-secrets
                   key: secret-key
-            - name: PHYNE_CRM_URL
+            - name: PHYND_CRM_URL
               value: http://phynd-crm-web.phynd-crm.svc.cluster.local
             - name: RESEND_API_KEY
               valueFrom:

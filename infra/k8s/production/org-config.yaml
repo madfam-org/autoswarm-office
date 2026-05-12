@@ -162,7 +162,7 @@ data:
       phyndcrm:
         provider: phyndcrm
         service_type: crm
-        api_key_env: PHYNE_CRM_FEDERATION_TOKEN
+        api_key_env: PHYND_CRM_FEDERATION_TOKEN
         plan: self_hosted
         plan_details: "Self-hosted PhyndCRM on K3s. Federation token auth."
         payment_method: none

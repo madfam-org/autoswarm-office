@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     database_url: str | None = None
 
     # -- Phynd-CRM ------------------------------------------------------------
-    phyne_crm_url: str | None = None
-    phyne_crm_token: str | None = None
+    phynd_crm_url: str | None = None
+    phynd_crm_token: str | None = None
 
     # -- Search ---------------------------------------------------------------
     search_api_key: str | None = None

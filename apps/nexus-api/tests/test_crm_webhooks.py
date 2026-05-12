@@ -103,7 +103,7 @@ class TestCRMWebhookSignature:
             "nexus_api.routers.crm_webhooks.get_settings",
         ) as mock_settings:
             settings_obj = MagicMock()
-            settings_obj.phyne_crm_webhook_secret = "test-secret-123"
+            settings_obj.phynd_crm_webhook_secret = "test-secret-123"
             settings_obj.redis_url = "redis://localhost:6379"
             mock_settings.return_value = settings_obj
 
@@ -127,7 +127,7 @@ class TestCRMWebhookSignature:
             "nexus_api.routers.crm_webhooks.get_settings",
         ) as mock_settings:
             settings_obj = MagicMock()
-            settings_obj.phyne_crm_webhook_secret = secret
+            settings_obj.phynd_crm_webhook_secret = secret
             settings_obj.redis_url = "redis://localhost:6379"
             mock_settings.return_value = settings_obj
 

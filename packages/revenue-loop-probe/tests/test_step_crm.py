@@ -1,7 +1,7 @@
 """Tests for CrmHotLeadStep.
 
 This stage is representative: the other five probe steps
-(drafter, email_send, stripe_webhook, dhanam_billing, phyne_attribution)
+(drafter, email_send, stripe_webhook, dhanam_billing, phynd_attribution)
 follow the same pattern — a POST or GET with bearer auth, JSON response
 interpretation, skip-when-env-missing, fail-closed on HTTP >= 400.
 
@@ -19,7 +19,7 @@ from revenue_loop_probe.probe import ProbeContext, StageStatus
 from revenue_loop_probe.steps import CrmHotLeadStep
 
 
-PHYNE_URL = "https://phynd.example"
+PHYND_URL = "https://phynd.example"
 
 
 def _ctx(env: dict[str, str] | None = None) -> ProbeContext:
@@ -32,7 +32,7 @@ def _ctx(env: dict[str, str] | None = None) -> ProbeContext:
 
 @pytest.mark.asyncio
 async def test_skips_when_env_missing():
-    ctx = _ctx({})  # no PHYNE_CRM_API_URL / TOKEN set
+    ctx = _ctx({})  # no PHYND_CRM_API_URL / TOKEN set
     res = await CrmHotLeadStep().run(ctx)
     try:
         assert res.status is StageStatus.SKIPPED
@@ -43,7 +43,7 @@ async def test_skips_when_env_missing():
 
 @pytest.mark.asyncio
 async def test_skips_when_only_one_env_set():
-    ctx = _ctx({"PHYNE_CRM_API_URL": PHYNE_URL})  # TOKEN missing
+    ctx = _ctx({"PHYND_CRM_API_URL": PHYND_URL})  # TOKEN missing
     res = await CrmHotLeadStep().run(ctx)
     try:
         assert res.status is StageStatus.SKIPPED
@@ -54,12 +54,12 @@ async def test_skips_when_only_one_env_set():
 @pytest.mark.asyncio
 async def test_passes_on_2xx_and_threads_lead_id():
     env = {
-        "PHYNE_CRM_API_URL": PHYNE_URL,
-        "PHYNE_CRM_PROBE_TOKEN": "probe-token-abc",
+        "PHYND_CRM_API_URL": PHYND_URL,
+        "PHYND_CRM_PROBE_TOKEN": "probe-token-abc",
     }
     ctx = _ctx(env)
     try:
-        with respx.mock(base_url=PHYNE_URL) as mock:
+        with respx.mock(base_url=PHYND_URL) as mock:
             route = mock.post("/v1/probe/leads").respond(
                 json={"lead_id": "lead_42", "echo": "ok"}, status_code=200
             )
@@ -84,12 +84,12 @@ async def test_accepts_id_as_alias_for_lead_id():
     # Some CRM dialects return `id` instead of `lead_id`; the step must
     # accept either so we don't false-fail.
     env = {
-        "PHYNE_CRM_API_URL": PHYNE_URL,
-        "PHYNE_CRM_PROBE_TOKEN": "tok",
+        "PHYND_CRM_API_URL": PHYND_URL,
+        "PHYND_CRM_PROBE_TOKEN": "tok",
     }
     ctx = _ctx(env)
     try:
-        with respx.mock(base_url=PHYNE_URL) as mock:
+        with respx.mock(base_url=PHYND_URL) as mock:
             mock.post("/v1/probe/leads").respond(json={"id": "lead_99"}, status_code=201)
             res = await CrmHotLeadStep().run(ctx)
         assert res.status is StageStatus.PASSED
@@ -101,12 +101,12 @@ async def test_accepts_id_as_alias_for_lead_id():
 @pytest.mark.asyncio
 async def test_fails_on_4xx():
     env = {
-        "PHYNE_CRM_API_URL": PHYNE_URL,
-        "PHYNE_CRM_PROBE_TOKEN": "tok",
+        "PHYND_CRM_API_URL": PHYND_URL,
+        "PHYND_CRM_PROBE_TOKEN": "tok",
     }
     ctx = _ctx(env)
     try:
-        with respx.mock(base_url=PHYNE_URL) as mock:
+        with respx.mock(base_url=PHYND_URL) as mock:
             mock.post("/v1/probe/leads").respond(json={"error": "unauthorized"}, status_code=403)
             res = await CrmHotLeadStep().run(ctx)
         assert res.status is StageStatus.FAILED
@@ -118,12 +118,12 @@ async def test_fails_on_4xx():
 @pytest.mark.asyncio
 async def test_fails_when_response_missing_lead_id():
     env = {
-        "PHYNE_CRM_API_URL": PHYNE_URL,
-        "PHYNE_CRM_PROBE_TOKEN": "tok",
+        "PHYND_CRM_API_URL": PHYND_URL,
+        "PHYND_CRM_PROBE_TOKEN": "tok",
     }
     ctx = _ctx(env)
     try:
-        with respx.mock(base_url=PHYNE_URL) as mock:
+        with respx.mock(base_url=PHYND_URL) as mock:
             mock.post("/v1/probe/leads").respond(json={"echo": "ok"}, status_code=200)
             res = await CrmHotLeadStep().run(ctx)
         assert res.status is StageStatus.FAILED
@@ -135,12 +135,12 @@ async def test_fails_when_response_missing_lead_id():
 @pytest.mark.asyncio
 async def test_fails_on_network_exception():
     env = {
-        "PHYNE_CRM_API_URL": PHYNE_URL,
-        "PHYNE_CRM_PROBE_TOKEN": "tok",
+        "PHYND_CRM_API_URL": PHYND_URL,
+        "PHYND_CRM_PROBE_TOKEN": "tok",
     }
     ctx = _ctx(env)
     try:
-        with respx.mock(base_url=PHYNE_URL) as mock:
+        with respx.mock(base_url=PHYND_URL) as mock:
             mock.post("/v1/probe/leads").mock(side_effect=httpx.ConnectError("boom"))
             res = await CrmHotLeadStep().run(ctx)
         assert res.status is StageStatus.FAILED

@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -162,7 +163,7 @@ class RunDFMAnalysisTool(BaseTool):
 
 
 class GenerateQuoteTool(BaseTool):
-    """Generate a fabrication quote from model specs and pricing intelligence."""
+    """Generate a fabrication quote using the Yantra/Cotiza quote contract."""
 
     name = "generate_quote"
     description = (
@@ -174,7 +175,31 @@ class GenerateQuoteTool(BaseTool):
         return {
             "type": "object",
             "properties": {
-                "model_id": {"type": "string", "description": "Model ID from Yantra4D"},
+                "project_slug": {
+                    "type": "string",
+                    "description": (
+                        "Yantra4D project slug. When provided, Selva requests the "
+                        "quote through Yantra4D's project endpoint."
+                    ),
+                },
+                "geometry": {
+                    "type": "object",
+                    "description": (
+                        "Structured geometry data required by Cotiza when no "
+                        "project_slug is available."
+                    ),
+                },
+                "project": {
+                    "type": "object",
+                    "description": (
+                        "Structured project metadata required by Cotiza when no "
+                        "project_slug is available."
+                    ),
+                },
+                "model_id": {
+                    "type": "string",
+                    "description": "Optional Yantra4D model ID for traceability",
+                },
                 "material": {"type": "string", "default": "PLA"},
                 "quantity": {"type": "integer", "default": 1, "description": "Number of units"},
                 "process": {"type": "string", "default": "fdm"},
@@ -183,35 +208,125 @@ class GenerateQuoteTool(BaseTool):
                     "enum": ["standard", "express", "rush"],
                     "default": "standard",
                 },
+                "finish": {"type": "string", "default": "standard"},
+                "currency": {"type": "string", "default": "MXN"},
+                "notes": {"type": "string", "default": ""},
+                "require_market_verified": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Require Cotiza/Forgesight market-verified pricing.",
+                },
             },
-            "required": ["model_id"],
+            "required": [],
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
-        api_url = COTIZA_API_URL or YANTRA4D_API_URL
-        if not api_url:
-            return ToolResult(success=False, error="No quoting service configured")
+        project_slug = str(kwargs.get("project_slug") or "").strip()
+        require_market_verified = bool(kwargs.get("require_market_verified", True))
+
+        quote_context = {
+            "material": kwargs.get("material", "PLA"),
+            "quantity": kwargs.get("quantity", 1),
+            "process": kwargs.get("process", "fdm"),
+            "priority": kwargs.get("priority", "standard"),
+            "finish": kwargs.get("finish", "standard"),
+            "currency": kwargs.get("currency", "MXN"),
+            "notes": kwargs.get("notes", ""),
+            "require_market_verified": require_market_verified,
+        }
+        if kwargs.get("model_id"):
+            quote_context["model_id"] = kwargs["model_id"]
+
+        if project_slug:
+            if not YANTRA4D_API_URL:
+                return ToolResult(success=False, error="YANTRA4D_API_URL not configured")
+            api_url = YANTRA4D_API_URL.rstrip("/")
+            endpoint = f"{api_url}/api/projects/{quote(project_slug, safe='')}/cotiza-quote-request"
+            payload = quote_context
+        else:
+            if not COTIZA_API_URL:
+                return ToolResult(success=False, error="COTIZA_API_URL not configured")
+            geometry = kwargs.get("geometry")
+            project = kwargs.get("project")
+            if not isinstance(geometry, dict) or not geometry:
+                return ToolResult(
+                    success=False,
+                    error="geometry is required for Cotiza quote requests without project_slug",
+                )
+            if not isinstance(project, dict) or not project:
+                return ToolResult(
+                    success=False,
+                    error="project is required for Cotiza quote requests without project_slug",
+                )
+            api_url = COTIZA_API_URL.rstrip("/")
+            endpoint = f"{api_url}/api/v1/quotes/from-yantra4d"
+            process_map = {
+                "fdm": "3d_fff",
+                "fff": "3d_fff",
+                "3d_fff": "3d_fff",
+                "sla": "3d_sla",
+                "3d_sla": "3d_sla",
+                "cnc": "cnc_3axis",
+                "cnc_3axis": "cnc_3axis",
+                "laser": "laser_2d",
+                "laser_2d": "laser_2d",
+            }
+            raw_process = str(kwargs.get("process", "fdm")).lower()
+            cotiza_process = process_map.get(raw_process, "3d_fff")
+            project_name = str(project.get("name") or project.get("slug") or "Yantra4D project")
+            payload = {
+                "source": "yantra4d",
+                "project": project,
+                "geometry": geometry,
+                "item": {
+                    "name": project_name,
+                    "process": cotiza_process,
+                    "material": quote_context["material"],
+                    "quantity": quote_context["quantity"],
+                    "finish": quote_context["finish"],
+                    "options": {
+                        "priority": quote_context["priority"],
+                        "require_market_verified": require_market_verified,
+                    },
+                },
+                "currency": quote_context["currency"],
+                "notes": quote_context["notes"],
+                "require_market_verified": require_market_verified,
+            }
 
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.post(
-                    f"{api_url}/api/v1/quotes/generate",
-                    json={
-                        "model_id": kwargs.get("model_id", ""),
-                        "material": kwargs.get("material", "PLA"),
-                        "quantity": kwargs.get("quantity", 1),
-                        "process": kwargs.get("process", "fdm"),
-                        "priority": kwargs.get("priority", "standard"),
-                    },
+                    endpoint,
+                    json=payload,
                 )
                 resp.raise_for_status()
                 data = resp.json()
 
-            price = data.get("total_price", data.get("price", 0))
+            price = data.get("totalPrice", data.get("total_price", data.get("total")))
             currency = data.get("currency", "MXN")
+            quote_id = data.get("quoteId", data.get("quote_id", data.get("id", "pending")))
+            market_verified = bool(
+                data.get("market_verified")
+                or (data.get("market_context") or {}).get("market_verified")
+                or (data.get("cotiza_quote") or {}).get("market_verified")
+            )
+            if require_market_verified and not market_verified:
+                return ToolResult(
+                    success=False,
+                    error="Quote was created/submitted but is not market verified",
+                    data=data,
+                )
+            if price is None:
+                output = f"Quote request submitted: {quote_id}"
+            else:
+                output = (
+                    f"Quote generated: {currency} ${float(price):.2f} "
+                    f"for {kwargs.get('quantity', 1)} unit(s)"
+                )
             return ToolResult(
                 success=True,
-                output=f"Quote generated: {currency} ${price:.2f} for {kwargs.get('quantity', 1)} unit(s)",  # noqa: E501
+                output=output,
                 data=data,
             )
         except httpx.HTTPError as exc:

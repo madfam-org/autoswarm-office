@@ -1,5 +1,13 @@
 # Harness Integration — Operations Runbook
 
+> [!IMPORTANT]
+> MADFAM-ENCLII-FIRST-LEGACY-RAW v1: This document contains legacy raw infrastructure command examples.
+> Routine production operations must use Enclii web, API, or CLI. Treat raw
+> `kubectl`, `helm`, SSH, provider CLI/API, `docker exec`, and direct container
+> access as platform bootstrap or documented break-glass only, and record any
+> missing Enclii adapter gap.
+
+
 This document is the **single source of truth** for all remaining operational steps required to bring both phases of the Harness Agent parity integration into production. All code changes are already merged to `main` — what follows is exclusively infrastructure provisioning, secret management, and platform registration.
 
 > [!IMPORTANT]

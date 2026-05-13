@@ -1,5 +1,13 @@
 # Selva Tool + Skill 100% Coverage Plan
 
+> [!IMPORTANT]
+> MADFAM-ENCLII-FIRST-LEGACY-RAW v1: This document contains legacy raw infrastructure command examples.
+> Routine production operations must use Enclii web, API, or CLI. Treat raw
+> `kubectl`, `helm`, SSH, provider CLI/API, `docker exec`, and direct container
+> access as platform bootstrap or documented break-glass only, and record any
+> missing Enclii adapter gap.
+
+
 > **Status: shipped 2026-04-18.** All six phases landed as PRs #50–#57
 > on `main`. Registry now has ~65 tool modules / ~258 tool classes /
 > 26 skills. Follow-up admin/tenant audience split shipped as PRs

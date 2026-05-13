@@ -1,5 +1,13 @@
 # ArgoCD Integration for AutoSwarm Office
 
+> [!IMPORTANT]
+> MADFAM-ENCLII-FIRST-LEGACY-RAW v1: This document contains legacy raw infrastructure command examples.
+> Routine production operations must use Enclii web, API, or CLI. Treat raw
+> `kubectl`, `helm`, SSH, provider CLI/API, `docker exec`, and direct container
+> access as platform bootstrap or documented break-glass only, and record any
+> missing Enclii adapter gap.
+
+
 ## Enclii App-of-Apps Pattern
 
 This directory contains the ArgoCD configuration for AutoSwarm Office.

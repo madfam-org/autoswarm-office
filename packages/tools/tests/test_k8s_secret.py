@@ -311,7 +311,9 @@ async def test_unknown_namespace_rejected(
     [
         ("madfam-dev", "autoswarm", "applied", "allow"),
         ("madfam-staging", "karafiel-staging", "pending_approval", "ask"),
+        ("madfam-staging", "forgesight-staging", "pending_approval", "ask"),
         ("madfam-prod", "karafiel", "pending_approval", "ask_dual"),
+        ("madfam-prod", "forgesight", "pending_approval", "ask_dual"),
     ],
 )
 async def test_hitl_gate_per_env(

@@ -178,7 +178,38 @@ class TestJanua:
             assert r.success is True
             assert r.data["client_id"] == "cid-1"
             assert r.data["client_secret"] == "sec-xxx"
-            assert r.data["jwks_uri"].endswith("/.well-known/jwks.json")
+
+    @pytest.mark.asyncio
+    async def test_oauth_client_create_machine_client_without_redirect_uri(self) -> None:
+        mock_request = AsyncMock(
+            return_value=(
+                201,
+                {
+                    "name": "madfam-ecosystem-probe",
+                    "client_id": "cid-1",
+                    "client_secret": "sec-xxx",
+                },
+            )
+        )
+        with (
+            patch("selva_tools.builtins.janua_admin.JANUA_INTERNAL_API_KEY", "internal"),
+            patch("selva_tools.builtins.janua_admin.JANUA_ADMIN_TOKEN", ""),
+            patch("selva_tools.builtins.janua_admin._request", new=mock_request),
+        ):
+            r = await JanuaOauthClientCreateTool().execute(
+                name="madfam-ecosystem-probe",
+                grant_types=["client_credentials"],
+                scopes=["openid", "yantra4d:quote", "cotiza:quote", "forgesight:read"],
+                organization_id="org-123",
+            )
+
+        assert r.success is True
+        _, kwargs = mock_request.call_args
+        assert kwargs["internal"] is True
+        assert kwargs["json_body"]["redirect_uris"] == []
+        assert kwargs["json_body"]["grant_types"] == ["client_credentials"]
+        assert kwargs["json_body"]["organization_id"] == "org-123"
+        assert r.data["jwks_uri"].endswith("/.well-known/jwks.json")
 
     @pytest.mark.asyncio
     async def test_rotate_returns_new_secret(self) -> None:

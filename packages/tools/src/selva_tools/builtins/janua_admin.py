@@ -104,7 +104,10 @@ class JanuaOauthClientCreateTool(BaseTool):
                 "redirect_uris": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Allowed post-auth redirect URIs.",
+                    "description": (
+                        "Allowed post-auth redirect URIs. Optional for "
+                        "client_credentials-only machine clients."
+                    ),
                 },
                 "grant_types": {
                     "type": "array",
@@ -146,7 +149,7 @@ class JanuaOauthClientCreateTool(BaseTool):
                     "description": "Optional — scope the client to a specific Janua org.",
                 },
             },
-            "required": ["name", "redirect_uris"],
+            "required": ["name"],
         }
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -156,7 +159,7 @@ class JanuaOauthClientCreateTool(BaseTool):
         payload = {
             "name": kwargs["name"],
             "description": kwargs.get("description") or "",
-            "redirect_uris": kwargs["redirect_uris"],
+            "redirect_uris": kwargs.get("redirect_uris") or [],
             "grant_types": kwargs.get("grant_types", ["authorization_code", "refresh_token"]),
             "allowed_scopes": kwargs.get("scopes", ["openid", "profile", "email"]),
             "client_key": kwargs.get("client_key") or kwargs["name"],

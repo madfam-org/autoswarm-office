@@ -966,6 +966,8 @@ Key environment variables referenced in this runbook. Secrets are stored in the
 | `ENCLII_WEBHOOK_SECRET` | nexus-api | Bearer token for verifying Enclii deployment webhooks |
 | `ENCLII_API_URL` | workers | Base URL of the Enclii deployment API |
 | `ENCLII_DEPLOY_TOKEN` | workers | Bearer token for authenticating with Enclii deploy API |
+| `PORKBUN_API_KEY` | workers | Porkbun registrar API key used by Selva DNS tools for domain inventory and nameserver operations |
+| `PORKBUN_SECRET_KEY` | workers | Porkbun registrar secret key paired with `PORKBUN_API_KEY`; stored only in `autoswarm-secrets` |
 | `ENVIRONMENT` | all | `development` / `production` |
 
 ---

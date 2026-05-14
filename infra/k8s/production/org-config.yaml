@@ -202,6 +202,22 @@ data:
         status: active
         notes: "All ecosystem domains managed via Cloudflare DNS + Tunnel."
 
+      porkbun:
+        provider: porkbun
+        service_type: registrar
+        api_key_env: PORKBUN_API_KEY
+        secret_key_env: PORKBUN_SECRET_KEY
+        plan: registrar_account
+        plan_details: "MADFAM registrar account for domain inventory, nameserver delegation, DNS fallback, and renewal checks."
+        payment_method: credit_card
+        capacity:
+          domains: 45
+          nameserver_updates: enabled
+          dns_records: enabled
+        consumption_tracking: false
+        status: active
+        notes: "Selva DNS tools require both PORKBUN_API_KEY and PORKBUN_SECRET_KEY from autoswarm-secrets. Routine registrar operations should go through Enclii when the Porkbun provider adapter is wired; direct API use is break-glass."
+
       enclii:
         provider: enclii
         service_type: devops

@@ -40,6 +40,7 @@ and never rotated."
 - **Janua JWT signing keys** — rotate via the Janua repo's own key-rotation procedure
 - **GitHub PAT (`GITHUB_TOKEN`)** — rotate via GitHub
 - **Cloudflare tunnel tokens** — rotate via Cloudflare Zero Trust dashboard
+- **Porkbun API credentials (`PORKBUN_API_KEY`, `PORKBUN_SECRET_KEY`)** — rotate via Porkbun account API keys, then update `autoswarm-secrets`
 
 If any of those are compromised, follow the vendor's procedure AND
 rotate them in `autoswarm-secrets` so the K8s pods see the new values.

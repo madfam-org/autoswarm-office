@@ -125,6 +125,18 @@ spec:
                   name: autoswarm-secrets
                   key: ENCLII_API_TOKEN
                   optional: true
+            - name: PORKBUN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-secrets
+                  key: PORKBUN_API_KEY
+                  optional: true
+            - name: PORKBUN_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-secrets
+                  key: PORKBUN_SECRET_KEY
+                  optional: true
             - name: YANTRA4D_API_URL
               value: "https://api.yantra4d.com"
             - name: COTIZA_API_URL

@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.15"
 resolution-markers = [
     "python_full_version >= '3.14'",
     "python_full_version == '3.13.*'",
@@ -3142,6 +3142,7 @@ dependencies = [
     { name = "httpx" },
     { name = "kubernetes" },
     { name = "pydantic" },
+    { name = "urllib3" },
 ]
 
 [package.optional-dependencies]
@@ -3168,6 +3169,7 @@ requires-dist = [
     { name = "mastodon-py", marker = "extra == 'mastodon'", specifier = ">=1.8,<3" },
     { name = "praw", marker = "extra == 'reddit'", specifier = ">=7.7,<8" },
     { name = "pydantic", specifier = ">=2.10.5" },
+    { name = "urllib3", specifier = ">=2.7.0" },
 ]
 provides-extras = ["mcp", "reddit", "mastodon", "bluesky"]
 

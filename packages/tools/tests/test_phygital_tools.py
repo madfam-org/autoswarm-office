@@ -23,8 +23,11 @@ class _RecordingClient:
     async def __aexit__(self, *exc: object) -> None:
         return None
 
-    async def post(self, url: str, json: dict[str, Any]) -> httpx.Response:
-        self.calls.append({"url": url, "json": json})
+    async def post(self, url: str, json: dict[str, Any], **kwargs: Any) -> httpx.Response:
+        call = {"url": url, "json": json}
+        if kwargs.get("headers") is not None:
+            call["headers"] = kwargs["headers"]
+        self.calls.append(call)
         request = httpx.Request("POST", url)
         return httpx.Response(
             200,
@@ -39,8 +42,10 @@ class _RecordingClient:
 
 
 @pytest.fixture(autouse=True)
-def _reset_client() -> None:
+def _reset_client(monkeypatch: pytest.MonkeyPatch) -> None:
     _RecordingClient.calls = []
+    monkeypatch.setattr(phygital_tools, "YANTRA4D_API_TOKEN", "")
+    monkeypatch.setattr(phygital_tools, "COTIZA_API_TOKEN", "")
 
 
 class TestGenerateQuoteTool:
@@ -76,6 +81,22 @@ class TestGenerateQuoteTool:
             }
         ]
         assert "0.00" not in result.output
+
+    @pytest.mark.asyncio
+    async def test_project_slug_sends_yantra_service_token(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(phygital_tools, "YANTRA4D_API_URL", "https://yantra.test")
+        monkeypatch.setattr(phygital_tools, "YANTRA4D_API_TOKEN", "yantra-service-token")
+        monkeypatch.setattr(phygital_tools.httpx, "AsyncClient", _RecordingClient)
+
+        result = await GenerateQuoteTool().execute(project_slug="tablaco")
+
+        assert result.success
+        assert _RecordingClient.calls[0]["headers"] == {
+            "Authorization": "Bearer yantra-service-token",
+            "X-Service-Actor": "selva-agent",
+        }
 
     @pytest.mark.asyncio
     async def test_without_project_slug_uses_cotiza_structured_payload(
@@ -124,6 +145,29 @@ class TestGenerateQuoteTool:
                 },
             }
         ]
+
+    @pytest.mark.asyncio
+    async def test_without_project_slug_sends_cotiza_service_token(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(phygital_tools, "COTIZA_API_URL", "https://cotiza.test")
+        monkeypatch.setattr(phygital_tools, "COTIZA_API_TOKEN", "cotiza-service-token")
+        monkeypatch.setattr(phygital_tools.httpx, "AsyncClient", _RecordingClient)
+
+        result = await GenerateQuoteTool().execute(
+            geometry={
+                "volume_cm3": 1.2,
+                "surface_area_cm2": 6.0,
+                "bounding_box_mm": {"x": 10, "y": 20, "z": 30},
+            },
+            project={"name": "Bracket", "units": "mm"},
+        )
+
+        assert result.success
+        assert _RecordingClient.calls[0]["headers"] == {
+            "Authorization": "Bearer cotiza-service-token",
+            "X-Service-Actor": "selva-agent",
+        }
 
     @pytest.mark.asyncio
     async def test_cotiza_requires_structured_geometry_and_project(

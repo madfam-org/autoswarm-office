@@ -26,6 +26,28 @@ logger = logging.getLogger(__name__)
 YANTRA4D_API_URL = os.environ.get("YANTRA4D_API_URL", "")
 PRAVARA_MES_API_URL = os.environ.get("PRAVARA_MES_API_URL", "")
 COTIZA_API_URL = os.environ.get("COTIZA_API_URL", "")
+YANTRA4D_API_TOKEN = (
+    os.environ.get("YANTRA4D_API_TOKEN")
+    or os.environ.get("SELVA_YANTRA4D_SERVICE_TOKEN")
+    or os.environ.get("SELVA_SERVICE_TOKEN")
+    or ""
+)
+COTIZA_API_TOKEN = (
+    os.environ.get("COTIZA_API_TOKEN")
+    or os.environ.get("SELVA_COTIZA_SERVICE_TOKEN")
+    or os.environ.get("SELVA_SERVICE_TOKEN")
+    or ""
+)
+
+
+def _service_auth_headers(token: str) -> dict[str, str]:
+    token = str(token or "").strip()
+    if not token:
+        return {}
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Service-Actor": "selva-agent",
+    }
 
 
 class GenerateParametricModelTool(BaseTool):
@@ -296,9 +318,15 @@ class GenerateQuoteTool(BaseTool):
 
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
+                request_kwargs: dict[str, Any] = {"json": payload}
+                headers = _service_auth_headers(
+                    YANTRA4D_API_TOKEN if project_slug else COTIZA_API_TOKEN
+                )
+                if headers:
+                    request_kwargs["headers"] = headers
                 resp = await client.post(
                     endpoint,
-                    json=payload,
+                    **request_kwargs,
                 )
                 resp.raise_for_status()
                 data = resp.json()

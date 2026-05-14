@@ -17,7 +17,7 @@ class _RecordingClient:
     def __init__(self, timeout: float) -> None:
         self.timeout = timeout
 
-    async def __aenter__(self) -> "_RecordingClient":
+    async def __aenter__(self) -> _RecordingClient:
         return self
 
     async def __aexit__(self, *exc: object) -> None:

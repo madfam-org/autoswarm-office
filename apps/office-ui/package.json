@@ -20,9 +20,9 @@
     "js-yaml": "^4.1.1",
     "next": "^15.5.18",
     "phaser": "^3.87.0",
-    "posthog-js": "^1.372.8",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "posthog-js": "^1.373.4",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "simple-peer": "^9.11.1",
     "zustand": "^4.5.7"
   },

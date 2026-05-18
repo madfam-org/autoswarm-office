@@ -35,8 +35,9 @@ commonLabels:
 # (Kyverno fail-closed mutable-tag policy). Each deployment manifest
 # (admin.yaml, colyseus.yaml, gateway.yaml, nexus-api.yaml, office-ui.yaml)
 # still references `:latest` inline; kustomize rewrites these to
-# digest-pinned references at build time. Workers is already pinned
-# inline in workers.yaml (sha256:5f6ad2ed…) and is excluded here.
+# digest-pinned references at build time. Workers is pinned inline in
+# workers.yaml and is also listed here so digest automation can update
+# the rebranded `selva-workers` image.
 #
 # Digests sourced from the most recent successful Build job logs in
 # `.github/workflows/deploy.yml` runs (the `pushing manifest for
@@ -55,7 +56,7 @@ commonLabels:
 images:
   - name: ghcr.io/madfam-org/autoswarm-nexus-api
     newName: ghcr.io/madfam-org/autoswarm-nexus-api
-    digest: sha256:e5d85ec5eb800ce70eaa491a8ddd86c9450418e80d3873a34e20d556f93ab754
+    digest: sha256:a51ae16616e0ad833696c3c1b0bbb01c7553833815bd88daf2b1b5421b93cece
   - name: ghcr.io/madfam-org/autoswarm-office-ui
     newName: ghcr.io/madfam-org/autoswarm-office-ui
     digest: sha256:57e77bac2ab49d84427afe101feb64c7841bb2a902680ec7b690e94a695a4acb
@@ -68,3 +69,6 @@ images:
   - name: ghcr.io/madfam-org/autoswarm-gateway
     newName: ghcr.io/madfam-org/autoswarm-gateway
     digest: sha256:7815f1accd169e765bb4c663ff686aca9a4f73ce2584dd3d420a8a2773b4d06a
+  - name: ghcr.io/madfam-org/selva-workers
+    newName: ghcr.io/madfam-org/selva-workers
+    digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b

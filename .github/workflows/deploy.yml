@@ -237,7 +237,7 @@ jobs:
               IMAGE="${entry##*:}"
 
               # Get the digest from the build job - use crane to fetch latest digest
-              DIGEST=$(docker buildx imagetools inspect "${{ env.REGISTRY }}/${IMAGE}:${GITHUB_SHA::7}" --format '{{.Digest}}' 2>/dev/null || true)
+              DIGEST=$(docker buildx imagetools inspect "${{ env.REGISTRY }}/${IMAGE}:${GITHUB_SHA::7}" --format '{{.Manifest.Digest}}' 2>/dev/null || true)
               if [ -n "$DIGEST" ]; then
                 kustomize edit set image "${{ env.REGISTRY }}/${IMAGE}=${{ env.REGISTRY }}/${IMAGE}@${DIGEST}"
                 CHANGED=true

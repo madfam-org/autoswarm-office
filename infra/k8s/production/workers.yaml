@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: workers
-          image: ghcr.io/madfam-org/autoswarm-workers@sha256:5f6ad2edab2b68db1ae092e4dace37930172a32936ffd0aec3e32baa4a4afd79
+          image: ghcr.io/madfam-org/selva-workers@sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b
           resources:
             requests:
               cpu: 100m

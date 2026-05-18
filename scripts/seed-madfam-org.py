@@ -20,6 +20,7 @@ import httpx
 
 API_URL = os.environ.get("AUTOSWARM_API_URL", "https://api.selva.town")
 TOKEN = os.environ.get("AUTOSWARM_TOKEN", "dev-bypass")
+ORG_ID = os.environ.get("AUTOSWARM_ORG_ID", "madfam")
 
 # ─── Departments ──────────────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ AGENTS = [
         "level": 10,
         "department_slug": "executive",
         "node_id": "executive",
-        "skill_ids": ["strategic-planning", "research", "product-catalog"],
+        "skill_ids": ["strategic-planning", "research", "product-catalog", "vault-break-glass"],
     },
     {
         "name": "Centinela",
@@ -91,6 +92,7 @@ AGENTS = [
             "research",
             "doc-coauthoring",
             "product-catalog",
+            "incident-triage",
         ],
     },
     # ═══ BUILD NODE ═══
@@ -100,7 +102,13 @@ AGENTS = [
         "level": 7,
         "department_slug": "build-engine",
         "node_id": "build",
-        "skill_ids": ["strategic-planning", "doc-coauthoring", "webapp-testing", "research"],
+        "skill_ids": [
+            "strategic-planning",
+            "doc-coauthoring",
+            "webapp-testing",
+            "research",
+            "staging-refresh",
+        ],
     },
     {
         "name": "Códice",
@@ -108,7 +116,14 @@ AGENTS = [
         "level": 9,
         "department_slug": "build-engine",
         "node_id": "build",
-        "skill_ids": ["coding", "code-review", "research", "webapp-testing", "doc-coauthoring"],
+        "skill_ids": [
+            "coding",
+            "code-review",
+            "research",
+            "webapp-testing",
+            "doc-coauthoring",
+            "cluster-triage",
+        ],
     },
     # ═══ GROWTH NODE (The Catalyst) ═══
     {
@@ -134,7 +149,15 @@ AGENTS = [
         "level": 10,
         "department_slug": "executive",
         "node_id": "orchestration",
-        "skill_ids": ["strategic-planning", "coding", "code-review", "research", "mcp-builder"],
+        "skill_ids": [
+            "strategic-planning",
+            "coding",
+            "code-review",
+            "research",
+            "mcp-builder",
+            "vault-break-glass",
+            "incident-triage",
+        ],
     },
     {
         "name": "Vigía",
@@ -149,6 +172,8 @@ AGENTS = [
             "research",
             "operations",
             "infrastructure-monitoring",
+            "cluster-triage",
+            "vault-break-glass",
         ],
     },
     # ═══ LEDGER NODE ═══
@@ -173,7 +198,11 @@ AGENTS = [
 
 
 def api(method: str, path: str, data: dict | None = None) -> dict | list | None:
-    headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {TOKEN}",
+        "Content-Type": "application/json",
+        "X-Selva-Tenant-Org": ORG_ID,
+    }
     url = f"{API_URL}{path}"
     try:
         if method == "GET":
@@ -200,7 +229,12 @@ def api(method: str, path: str, data: dict | None = None) -> dict | list | None:
 def seed_departments() -> dict[str, str]:
     """Create departments, return slug→id mapping."""
     print("\n═══ Departments ═══")
-    existing = api("GET", "/api/v1/departments/") or []
+    existing_response = api("GET", "/api/v1/departments/") or []
+    existing = (
+        existing_response.get("items", [])
+        if isinstance(existing_response, dict)
+        else existing_response
+    )
     slug_to_id: dict[str, str] = {}
 
     for dept in existing:
@@ -221,14 +255,37 @@ def seed_departments() -> dict[str, str]:
 
 
 def seed_agents(dept_map: dict[str, str]) -> None:
-    """Create agents in their departments."""
+    """Create or reconcile agents in their departments."""
     print("\n═══ Agents ═══")
-    existing = api("GET", "/api/v1/agents/") or []
-    existing_names = {a["name"] for a in existing}
+    existing_response = api("GET", "/api/v1/agents/") or []
+    existing_agents = (
+        existing_response.get("items", [])
+        if isinstance(existing_response, dict)
+        else existing_response
+    )
+    existing_by_name = {a["name"]: a for a in existing_agents}
 
     for agent_def in AGENTS:
-        if agent_def["name"] in existing_names:
-            print(f"  ✓  {agent_def['name']} (exists)")
+        existing_agent = existing_by_name.get(agent_def["name"])
+        if existing_agent is not None:
+            current_skills = existing_agent.get("skill_ids") or []
+            desired_skills = agent_def["skill_ids"]
+            if current_skills == desired_skills:
+                print(f"  ✓  {agent_def['name']} (exists)")
+                continue
+
+            payload = {
+                "role": agent_def["role"],
+                "level": agent_def["level"],
+                "skill_ids": desired_skills,
+            }
+            result = api("PUT", f"/api/v1/agents/{existing_agent['id']}", payload)
+            if result:
+                added = sorted(set(desired_skills) - set(current_skills))
+                suffix = f" +{', '.join(added)}" if added else ""
+                print(f"  ↻  {agent_def['name']} skills reconciled{suffix}")
+            else:
+                print(f"  ✗  Failed to update {agent_def['name']}")
             continue
 
         dept_id = dept_map.get(agent_def["department_slug"])
@@ -259,14 +316,17 @@ def main():
     parser = argparse.ArgumentParser(description="Seed MADFAM org structure")
     parser.add_argument("--api-url", default=API_URL)
     parser.add_argument("--token", default=TOKEN)
+    parser.add_argument("--org-id", default=ORG_ID)
     args = parser.parse_args()
 
     # Override module-level config from CLI args
     globals()["API_URL"] = args.api_url
     globals()["TOKEN"] = args.token
+    globals()["ORG_ID"] = args.org_id
 
     print(f"🏛  Seeding MADFAM organization at {args.api_url}")
-    print(f"   Token: {'***' + args.token[-4:] if len(args.token) > 8 else '(dev)'}")
+    print(f"   Org: {args.org_id}")
+    print(f"   Token: {'provided' if args.token else 'missing'}")
 
     # Health check
     health = api("GET", "/api/v1/health/health")

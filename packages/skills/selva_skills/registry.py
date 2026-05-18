@@ -207,17 +207,26 @@ class SkillRegistry:
         """Return DEFAULT_ROLE_SKILLS[role], or empty list for unknown roles."""
         return list(DEFAULT_ROLE_SKILLS.get(role, []))
 
-    def build_system_prompt(self, skill_names: list[str], locale: str = "en") -> str:
+    def build_system_prompt(
+        self,
+        skill_names: list[str],
+        locale: str = "en",
+        *,
+        audience: SkillAudience | None = None,
+    ) -> str:
         """Activate each skill, concatenate instructions with headers.
 
         When *locale* is not ``"en"``, the registry looks for a locale-specific
         ``SKILL.{locale}.md`` file alongside the canonical ``SKILL.md``.  If
         found, its body replaces the default English instructions.
+
+        If *audience* is provided, platform-audience skills are omitted for
+        tenant callers by the same activation guard used elsewhere.
         """
         sections: list[str] = []
         for name in skill_names:
             try:
-                defn = self.activate(name)
+                defn = self.activate(name, audience=audience)
                 locale_body = self._load_locale_body(name, locale)
                 body = locale_body or defn.instructions
                 sections.append(f"## Skill: {defn.meta.name}\n\n{body}")

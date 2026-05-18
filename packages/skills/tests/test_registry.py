@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from selva_skills import SkillAudience
 from selva_skills.defaults import DEFAULT_ROLE_SKILLS
 from selva_skills.registry import SkillRegistry
 
@@ -77,6 +78,37 @@ def test_build_system_prompt_skips_unknown(registry: SkillRegistry) -> None:
     prompt = registry.build_system_prompt(["coding", "nonexistent"])
     assert "## Skill: coding" in prompt
     assert "nonexistent" not in prompt
+
+
+def test_build_system_prompt_applies_audience_guard(
+    registry: SkillRegistry,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUDIENCE_FILTER_ENABLED", "true")
+
+    prompt = registry.build_system_prompt(
+        ["coding", "vault-break-glass"],
+        audience=SkillAudience.TENANT,
+    )
+
+    assert "## Skill: coding" in prompt
+    assert "## Skill: vault-break-glass" not in prompt
+    assert "Vault Break-Glass Skill" not in prompt
+
+
+def test_build_system_prompt_allows_platform_skill_for_platform_audience(
+    registry: SkillRegistry,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUDIENCE_FILTER_ENABLED", "true")
+
+    prompt = registry.build_system_prompt(
+        ["vault-break-glass"],
+        audience=SkillAudience.PLATFORM,
+    )
+
+    assert "## Skill: vault-break-glass" in prompt
+    assert "Vault Break-Glass Skill" in prompt
 
 
 def test_get_skills_for_role_defaults(registry: SkillRegistry) -> None:

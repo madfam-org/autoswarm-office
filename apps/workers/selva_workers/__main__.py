@@ -329,15 +329,25 @@ async def process_task(task_data: dict) -> None:
     # below uses the same value.
     payload_for_audience = task_data.get("payload", {}) or {}
     task_org_id = task_data.get("org_id") or payload_for_audience.get("org_id") or ""
+
+    # Resolve the audience before loading skills so platform-only instructions
+    # cannot be injected into tenant task prompts by a bad DB row or stale
+    # assignment. Tool execution is separately guarded by selva_tools.
+    task_audience = ToolAudience(resolve_audience(task_org_id).value)
+
     try:
         skill_ids = await _fetch_agent_skills(
             settings.nexus_api_url, agent_id, org_id=task_org_id or None
         )
         if skill_ids:
-            from selva_skills import get_skill_registry
+            from selva_skills import SkillAudience, get_skill_registry
 
             registry = get_skill_registry()
-            agent_system_prompt = registry.build_system_prompt(skill_ids, locale=locale)
+            agent_system_prompt = registry.build_system_prompt(
+                skill_ids,
+                locale=locale,
+                audience=SkillAudience(task_audience.value),
+            )
             logger.info(
                 "Built skill prompt for agent %s with skills: %s (locale=%s)",
                 agent_id,
@@ -351,14 +361,6 @@ async def process_task(task_data: dict) -> None:
     workflow_variables = task_data.get("payload", {}).get("variables", {}) or {}
     if locale != "en" and "locale" not in workflow_variables:
         workflow_variables["locale"] = locale
-
-    # Resolve swarm audience from the (already-derived) task_org_id.
-    # Platform org (per PLATFORM_ORG_ID env) gets Audience.PLATFORM and
-    # can see all tools + platform skills; every other tenant gets
-    # Audience.TENANT and only sees the filtered registry. We cast the
-    # selva_permissions enum to the selva_tools enum so
-    # ``enforce_audience()`` in the tool layer matches by identity.
-    task_audience = ToolAudience(resolve_audience(task_org_id).value)
 
     initial_state: dict = {
         "messages": [],

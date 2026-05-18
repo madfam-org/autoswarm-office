@@ -36,6 +36,7 @@ PLATFORM_SKILLS: frozenset[str] = frozenset(
         "tenant-onboarding",
         "skill-creator",
         "mcp-builder",
+        "vault-break-glass",
     }
 )
 

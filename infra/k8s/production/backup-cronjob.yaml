@@ -76,7 +76,14 @@ spec:
 
                   echo "[backup] Starting PostgreSQL backup at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-                  pg_dump "${DATABASE_URL}" \
+                  PG_DUMP_URL="${DATABASE_URL}"
+                  case "${PG_DUMP_URL}" in
+                    postgresql+asyncpg://*)
+                      PG_DUMP_URL="postgresql://${PG_DUMP_URL#postgresql+asyncpg://}"
+                      ;;
+                  esac
+
+                  pg_dump "${PG_DUMP_URL}" \
                     --format=custom \
                     --compress=9 \
                     --no-owner \

@@ -76,15 +76,17 @@ spec:
 
                   echo "[backup] Starting PostgreSQL backup at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-                  PG_DUMP_URL="${DATABASE_URL}"
-                  case "${PG_DUMP_URL}" in
-                    postgresql+asyncpg://*)
-                      PG_DUMP_URL="postgresql://${PG_DUMP_URL#postgresql+asyncpg://}"
-                      ;;
-                  esac
-                  PG_DUMP_URL=$(printf '%s' "${PG_DUMP_URL}" | sed 's/@pgbouncer\.data\.svc\.cluster\.local:6432\//@postgres.data.svc.cluster.local:5432\//')
+                  PG_DUMP_DB=$(printf '%s' "${DATABASE_URL}" | sed -E 's|^[^/]*//[^/]*/([^?]*).*|\1|')
+                  if [ -z "${PG_DUMP_DB}" ] || [ "${PG_DUMP_DB}" = "${DATABASE_URL}" ]; then
+                    echo "[backup] ERROR: Could not derive database name from DATABASE_URL"
+                    exit 1
+                  fi
 
-                  pg_dump "${PG_DUMP_URL}" \
+                  PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
+                    --host=postgres.data.svc.cluster.local \
+                    --port=5432 \
+                    --username="${POSTGRES_USER}" \
+                    --dbname="${PG_DUMP_DB}" \
                     --format=custom \
                     --compress=9 \
                     --no-owner \
@@ -126,6 +128,16 @@ spec:
                     secretKeyRef:
                       name: autoswarm-secrets
                       key: database-url
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-backup-credentials
+                      key: username
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-backup-credentials
+                      key: password
                 - name: S3_BUCKET
                   valueFrom:
                     configMapKeyRef:
@@ -144,3 +156,30 @@ spec:
             - name: tmp
               emptyDir:
                 sizeLimit: 100Mi
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: postgres-backup-credentials
+  namespace: autoswarm
+  labels:
+    app.kubernetes.io/name: postgres-backup
+    app.kubernetes.io/component: backup
+spec:
+  refreshInterval: 15m
+  secretStoreRef:
+    name: data-kubernetes-store
+    kind: ClusterSecretStore
+  target:
+    name: postgres-backup-credentials
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - secretKey: username
+      remoteRef:
+        key: postgres-credentials
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: postgres-credentials
+        property: password

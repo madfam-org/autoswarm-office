@@ -35,6 +35,7 @@ COPY --from=builder --chown=appuser:nodejs /app/apps/colyseus/dist ./dist
 COPY --from=builder --chown=appuser:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:nodejs /app/apps/colyseus/node_modules ./apps/colyseus/node_modules
 COPY --from=builder /app/apps/colyseus/package.json ./package.json
+COPY --from=builder --chown=appuser:nodejs /app/packages/shared-types ./packages/shared-types
 COPY --from=builder --chown=appuser:nodejs /app/packages/config ./packages/config
 
 ENV NODE_ENV=production

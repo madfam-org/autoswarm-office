@@ -3,33 +3,33 @@ kind: Kustomization
 
 namespace: autoswarm
 
-resources:
-  - configmap.yaml
-  - org-config.yaml
-  - service-account.yaml
-  - nexus-api.yaml
-  - office-ui.yaml
-  - colyseus.yaml
-  - admin.yaml
-  - admin-external-secret.yaml
-  - gateway.yaml
-  - workers.yaml
-  - service-monitors.yaml
-  - pdb.yaml
-  - hpa.yaml
-  - backup-cronjob.yaml
-  - keda-scaledobject.yaml
-  - keda-trigger-auth.yaml
   # RFC 0005 Sprint 1a — dedicated SA in the `autoswarm` namespace.
   # The per-target-namespace Roles + RoleBindings live in
   # selva-secret-writer-rolebinding.yaml and are applied OUTSIDE this
   # kustomize bundle (kustomize's namespace: autoswarm would rewrite
   # them incorrectly). See that file's header for the ops procedure.
-  - selva-secret-writer-sa.yaml
+resources:
+- configmap.yaml
+- org-config.yaml
+- service-account.yaml
+- nexus-api.yaml
+- office-ui.yaml
+- colyseus.yaml
+- admin.yaml
+- admin-external-secret.yaml
+- gateway.yaml
+- workers.yaml
+- service-monitors.yaml
+- pdb.yaml
+- hpa.yaml
+- backup-cronjob.yaml
+- keda-scaledobject.yaml
+- keda-trigger-auth.yaml
+- selva-secret-writer-sa.yaml
 
 commonLabels:
-  app.kubernetes.io/part-of: autoswarm-office
   app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: autoswarm-office
 
 # Image digest pins per RFC 0017 + 2026-05-03 ecosystem-health audit
 # (Kyverno fail-closed mutable-tag policy). Each deployment manifest
@@ -54,21 +54,21 @@ commonLabels:
 # observed in a ready production ReplicaSet after the newer audit-derived
 # digest failed to pull.
 images:
-  - name: ghcr.io/madfam-org/autoswarm-nexus-api
-    newName: ghcr.io/madfam-org/autoswarm-nexus-api
-    digest: sha256:a51ae16616e0ad833696c3c1b0bbb01c7553833815bd88daf2b1b5421b93cece
-  - name: ghcr.io/madfam-org/autoswarm-office-ui
-    newName: ghcr.io/madfam-org/autoswarm-office-ui
-    digest: sha256:57e77bac2ab49d84427afe101feb64c7841bb2a902680ec7b690e94a695a4acb
-  - name: ghcr.io/madfam-org/autoswarm-colyseus
-    newName: ghcr.io/madfam-org/autoswarm-colyseus
-    digest: sha256:14675b3ec8a414ebbca5c28332caaf37c6c0936cea3b94bd91aba30d391e6e5e
-  - name: ghcr.io/madfam-org/autoswarm-admin
-    newName: ghcr.io/madfam-org/autoswarm-admin
-    digest: sha256:f1898f32fa197c3e68253a723a907477ff209c1c99490a04b2a8886846a66920
-  - name: ghcr.io/madfam-org/autoswarm-gateway
-    newName: ghcr.io/madfam-org/autoswarm-gateway
-    digest: sha256:7815f1accd169e765bb4c663ff686aca9a4f73ce2584dd3d420a8a2773b4d06a
-  - name: ghcr.io/madfam-org/selva-workers
-    newName: ghcr.io/madfam-org/selva-workers
-    digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b
+- digest: sha256:f1898f32fa197c3e68253a723a907477ff209c1c99490a04b2a8886846a66920
+  name: ghcr.io/madfam-org/autoswarm-admin
+  newName: ghcr.io/madfam-org/autoswarm-admin
+- digest: sha256:14675b3ec8a414ebbca5c28332caaf37c6c0936cea3b94bd91aba30d391e6e5e
+  name: ghcr.io/madfam-org/autoswarm-colyseus
+  newName: ghcr.io/madfam-org/autoswarm-colyseus
+- digest: sha256:7815f1accd169e765bb4c663ff686aca9a4f73ce2584dd3d420a8a2773b4d06a
+  name: ghcr.io/madfam-org/autoswarm-gateway
+  newName: ghcr.io/madfam-org/autoswarm-gateway
+- digest: sha256:428bb1257b8a6ac855e81636a67288f415985ba81e10d0fcc488c3de7f1920cd
+  name: ghcr.io/madfam-org/autoswarm-nexus-api
+  newName: ghcr.io/madfam-org/autoswarm-nexus-api
+- digest: sha256:57e77bac2ab49d84427afe101feb64c7841bb2a902680ec7b690e94a695a4acb
+  name: ghcr.io/madfam-org/autoswarm-office-ui
+  newName: ghcr.io/madfam-org/autoswarm-office-ui
+- digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b
+  name: ghcr.io/madfam-org/selva-workers
+  newName: ghcr.io/madfam-org/selva-workers

@@ -162,7 +162,7 @@ export interface paths {
          * @description Verify the append-only invariant on `consent_ledger` is enforced at the DB level.
          *
          *     Migration 0018 REVOKEs UPDATE/DELETE on `consent_ledger` from the
-         *     application role (default ``autoswarm_app``). This endpoint exposes
+         *     application role (default ``autoswarm``). This endpoint exposes
          *     a runtime check so a re-applied migration, manual ``GRANT ALL``, or
          *     a superuser-mode test seed that silently re-mutates the grants will
          *     surface in monitoring.

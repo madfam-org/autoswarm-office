@@ -57,7 +57,7 @@ images:
 - digest: sha256:ab47c38503a6595776d54fbbc9f08a386c99625da80e0fcbf7ebda3175fa2fd4
   name: ghcr.io/madfam-org/autoswarm-admin
   newName: ghcr.io/madfam-org/autoswarm-admin
-- digest: sha256:14675b3ec8a414ebbca5c28332caaf37c6c0936cea3b94bd91aba30d391e6e5e
+- digest: sha256:833c7dd7e5582ea26a0fe9aa26ddb017659cc242fd369bc271fe3b297d2a0226
   name: ghcr.io/madfam-org/autoswarm-colyseus
   newName: ghcr.io/madfam-org/autoswarm-colyseus
 - digest: sha256:cb5831642fae7c69e3b1563f9808b320bc6252ed2894cc5d6fb2abcca344db08

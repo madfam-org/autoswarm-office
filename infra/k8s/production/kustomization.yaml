@@ -54,19 +54,19 @@ commonLabels:
 # observed in a ready production ReplicaSet after the newer audit-derived
 # digest failed to pull.
 images:
-- digest: sha256:ab47c38503a6595776d54fbbc9f08a386c99625da80e0fcbf7ebda3175fa2fd4
+- digest: sha256:af6d32c645a84993c5a2d3fec10fdf39985c4e6e642d90768d481fcbec649b3c
   name: ghcr.io/madfam-org/autoswarm-admin
   newName: ghcr.io/madfam-org/autoswarm-admin
-- digest: sha256:833c7dd7e5582ea26a0fe9aa26ddb017659cc242fd369bc271fe3b297d2a0226
+- digest: sha256:d7df985d46de94b421f6ba4bafc91fb9588dac963838988e60da73f8de2c950a
   name: ghcr.io/madfam-org/autoswarm-colyseus
   newName: ghcr.io/madfam-org/autoswarm-colyseus
-- digest: sha256:cb5831642fae7c69e3b1563f9808b320bc6252ed2894cc5d6fb2abcca344db08
+- digest: sha256:a43de7222d3f652d8011dbf8f082f659a84c9d6e2207c62ad007ce692ca79264
   name: ghcr.io/madfam-org/autoswarm-gateway
   newName: ghcr.io/madfam-org/autoswarm-gateway
 - digest: sha256:428bb1257b8a6ac855e81636a67288f415985ba81e10d0fcc488c3de7f1920cd
   name: ghcr.io/madfam-org/autoswarm-nexus-api
   newName: ghcr.io/madfam-org/autoswarm-nexus-api
-- digest: sha256:6b07213ace0bf0f9774a67981700f7e11dcb32fc5f57110004f731eff5e69c31
+- digest: sha256:f7da1bca69192ddb7b5bf1448293d866124f547d1b2c4f39e3d0265f1a143316
   name: ghcr.io/madfam-org/autoswarm-office-ui
   newName: ghcr.io/madfam-org/autoswarm-office-ui
 - digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b

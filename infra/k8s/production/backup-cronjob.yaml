@@ -82,6 +82,7 @@ spec:
                       PG_DUMP_URL="postgresql://${PG_DUMP_URL#postgresql+asyncpg://}"
                       ;;
                   esac
+                  PG_DUMP_URL=$(printf '%s' "${PG_DUMP_URL}" | sed 's/@pgbouncer\.data\.svc\.cluster\.local:6432\//@postgres.data.svc.cluster.local:5432\//')
 
                   pg_dump "${PG_DUMP_URL}" \
                     --format=custom \

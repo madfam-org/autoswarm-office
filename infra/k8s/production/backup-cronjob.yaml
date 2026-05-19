@@ -40,7 +40,7 @@ spec:
             app.kubernetes.io/part-of: autoswarm-office
             app.kubernetes.io/component: backup
         spec:
-          restartPolicy: OnFailure
+          restartPolicy: Never
           serviceAccountName: autoswarm-sa
           securityContext:
             runAsNonRoot: true

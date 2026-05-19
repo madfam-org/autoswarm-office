@@ -82,6 +82,21 @@ spec:
                     exit 1
                   fi
 
+                  PG_READY_ATTEMPT=1
+                  until pg_isready \
+                    --host=postgres.data.svc.cluster.local \
+                    --port=5432 \
+                    --username="${POSTGRES_USER}" \
+                    --dbname="${PG_DUMP_DB}" >/dev/null 2>&1; do
+                    if [ "${PG_READY_ATTEMPT}" -ge 12 ]; then
+                      echo "[backup] ERROR: PostgreSQL was not ready after ${PG_READY_ATTEMPT} attempts"
+                      exit 1
+                    fi
+                    echo "[backup] Waiting for PostgreSQL readiness (${PG_READY_ATTEMPT}/12)"
+                    PG_READY_ATTEMPT=$((PG_READY_ATTEMPT + 1))
+                    sleep 5
+                  done
+
                   PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
                     --host=postgres.data.svc.cluster.local \
                     --port=5432 \

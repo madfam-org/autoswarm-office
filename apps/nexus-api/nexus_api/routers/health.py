@@ -26,7 +26,7 @@ _settings = get_settings()
 # enforce the append-only invariant. Migration 0018 REVOKEs UPDATE/DELETE
 # from this role. Configurable via env in case a deployment uses a
 # different app role name.
-_CONSENT_LEDGER_APP_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE", "autoswarm_app")
+_CONSENT_LEDGER_APP_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE", "autoswarm")
 
 
 @router.get("/health")
@@ -233,7 +233,7 @@ async def consent_ledger_grants(
     """Verify the append-only invariant on `consent_ledger` is enforced at the DB level.
 
     Migration 0018 REVOKEs UPDATE/DELETE on `consent_ledger` from the
-    application role (default ``autoswarm_app``). This endpoint exposes
+    application role (default ``autoswarm``). This endpoint exposes
     a runtime check so a re-applied migration, manual ``GRANT ALL``, or
     a superuser-mode test seed that silently re-mutates the grants will
     surface in monitoring.

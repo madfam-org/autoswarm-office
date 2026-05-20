@@ -21,6 +21,9 @@ metadata:
     app.kubernetes.io/part-of: autoswarm-office
     autoswarm.dev/project: autoswarm
     autoswarm.dev/environment: staging
+  annotations:
+    enclii.dev/stability-audit: gated
+    enclii.dev/stability-gate-reason: "operator registration is deferred until staging secrets and smoke targets are provisioned"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

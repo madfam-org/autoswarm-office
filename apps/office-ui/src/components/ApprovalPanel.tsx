@@ -8,6 +8,7 @@ import { EVENT_CHAT_FOCUS } from '@/lib/constants';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useToast } from '@/hooks/useToast';
 import { DiffViewer } from './DiffViewer';
+import { PricingProposalDetails } from './PricingProposalDetails';
 import { extractAffectedFiles, splitDiffByFile } from '@/lib/diffPaths';
 import { timeAgo } from '@/lib/format-time';
 
@@ -21,6 +22,7 @@ const ACTION_TAGS: Record<ActionCategory, string> = {
   crm_update: '[CRM]',
   deploy: '[D]',
   api_call: '[API]',
+  pricing_proposal: '[$]',
 };
 
 const URGENCY_ORDER: Record<string, number> = {
@@ -265,6 +267,9 @@ export const ApprovalPanel: FC<ApprovalPanelProps> = ({
                   {/* Expanded details */}
                   {isExpanded && (
                     <div className="px-3 pb-3 space-y-2">
+                      {request.actionCategory === 'pricing_proposal' ? (
+                        <PricingProposalDetails request={request} />
+                      ) : null}
                       <div className="border-l-2 border-indigo-500 bg-slate-800/50 p-3">
                         <p className="font-mono text-[9px] text-slate-300 whitespace-pre-wrap">
                           {request.reasoning}

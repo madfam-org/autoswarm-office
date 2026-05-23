@@ -38,4 +38,5 @@ DEFAULT_PERMISSION_MATRIX: dict[ActionCategory, PermissionLevel] = {
     # ASK_DUAL in prod for create/delete. Read-only *.list operations
     # override to ALLOW at the call site.
     ActionCategory.WEBHOOK_MANAGEMENT: PermissionLevel.ASK,
+    ActionCategory.PRICING_PROPOSAL: PermissionLevel.ASK,
 }

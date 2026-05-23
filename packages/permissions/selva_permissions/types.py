@@ -66,6 +66,7 @@ class ActionCategory(StrEnum):
     # via K8S_SECRET_WRITE; a bad webhook destination could exfiltrate
     # payment/auth events so mutating ops are HITL-gated.
     WEBHOOK_MANAGEMENT = "webhook_management"
+    PRICING_PROPOSAL = "pricing_proposal"
 
 
 class PermissionResult(BaseModel):

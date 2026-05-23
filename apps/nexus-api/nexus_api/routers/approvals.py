@@ -341,6 +341,27 @@ async def approve_request(
         tenant_org_id=tenant.org_id,
     )
 
+    approval_row = await _get_request_or_404(request_id, db, tenant_org_id=tenant.org_id)
+    dhanam_apply: dict | None = None
+    if approval_row.action_category == "pricing_proposal":
+        from nexus_api.services.pricing_apply import (
+            apply_pricing_proposal_on_approve,
+            notify_tulana_outcome,
+        )
+
+        dhanam_apply = await apply_pricing_proposal_on_approve(
+            approval_row,
+            db,
+            responded_by=str(user.get("sub", "")),
+        )
+        await notify_tulana_outcome(
+            approval_row,
+            result="approved",
+            responded_by=str(user.get("sub", "")),
+            notes=feedback or "",
+            dhanam_apply=dhanam_apply,
+        )
+
     # PostHog analytics
     try:
         from nexus_api.analytics import track
@@ -396,6 +417,18 @@ async def deny_request(
         responded_by=user.get("sub"),
         tenant_org_id=tenant.org_id,
     )
+
+    approval_row = await _get_request_or_404(request_id, db, tenant_org_id=tenant.org_id)
+    if approval_row.action_category == "pricing_proposal":
+        from nexus_api.services.pricing_apply import notify_tulana_outcome
+
+        await notify_tulana_outcome(
+            approval_row,
+            result="denied",
+            responded_by=str(user.get("sub", "")),
+            notes=feedback or "",
+            dhanam_apply=None,
+        )
 
     # PostHog analytics
     try:

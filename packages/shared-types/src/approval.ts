@@ -14,7 +14,8 @@ export type ActionCategory =
   | 'email_send'
   | 'crm_update'
   | 'deploy'
-  | 'api_call';
+  | 'api_call'
+  | 'pricing_proposal';
 
 export interface ApprovalRequest {
   id: string;

@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # -- Billing (Dhanam) -----------------------------------------------------
     dhanam_api_url: str = ""
     dhanam_webhook_secret: str = ""
+    dhanam_catalog_apply_secret: str = ""
+
+    # -- Tulana (pricing intelligence handoff) --------------------------------
+    tulana_api_url: str = ""
+    tulana_selva_webhook_secret: str = ""
 
     # -- Gateway (GitHub webhooks) ---------------------------------------------
     github_webhook_secret: str = ""

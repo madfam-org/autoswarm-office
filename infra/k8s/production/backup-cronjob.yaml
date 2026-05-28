@@ -1,3 +1,20 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-autoswarm-backup
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "30"
+  fromBackup: ""
+  fsType: ext4
+  dataLocality: disabled
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -8,6 +25,7 @@ metadata:
     app.kubernetes.io/part-of: autoswarm-office
     app.kubernetes.io/component: backup
 spec:
+  storageClassName: longhorn-autoswarm-backup
   accessModes:
     - ReadWriteOnce
   resources:

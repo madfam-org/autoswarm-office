@@ -148,6 +148,7 @@ describe("PermissionMatrix type", () => {
       crm_update: "allow",
       deploy: "deny",
       api_call: "allow",
+      pricing_proposal: "ask",
     };
     expect(matrix.file_read).toBe("allow");
     expect(matrix.bash_execute).toBe("deny");

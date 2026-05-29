@@ -54,7 +54,7 @@ commonLabels:
 # observed in a ready production ReplicaSet after the newer audit-derived
 # digest failed to pull.
 images:
-- digest: sha256:af6d32c645a84993c5a2d3fec10fdf39985c4e6e642d90768d481fcbec649b3c
+- digest: sha256:a7ddd67c0e93d52a70bb4f44a410e4d77637febb50c0111e7a5891fa922789d7
   name: ghcr.io/madfam-org/autoswarm-admin
   newName: ghcr.io/madfam-org/autoswarm-admin
 - digest: sha256:31583edf727a518c4b235c56a497b835d20b2c99e2e474b9ba69c25f0f9ad1ac

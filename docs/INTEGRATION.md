@@ -1,7 +1,9 @@
 # MADFAM Ecosystem Integration
 
 AutoSwarm Office integrates with three sibling MADFAM platform services:
-Janua (authentication), Dhanam (billing), and Enclii (deployment).
+Janua (authentication), Dhanam (billing), and Enclii (deployment). For the
+Tulana -> Selva -> Phynd CRM SKU campaign path, see
+`docs/TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md`.
 
 ## Janua Auth Setup
 

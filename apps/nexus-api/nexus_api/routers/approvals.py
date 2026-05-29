@@ -199,8 +199,8 @@ async def _respond_to_request(
 async def list_pending_approvals(
     limit: int = Query(50, ge=1, le=200),  # noqa: B008
     offset: int = Query(0, ge=0),  # noqa: B008
-    db: AsyncSession = Depends(get_db),
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    db: AsyncSession = Depends(get_db),
 ) -> ApprovalListResponse:
     """List all pending approval requests for the caller's tenant.
 
@@ -231,8 +231,8 @@ async def list_pending_approvals(
 @router.post("/", response_model=ApprovalRequestResponse, status_code=status.HTTP_201_CREATED)
 async def create_approval_request(
     body: CreateApprovalRequest,
-    db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),
 ) -> ApprovalRequestResponse:
     """Create a new approval request.
 
@@ -290,8 +290,8 @@ async def create_approval_request(
 @router.get("/{request_id}", response_model=ApprovalRequestResponse)
 async def get_approval_request(
     request_id: str,
-    db: AsyncSession = Depends(get_db),
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    db: AsyncSession = Depends(get_db),
 ) -> ApprovalRequestResponse:
     """Retrieve a single approval request by ID. Tenant-scoped.
 

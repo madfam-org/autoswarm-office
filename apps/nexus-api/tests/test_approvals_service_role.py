@@ -14,6 +14,7 @@ These tests pin both the role gate and the org-derivation behaviour.
 
 from __future__ import annotations
 
+import inspect
 import uuid
 
 import httpx
@@ -21,6 +22,11 @@ import pytest
 
 from nexus_api.auth import get_current_user
 from nexus_api.main import app as _fastapi_app
+from nexus_api.routers.approvals import (
+    create_approval_request,
+    get_approval_request,
+    list_pending_approvals,
+)
 
 
 def _service_user(org_id: str = "dev-org") -> dict:
@@ -51,6 +57,23 @@ def _approval_payload(agent_id: str | None = None) -> dict:
         "reasoning": "test reasoning",
         "urgency": "medium",
     }
+
+
+def _param_index(callable_obj: object, name: str) -> int:
+    return list(inspect.signature(callable_obj).parameters).index(name)
+
+
+def test_approval_routes_resolve_tenant_before_db_session() -> None:
+    """RLS needs auth/tenant context set before ``get_db`` opens a session."""
+    assert _param_index(create_approval_request, "user") < _param_index(
+        create_approval_request, "db"
+    )
+    assert _param_index(list_pending_approvals, "tenant") < _param_index(
+        list_pending_approvals, "db"
+    )
+    assert _param_index(get_approval_request, "tenant") < _param_index(
+        get_approval_request, "db"
+    )
 
 
 @pytest.mark.asyncio

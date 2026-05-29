@@ -8,7 +8,7 @@ metadata:
 data:
   JANUA_ISSUER_URL: "https://auth.madfam.io"
   JANUA_CLIENT_ID: "autoswarm-office"
-  DHANAM_API_URL: "https://app.dhan.am"
+  DHANAM_API_URL: "https://api.dhan.am"
   ENVIRONMENT: "production"
   AUDIENCE_FILTER_ENABLED: "true"
   PLATFORM_ORG_ID: "madfam"

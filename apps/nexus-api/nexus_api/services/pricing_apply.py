@@ -85,10 +85,10 @@ async def apply_price_to_dhanam_catalog(
 def _interval_from_preview(preview: dict[str, Any]) -> str:
     raw = str(preview.get("interval") or "monthly").lower()
     if raw in ("month", "monthly"):
-        return "month"
+        return "monthly"
     if raw in ("year", "yearly", "annual"):
-        return "year"
-    return "month"
+        return "yearly"
+    return "monthly"
 
 
 async def apply_pricing_proposal_on_approve(

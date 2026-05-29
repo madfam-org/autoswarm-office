@@ -1,0 +1,22 @@
+# Canonical Janua OAuth redirect URIs for Selva Office (autoswarm-office client).
+# Apply with Janua admin API or janua CLI when redirect URIs drift.
+# Live production client_id: autoswarm-office (legacy string id).
+apiVersion: janua.dev/v1
+kind: OAuthClient
+metadata:
+  name: autoswarm-office
+spec:
+  description: Selva Office — admin console and Tulana pricing HITL
+  redirect_uris:
+    - https://app.selva.town/api/auth/callback/janua
+    - https://selva.town/api/auth/callback/janua
+    - https://admin.selva.town/api/auth/callback
+    - http://localhost:4301/api/auth/callback/janua
+  allowed_scopes:
+    - openid
+    - profile
+    - email
+    - roles
+  grant_types:
+    - authorization_code
+  is_confidential: false

@@ -57,16 +57,16 @@ images:
 - digest: sha256:af6d32c645a84993c5a2d3fec10fdf39985c4e6e642d90768d481fcbec649b3c
   name: ghcr.io/madfam-org/autoswarm-admin
   newName: ghcr.io/madfam-org/autoswarm-admin
-- digest: sha256:d7df985d46de94b421f6ba4bafc91fb9588dac963838988e60da73f8de2c950a
+- digest: sha256:31583edf727a518c4b235c56a497b835d20b2c99e2e474b9ba69c25f0f9ad1ac
   name: ghcr.io/madfam-org/autoswarm-colyseus
   newName: ghcr.io/madfam-org/autoswarm-colyseus
-- digest: sha256:a43de7222d3f652d8011dbf8f082f659a84c9d6e2207c62ad007ce692ca79264
+- digest: sha256:cc8e7278c98f1b6b99d1417224add0ab2fd2760c0e364ba2a74e1e6551d8c6e4
   name: ghcr.io/madfam-org/autoswarm-gateway
   newName: ghcr.io/madfam-org/autoswarm-gateway
 - digest: sha256:39e6f083b0c524e4ec22edbb090c9b022ae4e3b889c1482e20aff0ec93a5ef12
   name: ghcr.io/madfam-org/autoswarm-nexus-api
   newName: ghcr.io/madfam-org/autoswarm-nexus-api
-- digest: sha256:f7da1bca69192ddb7b5bf1448293d866124f547d1b2c4f39e3d0265f1a143316
+- digest: sha256:43fb337cf057ecf5b8aa70137b4ab0323f000b9abb671c8cfb11e966b37aff3f
   name: ghcr.io/madfam-org/autoswarm-office-ui
   newName: ghcr.io/madfam-org/autoswarm-office-ui
 - digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b

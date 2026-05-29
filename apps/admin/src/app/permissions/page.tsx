@@ -19,6 +19,11 @@ const ACTION_CATEGORIES: { key: ActionCategory; label: string; description: stri
   { key: 'crm_update', label: 'CRM Update', description: 'Modify CRM records' },
   { key: 'deploy', label: 'Deploy', description: 'Deploy to staging or production' },
   { key: 'api_call', label: 'API Call', description: 'Make external API requests' },
+  {
+    key: 'pricing_proposal',
+    label: 'Pricing Proposal',
+    description: 'Create or apply pricing proposal approvals',
+  },
 ];
 
 const PERMISSION_LEVELS: { key: PermissionLevel; label: string; color: string; activeColor: string }[] = [
@@ -52,6 +57,7 @@ const DEFAULT_MATRIX: PermissionMatrix = {
   crm_update: 'ask',
   deploy: 'deny',
   api_call: 'ask',
+  pricing_proposal: 'ask',
 };
 
 export default function PermissionsPage() {

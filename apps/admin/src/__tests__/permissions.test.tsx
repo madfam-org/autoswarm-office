@@ -12,6 +12,7 @@ const mockMatrix = {
   crm_update: 'ask',
   deploy: 'deny',
   api_call: 'ask',
+  pricing_proposal: 'ask',
 };
 
 function mockPermissionsFetch() {
@@ -75,6 +76,7 @@ describe('PermissionsPage', () => {
     expect(screen.getByText('CRM Update')).toBeInTheDocument();
     expect(screen.getByText('Deploy')).toBeInTheDocument();
     expect(screen.getByText('API Call')).toBeInTheDocument();
+    expect(screen.getByText('Pricing Proposal')).toBeInTheDocument();
   });
 
   it('renders permission level toggle buttons', async () => {
@@ -85,7 +87,7 @@ describe('PermissionsPage', () => {
       expect(screen.getByText('File Read')).toBeInTheDocument();
     });
 
-    // 9 action categories x 3 permission levels = 27 toggle buttons
+    // 10 action categories x 3 permission levels = 30 toggle buttons
     const allowButtons = screen.getAllByRole('button', { name: /Allow/i });
     const askButtons = screen.getAllByRole('button', { name: /Ask/i });
     const denyButtons = screen.getAllByRole('button', { name: /Deny/i });
@@ -101,9 +103,9 @@ describe('PermissionsPage', () => {
       (btn) => btn.getAttribute('aria-label')?.startsWith('Set'),
     );
 
-    expect(permAllows).toHaveLength(9);
-    expect(permAsks).toHaveLength(9);
-    expect(permDenys).toHaveLength(9);
+    expect(permAllows).toHaveLength(10);
+    expect(permAsks).toHaveLength(10);
+    expect(permDenys).toHaveLength(10);
   });
 
   it('shows "No changes" when matrix is unmodified', async () => {

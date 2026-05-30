@@ -157,25 +157,40 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 ### 5b. Staging campaign loop soak (Phase 2 gate)
 
-- **Status (2026-05-30)**: Campaign Dashboard live on staging after #179 deploy.
-  **Pre-check:** `./scripts/verify-campaign-path.sh --staging` must list
-  `schedule-social`, `tulana-feedback`, and `scheduled-actions` in OpenAPI.
-  If Argo sync fails (backup prune) or nexus-api stuck on missing
-  `DHANAM_WEBHOOK_SECRET`, run
-  `./scripts/reconcile-staging-argocd.sh --ensure-dhanam-secret` then re-verify.
-- **What**: On `https://staging.selva.town/office` → **Campaigns** (UI soak), or run
-  `AUTH_TOKEN=<janua-jwt> ./scripts/verify-campaign-loop.sh --staging` for the
-  API-level loop (import → schedule → HITL → CRM handoff → Tulana feedback).
-  Set `STAGING_CAMPAIGN_TEST_TOKEN` in GitHub for CI. For cron schedules, ensure
-  `POST /api/v1/schedules/` payload includes `org_id` and `platform` when
-  `action=social_post` (materializer requirement).
+- **Status (2026-05-30)**: **API loop green on staging** — `./scripts/verify-campaign-loop.sh --staging`
+  uses `WORKER_API_TOKEN` + `X-Selva-Tenant-Org: madfam` when no Janua JWT is set.
+  Import → schedule-social → HITL approve → CRM handoff all return 2xx after
+  `./scripts/run-staging-migrations.sh` (Alembic head + app-role grants).
+  **Tulana feedback** skips with 503 until Tulana ships
+  `POST /api/v1/internal/selva/buyer-signal/` on the configured
+  `TULANA_API_URL` (today `https://tulana-api.madfam.io` returns 404).
+  CI: set `STAGING_WORKER_API_TOKEN` repo secret; `staging-deploy.yml` runs
+  the loop post-smoke. Janua JWT path still works via `STAGING_CAMPAIGN_TEST_TOKEN`.
+- **What**: Optional UI soak on `https://staging.selva.town/office` → **Campaigns**.
+  Deploy Tulana buyer-signal route (Tulana team) to close the feedback leg.
 - **Why blocking**: Phase 2 program gate requires a proven Tulana → Selva → Phynd
-  → Tulana loop — engineering is shipped; this validates operator workflow.
+  → Tulana loop — Selva + Phynd legs proven; Tulana ingest route is the gap.
 - **Owner**: Operator (Janua staging login + Tulana export JSON).
 - **Unblocks**: Phase 3 phygital work; autonomy graduation for campaign lanes.
 - **Cross-refs**:
   - [docs/INTEGRATION.md](INTEGRATION.md) — campaign endpoints + UI
   - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
+  - `./scripts/run-staging-migrations.sh` — break-glass Alembic + grants on fresh DB
+
+### 3b. Deploy Tulana buyer-signal ingest route
+
+- **What**: On **Tulana** (`TULANA_API_URL`, staging uses `https://tulana-api.madfam.io`),
+  implement and deploy `POST /api/v1/internal/selva/buyer-signal/` authenticated via
+  `X-Tulana-Selva-Secret` (matches `TULANA_SELVA_WEBHOOK_SECRET` on nexus-api).
+  Accept Selva payload: `org_id`, `sku_key`, `summary`, `outcomes[]`, optional
+  `handoff_id` / `task_id` / `evidence_urls`. Return `{event_id}` on success.
+- **Why blocking**: `POST /api/v1/campaigns/tulana-feedback` is wired in Selva but
+  upstream returns 404 today — campaign PMF evidence cannot land in Tulana.
+- **Owner**: Tulana team (Selva contract in `nexus_api/services/tulana_feedback.py`).
+- **Unblocks**: Full Phase 2 Tulana ↔ Selva feedback loop; buyer-signal WTP evidence.
+- **Cross-refs**:
+  - `apps/nexus-api/nexus_api/services/tulana_feedback.py`
+  - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md) § Tests
 
 ### 6. Run backup/restore drill in staging
 

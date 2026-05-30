@@ -80,12 +80,4 @@ echo "--- verify scheduled_actions (postgres admin) ---"
 kubectl -n data exec deploy/postgres -- psql -U postgres -d autoswarm_staging -tAc \
   "SELECT COALESCE(to_regclass('public.scheduled_actions')::text, 'MISSING')"
 
-echo "--- grant autoswarm role on core tables (fresh DB bootstrap) ---"
-kubectl -n data exec deploy/postgres -- psql -U postgres -d autoswarm_staging -c "
-GRANT USAGE ON SCHEMA public TO autoswarm;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO autoswarm;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO autoswarm;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO autoswarm;
-"
-
 echo "OK   staging migrations complete"

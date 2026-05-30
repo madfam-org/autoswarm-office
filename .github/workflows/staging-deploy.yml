@@ -265,3 +265,15 @@ jobs:
         run: |
           chmod +x scripts/staging-smoke.sh
           scripts/staging-smoke.sh
+
+      - name: Campaign API loop (Phase 2 gate)
+        env:
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+          WORKER_API_TOKEN: ${{ secrets.STAGING_WORKER_API_TOKEN }}
+        run: |
+          if [[ -z "${WORKER_API_TOKEN}" ]]; then
+            echo "::notice::STAGING_WORKER_API_TOKEN unset — skipping verify-campaign-loop"
+            exit 0
+          fi
+          chmod +x scripts/verify-campaign-loop.sh
+          ./scripts/verify-campaign-loop.sh --staging

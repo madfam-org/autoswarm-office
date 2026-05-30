@@ -223,3 +223,40 @@ async def test_tulana_feedback_forwards_to_tulana(client, auth_headers) -> None:
     assert body["status"] == "accepted"
     assert body["tulana_event_id"] == "ev-99"
     mock_client.post.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_tulana_feedback_route_missing_returns_503(client, auth_headers) -> None:
+    payload = {
+        "sku_key": "avala__issuer",
+        "summary": "Outcomes pending Tulana route deploy.",
+        "outcomes": [{"metric": "verify_run", "value": 1}],
+    }
+    mock_resp = MagicMock()
+    mock_resp.status_code = 404
+    mock_resp.content = b"Not Found"
+    mock_resp.text = "Not Found"
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_resp)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch(
+            "nexus_api.services.tulana_feedback._tulana_config",
+            return_value=("https://tulana.test", "secret"),
+        ),
+        patch(
+            "nexus_api.services.tulana_feedback.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+    ):
+        response = await client.post(
+            "/api/v1/campaigns/tulana-feedback",
+            json=payload,
+            headers=auth_headers,
+        )
+
+    assert response.status_code == 503
+    assert "buyer-signal route not deployed" in response.json()["detail"]

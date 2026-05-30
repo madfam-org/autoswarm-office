@@ -66,6 +66,20 @@ async def push_tulana_buyer_signal(
             detail="Tulana buyer-signal API unreachable",
         ) from exc
 
+    if resp.status_code == 404:
+        logger.error(
+            "Tulana buyer-signal route missing status=%s url=%s",
+            resp.status_code,
+            url,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Tulana buyer-signal route not deployed "
+                "(POST /api/v1/internal/selva/buyer-signal/)"
+            ),
+        )
+
     if resp.status_code >= 400:
         logger.error(
             "Tulana buyer-signal rejected status=%s body=%s",

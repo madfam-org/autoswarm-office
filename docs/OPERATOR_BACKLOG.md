@@ -96,13 +96,12 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 ### 3. Configure Dhanam price→tier map + Selva webhook
 
-- **Status (2026-05-30)**: **Selva staging verified** —
-  `./scripts/verify-dhanam-billing-path.sh --staging` passes (Stripe blocked 503,
-  unsigned Dhanam 401, signed webhook 200 using cluster `DHANAM_WEBHOOK_SECRET`).
-  **Remaining operator work on Dhanam**: register Selva in `PRODUCT_WEBHOOK_URLS`
-  (`selva:https://staging-api.selva.town/api/v1/billing/webhooks/dhanam` on staging;
-  prod `https://api.selva.town/...`) with the **same** HMAC secret Selva holds;
-  map Stripe price IDs → `starter` / `professional` / `enterprise` in Dhanam catalog.
+- **Status (2026-05-30)**: **Selva + Dhanam staging fan-out wired** —
+  `./scripts/verify-dhanam-billing-path.sh --staging` passes; ran
+  `./scripts/reconcile-dhanam-selva-webhook.sh` to set
+  `PRODUCT_WEBHOOK_URLS=selva:https://staging-api.selva.town/api/v1/billing/webhooks/dhanam`
+  and align `DHANAM_WEBHOOK_SECRET` in `enclii-dhanam-staging`. **Remaining:** map
+  Stripe price IDs → tiers in Dhanam catalog (prod + staging checkout paths).
 - **What**: In **Dhanam** (canonical Stripe/POS router), map production
   Stripe price IDs to `starter`, `professional`, `enterprise`. Point Dhanam
   billing webhooks at Selva
@@ -166,17 +165,11 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 ### 5b. Staging campaign loop soak (Phase 2 gate)
 
-- **Status (2026-05-30)**: **API loop green on staging** — `./scripts/verify-campaign-loop.sh --staging`
-  uses `WORKER_API_TOKEN` + `X-Selva-Tenant-Org: madfam` when no Janua JWT is set.
-  Import → schedule-social → HITL approve → CRM handoff all return 2xx after
-  `./scripts/run-staging-migrations.sh` (Alembic head + app-role grants).
-  **Tulana feedback** skips with 503 until Tulana ships
-  `POST /api/v1/internal/selva/buyer-signal/` on the configured
-  `TULANA_API_URL` (today `https://tulana-api.madfam.io` returns 404).
-  CI: set `STAGING_WORKER_API_TOKEN` repo secret; `staging-deploy.yml` runs
-  the loop post-smoke. Janua JWT path still works via `STAGING_CAMPAIGN_TEST_TOKEN`.
+- **Status (2026-05-30)**: **DONE (API loop green)** —
+  `./scripts/verify-campaign-loop.sh --staging` passes end-to-end including
+  `tulana-feedback (200)` after Tulana `0161187` + cache-bust deploy
+  (`cc4d3b645469…`). Use worker auth via `STAGING_WORKER_API_TOKEN` in CI.
 - **What**: Optional UI soak on `https://staging.selva.town/office` → **Campaigns**.
-  Deploy Tulana buyer-signal route (Tulana team) to close the feedback leg.
 - **Why blocking**: Phase 2 program gate requires a proven Tulana → Selva → Phynd
   → Tulana loop — Selva + Phynd legs proven; Tulana ingest route is the gap.
 - **Owner**: Operator (Janua staging login + Tulana export JSON).
@@ -186,14 +179,11 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
   - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
   - `./scripts/reconcile-dhanam-selva-webhook.sh` — wire Dhanam `PRODUCT_WEBHOOK_URLS` → Selva staging
   - `./scripts/bootstrap-staging-observability.sh` — create `autoswarm-observability-secrets` (Tier 1)
-  - Tulana buyer-signal: merge `madfam-org/tulana@0161187` + Enclii deploy + `manage.py migrate decisions 0003`
 
-### 3b. Deploy Tulana buyer-signal ingest route
+### 3b. Deploy Tulana buyer-signal ingest route — **DONE (2026-05-30)**
 
-- **Status (2026-05-30)**: **Implemented in Tulana** (`POST /api/v1/internal/selva/buyer-signal/`,
-  migration `0003_selva_buyersignalevent`, tests in `test_selva_buyer_signal.py`).
-  **Deploy Tulana API** to `tulana-api.madfam.io` to close the 404 on staging.
-  Selva contract unchanged in `nexus_api/services/tulana_feedback.py`.
+- **Status**: Shipped in `madfam-org/tulana@0161187` + digest `cc4d3b645469…`.
+  `./scripts/verify-campaign-loop.sh --staging` → `tulana-feedback (200)`.
 - **Unblocks**: Full Phase 2 Tulana ↔ Selva feedback loop; buyer-signal WTP evidence.
 - **Cross-refs**:
   - `apps/nexus-api/nexus_api/services/tulana_feedback.py`

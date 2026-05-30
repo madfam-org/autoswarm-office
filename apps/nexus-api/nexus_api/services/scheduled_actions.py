@@ -213,7 +213,10 @@ async def update_scheduled_action_hitl(
     )
     row = result.scalar_one_or_none()
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled action not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scheduled action not found",
+        )
     if row.status not in {"pending", "failed"}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

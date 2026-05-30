@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import model_validator
-from pydantic_settings import BaseSettings
+from pydantic import AliasChoices, BeforeValidator, Field, model_validator
+from pydantic_settings import BaseSettings, NoDecode
 
 # Resolve project root so env_file works regardless of CWD.
 # config.py -> nexus_api -> nexus-api -> apps -> project root
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _parse_cors_origins(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    if isinstance(value, list):
+        return value
+    return []
 
 
 class Settings(BaseSettings):
@@ -130,7 +139,15 @@ class Settings(BaseSettings):
     # -- Server ---------------------------------------------------------------
     environment: str = "production"
     port: int = 4300
-    cors_origins: list[str] = [
+    public_app_url: str = Field(
+        default="http://localhost:4301",
+        validation_alias=AliasChoices("PUBLIC_APP_URL", "NEXT_PUBLIC_APP_URL"),
+    )
+    cors_origins: Annotated[
+        list[str],
+        NoDecode,
+        BeforeValidator(_parse_cors_origins),
+    ] = [
         "http://localhost:4301",
         "http://localhost:4302",
     ]
@@ -237,6 +254,7 @@ class Settings(BaseSettings):
         "env_file": (str(_PROJECT_ROOT / ".env"), ".env"),
         "env_file_encoding": "utf-8",
         "extra": "ignore",
+        "populate_by_name": True,
     }
 
     @model_validator(mode="after")

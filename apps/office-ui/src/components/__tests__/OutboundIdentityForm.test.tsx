@@ -140,9 +140,11 @@ describe('OutboundIdentityForm', () => {
       fireEvent.change(nameInput, { target: { value: 'Tenant CEO' } });
       fireEvent.change(slugSelect, { target: { value: 'growth' } });
     });
-    await waitFor(() => expect(emailInput.value).toBe('ceo@tenant.example'));
-    expect(nameInput.value).toBe('Tenant CEO');
-    expect(slugSelect.value).toBe('growth');
+    await waitFor(() => {
+      expect(emailInput.value).toBe('ceo@tenant.example');
+      expect(nameInput.value).toBe('Tenant CEO');
+      expect(slugSelect.value).toBe('growth');
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));

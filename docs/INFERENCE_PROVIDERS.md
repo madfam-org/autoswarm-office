@@ -190,7 +190,7 @@ automatically as a `GenericOpenAIProvider`.
 
 For providers that should always be available:
 
-1. Add the API key field to `apps/workers/autoswarm_workers/config.py`:
+1. Add the API key field to `apps/workers/selva_workers/config.py`:
    ```python
    my_provider_api_key: str | None = None
    ```

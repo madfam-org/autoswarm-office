@@ -1,8 +1,8 @@
 # AUDIENCE_FILTER_ENABLED — Shadow → Enforce Rollout Plan
 
-> Status: **rollout plan ready — execution gated on first meaningful production traffic**
+> Status: **enforced in production** (configmap flip); shadow procedure below for new envs
 > Owner: ops / platform
-> Last Updated: 2026-05-03
+> Last Updated: 2026-05-30
 > Related: ROADMAP.md Phase 2 ("AUDIENCE_FILTER_ENABLED=true"), CLAUDE.md
 > "Tool + Skill Audience Split (admin vs tenant)",
 > [docs/OBSERVABILITY_VENDOR_SELECTION.md](OBSERVABILITY_VENDOR_SELECTION.md)
@@ -20,6 +20,16 @@ events over 48h of meaningful production traffic, flip
 **Selva is pre-launch. There is no real production tenant traffic yet.** This
 doc documents the procedure for when there is. Until then, run the synthetic
 exercise in Section 5 and confirm the shadow log stays empty.
+
+## Production status (2026-05-30)
+
+Production (`infra/k8s/production/configmap.yaml`) sets
+`AUDIENCE_FILTER_ENABLED=true`. The three enforcement points (tool execute,
+skill activate, dispatch endpoint) **raise/403 in prod**. Code default remains
+off for local dev and new environments until explicitly flipped.
+
+For new staging or greenfield deployments, follow the shadow → enforce
+procedure in Sections 1–5 below before setting the env var.
 
 ## Section 1 — What "shadow" means today
 

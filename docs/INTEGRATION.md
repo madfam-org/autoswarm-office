@@ -150,7 +150,7 @@ for zero-downtime deployments:
 | nexus-api | `GET /api/v1/health/health` | `GET /api/v1/health/ready` | `GET /api/v1/health/detail` |
 | office-ui | `GET /api/health` | `GET /api/health` | -- |
 | colyseus | `GET /health` | `GET /health` | -- |
-| gateway | K8s exec probe (no HTTP endpoint) | K8s exec probe | -- |
+| gateway | `GET /health` on :4304 | `GET /health` on :4304 | Heartbeat metrics in JSON body |
 
 Health endpoints are exempt from rate limiting.
 

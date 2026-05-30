@@ -33,6 +33,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PRICING_JSON = _REPO_ROOT / "infra" / "pricing" / "selva-tiers.json"
 _SCHEMA_JSON = _REPO_ROOT / "infra" / "pricing" / "schema.json"
 _CLAUDE_MD = _REPO_ROOT / "CLAUDE.md"
+_AGENTS_MD = _REPO_ROOT / "AGENTS.md"
 
 
 @pytest.fixture
@@ -125,30 +126,22 @@ class TestBillingTiersLoaderMatchesJson:
         )
 
 
-class TestTulanaPackValuesMatchClaudeMd:
+class TestTulanaPackValuesMatchAgentsMd:
     """The Tulana hourly rates in the JSON must match the values cited in
-    CLAUDE.md. Otherwise the human-readable doc and the machine-readable
-    source disagree, which is what this whole codification was meant to
-    prevent."""
+    AGENTS.md (canonical). Otherwise the human-readable doc and the
+    machine-readable source disagree."""
 
-    def test_claude_md_cites_same_tulana_rates(self, pricing_data: dict) -> None:
-        assert _CLAUDE_MD.exists(), "CLAUDE.md missing"
-        claude_text = _CLAUDE_MD.read_text(encoding="utf-8")
+    def test_agents_md_cites_same_tulana_rates(self, pricing_data: dict) -> None:
+        assert _AGENTS_MD.exists(), "AGENTS.md missing"
+        agents_text = _AGENTS_MD.read_text(encoding="utf-8")
 
-        # CLAUDE.md cites: "Maker Pack 85 / Studio Pack 170 / Enterprise Pack 255"
-        # If those numbers don't appear in CLAUDE.md verbatim, either the
-        # doc was edited without touching the JSON or vice versa.
         json_packs = pricing_data["tulana_metered_hourly_packs"]["tiers"]
         for slug, spec in json_packs.items():
             rate = spec["hourly_rate_mxn"]
-            # Look for the integer rate near the pack name in CLAUDE.md.
-            # We don't pin exact prose because the doc's wording may
-            # evolve — we only pin the rate value's presence.
-            assert str(rate) in claude_text, (
+            assert str(rate) in agents_text, (
                 f"Tulana pack {slug!r} has hourly_rate_mxn={rate} in JSON "
-                f"but that integer isn't in CLAUDE.md. Either update the doc "
-                f"to cite the new number, or update the JSON to match the doc, "
-                f"or remove the doc's reference."
+                f"but that integer isn't in AGENTS.md. Either update the doc "
+                f"to cite the new number, or update the JSON to match the doc."
             )
 
 

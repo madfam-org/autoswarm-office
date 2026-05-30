@@ -70,13 +70,13 @@ spec:
       limits:
         cpu: "500m"
         memory: "1Gi"
-    healthCheck: /api/v1/health
+    healthCheck: /health
     readinessProbe:
-      path: /api/v1/health
+      path: /health
       initialDelaySeconds: 10
       periodSeconds: 5
     livenessProbe:
-      path: /api/v1/health
+      path: /health
       initialDelaySeconds: 30
       periodSeconds: 10
   env:

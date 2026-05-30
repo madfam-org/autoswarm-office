@@ -26,7 +26,7 @@
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Built-in tools | 240 (`selva_tools/builtins/`) | `grep -rE "^class [A-Z][A-Za-z]+Tool" packages/tools/src/selva_tools/builtins/` |
+| Built-in tools | 268 registered (`get_builtin_tools()`) | `uv run python -c "from selva_tools.builtins import get_builtin_tools; print(len(get_builtin_tools()))"` |
 | Workflow graphs | 12 (accounting, billing, coding, crm, deployment, intelligence, meeting, operations, project, puppeteer, research, sales) | `apps/workers/selva_workers/graphs/*.py` |
 | Ecosystem adapters | 6 (Karafiel, Dhanam, PhyndCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
 | Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
@@ -612,7 +612,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 │
 ├── 🏢 Selva Office (selva-office/) — THIS PRODUCT
 │   ├── selva.town — Virtual office + AI agent swarm
-│   ├── 240 built-in tools, 12 graphs, 6 adapters, 18 gateways, A2A protocol
+│   ├── 268 built-in tools, 12 graphs, 6 adapters, 18 gateways, A2A protocol
 │   └── Solarpunk UI, PWA, LiveKit SFU, es-MX locale, multi-tenant
 │
 ├── 🔐 Janua (janua/) — Authentication & SSO

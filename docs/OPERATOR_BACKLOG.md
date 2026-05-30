@@ -8,6 +8,12 @@
 > **Read this first** when picking the work back up. Then read
 > [ROADMAP.md](../ROADMAP.md) for engineering context and
 > [CHANGELOG.md](../CHANGELOG.md) for what shipped.
+>
+> **Doc truth remediation (2026-05-30):** Port, health, and count claims
+> were reconciled against code + prod. Canonical reference:
+> [docs/PORTS.md](PORTS.md). Config fixes (`PUBLIC_APP_URL`, `CORS_ORIGINS`,
+> gateway HTTP probes) ship in-repo — run `./scripts/verify-doc-truth.sh`
+> after Enclii promote; A2A url check passes only post-deploy.
 
 ---
 
@@ -88,22 +94,16 @@ Items are roughly priority-ordered. Highest value at top.
   - `apps/nexus-api/nexus_api/config.py:Settings.stripe_price_to_tier_map`
   - `infra/pricing/selva-tiers.json` — references which env key per tier
 
-### 4. Flip `AUDIENCE_FILTER_ENABLED=true`
+### 4. Flip `AUDIENCE_FILTER_ENABLED=true` — **DONE (prod)**
 
-- **What**: Run synthetic exercise per
-  [docs/AUDIENCE_FILTER_ROLLOUT.md](AUDIENCE_FILTER_ROLLOUT.md).
-  Soak in production with the env var still false but with logging
-  enabled for 24-48 hours. Review the `audience_shadow_block` logs
-  to confirm zero unintended blocks. Flip the env var. Watch for
-  legitimate-traffic 403s.
-- **Why blocking**: Today the platform/tenant audience boundary is
-  in shadow mode — violations are logged but not enforced. A
-  compromised tenant credential could call platform-only tools (e.g.,
-  `cloudflare_dns_update`) and the call would succeed.
-- **Owner**: Operator (production observation + flip).
-- **Unblocks**: True enforcement of the platform/tenant tool boundary.
+- **Status**: Production configmap sets `AUDIENCE_FILTER_ENABLED: "true"`
+  (`infra/k8s/production/configmap.yaml`). Platform/tenant boundary is
+  enforced on workers + nexus-api.
+- **Verify**: No spike in legitimate-traffic 403s; spot-check
+  `audience_shadow_block` logs are absent under enforce mode.
 - **Cross-refs**:
-  - [docs/AUDIENCE_FILTER_ROLLOUT.md](AUDIENCE_FILTER_ROLLOUT.md)
+  - [docs/AUDIENCE_FILTER_ROLLOUT.md](AUDIENCE_FILTER_ROLLOUT.md) § Production status
+  - Shadow procedure still applies when standing up **new** environments.
 
 ---
 

@@ -89,8 +89,8 @@ We extract capital from the digital economy to build the physical tools of local
 
 ## Technical Reference
 
-- **Playbook System:** `packages/permissions/autoswarm_permissions/playbook.py`
-- **Financial Circuit Breaker:** `packages/orchestrator/autoswarm_orchestrator/circuit_breaker.py`
+- **Playbook System:** `packages/permissions/selva_permissions/playbook.py`
+- **Financial Circuit Breaker:** `packages/orchestrator/selva_orchestrator/circuit_breaker.py`
 - **9-Node Architecture:** `docs/NODE_ARCHITECTURE.md`
 - **Agent Roster:** `scripts/seed-madfam-org.py`
-- **Phygital Graph:** `apps/workers/autoswarm_workers/graphs/phygital.py`
+- **Phygital Graph:** `[planned]` — no `graphs/phygital.py` in tree yet; see `docs/rfcs/phygital-quote-truth-contract.md`

@@ -63,13 +63,13 @@ images:
 - digest: sha256:71a0de873371ef897b62d95167c21fec3f466e331fedd6633b2ce2e05d6b686c
   name: ghcr.io/madfam-org/autoswarm-gateway
   newName: ghcr.io/madfam-org/autoswarm-gateway
-- digest: sha256:4b20434cec10c46b78c85b98e1521474b3e6dbfb1d677caee133af8cc86e9990
+- digest: sha256:592a7da0b1dfbfbcbe788c632fc9f4b3cb0cc87878c52e1c59f734ff61d708e4
   name: ghcr.io/madfam-org/autoswarm-nexus-api
   newName: ghcr.io/madfam-org/autoswarm-nexus-api
 - digest: sha256:83e621d162c582b1a61b709416567edfcf3441d6e88693f7c66c1a3049ffb0aa
   name: ghcr.io/madfam-org/autoswarm-office-ui
   newName: ghcr.io/madfam-org/autoswarm-office-ui
-- digest: sha256:6b9951de32d057219616fea68c68abb6e14f4013b30226a8072a8b2e20abb750
+- digest: sha256:9f6970b74a7b7dec857a79b8b8c639a64904a6426261bcb0a8df8bd460d7fe36
   name: ghcr.io/madfam-org/selva-workers
   newName: ghcr.io/madfam-org/selva-workers
 

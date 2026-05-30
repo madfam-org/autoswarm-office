@@ -26,25 +26,31 @@ if [[ "$MODE" == "--staging" ]]; then
 fi
 
 OPENAPI_JSON="$(curl -sS "${BASE_URL}/api/v1/openapi.json" 2>/dev/null || true)"
+OPENAPI_TMP=""
 if [[ -z "$OPENAPI_JSON" ]]; then
   fail "could not fetch ${BASE_URL}/api/v1/openapi.json"
 else
   pass "fetched OpenAPI from ${BASE_URL}"
+  OPENAPI_TMP="$(mktemp)"
+  printf '%s' "$OPENAPI_JSON" >"$OPENAPI_TMP"
+  trap 'rm -f "$OPENAPI_TMP"' EXIT
 fi
 
 require_openapi_path() {
   local path="$1"
-  if [[ -z "$OPENAPI_JSON" ]]; then
+  if [[ -z "$OPENAPI_TMP" || ! -f "$OPENAPI_TMP" ]]; then
     return
   fi
-  if python3 -c "
-import json, sys
-paths = json.loads(sys.argv[1]).get('paths', {})
-target = sys.argv[2]
-# FastAPI may register with or without trailing slash.
-ok = target in paths or (target.rstrip('/') + '/') in paths or target.rstrip('/') in paths
-sys.exit(0 if ok else 1)
-" "$OPENAPI_JSON" "$path"; then
+  if OPENAPI_FILE="$OPENAPI_TMP" CHECK_PATH="$path" python3 - <<'PY'; then
+import json
+import os
+from pathlib import Path
+
+paths = json.loads(Path(os.environ["OPENAPI_FILE"]).read_text()).get("paths", {})
+target = os.environ["CHECK_PATH"]
+ok = target in paths or (target.rstrip("/") + "/") in paths or target.rstrip("/") in paths
+raise SystemExit(0 if ok else 1)
+PY
     pass "OpenAPI lists ${path}"
   elif [[ "$MODE" == "--staging" ]]; then
     fail "${path} missing from staging OpenAPI — nexus-api image may not have synced yet"

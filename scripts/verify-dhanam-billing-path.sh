@@ -30,6 +30,13 @@ echo "== Dhanam billing path verification (mode=$MODE) =="
 
 if [[ "$MODE" == "--staging" ]]; then
   BASE_URL="${STAGING_API_URL:-https://staging-api.selva.town}"
+  if [[ -z "${DHANAM_WEBHOOK_SECRET:-}" ]] && command -v kubectl >/dev/null 2>&1; then
+    DHANAM_WEBHOOK_SECRET="$(kubectl -n autoswarm-staging get secret autoswarm-staging-secrets \
+      -o jsonpath='{.data.DHANAM_WEBHOOK_SECRET}' 2>/dev/null | base64 -d || true)"
+    if [[ -n "${DHANAM_WEBHOOK_SECRET:-}" ]]; then
+      pass "loaded DHANAM_WEBHOOK_SECRET from autoswarm-staging-secrets"
+    fi
+  fi
 fi
 
 # Stripe direct path should be blocked in default Dhanam-first config (503 on prod/staging).

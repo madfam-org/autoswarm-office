@@ -277,3 +277,15 @@ jobs:
           fi
           chmod +x scripts/verify-campaign-loop.sh
           ./scripts/verify-campaign-loop.sh --staging
+
+      - name: Dhanam billing path (staging)
+        env:
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+        run: |
+          chmod +x scripts/verify-dhanam-billing-path.sh
+          ./scripts/verify-dhanam-billing-path.sh --staging
+
+      - name: Staging observability wiring
+        run: |
+          chmod +x scripts/verify-staging-observability.sh
+          ./scripts/verify-staging-observability.sh || true

@@ -51,8 +51,8 @@ import { Gauge, Rate, Trend } from "k6/metrics";
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:4300";
 const TOKEN = __ENV.AUTH_TOKEN || "dev-token";
+const TENANT_ORG = __ENV.TENANT_ORG || "";
 
-// Custom metrics — emitted alongside k6's built-ins.
 const dispatchLatency = new Trend("dispatch_latency_ms", true);
 const queueDepth = new Gauge("queue_depth");
 const dlqDepth = new Gauge("dlq_depth");
@@ -63,6 +63,9 @@ const headers = {
   "Content-Type": "application/json",
   Authorization: `Bearer ${TOKEN}`,
 };
+if (TENANT_ORG) {
+  headers["X-Selva-Tenant-Org"] = TENANT_ORG;
+}
 
 export const options = {
   scenarios: {

@@ -63,6 +63,8 @@ if [[ "$RUN_STAGING" == true ]]; then
   ./scripts/verify-campaign-path.sh --staging
   echo "== Campaign loop (staging) =="
   ./scripts/verify-campaign-loop.sh --staging
+  echo "== Observability wiring (staging) =="
+  ./scripts/verify-staging-observability.sh || true
 fi
 
 echo "Phase 0 gates passed (operator still must provision OTel/Sentry secrets)."

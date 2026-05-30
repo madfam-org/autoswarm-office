@@ -45,8 +45,9 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 - **Status (2026-05-30)**: K8s optional secret refs shipped on all 6
   Deployments (`infra/k8s/production/patches/observability-*.yaml`).
-  Operator action remains: create `autoswarm-observability-secrets` (prod)
-  / same name in `autoswarm-staging` namespace with Grafana token + verify trace.
+  **Staging check:** `./scripts/verify-staging-observability.sh` (SKIP until
+  `autoswarm-observability-secrets` exists in `autoswarm-staging`).
+  Operator action remains: create secret + verify trace.
 - **What**: Pick a backend, provision the endpoint URL + auth header,
   set the env var on every service in production K8s. Verify a trace
   flows end-to-end for one request path (e.g.,
@@ -95,6 +96,13 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 ### 3. Configure Dhanam price→tier map + Selva webhook
 
+- **Status (2026-05-30)**: **Selva staging verified** —
+  `./scripts/verify-dhanam-billing-path.sh --staging` passes (Stripe blocked 503,
+  unsigned Dhanam 401, signed webhook 200 using cluster `DHANAM_WEBHOOK_SECRET`).
+  **Remaining operator work on Dhanam**: register Selva in `PRODUCT_WEBHOOK_URLS`
+  (`selva:https://staging-api.selva.town/api/v1/billing/webhooks/dhanam` on staging;
+  prod `https://api.selva.town/...`) with the **same** HMAC secret Selva holds;
+  map Stripe price IDs → `starter` / `professional` / `enterprise` in Dhanam catalog.
 - **What**: In **Dhanam** (canonical Stripe/POS router), map production
   Stripe price IDs to `starter`, `professional`, `enterprise`. Point Dhanam
   billing webhooks at Selva
@@ -134,9 +142,10 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 ### 5. Run k6 100-concurrent-tasks load scenario in staging
 
 - **Status (2026-05-30)**: `.github/workflows/load-test.yml` ships with
-  `workflow_dispatch` (includes `concurrent-100-swarmtasks.js`). Operator
-  sets `STAGING_LOAD_TEST_TOKEN` repo secret and records results in
-  `docs/LOAD_TEST_2026-Q2.md`.
+  `workflow_dispatch`. **Precursor smoke:** `./scripts/run-staging-load-smoke.sh`
+  (10 VU × ~2 min, worker token via kubectl). Full scenario:
+  `tests/load/concurrent-100-swarmtasks.js` — pass `-e TENANT_ORG=madfam` when
+  using `WORKER_API_TOKEN`. Record results in `docs/LOAD_TEST_2026-Q2.md`.
 - **What**: Provision `k6` in the operator workstation or staging
   CI runner. Provision a staging API token. Run
   `k6 run -e BASE_URL=https://staging-api.selva.town -e AUTH_TOKEN=<token> tests/load/concurrent-100-swarmtasks.js`.

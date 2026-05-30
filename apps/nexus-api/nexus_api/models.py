@@ -538,6 +538,29 @@ class Schedule(Base):
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class ScheduledActionRow(Base):
+    """Instance-level due-row queue drained by the worker social_post executor."""
+
+    __tablename__ = "scheduled_actions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    action_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_retries: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    playbook_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    hitl_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    persona_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    org_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 # ---------------------------------------------------------------------------
 # Multi-tenant enterprise provisioning (migration 0015)
 # ---------------------------------------------------------------------------

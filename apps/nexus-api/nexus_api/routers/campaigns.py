@@ -26,6 +26,11 @@ from ..schemas.tulana_campaign import (
     TulanaImportRequest,
     TulanaImportResponse,
 )
+from ..schemas.scheduled_actions import (
+    CampaignSocialScheduleRequest,
+    ScheduledActionBatchResponse,
+)
+from ..services.scheduled_actions import enqueue_campaign_social_schedule
 from ..services.tulana_campaign import import_tulana_packs, validate_pack
 from ..services.tulana_feedback import push_tulana_buyer_signal
 from ..tenant import TenantContext, get_tenant
@@ -302,6 +307,30 @@ async def crm_campaign_handoff(
         status="queued",
         message="Campaign handoff queued for Phynd CRM staging (HITL required)",
     )
+    await idem.save(response.model_dump(mode="json"))
+    return response
+
+
+@router.post(
+    "/schedule-social",
+    response_model=ScheduledActionBatchResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_non_guest)],
+)
+async def campaign_schedule_social(
+    body: CampaignSocialScheduleRequest,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
+) -> ScheduledActionBatchResponse:
+    """Schedule campaign social posts for worker drain (Phase 2.5)."""
+    cached = getattr(idem, "cached", None)
+    if getattr(idem, "is_replay", False) and cached is not None:
+        return ScheduledActionBatchResponse.model_validate(cached)
+
+    created = await enqueue_campaign_social_schedule(db, org_id=tenant.org_id, body=body)
+    await db.commit()
+    response = ScheduledActionBatchResponse(created=created, count=len(created))
     await idem.save(response.model_dump(mode="json"))
     return response
 

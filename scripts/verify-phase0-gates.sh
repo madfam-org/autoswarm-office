@@ -24,6 +24,8 @@ done
 echo "== Phase 0 local gates =="
 uv run pytest apps/nexus-api/tests/test_doc_codification.py -q
 uv run pytest apps/nexus-api/tests/test_tulana_campaign_import.py -q
+uv run pytest apps/nexus-api/tests/test_scheduled_actions_router.py -q
+uv run pytest apps/nexus-api/tests/test_tier_limits.py -q
 uv run pytest apps/workers/tests/test_campaign_graph.py -q
 
 if ! kubectl kustomize infra/k8s/overlays/staging >/dev/null; then
@@ -52,6 +54,8 @@ fi
 if [[ "$RUN_STAGING" == true ]]; then
   echo "== Staging smoke =="
   ./scripts/staging-smoke.sh
+  echo "== Dhanam billing path (staging) =="
+  ./scripts/verify-dhanam-billing-path.sh --staging
 fi
 
 echo "Phase 0 gates passed (operator still must provision OTel/Sentry secrets)."

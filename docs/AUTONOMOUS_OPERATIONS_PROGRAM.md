@@ -118,7 +118,7 @@ Heartbeat → PhyndCRM hot leads → auto-dispatch (HITL)
 | 2.2 | `sku_campaign_planning` | ✅ `campaign` graph (`load_tulana_pack` → `plan_lane` → `draft_copy`); import dispatches `graph_type=campaign` |
 | 2.3 | `campaign_draft` | Partial — LLM drafts from proof points; `guard_campaign_draft()` scrubs `do_not_claim` |
 | 2.4 | Phynd handoff | ✅ `POST /api/v1/campaigns/crm-handoff` with idempotency + HITL |
-| 2.5 | Scheduled social executor | Extend `ScheduledAction.SOCIAL_POST` (Reddit/Mastodon/Bluesky/LinkedIn drafts) |
+| 2.5 | Scheduled social executor | ✅ Enqueue API + `POST /campaigns/schedule-social`; worker drain (`social_post_executor`) |
 | 2.6 | Feedback loop | ✅ `POST /api/v1/campaigns/tulana-feedback` → Tulana buyer-signal API |
 | 2.7 | Campaign UI | Office dashboard: lanes, drafts, approvals, Tulana readiness badges |
 

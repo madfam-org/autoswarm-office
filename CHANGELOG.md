@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Phase 2.5 scheduled social enqueue** — `ScheduledActionRow` model,
+  `POST /api/v1/scheduled-actions`, batch + HITL approve, and
+  `POST /api/v1/campaigns/schedule-social` for Tulana cadence posting.
+- **k6 load-test workflow** — `.github/workflows/load-test.yml` (`workflow_dispatch`).
+- **`scripts/verify-dhanam-billing-path.sh`** — staging/prod Dhanam-first checks.
 - **Phase 1.2 tier enforcement** — `resolve_org_daily_limit()` reads Redis cache then
   `tenant_configs.subscription_tier`; dispatch blocks `past_due`/`cancelled` subscriptions.
 - **`POST /api/v1/campaigns/tulana-feedback`** — pushes campaign outcomes to Tulana

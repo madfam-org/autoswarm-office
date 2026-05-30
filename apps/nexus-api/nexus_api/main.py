@@ -57,6 +57,7 @@ from .routers import (
     playbooks,
     probe,
     providers,
+    scheduled_actions,
     schedules,
     skills,
     skills_hub,
@@ -223,6 +224,7 @@ def create_app() -> FastAPI:
     # routes live on the canonical top-level paths.
     app.include_router(onboarding.router, prefix="/api/v1")
     app.include_router(schedules.router, prefix="/api/v1")
+    app.include_router(scheduled_actions.router, prefix="/api/v1")
     # Dragon-egg social-account hatching (Phase 1, admin-only).
     app.include_router(dragon_eggs.router, prefix="/api/v1")
     # Gap 2: Dangerous command approval

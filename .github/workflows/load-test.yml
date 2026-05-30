@@ -1,0 +1,43 @@
+name: Load Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: k6 script to run
+        required: true
+        type: choice
+        options:
+          - concurrent-100-swarmtasks.js
+          - nexus-api-throughput.js
+          - colyseus-concurrent.js
+          - task-queue-throughput.js
+          - approval-flow-e2e.js
+      base_url:
+        description: Target Nexus API base URL
+        required: false
+        default: https://staging-api.selva.town
+      auth_token:
+        description: Bearer token (use repo secret STAGING_LOAD_TEST_TOKEN when empty)
+        required: false
+        default: ""
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Run k6 scenario
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          AUTH_TOKEN: ${{ inputs.auth_token != '' && inputs.auth_token || secrets.STAGING_LOAD_TEST_TOKEN }}
+        run: |
+          if [ -z "${AUTH_TOKEN}" ]; then
+            echo "::warning::AUTH_TOKEN unset — using dev-token (local smoke only)"
+            export AUTH_TOKEN="dev-token"
+          fi
+          k6 run -e BASE_URL="${BASE_URL}" -e AUTH_TOKEN="${AUTH_TOKEN}" "tests/load/${{ inputs.script }}"

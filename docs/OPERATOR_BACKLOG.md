@@ -128,6 +128,10 @@ Items are roughly priority-ordered. Highest value at top.
 
 ### 5. Run k6 100-concurrent-tasks load scenario in staging
 
+- **Status (2026-05-30)**: `.github/workflows/load-test.yml` ships with
+  `workflow_dispatch` (includes `concurrent-100-swarmtasks.js`). Operator
+  sets `STAGING_LOAD_TEST_TOKEN` repo secret and records results in
+  `docs/LOAD_TEST_2026-Q2.md`.
 - **What**: Provision `k6` in the operator workstation or staging
   CI runner. Provision a staging API token. Run
   `k6 run -e BASE_URL=https://staging-api.selva.town -e AUTH_TOKEN=<token> tests/load/concurrent-100-swarmtasks.js`.

@@ -24,6 +24,7 @@ docker run --rm -i grafana/k6 run - <script.js
 | `nexus-api-throughput.js` | Nexus API (port 4300) | HTTP endpoint latency and error rate under ramp-up to 100 VUs |
 | `colyseus-concurrent.js` | Colyseus (port 4303) | WebSocket connection capacity and message round-trip time at 50 concurrent players |
 | `task-queue-throughput.js` | Redis task queue | Sustained dispatch rate (100/min) and queue depth backpressure |
+| `concurrent-100-swarmtasks.js` | Nexus API (staging/prod) | 100 VU ramp/hold/drain — Phase 0.4 calibration scenario |
 | `approval-flow-e2e.js` | Full approval pipeline | End-to-end latency from task dispatch through approval resolution |
 
 ## Running Tests
@@ -67,7 +68,13 @@ A threshold breach causes k6 to exit with a non-zero code, which fails CI.
 
 ## CI Integration
 
-Add a `workflow_dispatch` trigger to your GitHub Actions workflow:
+Workflow: `.github/workflows/load-test.yml` (`workflow_dispatch`).
+
+Trigger from GitHub Actions → **Load Tests** → pick script + `base_url`
+(default `https://staging-api.selva.town`). Set repo secret
+`STAGING_LOAD_TEST_TOKEN` for authenticated staging runs.
+
+Manual template (local):
 
 ```yaml
 name: Load Tests

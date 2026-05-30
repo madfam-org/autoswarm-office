@@ -36,6 +36,18 @@ Canonical plan: [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIO
 
 **Baseline → north star:** MADFAM platform slice ~85–90%; production-truthful Selva ~88–92%; full autonomous digital ops **~50–62%** (Phase 2 API proven 2026-05-30). Target ~95%+ engineering completion in 6–9 months; 100% includes GTM traction (Phase 5).
 
+### Coupler consumer track (P3, Oct 2026)
+
+Delegated SaaS tools (Slack, Gmail, GitHub-as-user) route through **Coupler** (`madfam-org/coupler`), not new Selva adapters.
+
+| Milestone | Target | Doc |
+|-----------|--------|-----|
+| `CouplerToolBackend` PoC | 2026-10-03 | [COUPLER_INTEGRATION.md](docs/COUPLER_INTEGRATION.md) |
+| Feature-flagged agent graph wiring | 2026-10-17 | Coupler P3 gate |
+| Replace direct SaaS calls in adapters | 2026-11-14 | Coupler P4 |
+
+**Does not replace** 268 built-ins or ecosystem adapters (Dhanam, PhyndCRM, etc.).
+
 Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below map into program Phases 1–5 — use the program doc for sequencing and exit gates.
 
 ---

@@ -31,6 +31,21 @@ _REQUIRED_HEALTH_PATHS = (
 
 _MIN_BUILTIN_TOOLS = 268
 
+_DNS_RECORDS = _REPO_ROOT / "infra" / "cloudflare" / "dns-records.yaml"
+_TUNNEL_ROUTES = _REPO_ROOT / "infra" / "cloudflare" / "tunnel-routes.yaml"
+
+_REQUIRED_DNS_HOSTNAMES = (
+    "app.selva.town",
+    "gw.selva.town",
+    "staging-api.selva.town",
+    "staging.selva.town",
+    "staging-admin.selva.town",
+    "staging-ws.selva.town",
+    "staging-gw.selva.town",
+)
+
+_REQUIRED_TUNNEL_HOSTNAMES = _REQUIRED_DNS_HOSTNAMES
+
 
 class TestPortsDoc:
     def test_ports_md_exists(self) -> None:
@@ -94,4 +109,23 @@ class TestAgentsToolClaim:
         cited = int(match.group(1))
         assert cited >= _MIN_BUILTIN_TOOLS, (
             f"AGENTS.md cites {cited} tools but floor is {_MIN_BUILTIN_TOOLS}"
+        )
+
+
+class TestCloudflareInfra:
+    def test_dns_records_lists_prod_and_staging_hostnames(self) -> None:
+        text = _DNS_RECORDS.read_text(encoding="utf-8")
+        for hostname in _REQUIRED_DNS_HOSTNAMES:
+            assert hostname in text, (
+                f"infra/cloudflare/dns-records.yaml must declare {hostname}"
+            )
+
+    def test_tunnel_routes_lists_prod_and_staging_hostnames(self) -> None:
+        text = _TUNNEL_ROUTES.read_text(encoding="utf-8")
+        for hostname in _REQUIRED_TUNNEL_HOSTNAMES:
+            assert f"hostname: {hostname}" in text, (
+                f"infra/cloudflare/tunnel-routes.yaml must route {hostname}"
+            )
+        assert "autoswarm-staging.svc.cluster.local" in text, (
+            "tunnel-routes.yaml must target autoswarm-staging namespace"
         )

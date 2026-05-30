@@ -190,10 +190,10 @@ operator actions, in order:
    `POST /api/v1/oauth/clients/register` with redirect URIs
    `https://staging-admin.selva.town/api/auth/callback` and
    `https://staging.selva.town/auth/callback`).
-3. **Create Cloudflare DNS records** for `staging-api.selva.town`,
-   `staging.selva.town`, `staging-admin.selva.town`,
-   `staging-ws.selva.town`, `staging-gw.selva.town` (all CNAME → the
-   same Cloudflare tunnel as prod; tunnel route config per `infra/cloudflare/tunnel-routes.yaml`).
+3. **Apply Cloudflare DNS + tunnel routes** — records are codified in
+   `infra/cloudflare/dns-records.yaml` + `tunnel-routes.yaml`. Apply with
+   `./scripts/bootstrap-staging.sh` (or `python3 scripts/apply-cloudflare-infra.py`).
+   Requires `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
 4. **Register ArgoCD staging Application**:
    ```bash
    kubectl apply -f infra/argocd/staging.yaml

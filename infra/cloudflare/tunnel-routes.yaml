@@ -1,9 +1,18 @@
+# Canonical Cloudflare Tunnel ingress for autoswarm-office.
+# Applied via: scripts/apply-cloudflare-infra.py --tunnel
+#
+# Prod routes target the `autoswarm` namespace; staging routes target
+# `autoswarm-staging`. ClusterIP services expose port 80 → containerPort.
+
 tunnel: autoswarm-office
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:
+  # --- Production (autoswarm namespace) ---
   - hostname: api.selva.town
     service: http://nexus-api.autoswarm.svc.cluster.local:80
+  - hostname: app.selva.town
+    service: http://office-ui.autoswarm.svc.cluster.local:80
   - hostname: selva.town
     service: http://office-ui.autoswarm.svc.cluster.local:80
   - hostname: www.selva.town
@@ -12,4 +21,19 @@ ingress:
     service: http://colyseus.autoswarm.svc.cluster.local:80
   - hostname: admin.selva.town
     service: http://admin.autoswarm.svc.cluster.local:80
+  - hostname: gw.selva.town
+    service: http://gateway.autoswarm.svc.cluster.local:80
+
+  # --- Staging (autoswarm-staging namespace) ---
+  - hostname: staging-api.selva.town
+    service: http://nexus-api.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging.selva.town
+    service: http://office-ui.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging-admin.selva.town
+    service: http://admin.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging-ws.selva.town
+    service: http://colyseus.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging-gw.selva.town
+    service: http://gateway.autoswarm-staging.svc.cluster.local:80
+
   - service: http_status:404

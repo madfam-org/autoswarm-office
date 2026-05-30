@@ -80,5 +80,6 @@ spec:
                 secretKeyRef:
                   name: autoswarm-staging-secrets
                   key: DHANAM_WEBHOOK_SECRET
+                  optional: true
             - name: BILLING_VIA_DHANAM
               value: "true"

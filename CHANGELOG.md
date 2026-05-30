@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Staging Argo reconcile** — `scripts/reconcile-staging-argocd.sh` prunes backup
+  stack excluded from overlay and syncs via Enclii; `DHANAM_WEBHOOK_SECRET` is
+  optional in staging nexus-api patch so rollouts do not block before Dhanam wiring.
 - **`scripts/verify-campaign-path.sh`** — OpenAPI path checks + GET auth probes
   (bare POST no longer false-passes on CSRF 403). Staging deploy smoke polls
   until Phase 2.5 routes appear.

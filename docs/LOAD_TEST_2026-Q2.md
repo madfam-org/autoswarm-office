@@ -138,27 +138,37 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 | **Recommended next step** | Add **`passthrough`/`literal` no-LLM graph** for calibration OR scale **nexus-api** replicas on staging; single API replica saturates before workers at 100 VU |
 | Notes | 582/1316 dispatches 2xx (44%). Pre-run `./scripts/drain-staging-task-queue.sh` cleared stream. Campaign loop re-verified green post-run. Raw: `docs/load-test-runs/20260530T215200Z.k6.json`. |
 
-### Run 4 — TBD (calibration graph + optional API scale)
+### Run 4 — 2026-05-30 (calibration graph + pipeline fixes — thresholds failed)
 
-Planned in [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) Sprint 1.
+| Field | Value |
+|---|---|
+| Date | 2026-05-30 |
+| Staging SHA | `2cb7a7a` (calibration graph + queue-stats + events RLS + workers `NEXUS_API_URL`) |
+| Operator | autonomous ops agent |
+| `MAX_CONCURRENT_TASKS` at run | 15 |
+| `dispatch_rate_limit` at run | 500 |
+| `RATE_LIMIT_PER_MINUTE` at run | 10000 |
+| Worker pod replicas | 1 (RWO PVC) |
+| nexus-api replicas | **1** (kustomize targets 2; Argo/live cluster stayed at 1 during run) |
+| Graph type | **`calibration`** (no-LLM) |
+| **Hard thresholds passed?** | **No** (errors 19.08%; p99 dispatch 10s; queue_depth max 1209) |
+| `dispatch_latency_ms` p50 / p95 / p99 | 4.61s / 10s / 10s (client POST timeout) |
+| `queue_depth` p50 / max | 816 / **1209** (health gauge; stream backlog visible) |
+| `dlq_depth` final | 0 |
+| `worker_in_flight` steady-state max | 0 (DB gauge under-counts vs stream; follow-up) |
+| Dispatches 2xx | **1064/1315 (80.9%)** — up from 44% (Run 3) and 78% (Run 2) |
+| **Blockers fixed this run** | (1) `graph_type=calibration` on dispatch API, (2) workers `NEXUS_API_URL` → staging svc, (3) `POST /events` RLS via `tenant_session` |
+| **Recommended next step** | Run **4b**: enforce `nexus-api` replicas=2 on staging (Argo sync), re-run `./scripts/run-staging-load-calibration.sh` |
+| Notes | Probe task completes in ~1s post-fix. CI smoke flakes on Cloudflare 525/502 during rollouts. Raw: `docs/load-test-runs/20260530T223724Z.k6.json`. |
 
-| Track | Action |
-|-------|--------|
-| **B1 Engineering** | Add `graph_type: calibration` (no LLM, &lt;5s); `tests/load/calibration-dispatch.js`; `./scripts/run-staging-load-calibration.sh` |
-| **B2 Ops** | Staging `nexus-api` replicas=2; re-run `concurrent-100-swarmtasks.js` as Run 4b |
-| **Metrics fix** | Surface accurate `worker_in_flight` / queue depth in health endpoint |
-
-**Pass criteria:** Same hard thresholds as Runs 1–3; record in table below.
+### Run 4b — TBD (nexus-api scale=2, re-calibrate)
 
 | Field | Value |
 |---|---|
 | Date | TBD |
-| Staging SHA | TBD |
-| `MAX_CONCURRENT_TASKS` at run | 15 |
-| nexus-api replicas | 1 or 2 |
-| Graph type | `calibration` or `research` |
+| nexus-api replicas | 2 (required) |
 | **Hard thresholds passed?** | TBD |
-| Notes | TBD |
+| Notes | Same script; drain queue first. |
 
 ### Run 5 — TBD (post-recommendation, validate prod config)
 

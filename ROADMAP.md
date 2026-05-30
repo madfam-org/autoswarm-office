@@ -353,12 +353,10 @@ data-truthful"** as of 2026-05-04 (v2.3.0 sprint). Staging bootstrap
 (PP.4), doc-truth remediation, and DNS/tunnel fix landed 2026-05-30 —
 see [CHANGELOG.md](CHANGELOG.md) and [docs/PP_4_STAGING_AUDIT.md](docs/PP_4_STAGING_AUDIT.md).
 
-**North star gap (~40-55% → 100%):** See
+**North star gap (~45-58% → 100%):** See
 [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md).
-The ~10% production-truthful remainder (OTel, Sentry, Stripe map, k6,
-backup drill, secret rotation) is Phase 0 of that program. Autonomous
-revenue, campaigns, phygital E2E, compliance GTM, and multi-tenant scale
-are Phases 1–5.
+Phase 2 campaign API + UI shipped (#179); remaining gap is operator proof
+(Dhanam webhooks, k6, OTel/Sentry) and Phases 3–5.
 
 Major movements 2026-05-04 session:
 - Workers + packages mypy: 14 → 0 + 129 → 0 (2 of 2 trees pinned at 0)

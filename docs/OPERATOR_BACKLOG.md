@@ -32,6 +32,11 @@ Items are roughly priority-ordered. Highest value at top.
 
 **Program mapping:** Tier 1–3 items = [Autonomous Operations Program Phase 0](AUTONOMOUS_OPERATIONS_PROGRAM.md#phase-0--operational-foundation-2-3-weeks). Tier 5 items = Program Phases 4–5. Completing Phase 0 gates Phase 1 (live revenue loop).
 
+**Phase 2 engineering (2026-05-30):** Campaign API, worker graph, scheduled social
+executor, schedule materializer, and office-ui Campaign Dashboard are merged to
+`main` (#179). Remaining Phase 2 gate is **operator proof**: import a real Tulana
+pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
+
 ---
 
 ## Tier 1 — Blocks production observability (do first)
@@ -149,6 +154,22 @@ Items are roughly priority-ordered. Highest value at top.
   - [docs/LOAD_TEST_2026-Q2.md](LOAD_TEST_2026-Q2.md)
   - [docs/SLOS.md](SLOS.md) §2 — Tier 1 p99 < 1500ms target this
     scenario validates
+
+### 5b. Staging campaign loop soak (Phase 2 gate)
+
+- **Status (2026-05-30)**: Campaign Dashboard live on staging after #179 deploy.
+- **What**: On `https://staging.selva.town/office` → **Campaigns**: import a
+  Tulana pack with `dispatch_tasks`, approve a scheduled social post (HITL),
+  submit CRM handoff, push Tulana feedback. For cron-based schedules, ensure
+  `POST /api/v1/schedules/` payload includes `org_id` and `platform` when
+  `action=social_post` (materializer requirement).
+- **Why blocking**: Phase 2 program gate requires a proven Tulana → Selva → Phynd
+  → Tulana loop — engineering is shipped; this validates operator workflow.
+- **Owner**: Operator (Janua staging login + Tulana export JSON).
+- **Unblocks**: Phase 3 phygital work; autonomy graduation for campaign lanes.
+- **Cross-refs**:
+  - [docs/INTEGRATION.md](INTEGRATION.md) — campaign endpoints + UI
+  - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
 
 ### 6. Run backup/restore drill in staging
 

@@ -199,16 +199,35 @@ For the full Enclii API surface, read the `llms-full.txt` file in the Enclii rep
 
 ## Tulana campaign orchestration (Phase 2)
 
-Selva imports Tulana SKU campaign packs and ranks them before agent dispatch.
+Selva imports Tulana SKU campaign packs, ranks them, generates proof-backed drafts,
+schedules social posts (HITL), hands off to Phynd CRM, and pushes outcomes to Tulana.
 Contract: [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](./TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md).
+
+### REST API
 
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
 | `POST /api/v1/campaigns/import-tulana-pack` | Bearer (Janua JWT) | Validate Tulana export JSON, rank SKUs, optional `dispatch_tasks` |
+| `POST /api/v1/campaigns/crm-handoff` | Bearer | HITL-gated Phynd CRM staging for approved drafts |
+| `POST /api/v1/campaigns/schedule-social` | Bearer | Enqueue Tulana social cadence rows (`scheduled_actions`) |
+| `POST /api/v1/campaigns/tulana-feedback` | Bearer | Push campaign outcomes to Tulana buyer-signal API |
+| `GET /api/v1/scheduled-actions/` | Bearer | List org scheduled social rows (filter `?status=pending`) |
+| `PATCH /api/v1/scheduled-actions/{id}/hitl` | Bearer | Approve/deny playbook-gated posts |
+| `POST /api/v1/schedules/` | Bearer | Recurring cron (materializer requires `payload.org_id` + `payload.platform` for `social_post`) |
+
+### Office UI
+
+Open **Campaigns** from the HUD (left controls) or Dashboard panel. Tabs: Import,
+Campaign Tasks, Scheduled Posts (HITL), Handoff & Feedback.
 
 Implementation: `apps/nexus-api/nexus_api/routers/campaigns.py`,
-`schemas/tulana_campaign.py`, `services/tulana_campaign.py`.
-Tests: `apps/nexus-api/tests/test_tulana_campaign_import.py`.
+`routers/scheduled_actions.py`, `schemas/tulana_campaign.py`,
+`services/tulana_campaign.py`, `services/scheduled_actions.py`,
+`apps/office-ui/src/components/campaigns/`, worker `graphs/campaign.py`,
+`jobs/social_post_executor.py`, `jobs/schedule_materializer.py`.
+Tests: `apps/nexus-api/tests/test_tulana_campaign_import.py`,
+`test_scheduled_actions_router.py`, `apps/workers/tests/test_campaign_graph.py`,
+`test_schedule_materializer.py`.
 
 Tulana webhook outcomes (pricing apply) use existing `TULANA_API_URL` +
 `tulana_selva_webhook_secret` settings — see `services/pricing_apply.py`.

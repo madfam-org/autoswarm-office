@@ -42,7 +42,7 @@ the following are true:
 |-------|----------|-------|
 | MADFAM platform slice in Selva | **~85–90%** | Prod live; `PLATFORM_ORG_ID=madfam`; audience filter enforced; 10-agent roster |
 | Selva “production-truthful” | **~88–92%** | RLS, audit, idempotency, webhook hardening — see ROADMAP honest scorecard |
-| Full north star (this doc) | **~40–55%** | Revenue loop code-complete but not live; campaigns proposed; phygital graph missing |
+| Full north star (this doc) | **~45–58%** | Phase 2 API + UI shipped; revenue loop and proven campaign loop still operator-gated |
 
 ---
 
@@ -116,11 +116,11 @@ Heartbeat → PhyndCRM hot leads → auto-dispatch (HITL)
 |----|-------------|----------------|
 | 2.1 | Tulana import API | ✅ `POST /api/v1/campaigns/import-tulana-pack` + schema validation (`routers/campaigns.py`) |
 | 2.2 | `sku_campaign_planning` | ✅ `campaign` graph (`load_tulana_pack` → `plan_lane` → `draft_copy`); import dispatches `graph_type=campaign` |
-| 2.3 | `campaign_draft` | Partial — LLM drafts from proof points; `guard_campaign_draft()` scrubs `do_not_claim` |
+| 2.3 | `campaign_draft` | ✅ `campaign` graph drafts from proof points; `guard_campaign_draft()` scrubs `do_not_claim`; auto `schedule_social` after `draft_copy` |
 | 2.4 | Phynd handoff | ✅ `POST /api/v1/campaigns/crm-handoff` with idempotency + HITL |
-| 2.5 | Scheduled social executor | ✅ Enqueue API + `POST /campaigns/schedule-social`; worker drain (`social_post_executor`) |
+| 2.5 | Scheduled social executor | ✅ Enqueue API + `POST /campaigns/schedule-social`; worker drain (`social_post_executor`); **`schedules` cron materializer** → `scheduled_actions` |
 | 2.6 | Feedback loop | ✅ `POST /api/v1/campaigns/tulana-feedback` → Tulana buyer-signal API |
-| 2.7 | Campaign UI | Office dashboard: lanes, drafts, approvals, Tulana readiness badges |
+| 2.7 | Campaign UI | ✅ Office **Campaign Dashboard** (`/office` → Campaigns): Tulana import, task lane, HITL social queue, CRM handoff, Tulana feedback, readiness badges |
 
 **Permission policy:** Campaign sends stay **ASK** until lane has 30 days zero incidents; operator promotes specific lanes to ALLOW.
 
@@ -253,7 +253,7 @@ Phase 4 (compliance) parallel from week 2; gates Phase 5 enterprise sales.
 | Backups + DR | unknown → **90%** | 0 |
 | Deployment pipeline | ~85% → **90%** | 0 (PP.5 prod cutover) |
 | Autonomous revenue loop | code-complete → **live** | 1 |
-| Campaign orchestration | proposed → **proven loop** | 2 |
+| Campaign orchestration | API + UI shipped → **proven loop** | 2 |
 | Phygital E2E | webhooks only → **demo** | 3 |
 | Compliance GTM | tools → **paying + LFPDPPP** | 4–5 |
 | Multi-tenant scale | provisioning API → **SSO + 100 orgs** | 5 |
@@ -300,4 +300,5 @@ Use these as PR/epic titles when executing:
 
 | Date | Change |
 |------|--------|
+| 2026-05-30 | Phase 2.7 Campaign Dashboard + schedule materializer + campaign graph auto-schedule merged (#179); staging deploy green |
 | 2026-05-30 | Initial program plan documented; staging bootstrap + DNS fix landed on main |

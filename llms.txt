@@ -9,8 +9,17 @@ Compact LLM context index for this repository.
 - `ECOSYSTEM.md` — MADFAM ecosystem and Enclii deployment context when present.
 - `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6).
 - `docs/OPERATOR_BACKLOG.md` — human-gated operator items.
-- `POST /api/v1/campaigns/import-tulana-pack` — Tulana SKU campaign import (Phase 2).
 - `llms-full.txt` — full context map and durable operating contract.
+
+## Campaign orchestration (Phase 2 — shipped)
+
+- `POST /api/v1/campaigns/import-tulana-pack` — Tulana SKU import + optional dispatch.
+- `POST /api/v1/campaigns/crm-handoff` — Phynd CRM handoff (HITL).
+- `POST /api/v1/campaigns/schedule-social` — enqueue social cadence rows.
+- `POST /api/v1/campaigns/tulana-feedback` — Tulana buyer-signal feedback.
+- `GET /api/v1/scheduled-actions/` + `PATCH .../hitl` — HITL social queue.
+- Office UI: `/office` → **Campaigns** dashboard (`components/campaigns/`).
+- Worker: `campaign` graph + `social_post_executor` + `schedule_materializer`.
 
 ## Production operations
 

@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Phase 2.7 Campaign Dashboard** — office-ui modal at `/office` → **Campaigns**
+  (HUD + Dashboard panel): Tulana JSON import, campaign task lane, scheduled
+  social HITL approve/deny, CRM handoff, Tulana feedback push, GA readiness badges.
+  Components: `apps/office-ui/src/components/campaigns/`.
+- **Schedule materializer** — worker job `schedule_materializer.py` bridges
+  `schedules` cron rows (`action=social_post`) → `scheduled_actions` queue
+  (runs every 60s alongside `social_post_executor`).
+- **Campaign graph auto-schedule** — `schedule_social` node after `draft_copy`
+  enqueues HITL-gated social cadence via `POST /api/v1/campaigns/schedule-social`
+  (disable with `auto_schedule_social: false` in task payload).
 - **Phase 2.5 scheduled social enqueue** — `ScheduledActionRow` model,
   `POST /api/v1/scheduled-actions`, batch + HITL approve, and
   `POST /api/v1/campaigns/schedule-social` for Tulana cadence posting.

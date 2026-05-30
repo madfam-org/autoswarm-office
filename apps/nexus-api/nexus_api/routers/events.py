@@ -131,7 +131,6 @@ def _safe_uuid(value: str | None) -> uuid.UUID | None:
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_event(
     body: CreateEventRequest,
-    db: AsyncSession = Depends(get_db),  # noqa: B008
     user: dict = Depends(get_current_user),  # noqa: B008
 ) -> dict[str, str]:
     """Create a new task event.
@@ -141,31 +140,35 @@ async def create_event(
     cannot specify a target ``org_id`` in the body. Workers declare their
     tenant via the ``X-Selva-Tenant-Org`` header (resolved by ``auth.py``).
 
+    Uses ``tenant_session(org_id)`` instead of ``get_db`` so RLS sees the
+    worker/JWT tenant before insert (``get_db`` would run before ``user``).
+
     Broadcasts only to WebSocket clients in the same tenant.
     """
     org_id = user.get("org_id") or "default"
-    event = TaskEvent(
-        task_id=_safe_uuid(body.task_id),
-        agent_id=_safe_uuid(body.agent_id),
-        event_type=body.event_type,
-        event_category=body.event_category,
-        node_id=body.node_id,
-        graph_type=body.graph_type,
-        payload=body.payload,
-        duration_ms=body.duration_ms,
-        provider=body.provider,
-        model=body.model,
-        token_count=body.token_count,
-        error_message=body.error_message,
-        request_id=body.request_id,
-        org_id=org_id,
-    )
-    db.add(event)
-    await db.flush()
-    await db.refresh(event)
+    async with tenant_session(org_id=org_id) as db:
+        event = TaskEvent(
+            task_id=_safe_uuid(body.task_id),
+            agent_id=_safe_uuid(body.agent_id),
+            event_type=body.event_type,
+            event_category=body.event_category,
+            node_id=body.node_id,
+            graph_type=body.graph_type,
+            payload=body.payload,
+            duration_ms=body.duration_ms,
+            provider=body.provider,
+            model=body.model,
+            token_count=body.token_count,
+            error_message=body.error_message,
+            request_id=body.request_id,
+            org_id=org_id,
+        )
+        db.add(event)
+        await db.flush()
+        await db.refresh(event)
+        response = _event_to_response(event)
 
     # Broadcast to WebSocket clients in the same tenant only.
-    response = _event_to_response(event)
     await event_manager.broadcast_to_org(
         org_id, {"type": "task_event", "payload": response.model_dump()}
     )

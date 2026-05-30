@@ -111,6 +111,8 @@ from .legal import (
     LawSearchTool,
     REPSECheckTool,
 )
+from .linkedin_draft_list import LinkedInDraftListTool
+from .linkedin_drafts import LinkedInDraftCreateTool
 from .loki import get_loki_tools
 from .marketing_tools import SendMarketingEmailTool
 from .mastodon_tools import MastodonPostTool
@@ -325,6 +327,13 @@ def get_builtin_tools() -> list[BaseTool]:
         # bluesky_promo_v1 playbook. Tech-leaning audience fits Selva +
         # Yantra4D promo. Quote-posts deferred to v2.
         BlueskyPostTool(),
+        # LinkedIn — DRAFT-ONLY by design. No posting tool ever ships in
+        # this package; LinkedIn has no automation-friendly promo API and
+        # the operator must paste manually. Drafts land in
+        # ``linkedin_drafts/<date>/<id>.md`` artifact storage with
+        # frontmatter + a 140-char hook for in-feed preview verification.
+        LinkedInDraftCreateTool(),
+        LinkedInDraftListTool(),
         # Phygital tools (Yantra4D Engine Node)
         GenerateParametricModelTool(),
         RunDFMAnalysisTool(),

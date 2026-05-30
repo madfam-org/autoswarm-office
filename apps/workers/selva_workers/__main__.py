@@ -39,6 +39,7 @@ from .config import get_settings
 from .event_emitter import emit_event as _emit_event
 from .graphs.accounting import build_accounting_graph
 from .graphs.billing import build_billing_graph
+from .graphs.campaign import build_campaign_graph
 from .graphs.coding import build_coding_graph
 from .graphs.crm import build_crm_graph
 from .graphs.deployment import build_deployment_graph
@@ -63,6 +64,7 @@ AGENT_STATUS_CHANNEL = "autoswarm:agent-status"
 GRAPH_BUILDERS = {
     "accounting": build_accounting_graph,
     "billing": build_billing_graph,
+    "campaign": build_campaign_graph,
     "coding": build_coding_graph,
     "research": build_research_graph,
     "crm": build_crm_graph,
@@ -463,6 +465,15 @@ async def process_task(task_data: dict) -> None:
         initial_state["exchange_rate"] = None
         initial_state["economic_indicators"] = None
         initial_state["briefing_text"] = None
+    elif graph_type == "campaign":
+        payload = task_data.get("payload", {})
+        initial_state["tulana_pack"] = payload.get("tulana_pack")
+        initial_state["campaign_category"] = payload.get(
+            "campaign_category", "sku_campaign_planning"
+        )
+        initial_state["campaign_lane"] = None
+        initial_state["draft_variants"] = []
+        initial_state["guardrail_violations"] = []
     elif graph_type == "operations":
         payload = task_data.get("payload", {})
         initial_state["org_id"] = payload.get("org_id", "")

@@ -11,6 +11,7 @@ from typing import Any
 DEFAULT_TIMEOUTS: dict[str, int] = {
     "accounting": 600,
     "billing": 300,
+    "campaign": 300,
     "coding": 600,
     "research": 300,
     "crm": 120,

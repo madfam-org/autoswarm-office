@@ -86,7 +86,7 @@ Selva should reject campaign tasks that lack:
 
 `POST /api/v1/campaigns/import-tulana-pack` — validates packs, returns ranked
 accept/reject lists, optional `dispatch_tasks` to enqueue `sku_campaign_planning`
-tasks on the `intelligence` graph.
+tasks on the `campaign` graph (`load_tulana_pack` → `plan_lane` → `draft_copy`).
 
 ## Agent workflow
 

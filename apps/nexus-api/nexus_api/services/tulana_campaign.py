@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from ..schemas.tulana_campaign import (
     TulanaImportRequest,
     TulanaImportResponse,
@@ -16,6 +18,22 @@ _READINESS_SCORE: dict[str, float] = {
     "discovery": 50.0,
     "blocked": 10.0,
 }
+
+
+def guard_campaign_draft(draft: str, do_not_claim: list[str]) -> tuple[str, list[str]]:
+    """Scrub do_not_claim phrases from generated copy (Phase 2.3 guardrail)."""
+    violations: list[str] = []
+    scrubbed = draft
+    for phrase in do_not_claim:
+        cleaned = phrase.strip()
+        if not cleaned:
+            continue
+        pattern = re.compile(re.escape(cleaned), re.IGNORECASE)
+        if pattern.search(scrubbed):
+            violations.append(cleaned)
+            scrubbed = pattern.sub("", scrubbed)
+    scrubbed = re.sub(r"\s{2,}", " ", scrubbed).strip()
+    return scrubbed, violations
 
 
 def validate_pack(

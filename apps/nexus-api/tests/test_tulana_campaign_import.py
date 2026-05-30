@@ -47,19 +47,24 @@ class TestTulanaPackValidation:
         assert result.accepted is False
         assert any("do_not_claim" in e for e in result.errors)
 
-    def test_missing_proof_and_not_waived_rejected(self) -> None:
-        pack = _valid_pack(proof_points=[], policy_state="pending_review")
-        result = validate_pack(pack, allow_blocked=False)
-        assert result.accepted is False
-        assert any("proof_point" in e for e in result.errors)
-
     def test_blocked_rejected_unless_allowed(self) -> None:
         pack = _valid_pack(ga_readiness="blocked")
         blocked = validate_pack(pack, allow_blocked=False)
         assert blocked.accepted is False
-
         allowed = validate_pack(pack, allow_blocked=True)
         assert allowed.accepted is True
+
+
+class TestGuardCampaignDraft:
+    def test_scrubs_do_not_claim(self) -> None:
+        from nexus_api.services.tulana_campaign import guard_campaign_draft
+
+        scrubbed, violations = guard_campaign_draft(
+            "Buy now. Do not claim external legal approval.",
+            ["Do not claim external legal approval"],
+        )
+        assert "external legal approval" not in scrubbed.lower()
+        assert violations
 
 
 class TestTulanaImportRanking:

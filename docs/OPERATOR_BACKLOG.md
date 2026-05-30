@@ -38,6 +38,10 @@ Items are roughly priority-ordered. Highest value at top.
 
 ### 1. Wire OTel exporter (`OTEL_EXPORTER_OTLP_ENDPOINT`)
 
+- **Status (2026-05-30)**: K8s optional secret refs shipped on all 6
+  Deployments (`infra/k8s/production/patches/observability-*.yaml`).
+  Operator action remains: create `autoswarm-observability-secrets` (prod)
+  / same name in `autoswarm-staging` namespace with Grafana token + verify trace.
 - **What**: Pick a backend, provision the endpoint URL + auth header,
   set the env var on every service in production K8s. Verify a trace
   flows end-to-end for one request path (e.g.,
@@ -60,6 +64,10 @@ Items are roughly priority-ordered. Highest value at top.
 
 ### 2. Provision Sentry per-service DSNs
 
+- **Status (2026-05-30)**: Per-service optional `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
+  secret refs wired in the same observability patches. Operator creates DSN keys
+  in `autoswarm-observability-secrets` per
+  `infra/k8s/production/observability-secrets-template.yaml`.
 - **What**: Create 5 separate Sentry projects (nexus-api, workers,
   gateway, colyseus, office-ui), grab the DSN for each, set the
   per-service env var (`SENTRY_DSN`). Add source-map upload to the

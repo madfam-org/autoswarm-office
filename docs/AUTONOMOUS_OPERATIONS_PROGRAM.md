@@ -66,7 +66,7 @@ Observability         → OTel, Sentry, SLO burn alerts, on-call runbooks
 
 | ID | Work | Primary repo | Exit criteria |
 |----|------|--------------|---------------|
-| 0.1 | Wire `OTEL_EXPORTER_OTLP_ENDPOINT` on all 6 services | selva-office + Enclii | End-to-end trace: `POST /swarms/dispatch` → worker → checkpoint |
+| 0.1 | Wire `OTEL_EXPORTER_OTLP_ENDPOINT` on all 6 services | selva-office + Enclii | K8s optional secret refs shipped; operator provisions Grafana token → end-to-end trace |
 | 0.2 | Sentry DSNs + office-ui source maps in CI | selva-office | Synthetic staging error captured |
 | 0.3 | `STRIPE_PRICE_TO_TIER_MAP` + staging verification | selva-office + Stripe | Webhook events map to correct tier in staging |
 | 0.4 | k6 100-concurrent-tasks in staging | selva-office | Results in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md) |
@@ -115,8 +115,8 @@ Heartbeat → PhyndCRM hot leads → auto-dispatch (HITL)
 | ID | Deliverable | Implementation |
 |----|-------------|----------------|
 | 2.1 | Tulana import API | ✅ `POST /api/v1/campaigns/import-tulana-pack` + schema validation (`routers/campaigns.py`) |
-| 2.2 | `sku_campaign_planning` | Partial — `dispatch_tasks` enqueues `intelligence` tasks; dedicated graph/workflow TBD |
-| 2.3 | `campaign_draft` | LLM drafts from proof points only; CI excludes `do_not_claim` |
+| 2.2 | `sku_campaign_planning` | ✅ `campaign` graph (`load_tulana_pack` → `plan_lane` → `draft_copy`); import dispatches `graph_type=campaign` |
+| 2.3 | `campaign_draft` | Partial — LLM drafts from proof points; `guard_campaign_draft()` scrubs `do_not_claim` |
 | 2.4 | Phynd handoff | `crm_campaign_handoff` with idempotency + consent/unsubscribe preservation |
 | 2.5 | Scheduled social executor | Extend `ScheduledAction.SOCIAL_POST` (Reddit/Mastodon/Bluesky/LinkedIn drafts) |
 | 2.6 | Feedback loop | `tulana_feedback_update` → Tulana buyer-signal endpoint |

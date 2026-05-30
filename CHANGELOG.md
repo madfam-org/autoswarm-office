@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **`campaign` worker graph** — Tulana SKU planning lane + draft generation with
+  `do_not_claim` guardrail scrubbing (Phase 2.2–2.3).
+- **Phase 0 observability k8s wiring** — optional `autoswarm-observability-secrets`
+  env refs on all 6 Deployments + `observability-secrets-template.yaml` +
+  `./scripts/verify-phase0-gates.sh`.
+- **OTel gRPC exporter deps** on nexus-api and workers (activates when endpoint set).
 - **`POST /api/v1/campaigns/import-tulana-pack`** — Tulana SKU pack validation,
   ranking, optional `dispatch_tasks` for `sku_campaign_planning` on the
   `intelligence` graph (Phase 2.1–2.2).

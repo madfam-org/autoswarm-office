@@ -185,3 +185,16 @@ class TestCampaignsApi:
         assert patch.exists(), "staging KEDA pin patch must exist for RWO PVC"
         text = patch.read_text(encoding="utf-8")
         assert "maxReplicaCount" in text and "value: 1" in text
+
+    def test_observability_patches_exist(self) -> None:
+        patch_dir = _REPO_ROOT / "infra" / "k8s" / "production" / "patches"
+        for name in (
+            "observability-nexus-api.yaml",
+            "observability-workers.yaml",
+            "observability-gateway.yaml",
+        ):
+            path = patch_dir / name
+            assert path.exists(), f"missing {name}"
+            text = path.read_text(encoding="utf-8")
+            assert "autoswarm-observability-secrets" in text
+            assert "optional: true" in text

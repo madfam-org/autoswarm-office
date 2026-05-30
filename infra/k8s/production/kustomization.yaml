@@ -72,3 +72,30 @@ images:
 - digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b
   name: ghcr.io/madfam-org/selva-workers
   newName: ghcr.io/madfam-org/selva-workers
+
+# Phase 0 — optional OTel + Sentry env (no-op until observability secret exists).
+patches:
+  - path: patches/observability-nexus-api.yaml
+    target:
+      kind: Deployment
+      name: nexus-api
+  - path: patches/observability-workers.yaml
+    target:
+      kind: Deployment
+      name: workers
+  - path: patches/observability-gateway.yaml
+    target:
+      kind: Deployment
+      name: gateway
+  - path: patches/observability-colyseus.yaml
+    target:
+      kind: Deployment
+      name: colyseus
+  - path: patches/observability-office-ui.yaml
+    target:
+      kind: Deployment
+      name: office-ui
+  - path: patches/observability-admin.yaml
+    target:
+      kind: Deployment
+      name: admin

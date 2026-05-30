@@ -35,7 +35,7 @@ async def _dispatch_planning_tasks(
     import_result: TulanaImportResponse,
     idempotency_prefix: str,
 ) -> list[str]:
-    """Enqueue one intelligence-graph task per accepted SKU (Phase 2.2 skeleton)."""
+    """Enqueue one campaign-graph task per accepted SKU (Phase 2.2)."""
     from selva_permissions import resolve_audience
 
     settings = get_settings()
@@ -51,7 +51,7 @@ async def _dispatch_planning_tasks(
             "task_id": str(task_id),
             "org_id": tenant.org_id,
             "audience": task_audience,
-            "graph_type": "intelligence",
+            "graph_type": "campaign",
             "idempotency_key": idempotency_key,
             "source": "tulana-campaign-import",
             "desired_state_hash": None,
@@ -70,7 +70,7 @@ async def _dispatch_planning_tasks(
             id=task_id,
             title=f"Campaign plan: {pack.sku_key}",
             description=description[:2000],
-            graph_type="intelligence",
+            graph_type="campaign",
             assigned_agent_ids=[],
             payload=payload,
             status="queued",
@@ -87,7 +87,7 @@ async def _dispatch_planning_tasks(
             "task_id": str(task.id),
             "org_id": tenant.org_id,
             "audience": task_audience,
-            "graph_type": "intelligence",
+            "graph_type": "campaign",
             "idempotency_key": idempotency_key,
             "source": "tulana-campaign-import",
             "description": task.description,

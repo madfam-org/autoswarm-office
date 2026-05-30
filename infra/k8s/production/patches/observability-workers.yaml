@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workers
+spec:
+  template:
+    spec:
+      containers:
+        - name: workers
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-observability-secrets
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+                  optional: true
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-observability-secrets
+                  key: OTEL_EXPORTER_OTLP_HEADERS
+                  optional: true
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-observability-secrets
+                  key: SENTRY_DSN_WORKERS
+                  optional: true
+            - name: SENTRY_ENVIRONMENT
+              value: production

@@ -2,13 +2,17 @@
 # API-level Phase 2 campaign loop verification (operator backlog 5b).
 #
 # Exercises: import → schedule-social → HITL approve → CRM handoff → Tulana feedback.
-# Requires a Janua Bearer token with tenant org scope (not guest).
+# Requires a Janua Bearer token with tenant org scope (not guest), or on
+# --staging falls back to WORKER_API_TOKEN from autoswarm-staging-secrets
+# (with X-Selva-Tenant-Org) when no JWT is set.
 #
 # Usage:
 #   AUTH_TOKEN=<jwt> ./scripts/verify-campaign-loop.sh
 #   AUTH_TOKEN=<jwt> ./scripts/verify-campaign-loop.sh --staging
+#   ./scripts/verify-campaign-loop.sh --staging   # uses worker token via kubectl
 #
 # Env (first match wins): AUTH_TOKEN, STAGING_CAMPAIGN_TEST_TOKEN, STAGING_LOAD_TEST_TOKEN
+# Staging worker fallback: STAGING_TENANT_ORG (default madfam), WORKER_API_TOKEN
 #
 # Exit 0 when all applicable checks pass or when no token is set (SKIP).
 
@@ -33,6 +37,18 @@ if [[ "$MODE" == "--staging" ]]; then
 fi
 
 TOKEN="${AUTH_TOKEN:-${STAGING_CAMPAIGN_TEST_TOKEN:-${STAGING_LOAD_TEST_TOKEN:-}}}"
+TENANT_ORG_HEADER=()
+if [[ -z "$TOKEN" && "$MODE" == "--staging" ]]; then
+  if [[ -z "${WORKER_API_TOKEN:-}" ]] && command -v kubectl >/dev/null 2>&1; then
+    WORKER_API_TOKEN="$(kubectl -n autoswarm-staging get secret autoswarm-staging-secrets \
+      -o jsonpath='{.data.WORKER_API_TOKEN}' 2>/dev/null | base64 -d || true)"
+  fi
+  if [[ -n "${WORKER_API_TOKEN:-}" ]]; then
+    TOKEN="$WORKER_API_TOKEN"
+    TENANT_ORG_HEADER=(-H "X-Selva-Tenant-Org: ${STAGING_TENANT_ORG:-madfam}")
+    pass "using WORKER_API_TOKEN for staging API loop (org=${STAGING_TENANT_ORG:-madfam})"
+  fi
+fi
 if [[ -z "$TOKEN" ]]; then
   skip "no AUTH_TOKEN / STAGING_CAMPAIGN_TEST_TOKEN — API loop not run"
   skip "set STAGING_CAMPAIGN_TEST_TOKEN in GitHub secrets for CI soak"
@@ -55,10 +71,13 @@ api_post() {
   if [[ -n "$idem_key" ]]; then
     extra+=(-H "Idempotency-Key: ${idem_key}")
   fi
+  local headers=(-H "Content-Type: application/json" -H "$AUTH_HEADER")
+  if ((${#TENANT_ORG_HEADER[@]} > 0)); then
+    headers+=("${TENANT_ORG_HEADER[@]}")
+  fi
   curl -sS -w "\n%{http_code}" \
     -X POST "${BASE_URL}${path}" \
-    -H "Content-Type: application/json" \
-    -H "$AUTH_HEADER" \
+    "${headers[@]}" \
     "${extra[@]}" \
     --data "$body"
 }
@@ -66,10 +85,13 @@ api_post() {
 api_patch() {
   local path="$1"
   local body="$2"
+  local headers=(-H "Content-Type: application/json" -H "$AUTH_HEADER")
+  if ((${#TENANT_ORG_HEADER[@]} > 0)); then
+    headers+=("${TENANT_ORG_HEADER[@]}")
+  fi
   curl -sS -w "\n%{http_code}" \
     -X PATCH "${BASE_URL}${path}" \
-    -H "Content-Type: application/json" \
-    -H "$AUTH_HEADER" \
+    "${headers[@]}" \
     --data "$body"
 }
 
@@ -80,7 +102,8 @@ parse_response() {
 }
 
 echo "--- import Tulana pack ---"
-IMPORT_RAW="$(api_post "/api/v1/campaigns/import-tulana-pack" @"$FIXTURE" "campaign-loop-import-${RUN_ID}")"
+IMPORT_BODY="$(cat "$FIXTURE")"
+IMPORT_RAW="$(api_post "/api/v1/campaigns/import-tulana-pack" "$IMPORT_BODY" "campaign-loop-import-${RUN_ID}")"
 parse_response "$IMPORT_RAW"
 if [[ "$CODE" == "200" ]]; then
   pass "import-tulana-pack (200)"
@@ -172,10 +195,10 @@ FEEDBACK_RAW="$(api_post "/api/v1/campaigns/tulana-feedback" "$FEEDBACK_BODY" "c
 parse_response "$FEEDBACK_RAW"
 if [[ "$CODE" == "200" ]]; then
   pass "tulana-feedback (200)"
-elif [[ "$CODE" == "503" ]]; then
-  skip "tulana-feedback not configured on target (503) — wire TULANA_API_URL + secret"
+elif [[ "$CODE" == "503" || "$CODE" == "502" ]]; then
+  skip "tulana-feedback not configured or upstream missing (${CODE}) — wire TULANA_API_URL + secret + buyer-signal route"
 else
-  fail "tulana-feedback expected 200 or 503, got ${CODE}: ${BODY}"
+  fail "tulana-feedback expected 200 or 503/502 skip, got ${CODE}: ${BODY}"
 fi
 
 if ((${#FAILURES[@]} > 0)); then

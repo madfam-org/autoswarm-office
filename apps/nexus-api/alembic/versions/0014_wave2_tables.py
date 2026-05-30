@@ -28,9 +28,8 @@ def upgrade() -> None:
         sa.Column("state_json", sa.Text, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_session_checkpoints_run_id", "session_checkpoints", ["run_id"])
 
 
 def downgrade() -> None:
-    op.drop_index("ix_session_checkpoints_run_id")
+    op.drop_index("ix_session_checkpoints_run_id", table_name="session_checkpoints")
     op.drop_table("session_checkpoints")

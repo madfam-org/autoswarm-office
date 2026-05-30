@@ -22,6 +22,10 @@ spec:
               value: autoswarm-nexus-api@staging
             - name: CORS_ORIGINS
               value: "https://staging.selva.town,https://staging-admin.selva.town,https://staging-api.selva.town"
+            - name: PUBLIC_APP_URL
+              value: "https://staging.selva.town"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "https://staging.selva.town"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

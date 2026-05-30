@@ -21,3 +21,6 @@ data:
   NEXT_PUBLIC_DHANAM_URL: "https://app.dhan.am"
   NEXT_PUBLIC_DEMO_ENABLED: "true"
   NEXT_PUBLIC_GUEST_ACCESS_ENABLED: "true"
+  NEXT_PUBLIC_APP_URL: "https://app.selva.town"
+  PUBLIC_APP_URL: "https://app.selva.town"
+  CORS_ORIGINS: "https://app.selva.town,https://admin.selva.town,https://api.selva.town"

@@ -35,9 +35,9 @@ After startup, these URLs are available:
 | Office UI (demo) | http://localhost:4301/demo |
 | Office UI (office) | http://localhost:4301/office |
 | Nexus API | http://localhost:4300 |
-| API docs (Swagger) | http://localhost:4300/docs |
+| API docs (Swagger) | http://localhost:4300/api/v1/docs (disabled when `ENVIRONMENT=production`) |
 | Colyseus | ws://localhost:4303 |
-| Gateway | Background worker (no HTTP; port 4304 reserved) |
+| Gateway | http://localhost:4304/health (heartbeat daemon) |
 
 ## Running Services Individually
 

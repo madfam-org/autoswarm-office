@@ -31,10 +31,10 @@ Selva Office (repo `selva-office`, formerly `autoswarm-office`) is MADFAM's AI i
 
 | Service | Public domain | Container port |
 |---|---|---|
-| `selva-nexus-api` | api.selva.town | 8000 |
+| `selva-nexus-api` | api.selva.town | 4300 |
 | `selva-office-ui` | app.selva.town | 3000 |
-| `selva-admin` | admin.selva.town | 3001 |
-| `selva-colyseus` | ws.selva.town | 2567 |
+| `selva-admin` | admin.selva.town | 3000 |
+| `selva-colyseus` | ws.selva.town | 4303 |
 | `selva-gateway` | gw.selva.town (health/metrics) | 4304 |
 | `selva-workers` | (langgraph worker, internal) | 4305 |
 
@@ -93,7 +93,12 @@ below is embedded here so this document stands alone.
 
 - **Auth**: every authenticated service verifies Janua JWTs via JWKS at
   `https://auth.madfam.io/.well-known/jwks.json`. RS256 only — HS256 is
-  fail-closed after the 2026-04-23 audit (H3/H4).
+  fail-closed after the 2026-04-23 audit (H3/H4). Selva production runtime
+  sets `JANUA_ISSUER_URL=https://auth.madfam.io` in
+  `infra/k8s/production/configmap.yaml`. The Enclii service template in
+  `enclii.yaml` and staging patches may use the product-domain alias
+  `https://auth.selva.town` — verify both resolve to the same JWKS before
+  changing production.
 - **Billing**: credit metering + entitlements flow through Dhanam. See
   `madfam-org/dhanam` for the meter/entitlement/invoice APIs.
 - **Inference**: every LLM call should route through Selva

@@ -1,6 +1,6 @@
 # Architecture Overview
 
-AutoSwarm Office is a gamified multi-agent business orchestration platform built as a
+Selva Office is a gamified multi-agent business orchestration platform built as a
 polyglot monorepo with TypeScript frontend services and Python backend services.
 
 ## Component Diagram
@@ -32,11 +32,13 @@ polyglot monorepo with TypeScript frontend services and Python backend services.
                          +-----v------+
                          |  Workers   |
                          | (LangGraph)|
+                         |   :4305    |
                          +-----+------+
                                |
                          +-----v------+
                          |  Gateway   |
                          | (OpenClaw) |
+                         |   :4304    |
                          +------------+
 ```
 
@@ -48,7 +50,7 @@ polyglot monorepo with TypeScript frontend services and Python backend services.
 | **Nexus API** | FastAPI, SQLAlchemy, Pydantic | Central REST API, WebSocket hub, auth middleware, task dispatch |
 | **Colyseus** | Colyseus (Node.js) | Real-time game state synchronization for the spatial office |
 | **Workers** | LangGraph, Python | Execute agent tasks in isolated environments with HITL interrupts |
-| **Gateway** | OpenClaw (Node.js) | Persistent daemon for scheduled heartbeats and memory management |
+| **Gateway** | OpenClaw (Node.js) | Persistent daemon for scheduled heartbeats; exposes HTTP health/metrics on :4304 |
 | **PostgreSQL** | PostgreSQL 16 | Persistent storage for agents, departments, tasks, approvals, ledger |
 | **Redis** | Redis 7 | Task stream (`autoswarm:task-stream`), pub/sub for real-time events, caching |
 
@@ -126,23 +128,14 @@ PATCH task status to "completed" or "failed" with result
 
 ## Port Assignments
 
-All ports are scoped to avoid conflicts with sibling Selva services
-(Janua uses 4100-4104, Enclii uses 4200-4204).
-
-| Port | Service | Protocol |
-|------|---------|----------|
-| 4300 | nexus-api | HTTP/WebSocket |
-| 4301 | office-ui | HTTP |
-| 4302 | admin dashboard | HTTP |
-| 4303 | colyseus | WebSocket |
-| 4304 | gateway | Background worker (no HTTP) |
-| 5432 | PostgreSQL | TCP |
-| 6379 | Redis | TCP |
+See [PORTS.md](PORTS.md) for the canonical local dev, k8s container, public
+domain, and health endpoint tables. Local host ports are scoped to avoid
+conflicts with Janua (4100-4104) and Enclii (4200-4204).
 
 ## Monorepo Structure
 
 ```
-autoswarm-office/
+selva-office/
   apps/
     nexus-api/        Python -- FastAPI central API
     office-ui/        TypeScript -- Next.js + Phaser spatial UI

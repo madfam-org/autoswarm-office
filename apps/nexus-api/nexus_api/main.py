@@ -379,7 +379,7 @@ def create_app() -> FastAPI:
 
         a2a_router = create_a2a_router(
             agent_name="Selva Office",
-            base_url=settings.cors_origins[0] if settings.cors_origins else "",
+            base_url=settings.public_app_url,
             get_skills=_get_a2a_skills,
             dispatch_task=_dispatch_a2a_task,
             get_task_status=_get_a2a_task_status,

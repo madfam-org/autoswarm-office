@@ -890,8 +890,8 @@ MAX_CONCURRENT_TASKS=5  # Allow 5 concurrent tasks per worker
 kubectl scale deployment/workers --replicas=3 -n autoswarm
 
 # Local: run multiple processes
-MAX_CONCURRENT_TASKS=3 uv run python -m autoswarm_workers &
-MAX_CONCURRENT_TASKS=3 uv run python -m autoswarm_workers &
+MAX_CONCURRENT_TASKS=3 uv run python -m selva_workers &
+MAX_CONCURRENT_TASKS=3 uv run python -m selva_workers &
 ```
 
 ### Verifying Consumer Group Membership
@@ -987,6 +987,6 @@ Key environment variables referenced in this runbook. Secrets are stored in the
 | `scripts/restore-postgres.sh` | Manual restore script |
 | `scripts/verify-backup.sh` | Backup integrity verification |
 | `apps/nexus-api/nexus_api/routers/health.py` | Health and readiness endpoints |
-| `apps/workers/autoswarm_workers/health.py` | Worker health server |
+| `apps/workers/selva_workers/health.py` | Worker health server |
 | `apps/gateway/src/index.ts` | Gateway health server |
 | `apps/colyseus/src/index.ts` | Colyseus health endpoint |

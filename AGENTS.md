@@ -513,7 +513,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - `apps/colyseus/src/handlers/teleport.ts` -- Player teleport handler
 - `packages/workflows/src/selva_workflows/compiler.py` -- YAML-to-LangGraph compiler
 - `packages/workflows/src/selva_workflows/schema.py` -- Workflow definition models
-- `packages/tools/src/selva_tools/registry.py` -- Tool registry (240 built-in tools; see `builtins/__init__.py:get_builtin_tools`)
+- `packages/tools/src/selva_tools/registry.py` -- Tool registry (268 built-in tools; see `builtins/__init__.py:get_builtin_tools`)
 - `packages/memory/src/selva_memory/store.py` -- Per-agent FAISS memory store
 - `packages/tools/src/selva_tools/storage/local.py` -- Content-addressable artifact storage
 - `packages/tools/src/selva_tools/builtins/artifact.py` -- Artifact management tools (save/retrieve/list)
@@ -1038,11 +1038,14 @@ and tenant (customer-org) swarms see different registries:
 
 **Feature flag + shadow mode**:
 
-- `AUDIENCE_FILTER_ENABLED` env var (default off). When off, every
+- `AUDIENCE_FILTER_ENABLED` env var (default off in code). When off, every
   enforcement point logs a `audience_shadow_block` warning instead
   of raising/returning 403. Lets ops observe the production rate of
   would-be-blocks for 24-48h before flipping to enforce.
-- When ready, set `AUDIENCE_FILTER_ENABLED=true` on workers +
+- Production (`infra/k8s/production/configmap.yaml`) sets
+  `AUDIENCE_FILTER_ENABLED=true` — enforcement is live. New environments
+  should follow [docs/AUDIENCE_FILTER_ROLLOUT.md](docs/AUDIENCE_FILTER_ROLLOUT.md).
+- When ready in a new env, set `AUDIENCE_FILTER_ENABLED=true` on workers +
   nexus-api. The three gates (tool execute, skill activate, dispatch
   endpoint) all flip in the same release.
 
@@ -1389,6 +1392,7 @@ skill composes these four tools into a pre-submission gate.
 
 ### OpenAPI Documentation
 - Swagger UI at `/api/v1/docs`, OpenAPI JSON at `/api/v1/openapi.json`.
+  Disabled when `ENVIRONMENT=production` (see `docs/PORTS.md`).
 
 ### Simplified View
 - `SimplifiedView.tsx`: accessible HTML-only alternative to Phaser canvas.

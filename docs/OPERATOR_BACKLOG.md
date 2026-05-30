@@ -142,9 +142,11 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 - **Status (2026-05-30)**: `.github/workflows/load-test.yml` ships with
   `workflow_dispatch`. **Precursor smoke:** `./scripts/run-staging-load-smoke.sh`
-  (10 VU × ~2 min, worker token via kubectl). Full scenario:
-  `tests/load/concurrent-100-swarmtasks.js` — pass `-e TENANT_ORG=madfam` when
-  using `WORKER_API_TOKEN`. Record results in `docs/LOAD_TEST_2026-Q2.md`.
+  (1 VU). **Full scenario:** `./scripts/run-staging-load-full.sh` (requires
+  staging `DISPATCH_RATE_LIMIT=500`, `RATE_LIMIT_PER_MINUTE=10000` in
+  `patch-nexus-api.yaml`). **Run 2 recorded** in `docs/LOAD_TEST_2026-Q2.md`
+  — thresholds failed (p99 dispatch 5s, 22% errors); recommends raising
+  `MAX_CONCURRENT_TASKS` before Run 3.
 - **What**: Provision `k6` in the operator workstation or staging
   CI runner. Provision a staging API token. Run
   `k6 run -e BASE_URL=https://staging-api.selva.town -e AUTH_TOKEN=<token> tests/load/concurrent-100-swarmtasks.js`.
@@ -170,14 +172,15 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
   `tulana-feedback (200)` after Tulana `0161187` + cache-bust deploy
   (`cc4d3b645469…`). Use worker auth via `STAGING_WORKER_API_TOKEN` in CI.
 - **What**: Optional UI soak on `https://staging.selva.town/office` → **Campaigns**.
-- **Why blocking**: Phase 2 program gate requires a proven Tulana → Selva → Phynd
-  → Tulana loop — Selva + Phynd legs proven; Tulana ingest route is the gap.
+- **Why blocking**: Phase 2 program gate required a proven Tulana → Selva → Phynd
+  → Tulana loop — **API path now proven**; optional UI soak remains.
 - **Owner**: Operator (Janua staging login + Tulana export JSON).
 - **Unblocks**: Phase 3 phygital work; autonomy graduation for campaign lanes.
 - **Cross-refs**:
   - [docs/INTEGRATION.md](INTEGRATION.md) — campaign endpoints + UI
   - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
   - `./scripts/reconcile-dhanam-selva-webhook.sh` — wire Dhanam `PRODUCT_WEBHOOK_URLS` → Selva staging
+  - `./scripts/verify-dhanam-price-tier-map.sh` — check Dhanam Stripe price→tier keys (SKIP until catalog wired)
   - `./scripts/bootstrap-staging-observability.sh` — create `autoswarm-observability-secrets` (Tier 1)
 
 ### 3b. Deploy Tulana buyer-signal ingest route — **DONE (2026-05-30)**

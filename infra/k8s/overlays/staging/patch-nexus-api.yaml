@@ -83,6 +83,14 @@ spec:
                   optional: true
             - name: BILLING_VIA_DHANAM
               value: "true"
+            # Load-test calibration: worker JWT sub is shared (service:worker); default 10/min blocks 100-VU k6.
+            - name: DISPATCH_RATE_LIMIT
+              value: "500"
+            - name: DISPATCH_RATE_WINDOW
+              value: "60"
+            # Global IP bucket (RateLimitMiddleware); k6 runs from one egress IP.
+            - name: RATE_LIMIT_PER_MINUTE
+              value: "10000"
             - name: TULANA_API_URL
               value: "https://tulana-api.madfam.io"
             - name: TULANA_SELVA_WEBHOOK_SECRET

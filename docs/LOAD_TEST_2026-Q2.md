@@ -79,29 +79,48 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 
 ## Results
 
-### Run 1 — TBD
+### Run 1 — 2026-05-30 (invalid — rate limits)
 
 | Field | Value |
 |---|---|
-| Date | TBD |
-| Staging SHA | TBD |
-| Operator | TBD |
-| `MAX_CONCURRENT_TASKS` at run | TBD |
-| `dispatch_rate_limit` at run | TBD |
-| Worker pod replicas | TBD |
-| **Hard thresholds passed?** | TBD |
-| `dispatch_latency_ms` p50 / p95 / p99 | TBD |
-| `queue_depth` p50 / max | TBD |
-| `dlq_depth` final | TBD |
-| `worker_in_flight` steady-state max | TBD |
-| Postgres pool wait p99 (sidecar query) | TBD |
-| LLM 429 rate per provider | TBD |
-| **Recommended `MAX_CONCURRENT_TASKS` change** | TBD |
-| **Recommended `dispatch_rate_limit` change** | TBD |
-| **Recommended `TIER_DAILY_TASK_LIMIT` changes** | TBD |
-| Notes | TBD |
+| Date | 2026-05-30 |
+| Staging SHA | `dffbb9a` (pre-calibration patches) |
+| Operator | autonomous ops agent |
+| `MAX_CONCURRENT_TASKS` at run | 3 (worker default) |
+| `dispatch_rate_limit` at run | 500 (live patch) |
+| `RATE_LIMIT_PER_MINUTE` at run | 60 (default) |
+| Worker pod replicas | 1 |
+| **Hard thresholds passed?** | **No — invalid run** |
+| `dispatch_latency_ms` p50 / p95 / p99 | 201ms / 913ms / 1.7s |
+| `queue_depth` p50 / max | 0 / 0 |
+| `dlq_depth` final | 0 |
+| `worker_in_flight` steady-state max | 0 |
+| Notes | Global IP rate limit (60/min) caused 99.92% dispatch failures; k6 loop exited early (~376ms/iter). Do not use for calibration. See `docs/load-test-runs/20260530T212109Z.k6.json`. |
 
-### Run 2 — TBD (post-recommendation, validate the change)
+### Run 2 — 2026-05-30 (calibration — thresholds failed, data usable)
+
+| Field | Value |
+|---|---|
+| Date | 2026-05-30 |
+| Staging SHA | `dffbb9a` + live patches (`DISPATCH_RATE_LIMIT=500`, `RATE_LIMIT_PER_MINUTE=10000`, Redis `autoswarm:tier:madfam=100000`) |
+| Operator | autonomous ops agent |
+| `MAX_CONCURRENT_TASKS` at run | 3 (default) |
+| `dispatch_rate_limit` at run | 500 |
+| `RATE_LIMIT_PER_MINUTE` at run | 10000 |
+| Worker pod replicas | 1 |
+| **Hard thresholds passed?** | **No** (p99 dispatch 5.03s; errors 21.77%) |
+| `dispatch_latency_ms` p50 / p95 / p99 | 825ms / 5s / 5.03s |
+| `queue_depth` p50 / max | 0 / 0 |
+| `dlq_depth` final | 0 |
+| `worker_in_flight` steady-state max | 0 (metric not surfaced — `/metrics/dashboard` gap) |
+| Postgres pool wait p99 (sidecar query) | not measured |
+| LLM 429 rate per provider | not measured (research graph; staging LLM optional) |
+| **Recommended `MAX_CONCURRENT_TASKS` change** | Raise worker to **10–15** per pod before re-run; 3 cannot drain 100 VU inventory |
+| **Recommended `dispatch_rate_limit` change** | Keep **500** on staging during calibration; prod stays 10 until Run 3 passes |
+| **Recommended `TIER_DAILY_TASK_LIMIT` changes** | Use dedicated load-test org or Redis tier cache bump (script now sets 100k for 24h) |
+| Notes | 654/836 dispatches 2xx (78%); poll timeouts under load; post-run queue pending ~681. Staging overlay patches in `infra/k8s/overlays/staging/patch-nexus-api.yaml`. Raw: `docs/load-test-runs/20260530T213124Z.k6.json`. |
+
+### Run 3 — TBD (post-recommendation, validate the change)
 
 | Field | Value |
 |---|---|

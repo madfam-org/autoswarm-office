@@ -50,7 +50,7 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 | Metric | Value | Source |
 |--------|-------|--------|
 | Built-in tools | 268 registered (`get_builtin_tools()`) | `uv run python -c "from selva_tools.builtins import get_builtin_tools; print(len(get_builtin_tools()))"` |
-| Workflow graphs | 12 (accounting, billing, coding, crm, deployment, intelligence, meeting, operations, project, puppeteer, research, sales) | `apps/workers/selva_workers/graphs/*.py` |
+| Workflow graphs | 13 (includes `calibration` for k6 Run 4) | `apps/workers/selva_workers/graphs/*.py` |
 | Ecosystem adapters | 6 (Karafiel, Dhanam, PhyndCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
 | Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
 | Alembic migrations | 38 (latest 0038 — grant core schema to app roles) | `apps/nexus-api/alembic/versions/*.py` |

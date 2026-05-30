@@ -170,6 +170,7 @@ async def queue_stats() -> dict[str, object]:
             stats["dlq_depth"] = 0
 
         # Consumer group info
+        pending_total = 0
         try:
             groups = await client.xinfo_groups("autoswarm:task-stream")
             stats["consumer_groups"] = [
@@ -181,9 +182,36 @@ async def queue_stats() -> dict[str, object]:
                 }
                 for g in groups
             ]
+            pending_total = sum(
+                int(g.get("pending", 0))
+                for g in groups
+                if isinstance(g.get("pending", 0), int)
+            )
         except Exception:
             logger.debug("Failed to fetch consumer group info", exc_info=True)
             stats["consumer_groups"] = []
+
+        # k6 calibration gauges (Run 4+)
+        stream_len = int(stats.get("stream_length", 0) or 0)
+        stats["queue_depth"] = stream_len + pending_total
+        stats["pending_total"] = pending_total
+
+        try:
+            from sqlalchemy import func, select
+
+            from ..database import admin_session
+            from ..models import SwarmTask
+
+            async with admin_session() as db:
+                in_flight = await db.execute(
+                    select(func.count())
+                    .select_from(SwarmTask)
+                    .where(SwarmTask.status.in_(("queued", "pending", "running")))
+                )
+                stats["worker_in_flight"] = int(in_flight.scalar_one())
+        except Exception:
+            logger.debug("Failed to count in-flight swarm tasks", exc_info=True)
+            stats["worker_in_flight"] = pending_total
 
     except Exception as exc:
         logger.warning("Failed to fetch queue stats: %s", exc)

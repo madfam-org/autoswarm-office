@@ -17,10 +17,16 @@ TOKEN="${AUTH_TOKEN:-${STAGING_LOAD_TEST_TOKEN:-${STAGING_CAMPAIGN_TEST_TOKEN:-}
 TENANT_ORG="${STAGING_TENANT_ORG:-madfam}"
 SKIP_DRAIN=false
 OUT_DIR="${ROOT}/docs/load-test-runs"
+K6_SCRIPT="concurrent-100-swarmtasks.js"
 
-for arg in "$@"; do
-  case "$arg" in
-    --skip-drain) SKIP_DRAIN=true ;;
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-drain) SKIP_DRAIN=true; shift ;;
+    --script)
+      K6_SCRIPT="${2:?--script requires a filename}"
+      shift 2
+      ;;
+    *) echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
 
@@ -89,13 +95,13 @@ mkdir -p "$OUT_DIR"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_JSON="${OUT_DIR}/${STAMP}.k6.json"
 
-echo "--- k6 concurrent-100-swarmtasks (~8 min) ---"
+echo "--- k6 ${K6_SCRIPT} (~8 min) ---"
 echo "    results → ${OUT_JSON}"
-echo "    fill docs/LOAD_TEST_2026-Q2.md Run 1 table after completion"
+echo "    fill docs/LOAD_TEST_2026-Q2.md after completion"
 
 exec k6 run \
   --out "json=${OUT_JSON}" \
   -e "BASE_URL=${BASE_URL}" \
   -e "AUTH_TOKEN=${TOKEN}" \
   -e "TENANT_ORG=${TENANT_ORG}" \
-  "${ROOT}/tests/load/concurrent-100-swarmtasks.js"
+  "${ROOT}/tests/load/${K6_SCRIPT}"

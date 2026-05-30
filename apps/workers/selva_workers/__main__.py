@@ -39,6 +39,7 @@ from .config import get_settings
 from .event_emitter import emit_event as _emit_event
 from .graphs.accounting import build_accounting_graph
 from .graphs.billing import build_billing_graph
+from .graphs.calibration import build_calibration_graph
 from .graphs.campaign import build_campaign_graph
 from .graphs.coding import build_coding_graph
 from .graphs.crm import build_crm_graph
@@ -64,6 +65,7 @@ AGENT_STATUS_CHANNEL = "autoswarm:agent-status"
 GRAPH_BUILDERS = {
     "accounting": build_accounting_graph,
     "billing": build_billing_graph,
+    "calibration": build_calibration_graph,
     "campaign": build_campaign_graph,
     "coding": build_coding_graph,
     "research": build_research_graph,

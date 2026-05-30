@@ -164,7 +164,10 @@ export default function () {
     if (qres.status === 200) {
       try {
         const stats = qres.json();
-        queueDepth.add(stats.depth || 0);
+        queueDepth.add(stats.queue_depth ?? stats.stream_length ?? 0);
+        if (stats.worker_in_flight !== undefined) {
+          workerInFlight.add(stats.worker_in_flight);
+        }
       } catch (e) {
         // ignore parse error
       }
@@ -177,15 +180,11 @@ export default function () {
     if (dres.status === 200) {
       try {
         const stats = dres.json();
-        dlqDepth.add(stats.depth || 0);
+        dlqDepth.add(stats.depth ?? stats.dlq_depth ?? 0);
       } catch (e) {
         // ignore
       }
     }
-
-    // worker_in_flight comes from /api/v1/metrics/dashboard if it's
-    // surfaced; ignore if not yet. Phase 3 SLO work (item 16) is
-    // expected to add this.
   }
 }
 

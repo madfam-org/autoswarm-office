@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - concurrent-100-swarmtasks.js
+          - calibration-dispatch.js
           - nexus-api-throughput.js
           - colyseus-concurrent.js
           - task-queue-throughput.js

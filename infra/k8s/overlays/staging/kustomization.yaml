@@ -38,7 +38,7 @@ resources:
 # hpa-disable-patch.yaml — the deployments ignore HPA when at max.
 replicas:
   - name: nexus-api
-    count: 1
+    count: 2
   - name: office-ui
     count: 1
   - name: colyseus

@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   until Phase 2.5 routes appear.
 
 ### Added
+- **`scripts/verify-campaign-loop.sh`** — authenticated Phase 2 API loop soak
+  (fixture at `scripts/fixtures/staging-smoke-pack.json`); skips when
+  `AUTH_TOKEN` / `STAGING_CAMPAIGN_TEST_TOKEN` unset.
 - **`prepare_social_post_schedule_payload`** — `POST /api/v1/schedules/` with
   `action=social_post` auto-injects JWT `org_id` and validates platform fields
   for the worker schedule materializer.

@@ -163,9 +163,10 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
   If Argo sync fails (backup prune) or nexus-api stuck on missing
   `DHANAM_WEBHOOK_SECRET`, run
   `./scripts/reconcile-staging-argocd.sh --ensure-dhanam-secret` then re-verify.
-- **What**: On `https://staging.selva.town/office` → **Campaigns**: import a
-  Tulana pack with `dispatch_tasks`, approve a scheduled social post (HITL),
-  submit CRM handoff, push Tulana feedback. For cron-based schedules, ensure
+- **What**: On `https://staging.selva.town/office` → **Campaigns** (UI soak), or run
+  `AUTH_TOKEN=<janua-jwt> ./scripts/verify-campaign-loop.sh --staging` for the
+  API-level loop (import → schedule → HITL → CRM handoff → Tulana feedback).
+  Set `STAGING_CAMPAIGN_TEST_TOKEN` in GitHub for CI. For cron schedules, ensure
   `POST /api/v1/schedules/` payload includes `org_id` and `platform` when
   `action=social_post` (materializer requirement).
 - **Why blocking**: Phase 2 program gate requires a proven Tulana → Selva → Phynd

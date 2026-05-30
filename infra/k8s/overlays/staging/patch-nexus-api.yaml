@@ -83,3 +83,11 @@ spec:
                   optional: true
             - name: BILLING_VIA_DHANAM
               value: "true"
+            - name: TULANA_API_URL
+              value: "https://tulana-api.madfam.io"
+            - name: TULANA_SELVA_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-staging-secrets
+                  key: TULANA_SELVA_WEBHOOK_SECRET
+                  optional: true

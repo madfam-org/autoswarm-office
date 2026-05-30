@@ -61,6 +61,8 @@ if [[ "$RUN_STAGING" == true ]]; then
   ./scripts/verify-dhanam-billing-path.sh --staging
   echo "== Campaign path (staging) =="
   ./scripts/verify-campaign-path.sh --staging
+  echo "== Campaign loop (staging) =="
+  ./scripts/verify-campaign-loop.sh --staging
 fi
 
 echo "Phase 0 gates passed (operator still must provision OTel/Sentry secrets)."

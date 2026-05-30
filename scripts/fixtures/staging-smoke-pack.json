@@ -1,0 +1,24 @@
+{
+  "packs": [
+    {
+      "sku_key": "avala__issuer",
+      "platform": "avala",
+      "audience": "credential issuers",
+      "ga_readiness": "near_ready",
+      "rank": 1,
+      "value_prop": "Evidence-backed positioning for staging soak",
+      "proof_points": [
+        {
+          "label": "Comparator",
+          "source": "Canvas Credentials",
+          "url": "https://example.com/credentials"
+        }
+      ],
+      "do_not_claim": ["Do not claim external legal approval"],
+      "policy_state": "waived_by_operator",
+      "last_verified_at": "2026-05-29T00:00:00Z"
+    }
+  ],
+  "allow_blocked": false,
+  "dispatch_tasks": false
+}

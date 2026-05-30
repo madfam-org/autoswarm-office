@@ -63,7 +63,7 @@ images:
 - digest: sha256:e891cce849cec44fa58d9b99d6ff682aa82bfe0129bdadc838431d51f606e933
   name: ghcr.io/madfam-org/autoswarm-gateway
   newName: ghcr.io/madfam-org/autoswarm-gateway
-- digest: sha256:83b7354a826f9d2af586a60d528fc1e044168f0df921d3208e4ca1c51ef19fdb
+- digest: sha256:3f4a4a282bde3381ffa5d9e972c0e1572996b99fa24aedc79854f627ca6fc7e9
   name: ghcr.io/madfam-org/autoswarm-nexus-api
   newName: ghcr.io/madfam-org/autoswarm-nexus-api
 - digest: sha256:fa73686fc30128b373d610ea891aef67e6efc5261edc449ac1ecd153ef45fbed

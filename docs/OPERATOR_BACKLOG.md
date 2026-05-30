@@ -158,6 +158,10 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 ### 5b. Staging campaign loop soak (Phase 2 gate)
 
 - **Status (2026-05-30)**: Campaign Dashboard live on staging after #179 deploy.
+  **Pre-check:** `./scripts/verify-campaign-path.sh --staging` must list
+  `schedule-social`, `tulana-feedback`, and `scheduled-actions` in OpenAPI.
+  If missing, sync `autoswarm-office-staging` in ArgoCD (digest commit lands on
+  `main` within minutes of each push; pod roll can lag).
 - **What**: On `https://staging.selva.town/office` → **Campaigns**: import a
   Tulana pack with `dispatch_tasks`, approve a scheduled social post (HITL),
   submit CRM handoff, push Tulana feedback. For cron-based schedules, ensure

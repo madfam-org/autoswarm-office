@@ -239,10 +239,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for ArgoCD reconcile
-        # ArgoCD sync interval is 3min default; add buffer for image pull
-        # + 6-pod rolling restart.
-        run: sleep 240
+      - name: Wait for staging campaign routes
+        env:
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+        run: |
+          chmod +x scripts/verify-campaign-path.sh
+          for attempt in $(seq 1 12); do
+            if ./scripts/verify-campaign-path.sh --staging; then
+              echo "Campaign routes ready on attempt ${attempt}"
+              exit 0
+            fi
+            echo "attempt ${attempt}/12: campaign routes not ready, retrying in 30s"
+            sleep 30
+          done
+          echo "::error::Campaign routes never appeared on staging after 6 minutes (check ArgoCD autoswarm-office-staging sync)"
+          exit 1
 
       - name: Run staging smoke script
         env:

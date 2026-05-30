@@ -1221,6 +1221,12 @@ async def main() -> None:
     _active_tasks.add(scheduled_action_task)
     scheduled_action_task.add_done_callback(_active_tasks.discard)
 
+    from .jobs.schedule_materializer import periodic_loop as _schedule_materializer_loop
+
+    schedule_materializer_task = asyncio.create_task(_schedule_materializer_loop(_shutdown))
+    _active_tasks.add(schedule_materializer_task)
+    schedule_materializer_task.add_done_callback(_active_tasks.discard)
+
     # Start dragon-egg warmup drain loop.
     # Sibling job to the scheduled-action drain — drains
     # social_account_warmup_actions every 60s and dispatches the

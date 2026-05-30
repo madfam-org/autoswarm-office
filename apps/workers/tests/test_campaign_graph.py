@@ -8,6 +8,7 @@ from selva_workers.graphs.campaign import (
     guard_campaign_draft,
     load_tulana_pack,
     plan_lane,
+    schedule_social,
 )
 
 
@@ -56,7 +57,7 @@ class TestCampaignNodes:
             },
         }
         result = plan_lane(state)
-        assert "avala__issuer::credential issuers::near_ready" == result["campaign_lane"]
+        assert result["campaign_lane"] == "avala__issuer::credential issuers::near_ready"
 
     def test_draft_copy_scrubs_do_not_claim(self) -> None:
         state = {
@@ -79,3 +80,63 @@ class TestCampaignNodes:
         from selva_redis_pool.timeout import DEFAULT_TIMEOUTS
 
         assert DEFAULT_TIMEOUTS["campaign"] == 300
+
+    def test_schedule_social_calls_nexus_api(self, monkeypatch) -> None:
+        calls: list[dict] = []
+
+        class FakeResponse:
+            status_code = 201
+
+            def json(self) -> dict:
+                return {"count": 2}
+
+            text = ""
+
+        class FakeClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                return None
+
+            async def post(self, url, headers=None, json=None):
+                calls.append({"url": url, "headers": headers, "json": json})
+                return FakeResponse()
+
+        monkeypatch.setattr("httpx.AsyncClient", lambda **kwargs: FakeClient())
+        fake_settings = type(
+            "S",
+            (),
+            {"nexus_api_url": "http://test:4300", "event_emit_timeout_seconds": 3},
+        )()
+        monkeypatch.setattr("selva_workers.config.get_settings", lambda: fake_settings)
+        monkeypatch.setattr(
+            "selva_workers.auth.get_worker_auth_headers",
+            lambda org_id=None: {
+                "Authorization": "Bearer test",
+                "X-Selva-Tenant-Org": org_id or "",
+            },
+        )
+
+        state = {
+            "messages": [],
+            "status": "draft_ready",
+            "org_id": "org-test",
+            "task_id": "task-1",
+            "payload": {"reddit_subreddit": "selva"},
+            "tulana_pack": {
+                "sku_key": "avala__issuer",
+                "audience": "issuers",
+                "ga_readiness": "near_ready",
+                "value_prop": "Proof-backed",
+            },
+            "draft_variants": ["Variant A body", "Variant B body"],
+        }
+        result = schedule_social(state)
+        assert result["status"] == "scheduled"
+        assert calls
+        body = calls[0]["json"]
+        assert body["sku_key"] == "avala__issuer"
+        assert body["platform"] == "reddit"
+        assert len(body["posts"]) == 3
+

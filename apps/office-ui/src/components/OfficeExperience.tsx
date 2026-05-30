@@ -13,6 +13,7 @@ import { AvatarEditor } from '@/components/AvatarEditor';
 import { CoWebsitePanel } from '@/components/CoWebsitePanel';
 import { PopupOverlay } from '@/components/PopupOverlay';
 import { SkillMarketplace } from '@/components/SkillMarketplace';
+import { CampaignDashboard } from '@/components/campaigns/CampaignDashboard';
 import { CalendarPanel } from '@/components/CalendarPanel';
 import { WhiteboardPanel } from '@/components/WhiteboardPanel';
 import { DeskInfoPanel } from '@/components/DeskInfoPanel';
@@ -276,6 +277,7 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const [approvalPanelOpen, setApprovalPanelOpen] = useState(false);
   const [workflowEditorOpen, setWorkflowEditorOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+  const [campaignDashboardOpen, setCampaignDashboardOpen] = useState(false);
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const [mapEditorOpen, setMapEditorOpen] = useState(false);
   const [calendarPanelOpen, setCalendarPanelOpen] = useState(false);
@@ -412,6 +414,14 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const handleMarketplaceOpen = useCallback(() => {
     if (isDemo) return; // No marketplace in demo
     setMarketplaceOpen(true);
+    setDashboardOpen(false);
+    setDispatchPanelOpen(false);
+    setApprovalPanelOpen(false);
+  }, [isDemo]);
+
+  const handleCampaignDashboardOpen = useCallback(() => {
+    if (isDemo) return;
+    setCampaignDashboardOpen(true);
     setDashboardOpen(false);
     setDispatchPanelOpen(false);
     setApprovalPanelOpen(false);
@@ -597,6 +607,13 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
               >
                 Metrics
               </button>
+              <button
+                onClick={handleCampaignDashboardOpen}
+                className="rounded bg-rose-900/90 px-3 py-2 font-mono text-xs min-h-[44px] md:px-2 md:py-1 md:text-[8px] md:min-h-0 text-rose-200 retro-btn hover:bg-rose-800"
+                aria-label="Open campaign dashboard"
+              >
+                Campaigns
+              </button>
             </div>
           )}
 
@@ -613,6 +630,7 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
             departments={officeState?.departments ?? []}
             onNewTask={handleDispatchOpen}
             onOpenMarketplace={isDemo ? undefined : handleMarketplaceOpen}
+            onOpenCampaigns={isDemo ? undefined : handleCampaignDashboardOpen}
             onOpenMapEditor={isDemo ? undefined : handleMapEditorOpen}
           />
 
@@ -832,6 +850,13 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
         <SkillMarketplace
           open={marketplaceOpen}
           onClose={() => setMarketplaceOpen(false)}
+        />
+      )}
+
+      {!isDemo && (
+        <CampaignDashboard
+          open={campaignDashboardOpen}
+          onClose={() => setCampaignDashboardOpen(false)}
         />
       )}
 

@@ -17,6 +17,7 @@ interface DashboardPanelProps {
   departments: Department[];
   onNewTask?: () => void;
   onOpenMarketplace?: () => void;
+  onOpenCampaigns?: () => void;
   onOpenMapEditor?: () => void;
 }
 
@@ -159,6 +160,7 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
   departments,
   onNewTask,
   onOpenMarketplace,
+  onOpenCampaigns,
   onOpenMapEditor,
 }) => {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
@@ -228,6 +230,15 @@ export const DashboardPanel: FC<DashboardPanelProps> = ({
                   aria-label="Open skill marketplace"
                 >
                   Skills
+                </button>
+              )}
+              {onOpenCampaigns && (
+                <button
+                  onClick={onOpenCampaigns}
+                  className="touch-target rounded bg-rose-700 px-2 py-1 font-mono text-[8px] text-white hover:bg-rose-600 transition-colors"
+                  aria-label="Open campaign dashboard"
+                >
+                  Campaigns
                 </button>
               )}
               {onOpenMapEditor && (

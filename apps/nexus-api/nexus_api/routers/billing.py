@@ -13,8 +13,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from selva_redis_pool import get_redis_pool
-
 from ..auth import get_current_user
 from ..config import get_settings
 from ..database import get_db

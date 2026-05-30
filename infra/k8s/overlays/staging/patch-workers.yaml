@@ -22,6 +22,9 @@ spec:
               value: staging
             - name: SENTRY_ENVIRONMENT
               value: staging
+            # Override autoswarm-config (prod namespace) — workers must PATCH staging tasks.
+            - name: NEXUS_API_URL
+              value: "http://nexus-api.autoswarm-staging.svc.cluster.local"
             - name: FEATURE_STRIPE_MXN_LIVE
               value: "false"
             - name: FEATURE_VOICE_MODE_LIVE

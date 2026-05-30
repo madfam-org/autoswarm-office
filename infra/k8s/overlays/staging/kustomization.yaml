@@ -31,6 +31,7 @@ kind: Kustomization
 namespace: autoswarm-staging
 
 resources:
+  - namespace.yaml
   - ../../production
 
 # Staging replicas: 1 everywhere. HPAs are pinned min=max=1 via
@@ -54,23 +55,39 @@ replicas:
 # digest below will be overwritten by the first staging deploy.
 images:
   - name: ghcr.io/madfam-org/autoswarm-nexus-api
-    digest: sha256:5c8bf4eaa107beafda23a94a7cff6ed15c51c126967730968ec47f66b6fd5d1c
+    digest: sha256:8ee524954544b651ae560daf28d58af7d001ec39fef69269b485ac712722bd94
   - name: ghcr.io/madfam-org/autoswarm-office-ui
-    digest: sha256:ca85f779274d8e6a449a5ae5cf0a0e7c168ed20eefb890e21ee7aedf746db953
+    digest: sha256:294b2e7c62e685e8d380552cda0b930a983c3e883b54ad9b68956b5bbb739592
   - name: ghcr.io/madfam-org/autoswarm-colyseus
-    digest: sha256:75194bdef3cfb4350723182575b51363eaab5d63416550dcb752aacdd18161f1
+    digest: sha256:31583edf727a518c4b235c56a497b835d20b2c99e2e474b9ba69c25f0f9ad1ac
   - name: ghcr.io/madfam-org/autoswarm-admin
-    digest: sha256:8c6a8b4c5f735d628ec065d8ed8993808fa6a1a8640e5e8875895b2cc6c43dfa
+    digest: sha256:a7ddd67c0e93d52a70bb4f44a410e4d77637febb50c0111e7a5891fa922789d7
   - name: ghcr.io/madfam-org/autoswarm-gateway
-    digest: sha256:1988eae9746f7fee8c3f8e34044d94dd4258d9555a3629227f0a863cc0cd9d7f
+    digest: sha256:cc8e7278c98f1b6b99d1417224add0ab2fd2760c0e364ba2a74e1e6551d8c6e4
   - name: ghcr.io/madfam-org/selva-workers
-    digest: sha256:b9673d5802ed1f9ed862f65b6828aa8e0ed429e9cd6085265b63af4ea540ecea
+    digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b
 
 # Per-deployment strategic-merge-patches. Each file is a single-doc
 # patch with explicit `metadata.name` so kustomize's patch matcher
 # resolves cleanly (vs multi-doc files which trip up the name lookup
 # when namespace is rewritten by the overlay).
 patches:
+  - path: patch-delete-storageclass.yaml
+    target:
+      kind: StorageClass
+      name: longhorn-autoswarm-backup
+  - path: patch-delete-backup-pvc.yaml
+    target:
+      kind: PersistentVolumeClaim
+      name: postgres-backup-pvc
+  - path: patch-delete-backup-cronjob.yaml
+    target:
+      kind: CronJob
+      name: postgres-backup
+  - path: patch-delete-backup-externalsecret.yaml
+    target:
+      kind: ExternalSecret
+      name: postgres-backup-credentials
   - path: patch-nexus-api.yaml
     target:
       kind: Deployment

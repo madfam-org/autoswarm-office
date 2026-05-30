@@ -14,7 +14,8 @@ Optional:
 Usage:
   python3 scripts/apply-cloudflare-infra.py --dry-run
   python3 scripts/apply-cloudflare-infra.py --dns
-  python3 scripts/apply-cloudflare-infra.py --tunnel --merge   # safe default for shared enclii-prod tunnel
+  python3 scripts/apply-cloudflare-infra.py --tunnel --merge
+  # merge = safe default for shared enclii-prod tunnel
   python3 scripts/apply-cloudflare-infra.py --dns --tunnel --merge
 """
 
@@ -186,7 +187,10 @@ def apply_tunnel(*, dry_run: bool, merge: bool) -> None:
         summary = f"added {len(added)} rule(s): {', '.join(added)}"
     else:
         if not desired or desired[-1].get("hostname"):
-            print("error: --replace requires catch-all as final ingress rule in YAML", file=sys.stderr)
+            print(
+                "error: --replace requires catch-all as final ingress rule in YAML",
+                file=sys.stderr,
+            )
             sys.exit(1)
         payload_ingress = desired
         summary = f"replaced with {len(desired)} rule(s)"

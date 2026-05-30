@@ -87,3 +87,20 @@ spec:
                   name: autoswarm-staging-secrets
                   key: ENCLII_API_TOKEN
                   optional: true
+            - name: CONSENT_LEDGER_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-staging-secrets
+                  key: CONSENT_LEDGER_SIGNING_SECRET
+            - name: PORKBUN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-staging-secrets
+                  key: PORKBUN_API_KEY
+                  optional: true
+            - name: PORKBUN_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-staging-secrets
+                  key: PORKBUN_SECRET_KEY
+                  optional: true

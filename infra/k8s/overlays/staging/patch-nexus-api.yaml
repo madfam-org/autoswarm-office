@@ -51,6 +51,11 @@ spec:
                 secretKeyRef:
                   name: autoswarm-staging-secrets
                   key: WORKER_API_TOKEN
+            - name: COLYSEUS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-staging-secrets
+                  key: colyseus-secret
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -63,3 +68,8 @@ spec:
                   name: autoswarm-staging-llm-secrets
                   key: DEEPINFRA_API_KEY
                   optional: true
+            - name: CONSENT_LEDGER_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-staging-secrets
+                  key: CONSENT_LEDGER_SIGNING_SECRET

@@ -18,10 +18,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from selva_redis_pool import get_redis_pool
-
-from ..billing_tiers import get_daily_limit
-from ..config import get_settings
 from ..database import get_db
 from ..models import ComputeTokenLedger
 
@@ -79,23 +75,9 @@ async def check_budget(
 ) -> BudgetResponse:
     """Check whether an org has remaining compute token budget for today."""
     org_id = body.get("org_id", "default")
-    # Default to the "starter" tier limit when no Redis cache entry
-    # exists yet (org has no Dhanam subscription / billing webhook
-    # hasn't fired). Source-of-truth: ``nexus_api.billing_tiers``.
-    daily_limit = get_daily_limit(None)
+    from ..services.tier_limits import resolve_org_daily_limit
 
-    # Look up cached tier limit from Redis
-    try:
-        settings = get_settings()
-        pool = get_redis_pool(url=settings.redis_url)
-        cached = await pool.execute_with_retry("get", f"autoswarm:tier:{org_id}")
-        if cached:
-            # `execute_with_retry` is typed as returning `object`; the GET
-            # value is a bytes/str payload at runtime.  Coerce via str()
-            # so the int() cast has a concrete type to chew on.
-            daily_limit = int(str(cached))
-    except Exception:
-        logger.debug("Failed to fetch cached tier limit from Redis", exc_info=True)
+    daily_limit = await resolve_org_daily_limit(db, org_id)
 
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     result = await db.execute(

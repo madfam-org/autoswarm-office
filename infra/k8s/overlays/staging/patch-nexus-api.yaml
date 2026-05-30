@@ -73,3 +73,12 @@ spec:
                 secretKeyRef:
                   name: autoswarm-staging-secrets
                   key: CONSENT_LEDGER_SIGNING_SECRET
+            - name: DHANAM_API_URL
+              value: "https://staging-api.dhan.am"
+            - name: DHANAM_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: autoswarm-staging-secrets
+                  key: DHANAM_WEBHOOK_SECRET
+            - name: BILLING_VIA_DHANAM
+              value: "true"

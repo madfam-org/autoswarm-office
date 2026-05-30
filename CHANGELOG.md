@@ -7,7 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- **Dhanam-first billing sync** — `billing_sync.py` canonical handler for
+- **Phase 1.2 tier enforcement** — `resolve_org_daily_limit()` reads Redis cache then
+  `tenant_configs.subscription_tier`; dispatch blocks `past_due`/`cancelled` subscriptions.
+- **`POST /api/v1/campaigns/tulana-feedback`** — pushes campaign outcomes to Tulana
+  buyer-signal API (Phase 2.6).
+- **Dhanam-first billing sync** — `billing_sync.py` handles
   Dhanam-normalized subscription/invoice events; `POST /api/v1/billing/webhooks/dhanam`
   fail-closed without `DHANAM_WEBHOOK_SECRET`; direct Stripe webhook returns 503 when
   `BILLING_VIA_DHANAM=true` (default).
@@ -30,9 +34,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   autonomy graduation. Cross-linked from ROADMAP, OPERATOR_BACKLOG, README,
   ECOSYSTEM, llms.txt, RFC index, and Tulana campaign contract.
 
-### Fixed
-- **Dhanam webhook auth** — moved `POST /api/v1/billing/webhooks/dhanam` to an
-  unauthenticated `webhook_router` so Dhanam can POST without a user JWT (HMAC-only).
+### Changed
+- **Staging/prod Dhanam wiring** — nexus-api gets `DHANAM_WEBHOOK_SECRET` + staging
+  `DHANAM_API_URL=https://staging-api.dhan.am`; secrets template documents bootstrap key.
   scorecard links north-star gap to AUTONOMOUS_OPERATIONS_PROGRAM.
 - **OPERATOR_BACKLOG.md** — Tier 1–3 mapped to Program Phase 0; reading order updated.
 - **docs/rfcs/README.md** — index for RFCs 0018–0021 and phygital quote-truth contract.

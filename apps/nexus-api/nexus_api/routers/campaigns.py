@@ -21,10 +21,13 @@ from ..models import SwarmTask, SwarmTaskOutbox
 from ..schemas.tulana_campaign import (
     CrmCampaignHandoffRequest,
     CrmCampaignHandoffResponse,
+    TulanaFeedbackRequest,
+    TulanaFeedbackResponse,
     TulanaImportRequest,
     TulanaImportResponse,
 )
 from ..services.tulana_campaign import import_tulana_packs, validate_pack
+from ..services.tulana_feedback import push_tulana_buyer_signal
 from ..tenant import TenantContext, get_tenant
 
 logger = logging.getLogger(__name__)
@@ -300,4 +303,36 @@ async def crm_campaign_handoff(
         message="Campaign handoff queued for Phynd CRM staging (HITL required)",
     )
     await idem.save(response.model_dump(mode="json"))
+    return response
+
+
+@router.post(
+    "/tulana-feedback",
+    response_model=TulanaFeedbackResponse,
+    dependencies=[Depends(require_non_guest)],
+)
+async def tulana_campaign_feedback(
+    body: TulanaFeedbackRequest,
+    request: Request,
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
+) -> TulanaFeedbackResponse:
+    """Push validated campaign outcomes to Tulana buyer-signal API (Phase 2.6)."""
+    cached = getattr(idem, "cached", None)
+    if getattr(idem, "is_replay", False) and cached is not None:
+        return TulanaFeedbackResponse.model_validate(cached)
+
+    response = await push_tulana_buyer_signal(
+        org_id=tenant.org_id,
+        body=body,
+        actor_sub=user.get("sub"),
+    )
+    await idem.save(response.model_dump(mode="json"))
+    logger.info(
+        "Tulana feedback org=%s sku=%s event=%s",
+        tenant.org_id,
+        body.sku_key,
+        response.tulana_event_id,
+    )
     return response

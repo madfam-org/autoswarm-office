@@ -24,7 +24,6 @@ from selva_redis_pool import get_redis_pool
 from selva_skills import SkillAudience, get_skill_registry
 
 from ..auth import get_current_user, require_non_demo, require_non_guest
-from ..billing_tiers import get_daily_limit
 from ..config import get_settings
 from ..database import get_db
 from ..idempotency import IdempotencyContext, get_idempotency_context
@@ -1174,6 +1173,13 @@ async def dispatch_task(
             )
 
     # -- Compute token budget check -------------------------------------------
+    from ..services.tier_limits import (
+        assert_subscription_allows_dispatch,
+        resolve_org_daily_limit,
+    )
+
+    assert_subscription_allows_dispatch(tenant_config)
+
     dispatch_cost = _DISPATCH_COMPUTE_TOKEN_COST
 
     # Check remaining budget before dispatching.
@@ -1185,11 +1191,9 @@ async def dispatch_task(
         )
     )
     used: int = budget_result.scalar_one()
-    # Default tier limit when no Dhanam-cached entry exists in Redis.
-    # billing_internal.check_budget consults the cache; this branch is
-    # the fast path that keeps dispatch latency low. Source-of-truth:
-    # ``nexus_api.billing_tiers``.
-    daily_limit = get_daily_limit(None)
+    daily_limit = await resolve_org_daily_limit(
+        db, tenant.org_id, tenant_config=tenant_config
+    )
     if used + dispatch_cost > daily_limit:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,

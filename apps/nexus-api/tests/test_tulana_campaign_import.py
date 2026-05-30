@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from nexus_api.schemas.tulana_campaign import TulanaImportRequest, TulanaSkuCampaignPack
@@ -162,3 +164,63 @@ async def test_crm_handoff_rejects_invalid_pack(client, auth_headers) -> None:
         headers=auth_headers,
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_tulana_feedback_requires_config(client, auth_headers) -> None:
+    payload = {
+        "sku_key": "avala__issuer",
+        "summary": "Two demo calls booked from LinkedIn draft lane.",
+        "outcomes": [{"metric": "demo_calls", "value": 2, "source": "phynd_crm"}],
+    }
+    with patch(
+        "nexus_api.services.tulana_feedback._tulana_config",
+        return_value=("", ""),
+    ):
+        response = await client.post(
+            "/api/v1/campaigns/tulana-feedback",
+            json=payload,
+            headers=auth_headers,
+        )
+    assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_tulana_feedback_forwards_to_tulana(client, auth_headers) -> None:
+    payload = {
+        "sku_key": "avala__issuer",
+        "summary": "Campaign generated 12 MQLs with zero do_not_claim violations.",
+        "outcomes": [{"metric": "mql_count", "value": 12}],
+        "handoff_id": "handoff-123",
+    }
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"event_id":"ev-99"}'
+    mock_resp.json.return_value = {"event_id": "ev-99"}
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_resp)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch(
+            "nexus_api.services.tulana_feedback._tulana_config",
+            return_value=("https://tulana.test", "secret"),
+        ),
+        patch(
+            "nexus_api.services.tulana_feedback.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+    ):
+        response = await client.post(
+            "/api/v1/campaigns/tulana-feedback",
+            json=payload,
+            headers=auth_headers,
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "accepted"
+    assert body["tulana_event_id"] == "ev-99"
+    mock_client.post.assert_awaited_once()

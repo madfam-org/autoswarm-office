@@ -98,7 +98,7 @@ Heartbeat → PhyndCRM hot leads → auto-dispatch (HITL)
 | ID | Work | Exit criteria |
 |----|------|---------------|
 | 1.1 | Provider budget | LLM credits + `packages/budget-gate` wired with org-level caps |
-| 1.2 | Dhanam compute budgets | Dispatch enforces subscription tier from Dhanam (not cache-miss fallback only) |
+| 1.2 | Dhanam compute budgets | ✅ Dispatch/check-budget resolve tier via Redis → `tenant_configs.subscription_tier`; block `past_due` |
 | 1.3 | Attribution closure | `utm_campaign` + checkout reattribution tested prod → CRM → Dhanam |
 | 1.4 | Live Stripe path | Flip `FEATURE_STRIPE_MXN_LIVE` after 0.3; verify 5 webhook event types |
 | 1.5 | Voice/consent on outbound | Every marketing send: voice_mode + ledger row; agent_identified SPF check |
@@ -117,9 +117,9 @@ Heartbeat → PhyndCRM hot leads → auto-dispatch (HITL)
 | 2.1 | Tulana import API | ✅ `POST /api/v1/campaigns/import-tulana-pack` + schema validation (`routers/campaigns.py`) |
 | 2.2 | `sku_campaign_planning` | ✅ `campaign` graph (`load_tulana_pack` → `plan_lane` → `draft_copy`); import dispatches `graph_type=campaign` |
 | 2.3 | `campaign_draft` | Partial — LLM drafts from proof points; `guard_campaign_draft()` scrubs `do_not_claim` |
-| 2.4 | Phynd handoff | `crm_campaign_handoff` with idempotency + consent/unsubscribe preservation |
+| 2.4 | Phynd handoff | ✅ `POST /api/v1/campaigns/crm-handoff` with idempotency + HITL |
 | 2.5 | Scheduled social executor | Extend `ScheduledAction.SOCIAL_POST` (Reddit/Mastodon/Bluesky/LinkedIn drafts) |
-| 2.6 | Feedback loop | `tulana_feedback_update` → Tulana buyer-signal endpoint |
+| 2.6 | Feedback loop | ✅ `POST /api/v1/campaigns/tulana-feedback` → Tulana buyer-signal API |
 | 2.7 | Campaign UI | Office dashboard: lanes, drafts, approvals, Tulana readiness badges |
 
 **Permission policy:** Campaign sends stay **ASK** until lane has 30 days zero incidents; operator promotes specific lanes to ALLOW.

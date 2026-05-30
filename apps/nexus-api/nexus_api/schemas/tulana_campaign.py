@@ -89,3 +89,27 @@ class CrmCampaignHandoffResponse(BaseModel):
     task_id: str
     status: str = "queued"
     message: str
+
+
+class TulanaBuyerSignal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    metric: str = Field(..., min_length=1, max_length=200)
+    value: str | int | float
+    source: str = Field(default="selva_campaign", max_length=200)
+
+
+class TulanaFeedbackRequest(BaseModel):
+    sku_key: str = Field(..., min_length=1, max_length=200)
+    summary: str = Field(..., min_length=1, max_length=4000)
+    outcomes: list[TulanaBuyerSignal] = Field(..., min_length=1, max_length=50)
+    campaign_name: str | None = Field(default=None, max_length=200)
+    handoff_id: str | None = Field(default=None, max_length=200)
+    task_id: str | None = Field(default=None, max_length=200)
+    evidence_urls: list[str] = Field(default_factory=list, max_length=20)
+
+
+class TulanaFeedbackResponse(BaseModel):
+    status: str
+    tulana_event_id: str | None = None
+    message: str

@@ -184,7 +184,9 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 - **Cross-refs**:
   - [docs/INTEGRATION.md](INTEGRATION.md) — campaign endpoints + UI
   - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
-  - `./scripts/run-staging-migrations.sh` — break-glass Alembic + grants on fresh DB
+  - `./scripts/reconcile-dhanam-selva-webhook.sh` — wire Dhanam `PRODUCT_WEBHOOK_URLS` → Selva staging
+  - `./scripts/bootstrap-staging-observability.sh` — create `autoswarm-observability-secrets` (Tier 1)
+  - Tulana buyer-signal: merge `madfam-org/tulana@0161187` + Enclii deploy + `manage.py migrate decisions 0003`
 
 ### 3b. Deploy Tulana buyer-signal ingest route
 

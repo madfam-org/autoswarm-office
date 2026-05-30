@@ -144,86 +144,85 @@ async def run() -> dict[str, Any]:
     psycopg_url = _to_psycopg_url(db_url)
 
     try:
-        async with await AsyncConnection.connect(psycopg_url) as conn:
-            async with conn.transaction():
+        async with await AsyncConnection.connect(psycopg_url) as conn, conn.transaction():
+            async with conn.cursor() as cur:
+                await cur.execute(_SELECT_DUE_SCHEDULES_SQL)
+                rows = await cur.fetchall()
+                cols = [d.name for d in cur.description] if cur.description else []
+
+            for record in rows:
+                row = dict(zip(cols, record, strict=False))
+                summary["examined"] += 1
+                schedule_id = row["id"]
+                cron_expr = row["cron_expr"]
+                payload_raw = row.get("payload") or {}
+                if isinstance(payload_raw, str):
+                    try:
+                        payload = json.loads(payload_raw)
+                    except json.JSONDecodeError:
+                        payload = {}
+                else:
+                    payload = dict(payload_raw)
+
+                last_run_at = row.get("last_run_at")
+                if not is_schedule_due(cron_expr, last_run_at, now):
+                    summary["skipped"] += 1
+                    continue
+
+                org_id = str(payload.get("org_id") or "").strip()
+                if not org_id:
+                    msg = f"schedule {schedule_id} missing payload.org_id"
+                    logger.warning(msg)
+                    summary["errors"].append(msg)
+                    summary["skipped"] += 1
+                    continue
+
+                platform = str(payload.get("platform") or "").strip().lower()
+                if not platform:
+                    msg = f"schedule {schedule_id} missing payload.platform"
+                    logger.warning(msg)
+                    summary["errors"].append(msg)
+                    summary["skipped"] += 1
+                    continue
+
+                action_payload = {k: v for k, v in payload.items() if k not in {"org_id"}}
+                action_payload["materialized_from_schedule"] = str(schedule_id)
+                action_payload["platform"] = platform
+
+                playbook_id = payload.get("playbook_id")
+                hitl_status = payload.get("hitl_status")
+                if playbook_id and hitl_status is None:
+                    hitl_status = "pending"
+
+                minute_bucket = now.replace(second=0, microsecond=0, tzinfo=UTC)
                 async with conn.cursor() as cur:
-                    await cur.execute(_SELECT_DUE_SCHEDULES_SQL)
-                    rows = await cur.fetchall()
-                    cols = [d.name for d in cur.description] if cur.description else []
-
-                for record in rows:
-                    row = dict(zip(cols, record, strict=False))
-                    summary["examined"] += 1
-                    schedule_id = row["id"]
-                    cron_expr = row["cron_expr"]
-                    payload_raw = row.get("payload") or {}
-                    if isinstance(payload_raw, str):
-                        try:
-                            payload = json.loads(payload_raw)
-                        except json.JSONDecodeError:
-                            payload = {}
-                    else:
-                        payload = dict(payload_raw)
-
-                    last_run_at = row.get("last_run_at")
-                    if not is_schedule_due(cron_expr, last_run_at, now):
-                        summary["skipped"] += 1
-                        continue
-
-                    org_id = str(payload.get("org_id") or "").strip()
-                    if not org_id:
-                        msg = f"schedule {schedule_id} missing payload.org_id"
-                        logger.warning(msg)
-                        summary["errors"].append(msg)
-                        summary["skipped"] += 1
-                        continue
-
-                    platform = str(payload.get("platform") or "").strip().lower()
-                    if not platform:
-                        msg = f"schedule {schedule_id} missing payload.platform"
-                        logger.warning(msg)
-                        summary["errors"].append(msg)
-                        summary["skipped"] += 1
-                        continue
-
-                    action_payload = {k: v for k, v in payload.items() if k not in {"org_id"}}
-                    action_payload["materialized_from_schedule"] = str(schedule_id)
-                    action_payload["platform"] = platform
-
-                    playbook_id = payload.get("playbook_id")
-                    hitl_status = payload.get("hitl_status")
-                    if playbook_id and hitl_status is None:
-                        hitl_status = "pending"
-
-                    minute_bucket = now.replace(second=0, microsecond=0, tzinfo=UTC)
-                    async with conn.cursor() as cur:
-                        await cur.execute(
-                            _INSERT_SCHEDULED_ACTION_SQL,
-                            {
-                                "id": uuid.uuid4(),
-                                "action_type": "social_post",
-                                "scheduled_for": minute_bucket,
-                                "status": "pending",
-                                "payload": json.dumps(action_payload),
-                                "playbook_id": playbook_id,
-                                "hitl_status": hitl_status,
-                                "persona_id": payload.get("persona_id"),
-                                "org_id": org_id,
-                                "retry_count": 0,
-                                "max_retries": int(payload.get("max_retries") or 3),
-                            },
-                        )
-                        await cur.execute(
-                            _UPDATE_LAST_RUN_SQL,
-                            {"id": schedule_id, "last_run_at": minute_bucket},
-                        )
-                    summary["materialized"] += 1
-                    logger.info(
-                        "Materialized schedule %s → scheduled_action org=%s platform=%s",
-                        schedule_id,
-                        org_id,
-                        platform,
+                    await cur.execute(
+                        _INSERT_SCHEDULED_ACTION_SQL,
+                        {
+                            "id": uuid.uuid4(),
+                            "action_type": "social_post",
+                            "scheduled_for": minute_bucket,
+                            "status": "pending",
+                            "payload": json.dumps(action_payload),
+                            "playbook_id": playbook_id,
+                            "hitl_status": hitl_status,
+                            "persona_id": payload.get("persona_id"),
+                            "org_id": org_id,
+                            "retry_count": 0,
+                            "max_retries": int(payload.get("max_retries") or 3),
+                        },
                     )
+                    await cur.execute(
+                        _UPDATE_LAST_RUN_SQL,
+                        {"id": schedule_id, "last_run_at": minute_bucket},
+                    )
+                summary["materialized"] += 1
+                logger.info(
+                    "Materialized schedule %s → scheduled_action org=%s platform=%s",
+                    schedule_id,
+                    org_id,
+                    platform,
+                )
     except Exception as exc:
         logger.exception("Schedule materializer tick failed")
         summary["errors"].append(f"{exc.__class__.__name__}: {exc}")

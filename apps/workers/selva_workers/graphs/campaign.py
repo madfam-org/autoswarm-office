@@ -310,10 +310,13 @@ def schedule_social(state: CampaignState) -> CampaignState:
 
         settings = get_settings()
         url = f"{settings.nexus_api_url.rstrip('/')}/api/v1/campaigns/schedule-social"
+        idem_key = (
+            f"campaign-graph:{state.get('task_id', 'unknown')}:{pack.get('sku_key')}"
+        )
         headers = {
             **get_worker_auth_headers(org_id=org_id),
             "Content-Type": "application/json",
-            "Idempotency-Key": f"campaign-graph:{state.get('task_id', 'unknown')}:{pack.get('sku_key')}",
+            "Idempotency-Key": idem_key,
         }
 
         async def _post() -> httpx.Response:

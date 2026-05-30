@@ -3150,6 +3150,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scheduled-actions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Scheduled Actions */
+        get: operations["list_scheduled_actions_api_v1_scheduled_actions__get"];
+        put?: never;
+        /**
+         * Create Scheduled Action
+         * @description Enqueue a single due-row for the worker social_post executor.
+         */
+        post: operations["create_scheduled_action_api_v1_scheduled_actions__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduled-actions/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Scheduled Action Batch */
+        post: operations["create_scheduled_action_batch_api_v1_scheduled_actions_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduled-actions/{action_id}/hitl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Hitl Status
+         * @description Approve or deny a playbook-gated scheduled social post.
+         */
+        patch: operations["update_hitl_status_api_v1_scheduled_actions__action_id__hitl_patch"];
+        trace?: never;
+    };
+    "/api/v1/scheduled-actions/campaign-social": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Schedule Campaign Social Posts
+         * @description Schedule a Tulana campaign social cadence (Phase 2.5).
+         */
+        post: operations["schedule_campaign_social_posts_api_v1_scheduled_actions_campaign_social_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dragon-eggs": {
         parameters: {
             query?: never;
@@ -3617,6 +3695,86 @@ export interface paths {
          *     5. If no playbook → acknowledge but don't dispatch
          */
         post: operations["phynd_crm_webhook_api_v1_gateway_phynd_crm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/import-tulana-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Tulana Pack
+         * @description Validate and rank Tulana SKU campaign packs; optionally enqueue planning tasks.
+         */
+        post: operations["import_tulana_pack_api_v1_campaigns_import_tulana_pack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/crm-handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crm Campaign Handoff
+         * @description Stage human-approved campaign drafts for Phynd CRM handoff (Phase 2.4).
+         */
+        post: operations["crm_campaign_handoff_api_v1_campaigns_crm_handoff_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/schedule-social": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Campaign Schedule Social
+         * @description Schedule campaign social posts for worker drain (Phase 2.5).
+         */
+        post: operations["campaign_schedule_social_api_v1_campaigns_schedule_social_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/tulana-feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tulana Campaign Feedback
+         * @description Push validated campaign outcomes to Tulana buyer-signal API (Phase 2.6).
+         */
+        post: operations["tulana_campaign_feedback_api_v1_campaigns_tulana_feedback_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4422,6 +4580,41 @@ export interface components {
             /** Connected At */
             connected_at?: string | null;
         };
+        /** CampaignSocialPostItem */
+        CampaignSocialPostItem: {
+            /**
+             * Scheduled For
+             * Format: date-time
+             */
+            scheduled_for: string;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+        };
+        /** CampaignSocialScheduleRequest */
+        CampaignSocialScheduleRequest: {
+            /** Sku Key */
+            sku_key: string;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "mastodon" | "bluesky" | "reddit" | "email";
+            /** Posts */
+            posts: components["schemas"]["CampaignSocialPostItem"][];
+            /** Playbook Id */
+            playbook_id?: string | null;
+            /** Persona Id */
+            persona_id?: string | null;
+            /** Campaign Id */
+            campaign_id?: string | null;
+            /**
+             * Require Hitl
+             * @default true
+             */
+            require_hitl: boolean;
+        };
         /** ChatCompletionRequest */
         ChatCompletionRequest: {
             /**
@@ -4635,6 +4828,34 @@ export interface components {
             template_filename: string;
             /** Name */
             name?: string | null;
+        };
+        /** CrmCampaignHandoffRequest */
+        CrmCampaignHandoffRequest: {
+            /** Sku Key */
+            sku_key: string;
+            /** Audience */
+            audience: string;
+            /** Draft Variants */
+            draft_variants: string[];
+            tulana_pack: components["schemas"]["TulanaSkuCampaignPack"];
+            /** Campaign Name */
+            campaign_name?: string | null;
+            /** Phynd List Id */
+            phynd_list_id?: string | null;
+        };
+        /** CrmCampaignHandoffResponse */
+        CrmCampaignHandoffResponse: {
+            /** Handoff Id */
+            handoff_id: string;
+            /** Task Id */
+            task_id: string;
+            /**
+             * Status
+             * @default queued
+             */
+            status: string;
+            /** Message */
+            message: string;
         };
         /** DecisionList */
         DecisionList: {
@@ -5922,6 +6143,96 @@ export interface components {
          * @enum {string}
          */
         ScheduledAction: "acp_initiate" | "skill_refine" | "memory_compact" | "social_post";
+        /** ScheduledActionBatchCreate */
+        ScheduledActionBatchCreate: {
+            /** Actions */
+            actions: components["schemas"]["ScheduledActionCreate"][];
+        };
+        /** ScheduledActionBatchResponse */
+        ScheduledActionBatchResponse: {
+            /** Created */
+            created: components["schemas"]["ScheduledActionResponse"][];
+            /** Count */
+            count: number;
+        };
+        /** ScheduledActionCreate */
+        ScheduledActionCreate: {
+            /**
+             * Action Type
+             * @default social_post
+             */
+            action_type: string;
+            /**
+             * Scheduled For
+             * Format: date-time
+             */
+            scheduled_for: string;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /** Playbook Id */
+            playbook_id?: string | null;
+            /** Hitl Status */
+            hitl_status?: ("approved" | "denied" | "pending") | null;
+            /** Persona Id */
+            persona_id?: string | null;
+            /**
+             * Max Retries
+             * @default 3
+             */
+            max_retries: number;
+        };
+        /** ScheduledActionHitlUpdate */
+        ScheduledActionHitlUpdate: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "denied";
+        };
+        /** ScheduledActionResponse */
+        ScheduledActionResponse: {
+            /** Id */
+            id: string;
+            /** Action Type */
+            action_type: string;
+            /**
+             * Scheduled For
+             * Format: date-time
+             */
+            scheduled_for: string;
+            /** Status */
+            status: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Playbook Id */
+            playbook_id: string | null;
+            /** Hitl Status */
+            hitl_status: string | null;
+            /** Persona Id */
+            persona_id: string | null;
+            /** Org Id */
+            org_id: string;
+            /** Retry Count */
+            retry_count: number;
+            /** Max Retries */
+            max_retries: number;
+            /** Last Error */
+            last_error: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /**
          * SkillCompactResponse
          * @description Level-0: compact skill metadata (~3k tokens for full catalogue).
@@ -6443,6 +6754,137 @@ export interface components {
             timestamp: string;
             /** Value */
             value: number;
+        };
+        /** TulanaBuyerSignal */
+        TulanaBuyerSignal: {
+            /** Metric */
+            metric: string;
+            /** Value */
+            value: string | number;
+            /**
+             * Source
+             * @default selva_campaign
+             */
+            source: string;
+        };
+        /** TulanaFeedbackRequest */
+        TulanaFeedbackRequest: {
+            /** Sku Key */
+            sku_key: string;
+            /** Summary */
+            summary: string;
+            /** Outcomes */
+            outcomes: components["schemas"]["TulanaBuyerSignal"][];
+            /** Campaign Name */
+            campaign_name?: string | null;
+            /** Handoff Id */
+            handoff_id?: string | null;
+            /** Task Id */
+            task_id?: string | null;
+            /** Evidence Urls */
+            evidence_urls?: string[];
+        };
+        /** TulanaFeedbackResponse */
+        TulanaFeedbackResponse: {
+            /** Status */
+            status: string;
+            /** Tulana Event Id */
+            tulana_event_id?: string | null;
+            /** Message */
+            message: string;
+        };
+        /** TulanaImportRequest */
+        TulanaImportRequest: {
+            /** Packs */
+            packs: components["schemas"]["TulanaSkuCampaignPack"][];
+            /**
+             * Allow Blocked
+             * @description When true, blocked SKUs are accepted for waitlist/discovery lanes.
+             * @default false
+             */
+            allow_blocked: boolean;
+            /**
+             * Dispatch Tasks
+             * @description When true, enqueue one intelligence graph task per accepted SKU.
+             * @default false
+             */
+            dispatch_tasks: boolean;
+        };
+        /** TulanaImportResponse */
+        TulanaImportResponse: {
+            /** Accepted */
+            accepted: components["schemas"]["TulanaSkuCampaignPack"][];
+            /** Rejected */
+            rejected: components["schemas"]["TulanaPackValidation"][];
+            /** Ranked Sku Keys */
+            ranked_sku_keys: string[];
+            /** Dispatched Task Ids */
+            dispatched_task_ids?: string[];
+        };
+        /** TulanaPackValidation */
+        TulanaPackValidation: {
+            /** Sku Key */
+            sku_key: string;
+            /** Accepted */
+            accepted: boolean;
+            /** Errors */
+            errors?: string[];
+            /** Rank Score */
+            rank_score?: number | null;
+        };
+        /** TulanaProofPoint */
+        TulanaProofPoint: {
+            /** Label */
+            label: string;
+            /** Source */
+            source: string;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * TulanaSkuCampaignPack
+         * @description Minimum Tulana export shape consumed by Selva campaign orchestration.
+         */
+        TulanaSkuCampaignPack: {
+            /** Generated At */
+            generated_at?: string | null;
+            /** Sku Key */
+            sku_key: string;
+            /**
+             * Platform
+             * @default
+             */
+            platform: string;
+            /** Audience */
+            audience: string;
+            /**
+             * Ga Readiness
+             * @enum {string}
+             */
+            ga_readiness: "near_ready" | "waived" | "blocked" | "ready" | "discovery";
+            /** Rank */
+            rank?: number | null;
+            /** Readiness Reasons */
+            readiness_reasons?: string[];
+            /**
+             * Value Prop
+             * @default
+             */
+            value_prop: string;
+            /** Proof Points */
+            proof_points?: components["schemas"]["TulanaProofPoint"][];
+            /** Do Not Claim */
+            do_not_claim?: string[];
+            /**
+             * Policy State
+             * @default pending_review
+             */
+            policy_state: ("approved" | "waived_by_operator" | "blocked" | "pending_review") | string;
+            /**
+             * Last Verified At
+             * Format: date-time
+             */
+            last_verified_at: string;
         };
         /**
          * UnifiedAuditEvent
@@ -11498,6 +11940,174 @@ export interface operations {
             };
         };
     };
+    list_scheduled_actions_api_v1_scheduled_actions__get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledActionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_scheduled_action_api_v1_scheduled_actions__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduledActionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_scheduled_action_batch_api_v1_scheduled_actions_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduledActionBatchCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledActionBatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_hitl_status_api_v1_scheduled_actions__action_id__hitl_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduledActionHitlUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    schedule_campaign_social_posts_api_v1_scheduled_actions_campaign_social_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignSocialScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledActionBatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_eggs_api_v1_dragon_eggs_get: {
         parameters: {
             query?: {
@@ -12283,6 +12893,146 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    import_tulana_pack_api_v1_campaigns_import_tulana_pack_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TulanaImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TulanaImportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crm_campaign_handoff_api_v1_campaigns_crm_handoff_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrmCampaignHandoffRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrmCampaignHandoffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    campaign_schedule_social_api_v1_campaigns_schedule_social_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignSocialScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledActionBatchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tulana_campaign_feedback_api_v1_campaigns_tulana_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TulanaFeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TulanaFeedbackResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

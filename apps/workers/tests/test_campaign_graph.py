@@ -57,7 +57,7 @@ class TestCampaignNodes:
             },
         }
         result = plan_lane(state)
-        assert "avala__issuer::credential issuers::near_ready" == result["campaign_lane"]
+        assert result["campaign_lane"] == "avala__issuer::credential issuers::near_ready"
 
     def test_draft_copy_scrubs_do_not_claim(self) -> None:
         state = {

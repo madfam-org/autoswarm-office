@@ -63,39 +63,39 @@ images:
 - digest: sha256:e891cce849cec44fa58d9b99d6ff682aa82bfe0129bdadc838431d51f606e933
   name: ghcr.io/madfam-org/autoswarm-gateway
   newName: ghcr.io/madfam-org/autoswarm-gateway
-- digest: sha256:798537ecc8b6d4092adbe7178d920a33b406feb5273ccdeb32e09dc03b1eba90
+- digest: sha256:ceda4a52710f2c0e9654fa5744076143c85db7ea25edbe6cd6a4761052949017
   name: ghcr.io/madfam-org/autoswarm-nexus-api
   newName: ghcr.io/madfam-org/autoswarm-nexus-api
 - digest: sha256:fa73686fc30128b373d610ea891aef67e6efc5261edc449ac1ecd153ef45fbed
   name: ghcr.io/madfam-org/autoswarm-office-ui
   newName: ghcr.io/madfam-org/autoswarm-office-ui
-- digest: sha256:7536d8c7fefad9b815381c8dc0aca57df4e609eb10ae05ad69eda4eb9600bb5b
+- digest: sha256:dd5e8446b63f06fa2f7177c3ba2609e706950f69c5c401b6bb33c72bf7e971d4
   name: ghcr.io/madfam-org/selva-workers
   newName: ghcr.io/madfam-org/selva-workers
 
 # Phase 0 — optional OTel + Sentry env (no-op until observability secret exists).
 patches:
-  - path: patches/observability-nexus-api.yaml
-    target:
-      kind: Deployment
-      name: nexus-api
-  - path: patches/observability-workers.yaml
-    target:
-      kind: Deployment
-      name: workers
-  - path: patches/observability-gateway.yaml
-    target:
-      kind: Deployment
-      name: gateway
-  - path: patches/observability-colyseus.yaml
-    target:
-      kind: Deployment
-      name: colyseus
-  - path: patches/observability-office-ui.yaml
-    target:
-      kind: Deployment
-      name: office-ui
-  - path: patches/observability-admin.yaml
-    target:
-      kind: Deployment
-      name: admin
+- path: patches/observability-nexus-api.yaml
+  target:
+    kind: Deployment
+    name: nexus-api
+- path: patches/observability-workers.yaml
+  target:
+    kind: Deployment
+    name: workers
+- path: patches/observability-gateway.yaml
+  target:
+    kind: Deployment
+    name: gateway
+- path: patches/observability-colyseus.yaml
+  target:
+    kind: Deployment
+    name: colyseus
+- path: patches/observability-office-ui.yaml
+  target:
+    kind: Deployment
+    name: office-ui
+- path: patches/observability-admin.yaml
+  target:
+    kind: Deployment
+    name: admin

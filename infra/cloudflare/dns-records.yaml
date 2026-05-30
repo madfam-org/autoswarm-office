@@ -1,61 +1,50 @@
 # Canonical Cloudflare DNS records for selva.town (prod + staging).
 # Applied via: scripts/apply-cloudflare-infra.py --dns
 #
-# All hostnames CNAME to the autoswarm-office Zero Trust tunnel.
-# Tunnel ingress routing lives in tunnel-routes.yaml.
+# All hostnames CNAME to the shared MADFAM `enclii-prod` tunnel
+# (${tunnel_id}.cfargotunnel.com — resolved at apply time).
+# Tunnel ingress routing lives in tunnel-routes.yaml (same tunnel name).
 
 zone: selva.town
-cname_target: autoswarm-office.cfargotunnel.com
+tunnel: enclii-prod
 
 records:
   # --- Production ---
   - type: CNAME
     name: api.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: app.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: www.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: ws.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: admin.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: gw.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
 
   # --- Staging (PP.4) ---
   - type: CNAME
     name: staging-api.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: staging.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: staging-admin.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: staging-ws.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true
   - type: CNAME
     name: staging-gw.selva.town
-    content: autoswarm-office.cfargotunnel.com
     proxied: true

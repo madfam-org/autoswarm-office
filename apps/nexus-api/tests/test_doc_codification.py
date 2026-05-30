@@ -120,6 +120,15 @@ class TestCloudflareInfra:
                 f"infra/cloudflare/dns-records.yaml must declare {hostname}"
             )
 
+    def test_dns_records_target_shared_enclii_prod_tunnel(self) -> None:
+        text = _DNS_RECORDS.read_text(encoding="utf-8")
+        assert "tunnel: enclii-prod" in text, (
+            "dns-records.yaml must CNAME to enclii-prod (shared live tunnel)"
+        )
+        assert "autoswarm-office.cfargotunnel.com" not in text, (
+            "dns-records.yaml must not point at the defunct autoswarm-office tunnel"
+        )
+
     def test_tunnel_routes_lists_prod_and_staging_hostnames(self) -> None:
         text = _TUNNEL_ROUTES.read_text(encoding="utf-8")
         for hostname in _REQUIRED_TUNNEL_HOSTNAMES:

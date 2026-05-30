@@ -96,15 +96,27 @@ def _tunnel_id_by_name(name: str) -> str:
     sys.exit(1)
 
 
+def _dns_cname_target(spec: dict[str, Any]) -> str:
+    """Resolve tunnel CNAME target for proxied hostnames."""
+    if spec.get("cname_target"):
+        return str(spec["cname_target"])
+    tunnel_spec = yaml.safe_load(TUNNEL_FILE.read_text(encoding="utf-8"))
+    tunnel_name = spec.get("tunnel") or tunnel_spec.get("tunnel", "enclii-prod")
+    tid = _tunnel_id(str(tunnel_name))
+    return f"{tid}.cfargotunnel.com"
+
+
 def apply_dns(*, dry_run: bool) -> None:
     spec = yaml.safe_load(DNS_FILE.read_text(encoding="utf-8"))
     zone_name = spec.get("zone", "selva.town")
     records: list[dict[str, Any]] = spec.get("records") or []
+    cname_target = _dns_cname_target(spec)
     if dry_run:
-        print(f"[dry-run] zone={zone_name} records={len(records)}")
+        print(f"[dry-run] zone={zone_name} records={len(records)} cname_target={cname_target}")
         for rec in records:
+            content = rec.get("content") or cname_target
             print(
-                f"  - {rec['type']} {rec['name']} -> {rec['content']} "
+                f"  - {rec['type']} {rec['name']} -> {content} "
                 f"(proxied={rec.get('proxied', True)})"
             )
         return
@@ -114,7 +126,7 @@ def apply_dns(*, dry_run: bool) -> None:
     for rec in records:
         rtype = rec["type"]
         name = rec["name"]
-        content = rec["content"]
+        content = rec.get("content") or cname_target
         proxied = rec.get("proxied", True)
         existing = _request(
             "GET",

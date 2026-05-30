@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **`prepare_social_post_schedule_payload`** — `POST /api/v1/schedules/` with
+  `action=social_post` auto-injects JWT `org_id` and validates platform fields
+  for the worker schedule materializer.
+- **`scripts/verify-campaign-path.sh`** — auth-gate smoke for Phase 2 campaign
+  routes (wired into `verify-phase0-gates.sh --staging`).
 - **Phase 2.7 Campaign Dashboard** — office-ui modal at `/office` → **Campaigns**
   (HUD + Dashboard panel): Tulana JSON import, campaign task lane, scheduled
   social HITL approve/deny, CRM handoff, Tulana feedback push, GA readiness badges.

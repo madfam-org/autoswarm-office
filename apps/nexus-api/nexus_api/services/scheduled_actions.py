@@ -179,6 +179,37 @@ async def enqueue_campaign_social_schedule(
     return created
 
 
+def prepare_social_post_schedule_payload(
+    payload: dict[str, Any],
+    *,
+    org_id: str,
+) -> dict[str, Any]:
+    """Validate and normalize a ``schedules`` row payload for ``SOCIAL_POST``.
+
+    The worker materializer requires ``org_id`` and ``platform``; this helper
+    injects ``org_id`` from the JWT when absent and reuses the same platform
+    field validation as ``enqueue_scheduled_action``.
+    """
+    merged = dict(payload)
+    tenant_org = str(merged.get("org_id") or org_id or "").strip()
+    if not tenant_org:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="org_id is required for social_post schedules",
+        )
+    merged["org_id"] = tenant_org
+
+    platform = str(merged.get("platform") or "").strip().lower()
+    if not platform:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="payload.platform is required for social_post schedules",
+        )
+    merged["platform"] = platform
+    _validate_social_payload(platform, merged)
+    return merged
+
+
 async def list_org_scheduled_actions(
     db: AsyncSession,
     *,

@@ -74,11 +74,18 @@ async def create_schedule(
     # The previous `user.sub` access happened to work at runtime because the
     # dict carries a `sub` key, but mypy correctly flagged it as unsafe.
     user_sub = user["sub"]
+    org_id = str(user.get("org_id") or "").strip()
+    payload = dict(body.payload)
+    if body.action == ScheduledAction.SOCIAL_POST:
+        from ..services.scheduled_actions import prepare_social_post_schedule_payload
+
+        payload = prepare_social_post_schedule_payload(payload, org_id=org_id or "default")
+
     schedule = Schedule(
         user_id=user_sub,
         cron_expr=body.cron_expr,
         action=body.action,
-        payload=body.payload,
+        payload=payload,
         description=body.description,
     )
     db.add(schedule)

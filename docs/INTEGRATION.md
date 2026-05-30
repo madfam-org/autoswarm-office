@@ -213,7 +213,7 @@ Contract: [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](./TULANA_SKU_CAMPAIG
 | `POST /api/v1/campaigns/tulana-feedback` | Bearer | Push campaign outcomes to Tulana buyer-signal API |
 | `GET /api/v1/scheduled-actions/` | Bearer | List org scheduled social rows (filter `?status=pending`) |
 | `PATCH /api/v1/scheduled-actions/{id}/hitl` | Bearer | Approve/deny playbook-gated posts |
-| `POST /api/v1/schedules/` | Bearer | Recurring cron (materializer requires `payload.org_id` + `payload.platform` for `social_post`) |
+| `POST /api/v1/schedules/` | Bearer | Recurring cron; **`social_post`** auto-injects JWT `org_id` and validates platform payload for materializer |
 
 ### Office UI
 

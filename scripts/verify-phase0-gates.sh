@@ -26,7 +26,10 @@ uv run pytest apps/nexus-api/tests/test_doc_codification.py -q
 uv run pytest apps/nexus-api/tests/test_tulana_campaign_import.py -q
 uv run pytest apps/nexus-api/tests/test_scheduled_actions_router.py -q
 uv run pytest apps/nexus-api/tests/test_tier_limits.py -q
+uv run pytest apps/nexus-api/tests/test_dhanam_billing_sync.py -q
+uv run pytest apps/nexus-api/tests/test_schedules_social_post.py -q
 uv run pytest apps/workers/tests/test_campaign_graph.py -q
+uv run pytest apps/workers/tests/test_schedule_materializer.py -q
 
 if ! kubectl kustomize infra/k8s/overlays/staging >/dev/null; then
   echo "FAIL: staging kustomize build"
@@ -56,6 +59,8 @@ if [[ "$RUN_STAGING" == true ]]; then
   ./scripts/staging-smoke.sh
   echo "== Dhanam billing path (staging) =="
   ./scripts/verify-dhanam-billing-path.sh --staging
+  echo "== Campaign path (staging) =="
+  ./scripts/verify-campaign-path.sh --staging
 fi
 
 echo "Phase 0 gates passed (operator still must provision OTel/Sentry secrets)."

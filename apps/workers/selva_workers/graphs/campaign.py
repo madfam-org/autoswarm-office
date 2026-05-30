@@ -21,11 +21,19 @@ logger = logging.getLogger(__name__)
 class CampaignState(BaseGraphState, TypedDict, total=False):
     """State for Tulana-backed campaign planning + draft generation."""
 
+    org_id: str
+    payload: dict[str, Any]
     tulana_pack: dict[str, Any]
     campaign_lane: str
     draft_variants: list[str]
     guardrail_violations: list[str]
     campaign_category: str
+    error_message: str
+
+
+def _state_payload(state: CampaignState) -> dict[str, Any]:
+    raw = state.get("payload")
+    return raw if isinstance(raw, dict) else {}
 
 
 def guard_campaign_draft(draft: str, do_not_claim: list[str]) -> tuple[str, list[str]]:
@@ -73,7 +81,7 @@ def load_tulana_pack(state: CampaignState) -> CampaignState:
     messages = state.get("messages", [])
     pack = state.get("tulana_pack")
     if not isinstance(pack, dict):
-        payload = state.get("payload", {}) or {}
+        payload = _state_payload(state)
         pack = _extract_tulana_pack(payload)
     if pack is None:
         return {
@@ -95,7 +103,7 @@ def load_tulana_pack(state: CampaignState) -> CampaignState:
 
     category = str(
         state.get("campaign_category")
-        or (state.get("payload", {}) or {}).get("campaign_category")
+        or _state_payload(state).get("campaign_category")
         or "sku_campaign_planning"
     )
     msg = AIMessage(
@@ -279,7 +287,7 @@ def schedule_social(state: CampaignState) -> CampaignState:
     if status not in {"draft_ready", "draft_ready_with_scrub"}:
         return {**state, "messages": messages}
 
-    payload_root = state.get("payload", {}) or {}
+    payload_root = _state_payload(state)
     if payload_root.get("auto_schedule_social") is False:
         msg = AIMessage(content="Social auto-schedule skipped (disabled in payload).")
         return {
@@ -290,7 +298,8 @@ def schedule_social(state: CampaignState) -> CampaignState:
 
     pack = state.get("tulana_pack") or {}
     variants = state.get("draft_variants") or []
-    org_id = state.get("org_id") or payload_root.get("org_id") or ""
+    org_id_raw = state.get("org_id") or payload_root.get("org_id") or ""
+    org_id = str(org_id_raw) if org_id_raw else ""
     if not org_id:
         return {
             **state,

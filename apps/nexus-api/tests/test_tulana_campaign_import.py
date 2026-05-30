@@ -124,3 +124,41 @@ async def test_import_idempotency_replay(client, auth_headers) -> None:
     assert r1.status_code == 200
     assert r2.status_code == 200
     assert r1.json() == r2.json()
+
+
+@pytest.mark.asyncio
+async def test_crm_handoff_endpoint(client, auth_headers) -> None:
+    pack = _valid_pack()
+    payload = {
+        "sku_key": pack.sku_key,
+        "audience": pack.audience,
+        "draft_variants": ["Subject A", "Subject B"],
+        "tulana_pack": pack.model_dump(mode="json"),
+    }
+    response = await client.post(
+        "/api/v1/campaigns/crm-handoff",
+        json=payload,
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "queued"
+    assert body["task_id"]
+    assert body["handoff_id"]
+
+
+@pytest.mark.asyncio
+async def test_crm_handoff_rejects_invalid_pack(client, auth_headers) -> None:
+    bad = _valid_pack(do_not_claim=[])
+    payload = {
+        "sku_key": bad.sku_key,
+        "audience": bad.audience,
+        "draft_variants": ["Draft"],
+        "tulana_pack": bad.model_dump(mode="json"),
+    }
+    response = await client.post(
+        "/api/v1/campaigns/crm-handoff",
+        json=payload,
+        headers=auth_headers,
+    )
+    assert response.status_code == 422

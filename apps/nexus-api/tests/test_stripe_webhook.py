@@ -48,8 +48,10 @@ class TestStripeWebhookFailClosed:
 
         caplog.set_level(logging.ERROR, logger="nexus_api.routers.stripe_webhooks")
         settings = get_settings()
-        original = settings.stripe_webhook_secret
+        original_secret = settings.stripe_webhook_secret
+        original_billing = settings.billing_via_dhanam
         settings.stripe_webhook_secret = ""
+        settings.billing_via_dhanam = False
 
         try:
             resp = await client.post(
@@ -64,7 +66,8 @@ class TestStripeWebhookFailClosed:
             assert len(error_records) >= 1, "Expected ERROR log when secret unset"
             assert "stripe_webhook_secret" in error_records[0].getMessage().lower()
         finally:
-            settings.stripe_webhook_secret = original
+            settings.stripe_webhook_secret = original_secret
+            settings.billing_via_dhanam = original_billing
 
 
 @pytest.mark.asyncio
@@ -79,8 +82,10 @@ class TestStripeWebhookSignature:
 
         caplog.set_level(logging.WARNING, logger="nexus_api.routers.stripe_webhooks")
         settings = get_settings()
-        original = settings.stripe_webhook_secret
+        original_secret = settings.stripe_webhook_secret
+        original_billing = settings.billing_via_dhanam
         settings.stripe_webhook_secret = "whsec_test_real_secret"
+        settings.billing_via_dhanam = False
 
         try:
             resp = await client.post(
@@ -92,7 +97,8 @@ class TestStripeWebhookSignature:
                 f"Expected 401 on invalid sig, got {resp.status_code}: {resp.text}"
             )
         finally:
-            settings.stripe_webhook_secret = original
+            settings.stripe_webhook_secret = original_secret
+            settings.billing_via_dhanam = original_billing
 
     async def test_returns_200_on_valid_signature_unknown_event(
         self, client: httpx.AsyncClient, caplog: pytest.LogCaptureFixture
@@ -102,8 +108,10 @@ class TestStripeWebhookSignature:
 
         caplog.set_level(logging.INFO, logger="nexus_api.routers.stripe_webhooks")
         settings = get_settings()
-        original = settings.stripe_webhook_secret
+        original_secret = settings.stripe_webhook_secret
+        original_billing = settings.billing_via_dhanam
         settings.stripe_webhook_secret = "whsec_test_real_secret"
+        settings.billing_via_dhanam = False
 
         event_payload = json.dumps(
             {
@@ -138,7 +146,8 @@ class TestStripeWebhookSignature:
             ]
             assert len(info_records) >= 1
         finally:
-            settings.stripe_webhook_secret = original
+            settings.stripe_webhook_secret = original_secret
+            settings.billing_via_dhanam = original_billing
 
     async def test_replay_outside_tolerance_returns_401(
         self, client: httpx.AsyncClient
@@ -147,8 +156,10 @@ class TestStripeWebhookSignature:
         from nexus_api.config import get_settings
 
         settings = get_settings()
-        original = settings.stripe_webhook_secret
+        original_secret = settings.stripe_webhook_secret
+        original_billing = settings.billing_via_dhanam
         settings.stripe_webhook_secret = "whsec_test_real_secret"
+        settings.billing_via_dhanam = False
 
         # Sign a payload with a timestamp 1 hour in the past.
         event_payload = b'{"id": "evt_replay", "type": "ping"}'
@@ -167,4 +178,5 @@ class TestStripeWebhookSignature:
                 f"Expected 401 on stale signature, got {resp.status_code}: {resp.text}"
             )
         finally:
-            settings.stripe_webhook_secret = original
+            settings.stripe_webhook_secret = original_secret
+            settings.billing_via_dhanam = original_billing

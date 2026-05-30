@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from selva_redis_pool import get_redis_pool
 
 from ..auth import get_current_user
-from ..billing_tiers import DEFAULT_TIER, get_daily_limit
 from ..config import get_settings
 from ..database import get_db
 from ..models import ComputeTokenLedger
@@ -25,6 +24,7 @@ from ..tenant import TenantContext, get_tenant
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["billing"], dependencies=[Depends(get_current_user)])
+webhook_router = APIRouter(tags=["billing-webhooks"])
 
 
 @router.get("/status")
@@ -152,49 +152,39 @@ async def create_billing_portal() -> dict[str, object]:
         ) from exc
 
 
-@router.post("/webhooks/dhanam", include_in_schema=False, dependencies=[])
+@webhook_router.post("/webhooks/dhanam", include_in_schema=False)
 async def dhanam_webhook(request: Request) -> dict[str, str]:
-    """Receive and verify webhooks from the Dhanam billing system."""
+    """Receive verified billing events from Dhanam (canonical Stripe/POS router)."""
     settings = get_settings()
     body = await request.body()
     signature = request.headers.get("x-dhanam-signature", "")
 
-    if settings.dhanam_webhook_secret:
-        expected = hmac_mod.new(
-            settings.dhanam_webhook_secret.encode(),
-            body,
-            hashlib.sha256,
-        ).hexdigest()
-        if not hmac_mod.compare_digest(expected, signature):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid signature",
-            )
+    if not settings.dhanam_webhook_secret:
+        logger.error(
+            "Dhanam billing webhook received but DHANAM_WEBHOOK_SECRET is unset"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="dhanam billing webhook not configured",
+        )
+
+    expected = hmac_mod.new(
+        settings.dhanam_webhook_secret.encode(),
+        body,
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac_mod.compare_digest(expected, signature):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid signature",
+        )
 
     payload = json.loads(body)
     event_type = payload.get("type", "unknown")
-    logger.info("Received Dhanam webhook event: %s", event_type)
+    logger.info("Received Dhanam billing webhook: %s", event_type)
 
-    # Handle subscription tier changes by caching the daily limit in Redis.
-    if event_type == "subscription.updated":
-        tier = payload.get("data", {}).get("tier", DEFAULT_TIER)
-        org_id = payload.get("data", {}).get("org_id", "default")
-        # Tier slug → daily compute-token budget. Single source of truth
-        # lives in nexus_api.billing_tiers (also imported by swarms.py
-        # and billing_internal.py).
-        daily_limit = get_daily_limit(tier)
-        try:
-            pool = get_redis_pool(url=settings.redis_url)
-            await pool.execute_with_retry(
-                "set", f"autoswarm:tier:{org_id}", str(daily_limit), ex=86400
-            )
-            logger.info(
-                "Updated tier limit for org %s: %s -> %d",
-                org_id,
-                tier,
-                daily_limit,
-            )
-        except Exception:
-            logger.warning("Failed to cache tier limit in Redis")
+    from ..services.billing_sync import handle_dhanam_billing_event
 
-    return {"status": "ok"}
+    await handle_dhanam_billing_event(payload)
+
+    return {"status": "ok", "event_type": str(event_type)}

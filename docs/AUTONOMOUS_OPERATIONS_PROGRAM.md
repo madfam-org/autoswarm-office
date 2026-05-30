@@ -68,7 +68,7 @@ Observability         → OTel, Sentry, SLO burn alerts, on-call runbooks
 |----|------|--------------|---------------|
 | 0.1 | Wire `OTEL_EXPORTER_OTLP_ENDPOINT` on all 6 services | selva-office + Enclii | K8s optional secret refs shipped; operator provisions Grafana token → end-to-end trace |
 | 0.2 | Sentry DSNs + office-ui source maps in CI | selva-office | Synthetic staging error captured |
-| 0.3 | `STRIPE_PRICE_TO_TIER_MAP` + staging verification | selva-office + Stripe | Webhook events map to correct tier in staging |
+| 0.3 | Dhanam price→tier map + Selva webhook verification | Dhanam + selva-office | Dhanam sends normalized events; Selva tier cache correct in staging |
 | 0.4 | k6 100-concurrent-tasks in staging | selva-office | Results in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md) |
 | 0.5 | Backup/restore drill | selva-office + ops | RTO/RPO in [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md); monthly cadence |
 | 0.6 | Staging completion | selva-office + Janua | Janua staging OAuth client; optional PP.6 masked DB refresh |
@@ -81,7 +81,7 @@ Observability         → OTel, Sentry, SLO burn alerts, on-call runbooks
 - `./scripts/verify-doc-truth.sh` green on prod
 - `./scripts/staging-smoke.sh` green
 - OTel + Sentry receiving data
-- Stripe tier map verified in staging
+- Stripe tier map verified in staging **via Dhanam webhooks**
 
 ---
 

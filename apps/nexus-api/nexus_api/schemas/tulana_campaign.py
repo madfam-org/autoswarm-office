@@ -73,3 +73,19 @@ class TulanaImportResponse(BaseModel):
     rejected: list[TulanaPackValidation]
     ranked_sku_keys: list[str]
     dispatched_task_ids: list[str] = Field(default_factory=list)
+
+
+class CrmCampaignHandoffRequest(BaseModel):
+    sku_key: str = Field(..., min_length=1, max_length=200)
+    audience: str = Field(..., min_length=1, max_length=500)
+    draft_variants: list[str] = Field(..., min_length=1, max_length=10)
+    tulana_pack: TulanaSkuCampaignPack
+    campaign_name: str | None = Field(default=None, max_length=200)
+    phynd_list_id: str | None = Field(default=None, max_length=200)
+
+
+class CrmCampaignHandoffResponse(BaseModel):
+    handoff_id: str
+    task_id: str
+    status: str = "queued"
+    message: str

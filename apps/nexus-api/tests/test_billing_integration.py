@@ -126,13 +126,15 @@ class TestDispatchBudgetCheck:
 
 
 class TestDhanamWebhookTier:
-    """Dhanam webhook updates cached tier limits."""
+    """Dhanam webhook (canonical billing router) updates cached tier limits."""
 
     @pytest.mark.asyncio
-    async def test_subscription_updated_caches_tier(
+    async def test_returns_503_when_secret_unset(
         self, client: httpx.AsyncClient, auth_headers: dict[str, str]
     ) -> None:
         import json
+
+        from nexus_api.config import Settings
 
         payload = {
             "type": "subscription.updated",
@@ -140,28 +142,64 @@ class TestDhanamWebhookTier:
         }
         body = json.dumps(payload).encode()
 
-        # Mock Redis to capture the set call
-        mock_redis = AsyncMock()
-        mock_redis.set = AsyncMock()
-        mock_redis.aclose = AsyncMock()
-
-        with (
-            patch(
-                "nexus_api.routers.billing.get_settings",
-                return_value=type(
-                    "S", (), {"dhanam_webhook_secret": "", "redis_url": "redis://x"}
-                )(),
-            ),
-            patch(
-                "redis.asyncio.from_url",
-                return_value=mock_redis,
-            ),
-        ):
+        patched = Settings(
+            database_url="sqlite+aiosqlite://",
+            environment="development",
+            dev_auth_bypass=True,
+            dhanam_webhook_secret="",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        with patch("nexus_api.routers.billing.get_settings", return_value=patched):
             resp = await client.post(
                 "/api/v1/billing/webhooks/dhanam",
                 content=body,
                 headers={**auth_headers, "Content-Type": "application/json"},
             )
+        assert resp.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_subscription_updated_caches_tier(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        import hashlib
+        import hmac
+        import json
+
+        from nexus_api.config import Settings
+
+        secret = "test-dhanam-billing-secret"
+        payload = {
+            "type": "subscription.updated",
+            "data": {"tier": "professional", "org_id": "acme-corp"},
+        }
+        body = json.dumps(payload).encode()
+        signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+        mock_cache = AsyncMock()
+        patched = Settings(
+            database_url="sqlite+aiosqlite://",
+            environment="development",
+            dev_auth_bypass=True,
+            dhanam_webhook_secret=secret,
+            _env_file=None,  # type: ignore[call-arg]
+        )
+
+        with (
+            patch("nexus_api.routers.billing.get_settings", return_value=patched),
+            patch(
+                "nexus_api.services.billing_sync.handle_dhanam_billing_event",
+                new=AsyncMock(side_effect=mock_cache),
+            ),
+        ):
+            resp = await client.post(
+                "/api/v1/billing/webhooks/dhanam",
+                content=body,
+                headers={
+                    **auth_headers,
+                    "Content-Type": "application/json",
+                    "x-dhanam-signature": signature,
+                },
+            )
 
         assert resp.status_code == 200
-        mock_redis.set.assert_called_once_with("autoswarm:tier:acme-corp", "5000", ex=86400)
+        mock_cache.assert_awaited_once()

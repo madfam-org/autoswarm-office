@@ -88,23 +88,28 @@ Items are roughly priority-ordered. Highest value at top.
 
 ## Tier 2 — Blocks billing / compliance correctness
 
-### 3. Populate `STRIPE_PRICE_TO_TIER_MAP`
+### 3. Configure Dhanam price→tier map + Selva webhook
 
-- **What**: Log into Stripe Dashboard, copy the production price IDs
-  for `starter`, `professional`, `enterprise` tiers. Set the JSON map
-  in production K8s secret. Restart `nexus-api`.
-- **Why blocking**: Empty map means every Stripe subscription event
-  falls back to `DEFAULT_TIER` (starter), so live billing would
-  mis-tier every customer until corrected. Currently
-  `FEATURE_STRIPE_MXN_LIVE=false` so this isn't shipping incorrect
-  data — but the feature can't be flipped on until this is set.
-- **Owner**: Operator (Stripe Dashboard access required).
-- **Unblocks**: `FEATURE_STRIPE_MXN_LIVE=true` in production. Live
-  Stripe webhook processing per PR #116.
+- **What**: In **Dhanam** (canonical Stripe/POS router), map production
+  Stripe price IDs to `starter`, `professional`, `enterprise`. Point Dhanam
+  billing webhooks at Selva
+  `POST /api/v1/billing/webhooks/dhanam` with HMAC via
+  `DHANAM_WEBHOOK_SECRET`. Set `BILLING_VIA_DHANAM=true` on nexus-api
+  (default). Do **not** populate `STRIPE_PRICE_TO_TIER_MAP` in Selva —
+  Dhanam normalizes events and sends tier in the webhook payload.
+- **Why blocking**: Without Dhanam→Selva webhooks, subscription tier stays
+  at defaults and dispatch budget enforcement mis-tiers customers. Direct
+  Stripe webhooks to Selva return **503** when `BILLING_VIA_DHANAM=true`.
+- **Owner**: Operator (Dhanam + Stripe Dashboard access required).
+- **Unblocks**: Live billing via Dhanam checkout; tier cache updates in
+  Redis; `FEATURE_STRIPE_MXN_LIVE` only as break-glass with
+  `BILLING_VIA_DHANAM=false`.
 - **Cross-refs**:
-  - PR #116 (Stripe webhook handlers)
-  - `apps/nexus-api/nexus_api/config.py:Settings.stripe_price_to_tier_map`
-  - `infra/pricing/selva-tiers.json` — references which env key per tier
+  - `apps/nexus-api/nexus_api/services/billing_sync.py` — canonical sync
+  - `apps/nexus-api/nexus_api/routers/billing.py` — Dhanam webhook
+  - `infra/pricing/selva-tiers.json` — daily limits per tier
+  - `packages/tools/src/selva_tools/builtins/billing_tools.py` — checkout
+    via `DHANAM_API_URL/v1/billing/checkout`
 
 ### 4. Flip `AUDIENCE_FILTER_ENABLED=true` — **DONE (prod)**
 

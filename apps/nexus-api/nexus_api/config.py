@@ -228,7 +228,13 @@ class Settings(BaseSettings):
     # — this value is *not* a fallback for live sends.
     email_from: str = "noreply@selva.town"
 
-    # -- Stripe webhook (Phase 1 scaffold) ------------------------------------
+    # -- Billing router (Dhanam-first) ----------------------------------------
+    # When true (default), Stripe/POS webhooks MUST land on Dhanam first.
+    # Selva consumes Dhanam-normalized events at /api/v1/billing/webhooks/dhanam.
+    # Direct /api/v1/stripe/webhook is break-glass only when this is false.
+    billing_via_dhanam: bool = True
+
+    # -- Stripe webhook (legacy break-glass when billing_via_dhanam=false) ----
     # Required when ``feature_stripe_mxn_live`` is true (see
     # _validate_config below). Empty default means the webhook endpoint
     # responds 503 — same fail-closed pattern as the gateway providers.
@@ -236,18 +242,9 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     feature_stripe_mxn_live: bool = False
 
-    # JSON mapping of Stripe price IDs (``price_...``) to Selva tier slugs
-    # (``starter`` / ``professional`` / ``enterprise``). The Stripe webhook
-    # handlers in ``routers/stripe_webhooks.py`` consult this map when a
-    # subscription is created or updated to determine which
-    # ``TIER_DAILY_TASK_LIMIT`` row to apply for the tenant. Tier slugs MUST
-    # be keys in ``billing_tiers.TIER_DAILY_TASK_LIMIT`` -- unknown tiers
-    # fall through to ``DEFAULT_TIER`` rather than raising. Example:
-    # ``{"price_1AbC...": "professional", "price_1XyZ...": "enterprise"}``.
-    # Empty default means handlers fall back to ``DEFAULT_TIER`` for every
-    # subscription -- safe for staging, broken for production. Operator
-    # populates this from the Stripe Dashboard once production prices are
-    # cut over.
+    # JSON mapping of Stripe price IDs — **deprecated when billing_via_dhanam=true**.
+    # Price→tier mapping belongs in Dhanam (canonical POS router). Selva's direct
+    # Stripe handlers consult this map only in break-glass mode.
     stripe_price_to_tier_map: dict[str, str] = {}
 
     model_config = {
@@ -307,13 +304,14 @@ class Settings(BaseSettings):
 
         if (
             self.feature_stripe_mxn_live
+            and not self.billing_via_dhanam
             and not self.stripe_webhook_secret
             and self.environment == "production"
         ):
             raise ValueError(
                 "STRIPE_WEBHOOK_SECRET is required when FEATURE_STRIPE_MXN_LIVE "
-                "is true in production. Get it from Stripe Dashboard → "
-                "Developers → Webhooks → reveal signing secret (whsec_...)."
+                "is true and BILLING_VIA_DHANAM is false. Prefer Dhanam-first "
+                "billing: set BILLING_VIA_DHANAM=true and configure webhooks on Dhanam."
             )
 
         return self

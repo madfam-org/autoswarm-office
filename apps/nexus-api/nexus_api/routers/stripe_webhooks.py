@@ -50,9 +50,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from selva_redis_pool import get_redis_pool
-
-from ..billing_tiers import DEFAULT_TIER, get_daily_limit
+from ..billing_tiers import DEFAULT_TIER
 from ..config import get_settings
 from ..database import async_session_factory
 from ..models import TenantConfig
@@ -70,6 +68,20 @@ _SIGNATURE_TOLERANCE_SECONDS = 300
 async def stripe_webhook(request: Request) -> dict[str, str]:
     """Verify Stripe signature; dispatch event to per-type handlers."""
     settings = get_settings()
+
+    if settings.billing_via_dhanam:
+        logger.warning(
+            "Direct Stripe webhook rejected — billing routes through Dhanam. "
+            "Configure Stripe webhooks on Dhanam and point Selva at "
+            "/api/v1/billing/webhooks/dhanam."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "billing routes through Dhanam; direct Stripe webhook is break-glass only "
+                "(set BILLING_VIA_DHANAM=false to enable legacy path)"
+            ),
+        )
 
     if not settings.stripe_webhook_secret:
         logger.error(
@@ -201,46 +213,15 @@ def _coerce_period_end(subscription_obj: dict[str, Any]) -> datetime | None:
 
 
 async def _cache_tier_limit(org_id: str, tier: str) -> None:
-    """Mirror the new tier's daily limit into Redis (same key as Dhanam path).
+    from ..services.billing_sync import cache_tier_limit
 
-    Fire-and-forget: Redis being unavailable should never reject a Stripe
-    event. The cached value backs the dispatch budget check in
-    ``swarms.py`` / ``billing.py``; on cache miss those callers fall back
-    to ``billing_tiers.get_daily_limit(tier)`` so a stale or missing key
-    is degraded, not broken.
-    """
-    daily_limit = get_daily_limit(tier)
-    try:
-        settings = get_settings()
-        pool = get_redis_pool(url=settings.redis_url)
-        await pool.execute_with_retry(
-            "set", f"autoswarm:tier:{org_id}", str(daily_limit), ex=86400
-        )
-    except Exception:
-        logger.warning(
-            "Failed to cache tier limit for org=%s tier=%s in Redis",
-            org_id,
-            tier,
-            exc_info=True,
-        )
+    await cache_tier_limit(org_id, tier)
 
 
 async def _clear_overage_counter(org_id: str) -> None:
-    """Clear the daily-overage Redis key for a tenant after a successful invoice.
+    from ..services.billing_sync import clear_overage_counter
 
-    Fire-and-forget. Key naming follows the ``autoswarm:tier:<org_id>``
-    convention used by the Dhanam path so ops have a single key prefix to
-    monitor. Absent key (already-cleared / never-set) is a no-op at the
-    Redis layer.
-    """
-    try:
-        settings = get_settings()
-        pool = get_redis_pool(url=settings.redis_url)
-        await pool.execute_with_retry("delete", f"autoswarm:tier_overage:{org_id}")
-    except Exception:
-        logger.warning(
-            "Failed to clear tier_overage Redis key for org=%s", org_id, exc_info=True
-        )
+    await clear_overage_counter(org_id)
 
 
 # ---------------------------------------------------------------------------

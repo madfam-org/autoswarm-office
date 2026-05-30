@@ -185,6 +185,7 @@ def create_app() -> FastAPI:
     app.include_router(approvals.router, prefix="/api/v1/approvals")
     app.include_router(swarms.router, prefix="/api/v1/swarms")
     app.include_router(billing.router, prefix="/api/v1/billing")
+    app.include_router(billing.webhook_router, prefix="/api/v1/billing")
     app.include_router(billing_internal.router, prefix="/api/v1/billing")
     app.include_router(skills.router, prefix="/api/v1/skills")
     # Harness communication gateway canonical routes:

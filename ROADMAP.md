@@ -136,9 +136,9 @@ foundationally one-line dangerous if left undone.
   via migration 0027 (`stripe_customer_id` UNIQUE+indexed lookup),
   refresh cached tier limits, and emit `billing.invoice_paid` /
   `billing.payment_failed` task events. 22 regression tests pin the
-  contract. Operator follow-up: populate `STRIPE_PRICE_TO_TIER_MAP`
-  from Stripe Dashboard before flipping `FEATURE_STRIPE_MXN_LIVE` in
-  production.
+  contract. Operator follow-up: configure Stripe price→tier mapping in
+  **Dhanam** and point webhooks at Selva `/api/v1/billing/webhooks/dhanam`
+  before enabling live billing (`BILLING_VIA_DHANAM=true`, default).
 - **Production secrets provisioned** — `WORKER_API_TOKEN`,
   `CONSENT_LEDGER_SIGNING_SECRET`, `COLYSEUS_SERVICE_TOKEN` all need
   strong values in staging + prod. Settings validators now refuse

@@ -66,7 +66,10 @@ For the full Janua API surface, read the `llms-full.txt` file in the Janua repos
 ## Dhanam Billing
 
 Dhanam is the MADFAM platform's billing and subscription management service.
-AutoSwarm uses Dhanam to enforce compute token budgets and tier-based feature gates.
+**All Stripe and point-of-sale flows route through Dhanam** — Selva never
+accepts direct Stripe webhooks in production when `BILLING_VIA_DHANAM=true`
+(default). Dhanam normalizes provider events and pushes tier/subscription
+updates to Selva.
 
 ### SDK Installation
 
@@ -89,6 +92,7 @@ pnpm add @dhanam/billing-sdk
 ```bash
 DHANAM_API_URL=https://billing.example.com
 DHANAM_WEBHOOK_SECRET=<from Dhanam dashboard>
+BILLING_VIA_DHANAM=true  # default; set false only for break-glass direct Stripe
 ```
 
 ### Endpoints Used
@@ -111,8 +115,22 @@ DHANAM_WEBHOOK_SECRET=<from Dhanam dashboard>
 ### Webhook Verification
 
 Dhanam signs webhook payloads with HMAC-SHA256 using `DHANAM_WEBHOOK_SECRET`. The
-billing router at `apps/nexus-api/src/routers/billing.py` verifies this signature
-before processing any webhook event.
+billing router at `apps/nexus-api/nexus_api/routers/billing.py` verifies this signature
+before processing any webhook event. Processing is delegated to
+`apps/nexus-api/nexus_api/services/billing_sync.py`.
+
+| Dhanam event `type` | Selva action |
+|---------------------|--------------|
+| `subscription.created` / `subscription.updated` | Update `tenant_configs` tier/status; cache daily limit in Redis |
+| `subscription.cancelled` / `subscription.deleted` | Mark subscription `cancelled` |
+| `invoice.paid` | Clear overage counter; emit `billing.invoice_paid` |
+| `invoice.payment_failed` | Mark `past_due`; emit `billing.payment_failed` |
+
+Payload `data` must include `org_id` and normalized `tier` (Dhanam resolves Stripe
+price IDs — do not configure `STRIPE_PRICE_TO_TIER_MAP` in Selva when billing via Dhanam).
+
+**Legacy break-glass:** `/api/v1/stripe/webhook` remains for emergencies when
+`BILLING_VIA_DHANAM=false` and `STRIPE_WEBHOOK_SECRET` is set.
 
 For the full Dhanam API surface, read the `llms-full.txt` file in the Dhanam repository.
 

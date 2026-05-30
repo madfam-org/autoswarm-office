@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import UTC, datetime, timedelta
 from typing import Any, TypedDict
 
 from langchain_core.messages import AIMessage
@@ -208,14 +209,156 @@ def draft_copy(state: CampaignState) -> CampaignState:
     }
 
 
+def _build_social_schedule_body(
+    *,
+    pack: dict[str, Any],
+    variants: list[str],
+    payload_root: dict[str, Any],
+) -> dict[str, Any]:
+    """Build ``CampaignSocialScheduleRequest``-shaped body for nexus-api."""
+    sku_key = str(pack.get("sku_key") or "campaign")
+    audience = str(pack.get("audience") or "general")
+    platform = str(payload_root.get("auto_schedule_platform") or "reddit").strip().lower()
+    if platform not in {"reddit", "bluesky", "mastodon", "email"}:
+        platform = "reddit"
+
+    primary_copy = variants[0] if variants else str(pack.get("value_prop") or sku_key)
+    title = f"{sku_key} for {audience}"[:300]
+    subreddit = str(payload_root.get("reddit_subreddit") or "selva")
+
+    posts: list[dict[str, Any]] = []
+    base = datetime.now(UTC).replace(second=0, microsecond=0) + timedelta(hours=1)
+    offsets_days = payload_root.get("auto_schedule_offsets_days") or [1, 2, 3]
+    if not isinstance(offsets_days, list):
+        offsets_days = [1, 2, 3]
+
+    for idx, day_offset in enumerate(offsets_days[:3]):
+        try:
+            day_n = int(day_offset)
+        except (TypeError, ValueError):
+            day_n = idx + 1
+        when = base + timedelta(days=day_n)
+        variant = variants[idx % len(variants)] if variants else primary_copy
+        if platform == "reddit":
+            post_payload = {
+                "subreddit": subreddit,
+                "title": title,
+                "body": variant[:4000],
+            }
+        elif platform == "bluesky":
+            post_payload = {"text": variant[:300]}
+        elif platform == "mastodon":
+            post_payload = {
+                "instance": str(payload_root.get("mastodon_instance") or "mastodon.social"),
+                "status": variant[:500],
+            }
+        else:
+            recipient = str(payload_root.get("email_recipient") or "campaign@example.com")
+            post_payload = {
+                "recipient": recipient,
+                "subject": title,
+                "body": variant[:4000],
+            }
+        posts.append({"scheduled_for": when.isoformat(), "payload": post_payload})
+
+    return {
+        "sku_key": sku_key,
+        "platform": platform,
+        "require_hitl": payload_root.get("auto_schedule_require_hitl", True),
+        "campaign_id": payload_root.get("campaign_id"),
+        "persona_id": payload_root.get("persona_id"),
+        "posts": posts,
+    }
+
+
+@instrumented_node
+def schedule_social(state: CampaignState) -> CampaignState:
+    """Enqueue HITL-gated social cadence via nexus-api after drafts are ready."""
+    messages = state.get("messages", [])
+    status = state.get("status") or ""
+    if status not in {"draft_ready", "draft_ready_with_scrub"}:
+        return {**state, "messages": messages}
+
+    payload_root = state.get("payload", {}) or {}
+    if payload_root.get("auto_schedule_social") is False:
+        msg = AIMessage(content="Social auto-schedule skipped (disabled in payload).")
+        return {
+            **state,
+            "messages": [*messages, msg],
+            "status": "draft_ready",
+        }
+
+    pack = state.get("tulana_pack") or {}
+    variants = state.get("draft_variants") or []
+    org_id = state.get("org_id") or payload_root.get("org_id") or ""
+    if not org_id:
+        return {
+            **state,
+            "messages": messages,
+            "status": "schedule_skipped_no_org",
+        }
+
+    body = _build_social_schedule_body(pack=pack, variants=variants, payload_root=payload_root)
+
+    scheduled_count = 0
+    error_detail: str | None = None
+    try:
+        import httpx
+
+        from ..auth import get_worker_auth_headers
+        from ..config import get_settings
+
+        settings = get_settings()
+        url = f"{settings.nexus_api_url.rstrip('/')}/api/v1/campaigns/schedule-social"
+        headers = {
+            **get_worker_auth_headers(org_id=org_id),
+            "Content-Type": "application/json",
+            "Idempotency-Key": f"campaign-graph:{state.get('task_id', 'unknown')}:{pack.get('sku_key')}",
+        }
+
+        async def _post() -> httpx.Response:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                return await client.post(url, headers=headers, json=body)
+
+        response = _run_async(_post())
+        if response.status_code in {200, 201}:
+            data = response.json()
+            scheduled_count = int(data.get("count") or 0)
+        else:
+            error_detail = f"HTTP {response.status_code}: {response.text[:200]}"
+    except Exception as exc:
+        logger.warning("Campaign schedule-social failed", exc_info=True)
+        error_detail = str(exc)
+
+    if error_detail:
+        msg = AIMessage(content=f"Social schedule failed: {error_detail[:500]}")
+        return {
+            **state,
+            "messages": [*messages, msg],
+            "status": "schedule_failed",
+        }
+
+    msg = AIMessage(
+        content=f"Scheduled {scheduled_count} social post(s) with HITL gate.",
+        additional_kwargs={"action_category": "api_call"},
+    )
+    return {
+        **state,
+        "messages": [*messages, msg],
+        "status": "scheduled",
+    }
+
+
 def build_campaign_graph() -> StateGraph:
     """Construct Tulana campaign planning + draft graph."""
     graph = StateGraph(CampaignState)
     graph.add_node("load_tulana_pack", load_tulana_pack)
     graph.add_node("plan_lane", plan_lane)
     graph.add_node("draft_copy", draft_copy)
+    graph.add_node("schedule_social", schedule_social)
     graph.add_edge(START, "load_tulana_pack")
     graph.add_edge("load_tulana_pack", "plan_lane")
     graph.add_edge("plan_lane", "draft_copy")
-    graph.add_edge("draft_copy", END)
+    graph.add_edge("draft_copy", "schedule_social")
+    graph.add_edge("schedule_social", END)
     return graph

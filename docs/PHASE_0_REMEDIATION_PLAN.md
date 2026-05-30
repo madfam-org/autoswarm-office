@@ -32,7 +32,9 @@ Until Stream A+B+C complete, **do not promote prod** on campaign features alone.
 | Staging DB bootstrap | Migration 0014 fix, 0038 grants, `scripts/run-staging-migrations.sh` |
 | Staging verify gates | `verify-campaign-loop.sh`, `verify-dhanam-billing-path.sh`, `verify-doc-truth.sh` |
 | Dhanam webhook handler (Selva side) | `billing.py` — signed POST **200** |
-| Load-test harness | `run-staging-load-full.sh`, `drain-staging-task-queue.sh`, Runs 1–3 in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md) |
+| Load-test harness | `run-staging-load-full.sh`, `drain-staging-task-queue.sh`, Runs 1–4 in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md) |
+| Run 4 calibration graph + scripts | `graphs/calibration.py`, `tests/load/calibration-dispatch.js`, `run-staging-load-calibration.sh` |
+| Staging worker/API pipeline fixes | `patch-workers.yaml` (`NEXUS_API_URL`), dispatch `calibration` pattern, events `tenant_session` — see [SESSION_2026-05-30_PHASE0_RUN4.md](./SESSION_2026-05-30_PHASE0_RUN4.md) |
 | Staging rate-limit patches | `patch-nexus-api.yaml` (`DISPATCH_RATE_LIMIT`, `RATE_LIMIT_PER_MINUTE`) |
 | Worker calibration patch | `patch-workers.yaml` (`MAX_CONCURRENT_TASKS=15`) |
 | Tulana buyer-signal | Tulana `0161187` + cache-bust deploy; feedback **200** |
@@ -56,7 +58,7 @@ Until Stream A+B+C complete, **do not promote prod** on campaign features alone.
 | 0.1 | OTel exporter | Operator + Enclii | **Open** | Provision Grafana Cloud → `./scripts/bootstrap-staging-observability.sh` → prod mirror |
 | 0.2 | Sentry DSNs + source maps | Operator + CI | **Open** | 5 projects + `SENTRY_AUTH_TOKEN` in office-ui CI |
 | 0.3 | Dhanam price→tier + prod webhook | Operator (Dhanam/Stripe) | **Partial** | Map Stripe prices in Dhanam; prod `PRODUCT_WEBHOOK_URLS`; fix secret drift |
-| 0.4 | k6 calibration pass | Engineering + ops | **Partial** | Runs 1–3 failed thresholds — **Run 4** (see § Sprint 1) |
+| 0.4 | k6 calibration pass | Engineering + ops | **Partial** | Run 4 done (80.9% dispatch; thresholds fail) — **Run 4b** at `nexus-api` replicas=2 — [SESSION_2026-05-30_PHASE0_RUN4.md](./SESSION_2026-05-30_PHASE0_RUN4.md) |
 | 0.5 | Backup/restore drill | Operator | **Open** | `make db-backup` → restore staging → record RTO/RPO in [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) |
 | 0.6 | Staging completion | Operator | **Partial** | Janua staging OAuth client; optional masked DB refresh (PP.6) |
 | 0.7 | Secret rotation calendar | Operator | **Open** | Schedule Q3 2026-07-07 per [SECRET_ROTATION_POLICY.md](./SECRET_ROTATION_POLICY.md) |
@@ -89,6 +91,8 @@ Until Stream A+B+C complete, **do not promote prod** on campaign features alone.
 | Observability secret | `scripts/bootstrap-staging-observability.sh` | Enclii secret provisioning |
 | Dhanam `PRODUCT_WEBHOOK_URLS` drift | `scripts/reconcile-dhanam-selva-webhook.sh` | Dhanam/Enclii durable secret merge |
 | Staging `DATABASE_ADMIN_URL` | Break-glass only; drain script marks 0 DB rows | Enclii env for `app_admin` role on staging |
+| Staging workers `NEXUS_API_URL` | Fixed in `patch-workers.yaml` (2026-05-30) | Enclii env overlay should override ConfigMap prod URL |
+| Staging `nexus-api` replica drift | Manual `kubectl apply -k overlays/staging` | Argo sync policy / HPA pin review |
 
 ---
 
@@ -133,7 +137,9 @@ Until Stream A+B+C complete, **do not promote prod** on campaign features alone.
 2. Restore into staging isolated DB (or PP.6 masked refresh when available).
 3. Record measured RTO/RPO in [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) § Drill log.
 
-**Exit:** Run 4 passes hard thresholds in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md); DR drill row filled.
+**Exit:** Run 4b passes hard thresholds in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md); DR drill row filled.
+
+**Run 4 status (2026-05-30):** B1 complete; B2 partial (kustomize has replicas=2; cluster drifted to 1 during run). See [SESSION_2026-05-30_PHASE0_RUN4.md](./SESSION_2026-05-30_PHASE0_RUN4.md).
 
 ---
 

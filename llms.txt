@@ -8,6 +8,8 @@ Compact LLM context index for this repository.
 - `docs/PHASE_0_REMEDIATION_PLAN.md` — **4-sprint remediation plan** (Phase 0 → prod promote).
 - `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6).
 - `docs/OPERATOR_BACKLOG.md` — human-gated operator items.
+- `docs/SESSION_2026-05-30_PHASE0_RUN4.md` — **session wrap** (Run 4 fixes, results, handoff).
+- `docs/LOAD_TEST_2026-Q2.md` — k6 calibration Runs 1–4b.
 - `llms-full.txt` — full context map and durable operating contract.
 
 ## Campaign orchestration (Phase 2 — shipped)
@@ -19,6 +21,12 @@ Compact LLM context index for this repository.
 - `GET /api/v1/scheduled-actions/` + `PATCH .../hitl` — HITL social queue.
 - Office UI: `/office` → **Campaigns** dashboard (`components/campaigns/`).
 - Worker: `campaign` graph + `social_post_executor` + `schedule_materializer`.
+
+## Coupler integration (Agent Tool Plane)
+
+- `docs/COUPLER_INTEGRATION.md` — Selva consumer plan (`CouplerToolBackend`, P3 PoC)
+- Canonical architecture: enclii `docs/strategy/AGENT_TOOL_PLANE.md`
+- Janua blocker: ConnectedAccount / ADR-002
 
 ## Production operations
 

@@ -167,12 +167,15 @@ Optional UI soak remains; Phase 0 remediation is the critical path — see
 
 ### 5c. k6 Run 4 — calibration graph + threshold pass (engineering)
 
-- **Status (2026-05-30)**: **Planned** in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) Sprint 1.
-  Runs 1–3 failed (rate limits, API saturation). Run 4 adds no-LLM `calibration`
-  graph + optional staging `nexus-api` replicas=2.
-- **What**: Implement `graph_type: calibration` (or literal workflow), add
-  `tests/load/calibration-dispatch.js` + `./scripts/run-staging-load-calibration.sh`,
-  fix `worker_in_flight` metric gap, re-run until hard thresholds pass.
+- **Status (2026-05-30 session)**: **Partial — Run 4 executed; Run 4b pending.**
+  - **Shipped:** `graph_type=calibration`, worker/API pipeline fixes (`NEXUS_API_URL`, events RLS),
+    queue-stats gauges, `./scripts/run-staging-load-calibration.sh`.
+  - **Run 4:** 80.9% dispatch 2xx (vs 44% Run 3); **hard thresholds still fail** (p99 10s,
+    queue_depth max 1209) — single `nexus-api` replica during run; Argo drift vs kustomize `replicas: 2`.
+  - **Next:** Run 4b after drain + enforced `nexus-api` replicas=2. Session log:
+    [SESSION_2026-05-30_PHASE0_RUN4.md](SESSION_2026-05-30_PHASE0_RUN4.md).
+- **What**: Re-run `./scripts/run-staging-load-calibration.sh` until hard thresholds pass;
+  optional `worker_in_flight` gauge accuracy follow-up.
 - **Owner**: Engineer (selva-office).
 - **Unblocks**: Data-driven prod limits; Phase 0 gate 0.4; PP.5 promote confidence.
 - **Cross-refs**: Epic E1–E3 in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md)

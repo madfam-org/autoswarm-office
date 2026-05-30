@@ -188,14 +188,10 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 ### 3b. Deploy Tulana buyer-signal ingest route
 
-- **What**: On **Tulana** (`TULANA_API_URL`, staging uses `https://tulana-api.madfam.io`),
-  implement and deploy `POST /api/v1/internal/selva/buyer-signal/` authenticated via
-  `X-Tulana-Selva-Secret` (matches `TULANA_SELVA_WEBHOOK_SECRET` on nexus-api).
-  Accept Selva payload: `org_id`, `sku_key`, `summary`, `outcomes[]`, optional
-  `handoff_id` / `task_id` / `evidence_urls`. Return `{event_id}` on success.
-- **Why blocking**: `POST /api/v1/campaigns/tulana-feedback` is wired in Selva but
-  upstream returns 404 today — campaign PMF evidence cannot land in Tulana.
-- **Owner**: Tulana team (Selva contract in `nexus_api/services/tulana_feedback.py`).
+- **Status (2026-05-30)**: **Implemented in Tulana** (`POST /api/v1/internal/selva/buyer-signal/`,
+  migration `0003_selva_buyersignalevent`, tests in `test_selva_buyer_signal.py`).
+  **Deploy Tulana API** to `tulana-api.madfam.io` to close the 404 on staging.
+  Selva contract unchanged in `nexus_api/services/tulana_feedback.py`.
 - **Unblocks**: Full Phase 2 Tulana ↔ Selva feedback loop; buyer-signal WTP evidence.
 - **Cross-refs**:
   - `apps/nexus-api/nexus_api/services/tulana_feedback.py`

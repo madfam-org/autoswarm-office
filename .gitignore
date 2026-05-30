@@ -74,3 +74,6 @@ apps/gateway/data/
 .venv-test/
 
 .claude/
+
+# k6 raw JSON (large; summaries live in docs/LOAD_TEST_2026-Q2.md)
+docs/load-test-runs/*.k6.json

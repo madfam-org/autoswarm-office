@@ -5,8 +5,7 @@ Compact LLM context index for this repository.
 ## Read first
 
 - `AGENTS.md` — canonical agent operating instructions.
-- `README.md` — human/product overview when present.
-- `ECOSYSTEM.md` — MADFAM ecosystem and Enclii deployment context when present.
+- `docs/PHASE_0_REMEDIATION_PLAN.md` — **4-sprint remediation plan** (Phase 0 → prod promote).
 - `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6).
 - `docs/OPERATOR_BACKLOG.md` — human-gated operator items.
 - `llms-full.txt` — full context map and durable operating contract.

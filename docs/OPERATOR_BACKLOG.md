@@ -5,8 +5,10 @@
 > item below is unblocked from the engineering side; what's missing is
 > a vendor pick, a budget approval, a config flip, or a manual operation.
 >
-> **Read this first** when picking the work back up. Then read
-> [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)
+> **Read this first** when picking the work back up. For the **full sprint schedule**
+> (4 weeks, engineering backlog, exit checklist), see
+> [docs/PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md).
+> Then read [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)
 > for the full north-star plan (Phases 0–6), then
 > [ROADMAP.md](../ROADMAP.md) for product phase context and
 > [CHANGELOG.md](../CHANGELOG.md) for what shipped.
@@ -34,8 +36,9 @@ Items are roughly priority-ordered. Highest value at top.
 
 **Phase 2 engineering (2026-05-30):** Campaign API, worker graph, scheduled social
 executor, schedule materializer, and office-ui Campaign Dashboard are merged to
-`main` (#179). Remaining Phase 2 gate is **operator proof**: import a real Tulana
-pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
+`main` (#179). **API operator gate met** via `./scripts/verify-campaign-loop.sh --staging`.
+Optional UI soak remains; Phase 0 remediation is the critical path — see
+[PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md).
 
 ---
 
@@ -162,6 +165,18 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
   - [docs/SLOS.md](SLOS.md) §2 — Tier 1 p99 < 1500ms target this
     scenario validates
 
+### 5c. k6 Run 4 — calibration graph + threshold pass (engineering)
+
+- **Status (2026-05-30)**: **Planned** in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) Sprint 1.
+  Runs 1–3 failed (rate limits, API saturation). Run 4 adds no-LLM `calibration`
+  graph + optional staging `nexus-api` replicas=2.
+- **What**: Implement `graph_type: calibration` (or literal workflow), add
+  `tests/load/calibration-dispatch.js` + `./scripts/run-staging-load-calibration.sh`,
+  fix `worker_in_flight` metric gap, re-run until hard thresholds pass.
+- **Owner**: Engineer (selva-office).
+- **Unblocks**: Data-driven prod limits; Phase 0 gate 0.4; PP.5 promote confidence.
+- **Cross-refs**: Epic E1–E3 in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md)
+
 ### 5b. Staging campaign loop soak (Phase 2 gate)
 
 - **Status (2026-05-30)**: **DONE (API loop green)** —
@@ -206,6 +221,19 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
   - `Makefile` `db-backup` / `db-restore` / `db-verify-backup` targets
   - `infra/k8s/production/backup-cronjob.yaml`
   - RFC 0021 §10 — failover RFC depends on backup evidence
+
+---
+
+## Enclii adapter gaps (record — do not normalize raw kubectl)
+
+Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap analysis.
+
+| Gap | Break-glass today | Target |
+|-----|-------------------|--------|
+| Staging Alembic Job | `scripts/run-staging-migrations.sh` | Enclii pre-deploy migration hook |
+| Observability secret | `scripts/bootstrap-staging-observability.sh` | Enclii secret provisioning |
+| Dhanam webhook drift | `scripts/reconcile-dhanam-selva-webhook.sh` | Durable ExternalSecret merge in Dhanam |
+| Staging `DATABASE_ADMIN_URL` | Drain script cannot fail DB rows under strict RLS | Enclii env for `app_admin` role |
 
 ---
 
@@ -312,6 +340,7 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 | File | Purpose |
 |---|---|
 | [AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md) | **North star** — Phases 0–6 toward full autonomous digital ops |
+| [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) | **Sprint plan** — 4-week remediation + engineering backlog |
 | [ROADMAP.md](../ROADMAP.md) | Honest scorecard + product phases (F/E). Read after this doc. |
 | [CHANGELOG.md](../CHANGELOG.md) | What shipped. v2.3.0 entry covers today's work. |
 | [CLAUDE.md](../CLAUDE.md) | Patterns + invariants reference. "Patterns Added in v2.3.0" section is the most current. |
@@ -334,10 +363,11 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 ## Picking this work back up — recommended reading order
 
 1. **This doc** — what's blocked + why
-2. **[AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)** — north star + phase gates
-3. **ROADMAP.md "Honest scorecard"** — where we actually are
-4. **CHANGELOG.md** — what shipped
-5. **The RFC or contract for whichever phase you're executing**
+2. **[PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md)** — sprint schedule + engineering backlog
+3. **[AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)** — north star + phase gates
+4. **ROADMAP.md "Honest scorecard"** — where we actually are
+5. **CHANGELOG.md** — what shipped
+6. **The RFC or contract for whichever phase you're executing**
 
 If you're picking up after several weeks: also check `git log --oneline -30`
 for any new merges and `gh pr list --state open` for any new PRs that

@@ -138,12 +138,29 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 | **Recommended next step** | Add **`passthrough`/`literal` no-LLM graph** for calibration OR scale **nexus-api** replicas on staging; single API replica saturates before workers at 100 VU |
 | Notes | 582/1316 dispatches 2xx (44%). Pre-run `./scripts/drain-staging-task-queue.sh` cleared stream. Campaign loop re-verified green post-run. Raw: `docs/load-test-runs/20260530T215200Z.k6.json`. |
 
-### Run 4 — TBD (lighter graph or scaled API)
+### Run 4 — TBD (calibration graph + optional API scale)
+
+Planned in [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) Sprint 1.
+
+| Track | Action |
+|-------|--------|
+| **B1 Engineering** | Add `graph_type: calibration` (no LLM, &lt;5s); `tests/load/calibration-dispatch.js`; `./scripts/run-staging-load-calibration.sh` |
+| **B2 Ops** | Staging `nexus-api` replicas=2; re-run `concurrent-100-swarmtasks.js` as Run 4b |
+| **Metrics fix** | Surface accurate `worker_in_flight` / queue depth in health endpoint |
+
+**Pass criteria:** Same hard thresholds as Runs 1–3; record in table below.
 
 | Field | Value |
 |---|---|
 | Date | TBD |
-| Same shape as Run 1 with new config | TBD |
+| Staging SHA | TBD |
+| `MAX_CONCURRENT_TASKS` at run | 15 |
+| nexus-api replicas | 1 or 2 |
+| Graph type | `calibration` or `research` |
+| **Hard thresholds passed?** | TBD |
+| Notes | TBD |
+
+### Run 5 — TBD (post-recommendation, validate prod config)
 
 ## Cadence
 

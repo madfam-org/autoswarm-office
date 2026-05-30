@@ -415,6 +415,28 @@ After any recovery operation, confirm each item:
 
 ---
 
+## Drill log (Phase 0 gate 0.5)
+
+> Template for [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) Tier 3 item 6 and
+> [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) Sprint 1.
+> Fill after executing `make db-backup` → restore to staging → measure RTO.
+
+| Field | Value |
+|-------|-------|
+| Date | TBD |
+| Operator | TBD |
+| Backup source | prod / staging |
+| Backup file / S3 key | TBD |
+| Restore target | TBD |
+| **Measured RTO** | TBD |
+| **Measured RPO** | TBD |
+| Services verified post-restore | nexus-api, workers, campaign loop |
+| Notes | TBD |
+
+**Cadence after first drill:** monthly (see [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) § Cadence).
+
+---
+
 ## Appendix: File Locations
 
 | File | Purpose |

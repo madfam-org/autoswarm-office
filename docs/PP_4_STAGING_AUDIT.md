@@ -8,7 +8,8 @@
 > missing Enclii adapter gap.
 
 
-> Last Updated: 2026-05-30 (staging live; see program doc for remaining gates)
+> Last Updated: 2026-05-30 (staging live; Phase 0 remediation plan published)
+> **Next gates:** [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) → PP.5 prod cutover after Phase 0 exit checklist
 > RFC: [internal-devops/rfcs/0001-dev-staging-prod-pipeline.md](https://github.com/madfam-org/internal-devops/blob/main/rfcs/0001-dev-staging-prod-pipeline.md)
 > Reference impls:
 > - Karafiel PP.1 — `karafiel/infra/k8s/overlays/staging/` + `karafiel/.github/workflows/staging-deploy-*.yml`
@@ -42,8 +43,9 @@ Compliance estimate **before** PP.4: **~15%** (1 aligned: digest pinning
 in prod; 2 partially aligned: multi-image build + concurrency group).
 Compliance estimate **after** PP.4: **~85%** (staging overlay, promote,
 rollback, smoke, ArgoCD staging manifest, `.enclii.yml` Pattern B all
-shipped; remaining 15% is operator actions + deferred nightly masked DB
-restore).
+shipped; remaining 15% is Phase 0 gates in
+[PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) + PP.5 cutover +
+optional PP.6 masked DB restore).
 
 ## Current state
 
@@ -225,6 +227,7 @@ operator actions, in order:
 
 ## Cross-references
 
+- [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) — Phase 0 sprint plan + PP.5 gate
 - RFC 0001 — [internal-devops/rfcs/0001-dev-staging-prod-pipeline.md](https://github.com/madfam-org/internal-devops/blob/main/rfcs/0001-dev-staging-prod-pipeline.md)
 - Runbook — `internal-devops/runbooks/staging-bootstrap.md`
 - Karafiel PP.1 — `karafiel/infra/k8s/overlays/staging/`

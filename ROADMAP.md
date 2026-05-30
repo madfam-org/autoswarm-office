@@ -9,6 +9,10 @@
 > [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) — priority-
 > ordered items, each with what / why / owner / unblocks / cross-refs.
 >
+> **Full remediation sprint plan (Phase 0 → prod promote)?** See
+> [docs/PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md)
+> — 4-sprint schedule, engineering backlog, exit checklist.
+>
 > **North star — full autonomous digital operations?** See
 > [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md)
 > — phased program (Phases 0–6) toward 100% autonomous, revenue-generating,
@@ -22,32 +26,26 @@ Canonical plan: [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIO
 
 | Phase | Focus | Horizon | Gate |
 |-------|-------|---------|------|
-| **0** | Ops foundation (OTel, Sentry, Stripe map, k6, DR, staging) | 2–3 wk | verify-doc-truth + staging smoke green |
+| **0** | Ops foundation (OTel, Sentry, Dhanam map, k6 Run 4, DR, staging) | 2–3 wk | [PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md) exit checklist |
 | **1** | Closed revenue loop live (CRM → email → Stripe → CFDI) | 3–4 wk | One attributed paid conversion |
-| **2** | Tulana campaign orchestration | 4–6 wk | Tulana → Selva → Phynd → Tulana loop |
+| **2** | Tulana campaign orchestration | **API ✅** / UI soak optional | `./scripts/verify-campaign-loop.sh --staging` green |
 | **3** | Phygital E2E graph | 6–8 wk | Recorded design → invoice demo |
 | **4** | Compliance-grade (SAT, LFPDPPP, CDC, residency) | 6–10 wk | Audit trail + consent + region answerable |
 | **5** | Multi-tenant GTM at scale | 8–12 wk | SSO, white-label, paying Karafiel wedge |
-| **6** | Phase 6 — Autonomy graduation (ASK → ALLOW) | Ongoing | Per-lane 30d clean-run policy |
+| **6** | Autonomy graduation (ASK → ALLOW) | Ongoing | Per-lane 30d clean-run policy |
 
-**Baseline → north star:** MADFAM platform slice ~85–90%; production-truthful Selva ~88–92%; full autonomous digital ops ~40–55%. Target ~95%+ engineering completion in 6–9 months; 100% includes GTM traction (Phase 5).
+**Baseline → north star:** MADFAM platform slice ~85–90%; production-truthful Selva ~88–92%; full autonomous digital ops **~50–62%** (Phase 2 API proven 2026-05-30). Target ~95%+ engineering completion in 6–9 months; 100% includes GTM traction (Phase 5).
 
 Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below map into program Phases 1–5 — use the program doc for sequencing and exit gates.
 
 ---
 
-## Current Status: v2.3.0 + staging bootstrap (2026-05-30) ✅
+## Current Status: v2.3.0 + Phase 2 campaigns + Phase 0 remediation (2026-05-30) ✅
 
-> Supersedes v2.2.0 "Outbound Voice Mode + Consent Ledger". 28 PRs in
-> 24h on 2026-05-04 closed every in-repo Phase 1, Phase 2, and Phase 3
-> item that didn't require an operator decision. Workers + packages
-> mypy 0; audit-trail emit on all 37 mutation sites; RLS strict mode +
-> `tenant_session()` + `admin_session()` helpers; Idempotency-Key on
-> 10 mutation endpoints; secret rotation script + per-period
-> consent-ledger key tracking; W3C trace context propagation;
-> Prometheus rules + Grafana dashboard for SLOs; 5 architecture RFCs
-> landed (#0017, #0018, #0019, #0020, #0021). See
-> [CHANGELOG.md `[2.3.0]`](CHANGELOG.md) for the full list.
+> Phase 2 campaign orchestration **shipped** (#179): API, worker graph,
+> materializer, office-ui Campaign Dashboard. Staging API loop proven.
+> **Next:** [PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md)
+> (OTel/Sentry, Dhanam catalog, k6 Run 4, DR drill, prod promote).
 
 | Metric | Value | Source |
 |--------|-------|--------|
@@ -55,7 +53,7 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 | Workflow graphs | 12 (accounting, billing, coding, crm, deployment, intelligence, meeting, operations, project, puppeteer, research, sales) | `apps/workers/selva_workers/graphs/*.py` |
 | Ecosystem adapters | 6 (Karafiel, Dhanam, PhyndCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
 | Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
-| Alembic migrations | 32 (latest 0030 — consent_ledger_signing_keys) | `apps/nexus-api/alembic/versions/*.py` |
+| Alembic migrations | 38 (latest 0038 — grant core schema to app roles) | `apps/nexus-api/alembic/versions/*.py` |
 | Test files | 828 (pytest + vitest + playwright) | `find apps packages tests -name "test_*.py" -o -name "*.test.ts" -o -name "*.spec.ts"` |
 | Open architecture RFCs | 5 (#0017 image digests, #0018 A2A external tenant, #0019 CDC audit topic, #0020 data residency, #0021 multi-region failover) | `docs/rfcs/*.md` |
 | Python type safety | mypy=0 across all 3 trees (nexus-api, workers, packages) — CI ratchet at 0 | `.github/workflows/ci.yml` |
@@ -331,16 +329,16 @@ These cannot be assessed from inside selva-office:
 | Cross-service audit correlation | 20% — RFC 0019 shipped, awaits Kafka | 90% |
 | Type safety (Python) | 100% — all 3 trees mypy=0, CI ratchet locked | 100% |
 | Type safety (TS) | 80% | 95% |
-| Concurrency under load | 50% — scenario shipped, awaits staging run | 85% |
+| Concurrency under load | 55% — Runs 1–3 recorded; thresholds failed; Run 4 planned | 85% |
 | State persistence across restarts | 95% (was 5%) — PostgresSaver real | 95% |
 | Observability — logs | 85% | 95% |
-| Observability — traces | 70% (was 10%) — propagation wired, awaits exporter | 90% |
-| Observability — alerts | 75% (was 5%) — rules + dashboard ready, awaits OTel data | 90% |
+| Observability — traces | 70% — propagation wired; **exporter secret missing** | 90% |
+| Observability — alerts | 75% — rules + dashboard ready; **awaits OTel data** | 90% |
 | SLO/SLI definitions | 80% (was 0%) | 80% |
 | Idempotency | 90% (was 10%) — helper + 10 endpoints adopted | 90% |
-| Load test scenarios | 80% (was 30%) | 90% |
-| Backups + DR | unknown — runbook in RFC 0021 | 90% |
-| Deployment pipeline | 70% | 90% |
+| Load test scenarios | 85% — harness + 3 runs; **Run 4 calibration graph pending** | 90% |
+| Backups + DR | unknown — runbook exists; **drill not executed** | 90% |
+| Deployment pipeline | 85% — PP.4 staging live; **PP.5 prod cutover pending Phase 0** | 90% |
 | Pricing source-of-truth | 75% (was 30%) — JSON canonical + drift gate | 85% |
 | Secret rotation | 100% (was 0%) — script + policy + per-period keys | 100% |
 | Architecture RFCs landed | 5 of 5 (#0017, #0018, #0019, #0020, #0021) | 5 |
@@ -353,10 +351,12 @@ data-truthful"** as of 2026-05-04 (v2.3.0 sprint). Staging bootstrap
 (PP.4), doc-truth remediation, and DNS/tunnel fix landed 2026-05-30 —
 see [CHANGELOG.md](CHANGELOG.md) and [docs/PP_4_STAGING_AUDIT.md](docs/PP_4_STAGING_AUDIT.md).
 
-**North star gap (~45-58% → 100%):** See
-[docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md).
-Phase 2 campaign API + UI shipped (#179); remaining gap is operator proof
-(Dhanam webhooks, k6, OTel/Sentry) and Phases 3–5.
+**North star gap (~50–62% → 100%):** See
+[docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md)
+and sprint plan [docs/PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md).
+Phase 2 API + UI shipped (#179); Phase 2 **operator gate** met on API path;
+remaining gap is Phase 0 (observability, billing catalog, k6 Run 4, DR) then
+Phase 1 revenue proof and Phases 3–5.
 
 Major movements 2026-05-04 session:
 - Workers + packages mypy: 14 → 0 + 129 → 0 (2 of 2 trees pinned at 0)

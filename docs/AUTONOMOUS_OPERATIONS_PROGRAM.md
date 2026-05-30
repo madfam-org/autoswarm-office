@@ -14,6 +14,7 @@
 | Doc | Role |
 |-----|------|
 | **This doc** | North-star definition, phased program, exit gates, scorecard targets |
+| [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) | **Sprint plan** — 4-week remediation schedule + engineering backlog |
 | [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) | Human-gated items within Phase 0–1 (OTel, Sentry, Stripe map, k6, DR) |
 | [ROADMAP.md](../ROADMAP.md) | Product phases (F1–F5, E1–E6), honest scorecard, historical milestones |
 | [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](./TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md) | Phase 2 campaign contract (Tulana → Selva → Phynd → Tulana) |
@@ -42,7 +43,7 @@ the following are true:
 |-------|----------|-------|
 | MADFAM platform slice in Selva | **~85–90%** | Prod live; `PLATFORM_ORG_ID=madfam`; audience filter enforced; 10-agent roster |
 | Selva “production-truthful” | **~88–92%** | RLS, audit, idempotency, webhook hardening — see ROADMAP honest scorecard |
-| Full north star (this doc) | **~45–58%** | Phase 2 API + UI shipped; revenue loop and proven campaign loop still operator-gated |
+| Full north star (this doc) | **~50–62%** | Phase 2 API + UI shipped; API campaign loop proven on staging; Phase 0 + Phase 1 revenue proof remain |
 
 ---
 
@@ -68,10 +69,10 @@ Observability         → OTel, Sentry, SLO burn alerts, on-call runbooks
 |----|------|--------------|---------------|
 | 0.1 | Wire `OTEL_EXPORTER_OTLP_ENDPOINT` on all 6 services | selva-office + Enclii | K8s optional secret refs shipped; operator provisions Grafana token → end-to-end trace |
 | 0.2 | Sentry DSNs + office-ui source maps in CI | selva-office | Synthetic staging error captured |
-| 0.3 | Dhanam price→tier map + Selva webhook verification | Dhanam + selva-office | Dhanam sends normalized events; Selva tier cache correct in staging |
-| 0.4 | k6 100-concurrent-tasks in staging | selva-office | Results in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md) |
-| 0.5 | Backup/restore drill | selva-office + ops | RTO/RPO in [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md); monthly cadence |
-| 0.6 | Staging completion | selva-office + Janua | Janua staging OAuth client; optional PP.6 masked DB refresh |
+| 0.3 | Dhanam price→tier map + Selva webhook verification | Dhanam + selva-office | **Partial** — Selva handler green; fan-out drifts; catalog keys missing |
+| 0.4 | k6 100-concurrent-tasks in staging | selva-office | **Partial** — Runs 1–3 failed; Run 4 = calibration graph + optional API scale ([plan](./PHASE_0_REMEDIATION_PLAN.md)) |
+| 0.5 | Backup/restore drill | selva-office + ops | **Open** — runbook exists; no executed drill |
+| 0.6 | Staging completion | selva-office + Janua | **Partial** — namespace live; Janua staging OAuth pending |
 | 0.7 | First quarterly secret rotation | ops | Evidence per [SECRET_ROTATION_POLICY.md](./SECRET_ROTATION_POLICY.md) |
 
 **Maps to:** [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) Tier 1–3 (items 1–6).
@@ -124,7 +125,7 @@ Heartbeat → PhyndCRM hot leads → auto-dispatch (HITL)
 
 **Permission policy:** Campaign sends stay **ASK** until lane has 30 days zero incidents; operator promotes specific lanes to ALLOW.
 
-**Gate to Phase 3:** Import real Tulana pack → drafts → human approve → Phynd staged → engagement → Tulana evidence row.
+**Gate to Phase 3:** ✅ API path proven (`verify-campaign-loop.sh --staging`). Optional UI soak on `/office` → Campaigns. Then begin phygital graph (Phase 3).
 
 ---
 
@@ -234,12 +235,16 @@ Phase 0 (ops) ──► Phase 1 (revenue live)
 Phase 4 (compliance) parallel from week 2; gates Phase 5 enterprise sales.
 ```
 
-### First 30 days (highest ROI)
+### First 30 days (highest ROI) — updated 2026-05-30
 
-1. Phase 0: OTel, Sentry, Stripe map (OPERATOR_BACKLOG items 1–3)
-2. Phase 1: LLM credits, Dhanam budgets, Stripe staging → prod
-3. Phase 2: Tulana import API + `sku_campaign_planning` skeleton
-4. One controlled lane: CRM hot-lead → draft → approve → send (single SKU)
+**Done:** Phase 2 API + UI (#179); staging campaign loop; Tulana buyer-signal; load-test harness (Runs 1–3).
+
+**Remaining (see [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md)):**
+
+1. **Sprint 0:** OTel + Sentry secrets; Dhanam price map + durable webhook fan-out
+2. **Sprint 1:** k6 Run 4 (calibration graph + drain script); backup/restore drill
+3. **Sprint 2:** Phase 1 revenue proof on staging → `promote-to-prod.yml`
+4. **Sprint 3:** Campaign UI soak; Phase 3 phygital scaffold
 
 ---
 
@@ -253,7 +258,7 @@ Phase 4 (compliance) parallel from week 2; gates Phase 5 enterprise sales.
 | Backups + DR | unknown → **90%** | 0 |
 | Deployment pipeline | ~85% → **90%** | 0 (PP.5 prod cutover) |
 | Autonomous revenue loop | code-complete → **live** | 1 |
-| Campaign orchestration | API + UI shipped → **proven loop** | 2 |
+| Campaign orchestration | API + UI shipped → **proven API loop** | 2 |
 | Phygital E2E | webhooks only → **demo** | 3 |
 | Compliance GTM | tools → **paying + LFPDPPP** | 4–5 |
 | Multi-tenant scale | provisioning API → **SSO + 100 orgs** | 5 |
@@ -300,5 +305,6 @@ Use these as PR/epic titles when executing:
 
 | Date | Change |
 |------|--------|
-| 2026-05-30 | Phase 2.7 Campaign Dashboard + schedule materializer + campaign graph auto-schedule merged (#179); staging deploy green |
+| 2026-05-30 | [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) — 4-sprint remediation schedule; Run 4 plan; Enclii gap registry |
+| 2026-05-30 | Phase 2.7 Campaign Dashboard + schedule materializer + campaign graph auto-schedule merged (#179); staging API loop green |
 | 2026-05-30 | Initial program plan documented; staging bootstrap + DNS fix landed on main |

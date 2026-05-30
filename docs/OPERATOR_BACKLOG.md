@@ -240,21 +240,9 @@ Items are roughly priority-ordered. Highest value at top.
 
 ## Tier 6 — One-off operator merges
 
-### 12. Merge PR #125 (mypy wave 7)
+### 12. Merge PR #125 (mypy wave 7) — **DONE**
 
-- **What**: Open https://github.com/madfam-org/selva-office/pull/125
-  in browser, click Squash & Merge.
-- **Why blocking**: PR touches `.github/workflows/ci.yml` (lowers the
-  packages mypy ratchet from 116 → 0). The `gh` CLI auth token used
-  in this session lacks `workflow` scope, so `gh pr merge` 422'd. A
-  human with `workflow` scope can merge it from the GitHub UI in 30
-  seconds.
-- **Why this matters**: Without it, the packages mypy ratchet stays
-  at 116, so a new packages/ regression up to that ceiling wouldn't
-  trip the CI gate. Engineering fact-on-disk says 0; CI says ≤116.
-  Operator merge syncs them.
-- **Owner**: Anyone with repo write + workflow scope (typically the
-  author or any maintainer).
+- **Status**: Merged to `main` (2026-05-04). Packages mypy ratchet is 0.
 
 ---
 

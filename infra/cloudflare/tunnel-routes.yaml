@@ -1,9 +1,21 @@
-tunnel: autoswarm-office
+# Selva ingress rules for the shared MADFAM `enclii-prod` Cloudflare tunnel.
+# The live tunnel carries ~140 ecosystem hostnames — never PUT the full
+# list from this file. Apply with merge mode:
+#   python3 scripts/apply-cloudflare-infra.py --tunnel --merge
+#
+# Prod routes target `autoswarm`; staging routes target `autoswarm-staging`.
+# ClusterIP services expose port 80 → containerPort.
+
+tunnel: enclii-prod
+# tunnel_id: c9fac286-497b-4aac-9288-f784a1ea561c  # optional override via CLOUDFLARE_TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:
+  # --- Production (autoswarm namespace) ---
   - hostname: api.selva.town
     service: http://nexus-api.autoswarm.svc.cluster.local:80
+  - hostname: app.selva.town
+    service: http://office-ui.autoswarm.svc.cluster.local:80
   - hostname: selva.town
     service: http://office-ui.autoswarm.svc.cluster.local:80
   - hostname: www.selva.town
@@ -12,4 +24,19 @@ ingress:
     service: http://colyseus.autoswarm.svc.cluster.local:80
   - hostname: admin.selva.town
     service: http://admin.autoswarm.svc.cluster.local:80
+  - hostname: gw.selva.town
+    service: http://gateway.autoswarm.svc.cluster.local:80
+
+  # --- Staging (autoswarm-staging namespace) ---
+  - hostname: staging-api.selva.town
+    service: http://nexus-api.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging.selva.town
+    service: http://office-ui.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging-admin.selva.town
+    service: http://admin.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging-ws.selva.town
+    service: http://colyseus.autoswarm-staging.svc.cluster.local:80
+  - hostname: staging-gw.selva.town
+    service: http://gateway.autoswarm-staging.svc.cluster.local:80
+
   - service: http_status:404

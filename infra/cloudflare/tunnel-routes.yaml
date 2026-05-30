@@ -1,10 +1,13 @@
-# Canonical Cloudflare Tunnel ingress for autoswarm-office.
-# Applied via: scripts/apply-cloudflare-infra.py --tunnel
+# Selva ingress rules for the shared MADFAM `enclii-prod` Cloudflare tunnel.
+# The live tunnel carries ~140 ecosystem hostnames — never PUT the full
+# list from this file. Apply with merge mode:
+#   python3 scripts/apply-cloudflare-infra.py --tunnel --merge
 #
-# Prod routes target the `autoswarm` namespace; staging routes target
-# `autoswarm-staging`. ClusterIP services expose port 80 → containerPort.
+# Prod routes target `autoswarm`; staging routes target `autoswarm-staging`.
+# ClusterIP services expose port 80 → containerPort.
 
-tunnel: autoswarm-office
+tunnel: enclii-prod
+# tunnel_id: c9fac286-497b-4aac-9288-f784a1ea561c  # optional override via CLOUDFLARE_TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:

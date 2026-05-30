@@ -9,12 +9,13 @@ Requires:
 
 Optional:
   CLOUDFLARE_ZONE_ID     — skip zone lookup for selva.town
+  CLOUDFLARE_TUNNEL_ID   — tunnel UUID (or TUNNEL_ID from ~/.enclii/credentials)
 
 Usage:
   python3 scripts/apply-cloudflare-infra.py --dry-run
   python3 scripts/apply-cloudflare-infra.py --dns
-  python3 scripts/apply-cloudflare-infra.py --tunnel
-  python3 scripts/apply-cloudflare-infra.py --dns --tunnel
+  python3 scripts/apply-cloudflare-infra.py --tunnel --merge   # safe default for shared enclii-prod tunnel
+  python3 scripts/apply-cloudflare-infra.py --dns --tunnel --merge
 """
 
 from __future__ import annotations
@@ -138,47 +139,95 @@ def apply_dns(*, dry_run: bool) -> None:
             print(f"OK   DNS created: {name}")
 
 
-def apply_tunnel(*, dry_run: bool) -> None:
+def _tunnel_id(tunnel_name: str) -> str:
+    env_tid = os.environ.get("CLOUDFLARE_TUNNEL_ID") or os.environ.get("TUNNEL_ID", "")
+    if env_tid:
+        return env_tid
+    return _tunnel_id_by_name(tunnel_name)
+
+
+def apply_tunnel(*, dry_run: bool, merge: bool) -> None:
     spec = yaml.safe_load(TUNNEL_FILE.read_text(encoding="utf-8"))
-    tunnel_name = spec.get("tunnel", "autoswarm-office")
-    ingress: list[dict[str, Any]] = spec.get("ingress") or []
-    if not ingress or ingress[-1].get("hostname"):
-        print("error: tunnel ingress must end with hostname-less catch-all", file=sys.stderr)
-        sys.exit(1)
+    tunnel_name = spec.get("tunnel", "enclii-prod")
+    desired: list[dict[str, Any]] = spec.get("ingress") or []
+    # Drop catch-all from desired list — live config owns the final rule.
+    desired_named = [r for r in desired if r.get("hostname")]
 
     if dry_run:
-        print(f"[dry-run] tunnel {tunnel_name}: {len(ingress)} ingress rule(s)")
-        for rule in ingress:
-            host = rule.get("hostname") or "(catch-all)"
-            print(f"  - {host} -> {rule.get('service')}")
+        mode = "merge" if merge else "replace"
+        print(f"[dry-run] tunnel {tunnel_name} ({mode}): {len(desired_named)} hostname rule(s)")
+        for rule in desired_named:
+            print(f"  - {rule.get('hostname')} -> {rule.get('service')}")
         return
 
-    tid = _tunnel_id_by_name(tunnel_name)
+    tid = _tunnel_id(tunnel_name)
     account = _account_id()
+
+    if merge:
+        cfg = _request("GET", f"accounts/{account}/cfd_tunnel/{tid}/configurations")
+        ingress: list[dict[str, Any]] = (cfg.get("result") or {}).get("config", {}).get(
+            "ingress", []
+        )
+        if not ingress or ingress[-1].get("hostname"):
+            print("error: live tunnel ingress missing catch-all", file=sys.stderr)
+            sys.exit(1)
+        existing = {r.get("hostname") for r in ingress if r.get("hostname")}
+        added: list[str] = []
+        for rule in desired_named:
+            host = rule.get("hostname")
+            if host in existing:
+                continue
+            ingress.insert(-1, rule)
+            added.append(str(host))
+        if not added:
+            print(f"OK   tunnel {tunnel_name}: all {len(desired_named)} hostname rule(s) present")
+            return
+        payload_ingress = ingress
+        summary = f"added {len(added)} rule(s): {', '.join(added)}"
+    else:
+        if not desired or desired[-1].get("hostname"):
+            print("error: --replace requires catch-all as final ingress rule in YAML", file=sys.stderr)
+            sys.exit(1)
+        payload_ingress = desired
+        summary = f"replaced with {len(desired)} rule(s)"
+
     body = _request(
         "PUT",
         f"accounts/{account}/cfd_tunnel/{tid}/configurations",
-        {"config": {"ingress": ingress}},
+        {"config": {"ingress": payload_ingress}},
     )
     if not body.get("success"):
         print(f"error: tunnel PUT failed: {body.get('errors')}", file=sys.stderr)
         sys.exit(1)
-    print(f"OK   tunnel {tunnel_name}: {len(ingress)} ingress rule(s) applied")
+    print(f"OK   tunnel {tunnel_name}: {summary}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Apply Cloudflare DNS + tunnel ingress")
     parser.add_argument("--dns", action="store_true", help="Apply dns-records.yaml")
     parser.add_argument("--tunnel", action="store_true", help="Apply tunnel-routes.yaml")
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help="Merge hostname rules into live tunnel config (default when --tunnel set)",
+    )
+    parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace full tunnel ingress (dangerous on shared enclii-prod tunnel)",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print actions only")
     args = parser.parse_args()
     if not args.dns and not args.tunnel:
         args.dns = True
         args.tunnel = True
+    merge = not args.replace
+    if args.tunnel and not args.replace and not args.merge:
+        merge = True
     if args.dns:
         apply_dns(dry_run=args.dry_run)
     if args.tunnel:
-        apply_tunnel(dry_run=args.dry_run)
+        apply_tunnel(dry_run=args.dry_run, merge=merge)
 
 
 if __name__ == "__main__":

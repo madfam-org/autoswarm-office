@@ -44,11 +44,18 @@ if $DRY_RUN; then cf_args+=(--dry-run); fi
 
 echo "== Step 1: Cloudflare DNS + tunnel ingress =="
 if [[ -z "${CLOUDFLARE_API_TOKEN:-}" || -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+  if [[ -f "${HOME}/.enclii/credentials" ]]; then
+    # shellcheck disable=SC1091
+    source "${ROOT}/../enclii/scripts/lib/cloudflare-credentials.sh" 2>/dev/null \
+      || source "/Users/aldoruizluna/labspace/enclii/scripts/lib/cloudflare-credentials.sh"
+    load_cloudflare_credentials || true
+  fi
+fi
+if [[ -z "${CLOUDFLARE_API_TOKEN:-}" || -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
   echo "WARN CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set — skipping apply."
-  echo "     Run: python3 scripts/apply-cloudflare-infra.py --dry-run"
-  echo "     Then export credentials and re-run this script."
+  echo "     Configure ~/.enclii/credentials or export env vars, then re-run."
 else
-  python3 "$ROOT/scripts/apply-cloudflare-infra.py" "${cf_args[@]}"
+  python3 "$ROOT/scripts/apply-cloudflare-infra.py" "${cf_args[@]}" --merge
 fi
 
 echo ""

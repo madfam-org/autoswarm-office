@@ -49,3 +49,10 @@ Key parameters:
 - Scale-to-zero (`minReplicaCount: 0`) means the consumer group won't exist
   until the first replica starts. Use `minReplicaCount: 1` unless you have
   an init job that creates the group.
+
+## Staging overlay constraint
+
+Workers mount `selva-memory-pvc` (ReadWriteOnce). **Do not scale workers past
+one replica in staging** unless the PVC is switched to ReadWriteMany or
+per-pod storage. Staging applies `infra/k8s/overlays/staging/patch-keda-staging.yaml`
+to pin `workers-keda` at `minReplicaCount: 1` / `maxReplicaCount: 1`.

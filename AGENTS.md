@@ -33,6 +33,9 @@ redirect and should not become the source of truth again.
 
 - `README.md`
 - `ECOSYSTEM.md`
+- `ROADMAP.md`
+- `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6)
+- `docs/OPERATOR_BACKLOG.md` — operator-gated items
 - `docs/`
 - `infra/`
 - `.github/workflows/`

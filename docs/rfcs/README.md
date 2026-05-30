@@ -5,9 +5,16 @@ and lives as a single markdown file in this directory.
 
 ## Index
 
-| # | Title | Status |
-|---|---|---|
-| [0001](./0001-onboarding-improvements.md) | Onboarding improvements informed by category benchmark | Draft |
+| # | Title | Status | Program phase |
+|---|---|---|---|
+| [0001](./0001-onboarding-improvements.md) | Onboarding improvements informed by category benchmark | Draft | — |
+| [0018](./0018-a2a-external-tenant-model.md) | A2A external tenant model | Accepted | Phase 5 (§ 5.4) |
+| [0019](./0019-cross-service-cdc-audit-topic.md) | Cross-service CDC audit topic | Accepted | Phase 4 |
+| [0020](./0020-per-tenant-data-residency.md) | Per-tenant data residency | Accepted | Phase 4 |
+| [0021](./0021-multi-region-failover.md) | Multi-region failover | Accepted | Phase 4 (after 0020) |
+| — | [phygital-quote-truth-contract.md](./phygital-quote-truth-contract.md) | Accepted | Phase 3 |
+
+North-star sequencing: [../AUTONOMOUS_OPERATIONS_PROGRAM.md](../AUTONOMOUS_OPERATIONS_PROGRAM.md).
 
 ## When to write one
 

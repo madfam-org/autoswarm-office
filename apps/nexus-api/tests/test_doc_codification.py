@@ -31,6 +31,8 @@ _REQUIRED_HEALTH_PATHS = (
 
 _MIN_BUILTIN_TOOLS = 268
 
+_AUTONOMOUS_OPS_PROGRAM = _REPO_ROOT / "docs" / "AUTONOMOUS_OPERATIONS_PROGRAM.md"
+_ROADMAP_MD = _REPO_ROOT / "ROADMAP.md"
 _DNS_RECORDS = _REPO_ROOT / "infra" / "cloudflare" / "dns-records.yaml"
 _TUNNEL_ROUTES = _REPO_ROOT / "infra" / "cloudflare" / "tunnel-routes.yaml"
 
@@ -138,3 +140,48 @@ class TestCloudflareInfra:
         assert "autoswarm-staging.svc.cluster.local" in text, (
             "tunnel-routes.yaml must target autoswarm-staging namespace"
         )
+
+
+class TestAutonomousOperationsProgram:
+    def test_program_doc_exists(self) -> None:
+        assert _AUTONOMOUS_OPS_PROGRAM.exists(), (
+            "docs/AUTONOMOUS_OPERATIONS_PROGRAM.md is the north-star SSOT"
+        )
+
+    def test_roadmap_links_program(self) -> None:
+        text = _ROADMAP_MD.read_text(encoding="utf-8")
+        assert "AUTONOMOUS_OPERATIONS_PROGRAM.md" in text, (
+            "ROADMAP.md must link to the autonomous operations program"
+        )
+        assert "Phase 0" in text and "Phase 6" in text, (
+            "ROADMAP.md must summarize program phases 0–6"
+        )
+
+    def test_tulana_import_endpoint_documented(self) -> None:
+        tulana_doc = _REPO_ROOT / "docs" / "TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md"
+        text = tulana_doc.read_text(encoding="utf-8")
+        assert "POST /api/v1/campaigns/import-tulana-pack" in text or (
+            "import-tulana-pack" in text
+        ), "Tulana orchestration doc must reference the import endpoint"
+
+
+class TestCampaignsApi:
+    _MAIN_PY = _REPO_ROOT / "apps" / "nexus-api" / "nexus_api" / "main.py"
+
+    def test_main_registers_campaigns_router(self) -> None:
+        text = self._MAIN_PY.read_text(encoding="utf-8")
+        assert "campaigns.router" in text, (
+            "main.py must include campaigns router for Tulana import"
+        )
+
+    def test_campaigns_router_module_exists(self) -> None:
+        router_path = _REPO_ROOT / "apps" / "nexus-api" / "nexus_api" / "routers" / "campaigns.py"
+        assert router_path.exists(), "campaigns router must exist"
+        text = router_path.read_text(encoding="utf-8")
+        assert "/import-tulana-pack" in text
+
+    def test_staging_keda_patch_exists(self) -> None:
+        patch = _REPO_ROOT / "infra" / "k8s" / "overlays" / "staging" / "patch-keda-staging.yaml"
+        assert patch.exists(), "staging KEDA pin patch must exist for RWO PVC"
+        text = patch.read_text(encoding="utf-8")
+        assert "maxReplicaCount" in text and "value: 1" in text

@@ -36,6 +36,7 @@ from .routers import (
     billing,
     billing_internal,
     calendar,
+    campaigns,
     chat,
     checkpoints,
     command_approvals,
@@ -233,6 +234,8 @@ def create_app() -> FastAPI:
     # Autonomous operations (Swarm Manifesto)
     app.include_router(playbooks.router, prefix="/api/v1")
     app.include_router(crm_webhooks.router, prefix="/api/v1")
+    # Phase 2: Tulana SKU campaign import + planning
+    app.include_router(campaigns.router, prefix="/api/v1")
     # Stripe webhook (Phase 1 scaffold) — signature verification today;
     # per-event handlers land in follow-up PRs as each event becomes
     # operationally relevant per ROADMAP Phase 2.

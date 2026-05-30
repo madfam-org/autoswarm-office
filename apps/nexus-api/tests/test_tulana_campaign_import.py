@@ -1,0 +1,121 @@
+"""Contract tests for Tulana SKU campaign import (Phase 2)."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+import pytest
+
+from nexus_api.schemas.tulana_campaign import TulanaImportRequest, TulanaSkuCampaignPack
+from nexus_api.services.tulana_campaign import import_tulana_packs, validate_pack
+
+
+def _valid_pack(**overrides: object) -> TulanaSkuCampaignPack:
+    base = {
+        "sku_key": "avala__issuer",
+        "platform": "avala",
+        "audience": "credential issuers",
+        "ga_readiness": "near_ready",
+        "rank": 1,
+        "value_prop": "Evidence-backed positioning",
+        "proof_points": [
+            {
+                "label": "Comparator",
+                "source": "Canvas Credentials",
+                "url": "https://example.com/credentials",
+            }
+        ],
+        "do_not_claim": ["Do not claim external legal approval"],
+        "policy_state": "waived_by_operator",
+        "last_verified_at": datetime(2026, 5, 29, tzinfo=UTC),
+    }
+    base.update(overrides)
+    return TulanaSkuCampaignPack.model_validate(base)
+
+
+class TestTulanaPackValidation:
+    def test_valid_pack_accepted(self) -> None:
+        pack = _valid_pack()
+        result = validate_pack(pack, allow_blocked=False)
+        assert result.accepted is True
+        assert result.errors == []
+        assert result.rank_score is not None
+
+    def test_missing_do_not_claim_rejected(self) -> None:
+        pack = _valid_pack(do_not_claim=[])
+        result = validate_pack(pack, allow_blocked=False)
+        assert result.accepted is False
+        assert any("do_not_claim" in e for e in result.errors)
+
+    def test_missing_proof_and_not_waived_rejected(self) -> None:
+        pack = _valid_pack(proof_points=[], policy_state="pending_review")
+        result = validate_pack(pack, allow_blocked=False)
+        assert result.accepted is False
+        assert any("proof_point" in e for e in result.errors)
+
+    def test_blocked_rejected_unless_allowed(self) -> None:
+        pack = _valid_pack(ga_readiness="blocked")
+        blocked = validate_pack(pack, allow_blocked=False)
+        assert blocked.accepted is False
+
+        allowed = validate_pack(pack, allow_blocked=True)
+        assert allowed.accepted is True
+
+
+class TestTulanaImportRanking:
+    def test_ranks_near_ready_before_waived(self) -> None:
+        near = _valid_pack(sku_key="a_near", ga_readiness="near_ready", rank=2)
+        waived = _valid_pack(sku_key="b_waived", ga_readiness="waived", rank=1)
+        result = import_tulana_packs(
+            TulanaImportRequest(packs=[waived, near], allow_blocked=False)
+        )
+        assert result.ranked_sku_keys[0] == "a_near"
+        assert len(result.rejected) == 0
+
+    def test_mixed_accept_reject(self) -> None:
+        good = _valid_pack()
+        bad = _valid_pack(sku_key="bad_sku", do_not_claim=[])
+        result = import_tulana_packs(TulanaImportRequest(packs=[good, bad]))
+        assert len(result.accepted) == 1
+        assert len(result.rejected) == 1
+        assert result.rejected[0].sku_key == "bad_sku"
+
+
+@pytest.mark.asyncio
+async def test_import_tulana_pack_endpoint(client, auth_headers) -> None:
+    payload = {
+        "packs": [
+            _valid_pack().model_dump(mode="json"),
+            _valid_pack(sku_key="blocked_sku", ga_readiness="blocked").model_dump(mode="json"),
+        ],
+        "allow_blocked": False,
+    }
+    response = await client.post(
+        "/api/v1/campaigns/import-tulana-pack",
+        json=payload,
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ranked_sku_keys"] == ["avala__issuer"]
+    assert len(body["rejected"]) == 1
+    assert body["rejected"][0]["sku_key"] == "blocked_sku"
+
+
+@pytest.mark.asyncio
+async def test_import_idempotency_replay(client, auth_headers) -> None:
+    payload = {"packs": [_valid_pack().model_dump(mode="json")]}
+    headers = {**auth_headers, "Idempotency-Key": "tulana-test-key-1"}
+    r1 = await client.post(
+        "/api/v1/campaigns/import-tulana-pack",
+        json=payload,
+        headers=headers,
+    )
+    r2 = await client.post(
+        "/api/v1/campaigns/import-tulana-pack",
+        json=payload,
+        headers=headers,
+    )
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    assert r1.json() == r2.json()

@@ -4,6 +4,26 @@ All notable changes to **Selva Office** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **`POST /api/v1/campaigns/import-tulana-pack`** — Tulana SKU pack validation,
+  ranking, optional `dispatch_tasks` for `sku_campaign_planning` on the
+  `intelligence` graph (Phase 2.1–2.2).
+- **Staging KEDA pin** — `patch-keda-staging.yaml` sets workers `maxReplicaCount: 1`
+  so RWO `selva-memory-pvc` does not Multi-Attach when KEDA scales past one pod.
+- **[Autonomous Operations Program](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md)** — canonical
+  north-star plan (Phases 0–6): operational foundation, live revenue loop, Tulana
+  campaign orchestration, phygital E2E, compliance-grade platform, multi-tenant GTM,
+  autonomy graduation. Cross-linked from ROADMAP, OPERATOR_BACKLOG, README,
+  ECOSYSTEM, llms.txt, RFC index, and Tulana campaign contract.
+
+### Changed
+- **ROADMAP.md** — program phase table; F1/F3 mapped to program phases; honest
+  scorecard links north-star gap to AUTONOMOUS_OPERATIONS_PROGRAM.
+- **OPERATOR_BACKLOG.md** — Tier 1–3 mapped to Program Phase 0; reading order updated.
+- **docs/rfcs/README.md** — index for RFCs 0018–0021 and phygital quote-truth contract.
+
 ## [2.3.0] - 2026-05-04
 
 > Production-truthfulness sprint. 24 PRs in 24h closed every in-repo

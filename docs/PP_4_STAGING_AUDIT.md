@@ -8,7 +8,7 @@
 > missing Enclii adapter gap.
 
 
-> Last Updated: 2026-04-17
+> Last Updated: 2026-05-30 (staging live; see program doc for remaining gates)
 > RFC: [internal-devops/rfcs/0001-dev-staging-prod-pipeline.md](https://github.com/madfam-org/internal-devops/blob/main/rfcs/0001-dev-staging-prod-pipeline.md)
 > Reference impls:
 > - Karafiel PP.1 — `karafiel/infra/k8s/overlays/staging/` + `karafiel/.github/workflows/staging-deploy-*.yml`
@@ -96,6 +96,10 @@ restore).
    (nexus-api 1-6, office-ui 1-4, colyseus 1-3). Staging needs these
    pinned to maxReplicas=1 so deploys are visible and don't burn
    resources autoscaling against low staging traffic.
+6b. **KEDA workers scaler pinned in staging.** Prod `workers-keda` allows
+   `maxReplicaCount: 10`, but workers mount RWO `selva-memory-pvc`. Staging
+   overlay applies `patch-keda-staging.yaml` (`min/maxReplicaCount: 1`) so
+   a second pod cannot Multi-Attach the PVC.
 7. **No staging ArgoCD Application.** Prod has one; staging needs a
    peer that points at `infra/k8s/overlays/staging` on the same `main`
    branch.
@@ -144,6 +148,7 @@ restore).
 | Digest pinning (staging) | `sha256:...` per image | N/A (0%) | 6 digests, CI-patched per main merge (100%) |
 | All 6 services in staging | api + ui + colyseus + admin + gateway + workers | N/A (0%) | Aligned (100%) |
 | HPAs disabled in staging | maxReplicas=1 | N/A (0%) | Aligned (100%) |
+| KEDA workers pinned in staging | maxReplicaCount=1 (RWO PVC) | N/A (0%) | Aligned (100%) |
 | Staging namespace | `<service>-staging` | N/A (0%) | `autoswarm-staging` (100%) |
 | Staging secrets template | Separate `-staging` secrets | N/A (0%) | Template shipped, operator provisions (80%; operator action pending) |
 | Staging ingress/DNS | `staging-*.<domain>` | N/A (0%) | env + Cloudflare config template shipped; operator creates DNS (60%) |
@@ -157,7 +162,9 @@ restore).
 **Overall**: ~15% → ~85%. Remaining 15% is operator action (register
 Janua staging OAuth client, provision staging Secrets, create
 Cloudflare DNS/tunnel routes, register staging ArgoCD Application) plus
-deferred PP.6 (masked DB restore).
+deferred PP.6 (masked DB restore). **2026-05-30 update:** DNS/tunnel,
+secrets, ArgoCD app, and staging smoke largely complete — see
+[AUTONOMOUS_OPERATIONS_PROGRAM.md § Phase 0.6](./AUTONOMOUS_OPERATIONS_PROGRAM.md#phase-0--operational-foundation-2-3-weeks).
 
 ## Recommended ordering of fixes
 

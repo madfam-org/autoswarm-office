@@ -6,12 +6,37 @@
 > identifiers and a few infra namespaces. The product, repo, and brand are Selva._
 >
 > **Need to know what's blocked on a human decision right now?** See
-> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) — 12 priority-
+> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) — priority-
 > ordered items, each with what / why / owner / unblocks / cross-refs.
+>
+> **North star — full autonomous digital operations?** See
+> [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md)
+> — phased program (Phases 0–6) toward 100% autonomous, revenue-generating,
+> campaign-planning, compliance-grade, multi-product orchestration.
 
 ---
 
-## Current Status: v2.3.0 — Production-truthfulness sprint ✅
+## Autonomous Operations Program (2026-05-30)
+
+Canonical plan: [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md).
+
+| Phase | Focus | Horizon | Gate |
+|-------|-------|---------|------|
+| **0** | Ops foundation (OTel, Sentry, Stripe map, k6, DR, staging) | 2–3 wk | verify-doc-truth + staging smoke green |
+| **1** | Closed revenue loop live (CRM → email → Stripe → CFDI) | 3–4 wk | One attributed paid conversion |
+| **2** | Tulana campaign orchestration | 4–6 wk | Tulana → Selva → Phynd → Tulana loop |
+| **3** | Phygital E2E graph | 6–8 wk | Recorded design → invoice demo |
+| **4** | Compliance-grade (SAT, LFPDPPP, CDC, residency) | 6–10 wk | Audit trail + consent + region answerable |
+| **5** | Multi-tenant GTM at scale | 8–12 wk | SSO, white-label, paying Karafiel wedge |
+| **6** | Phase 6 — Autonomy graduation (ASK → ALLOW) | Ongoing | Per-lane 30d clean-run policy |
+
+**Baseline → north star:** MADFAM platform slice ~85–90%; production-truthful Selva ~88–92%; full autonomous digital ops ~40–55%. Target ~95%+ engineering completion in 6–9 months; 100% includes GTM traction (Phase 5).
+
+Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below map into program Phases 1–5 — use the program doc for sequencing and exit gates.
+
+---
+
+## Current Status: v2.3.0 + staging bootstrap (2026-05-30) ✅
 
 > Supersedes v2.2.0 "Outbound Voice Mode + Consent Ledger". 28 PRs in
 > 24h on 2026-05-04 closed every in-repo Phase 1, Phase 2, and Phase 3
@@ -324,18 +349,16 @@ These cannot be assessed from inside selva-office:
 | A11y (WCAG 2.1 AA) | 65% | 90% |
 
 **Weighted overall: ~88-92% of "fully production stable +
-data-truthful"** as of end-of-day 2026-05-04. Was 45-55% post
-v2.2.x remediation; was 25-30% before. Today's 27-PR sprint moved
-the needle ~30 percentage points.
+data-truthful"** as of 2026-05-04 (v2.3.0 sprint). Staging bootstrap
+(PP.4), doc-truth remediation, and DNS/tunnel fix landed 2026-05-30 —
+see [CHANGELOG.md](CHANGELOG.md) and [docs/PP_4_STAGING_AUDIT.md](docs/PP_4_STAGING_AUDIT.md).
 
-Remaining ~10% gap is exclusively operator-gated infrastructure
-decisions (OTel + Sentry vendor wiring, AUDIENCE_FILTER flip,
-Stripe price-map populate, backup drill execution, k6 staging run,
-Kafka cluster + cost approval for CDC RFC #0019, MX-region cluster
-for residency RFC #0020, mypy wave 7 PR #125 merge needs `workflow`
-scope token, schedule first quarterly secret rotation). Every one
-of those is unblocked by what shipped today — they need decisions
-+ provisioning, not engineering.
+**North star gap (~40-55% → 100%):** See
+[docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md).
+The ~10% production-truthful remainder (OTel, Sentry, Stripe map, k6,
+backup drill, secret rotation) is Phase 0 of that program. Autonomous
+revenue, campaigns, phygital E2E, compliance GTM, and multi-tenant scale
+are Phases 1–5.
 
 Major movements 2026-05-04 session:
 - Workers + packages mypy: 14 → 0 + 129 → 0 (2 of 2 trees pinned at 0)
@@ -415,10 +438,13 @@ auth exports, skills package fix, Colyseus state sync, brand correction
 > becomes a quoted, manufactured, shipped, and invoiced physical product —
 > entirely orchestrated by Selva agents.
 
-### Phase F1: Autonomous Revenue Loop ✅ Code Complete (2026-04-16)
+### Phase F1: Autonomous Revenue Loop — Program Phase 1 🔄
 
-The CRM-driven email loop is deployed and security-hardened. Waiting on
-Anthropic credits and Stripe live mode confirmation.
+> **Program mapping:** [AUTONOMOUS_OPERATIONS_PROGRAM.md § Phase 1](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md#phase-1--closed-revenue-loop-3-4-weeks)
+
+The CRM-driven email loop is deployed and security-hardened. **Code complete**
+(2026-04-16); **not yet live** for revenue attribution. Waiting on Phase 0
+(Stripe map, OTel) + provider credits + `FEATURE_STRIPE_MXN_LIVE`.
 
 ```
 HeartbeatService (*/30 cron)
@@ -430,9 +456,10 @@ HeartbeatService (*/30 cron)
             → Payment → Subscription Activation
 ```
 
-Status: **Blocked on $20 Anthropic credits + Stripe live mode verification.**
+Status: **Program Phase 1** — blocked on operator wiring (OPERATOR_BACKLOG
+items 1–3) + Anthropic credits + Stripe live mode verification.
 
-### Phase F2: Compliance Wedge (GTM Wave 1)
+### Phase F2: Compliance Wedge (GTM Wave 1) — Program Phases 4–5
 
 Lead with Karafiel compliance for Mexican SMBs:
 - `[x]` CFDI 4.0 tools (generate, stamp, status, blacklist check)
@@ -442,7 +469,9 @@ Lead with Karafiel compliance for Mexican SMBs:
 - `[ ]` 10+ paying customers on Karafiel compliance
 - `[ ]` Referral flywheel active (PhyndCRM funnel → Dhanam rewards)
 
-### Phase F3: Fabrication Bundle (GTM Wave 2)
+### Phase F3: Fabrication Bundle (GTM Wave 2) — Program Phase 3
+
+> **Program mapping:** [AUTONOMOUS_OPERATIONS_PROGRAM.md § Phase 3](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md#phase-3--multi-product-phygital-orchestration-6-8-weeks)
 
 Bundle Cotiza + Yantra4D + PravaraMES for digital fabrication shops:
 - `[x]` Cotiza↔Yantra4D bidirectional webhooks

@@ -12,7 +12,9 @@ repository without depending on vendor-specific instruction files.
 1. `AGENTS.md`
 2. `README.md` if present
 3. `ECOSYSTEM.md` if present
-4. Relevant files under `docs/`, `infra/`, `.github/workflows/`, and source
+4. `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6)
+5. `docs/OPERATOR_BACKLOG.md` — operator-gated items
+6. Relevant files under `docs/`, `infra/`, `.github/workflows/`, and source
    directories for the specific task
 
 ## Agent compatibility
@@ -46,3 +48,17 @@ gap or incident link.
 These files are maintained by `internal-devops/scripts/sync-agent-docs.py`.
 If repo-specific long-form agent guidance is needed, put it in `AGENTS.md`,
 not `CLAUDE.md`.
+
+## Nexus API surfaces (campaign orchestration)
+
+Phase 2 Tulana import (shipped):
+
+- `POST /api/v1/campaigns/import-tulana-pack` — validate/rank Tulana SKU packs;
+  optional `dispatch_tasks` enqueues `intelligence` graph tasks with
+  `campaign_category: sku_campaign_planning`.
+- Router: `apps/nexus-api/nexus_api/routers/campaigns.py`
+- Contract tests: `apps/nexus-api/tests/test_tulana_campaign_import.py`
+- Human doc: `docs/TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md`
+
+Staging workers KEDA is pinned to 1 replica (`patch-keda-staging.yaml`) because
+`selva-memory-pvc` is RWO — see `docs/KEDA_QUEUE_SCALING.md`.

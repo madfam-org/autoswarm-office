@@ -156,3 +156,14 @@ selva-office/
     docker/           Dockerfiles and Compose configs
     k8s/              Kubernetes manifests (base + production overlays)
 ```
+
+## Related documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) | North-star plan (Phases 0–6) |
+| [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) | Operator-gated work |
+| [ROADMAP.md](../ROADMAP.md) | Product phases + honest scorecard |
+| [INTEGRATION.md](./INTEGRATION.md) | Janua, Dhanam, Enclii wiring |
+| [HITL_FLOW.md](./HITL_FLOW.md) | Approval gates + autonomy graduation |
+| [PORTS.md](./PORTS.md) | Canonical ports and health paths |

@@ -7,6 +7,9 @@ Compact LLM context index for this repository.
 - `AGENTS.md` — canonical agent operating instructions.
 - `README.md` — human/product overview when present.
 - `ECOSYSTEM.md` — MADFAM ecosystem and Enclii deployment context when present.
+- `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6).
+- `docs/OPERATOR_BACKLOG.md` — human-gated operator items.
+- `POST /api/v1/campaigns/import-tulana-pack` — Tulana SKU campaign import (Phase 2).
 - `llms-full.txt` — full context map and durable operating contract.
 
 ## Production operations

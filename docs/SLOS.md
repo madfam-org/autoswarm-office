@@ -6,8 +6,9 @@
 > rates that page on-call.
 >
 > **Status**: definition phase. SLI dashboards land once OTel is wired
-> (Phase 2 item 11) and Sentry DSNs flow (item 12). On-call alert
-> wiring lands as a follow-up PR.
+> (Program Phase 0 / [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) item 1)
+> and Sentry DSNs flow (item 2). On-call alert wiring lands as a follow-up PR.
+> See [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md).
 
 ---
 

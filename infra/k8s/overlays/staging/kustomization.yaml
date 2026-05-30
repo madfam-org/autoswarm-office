@@ -119,6 +119,12 @@ patches:
     target:
       kind: HorizontalPodAutoscaler
 
+  # KEDA workers scaler pinned to 1 — RWO memory PVC cannot multi-attach.
+  - path: patch-keda-staging.yaml
+    target:
+      kind: ScaledObject
+      name: workers-keda
+
 # `labels:` replaces the deprecated `commonLabels:`. Adds an
 # environment tag so Grafana/Prometheus can slice dashboards by tier.
 labels:

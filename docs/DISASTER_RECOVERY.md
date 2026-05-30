@@ -14,6 +14,10 @@ This document defines the disaster recovery (DR) procedures for the AutoSwarm
 Office platform. It covers backup strategy, recovery procedures for common
 failure scenarios, and verification steps to confirm successful recovery.
 
+**Program gate:** Phase 0 item 0.5 in
+[AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) requires
+a executed backup/restore drill with measured RTO/RPO before north-star Phase 1.
+
 ### Recovery Objectives
 
 | Metric | Target | Notes |

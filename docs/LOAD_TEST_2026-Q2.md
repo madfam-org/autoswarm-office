@@ -1,6 +1,9 @@
 # Load Test Q2 2026 — 100 concurrent SwarmTasks calibration
 
-> Phase 3 item 17 in the [full-remediation plan](../ROADMAP.md). Template doc to capture the calibration output of `tests/load/concurrent-100-swarmtasks.js` once staging actually runs the scenario. Operator: fill in the Results section after the run.
+> **Program Phase 0** item 0.4 / [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) Tier 3.
+> Template to capture output of `tests/load/concurrent-100-swarmtasks.js` once
+> staging runs the scenario. Operator: fill in Results after the run.
+> See [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md).
 
 ## Why we're running this
 

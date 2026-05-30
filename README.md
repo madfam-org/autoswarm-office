@@ -122,11 +122,15 @@ These ports do not conflict with Janua (4100-4104) or Enclii (4200-4204).
 
 ## Documentation
 
+- [Autonomous Operations Program](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md) — north star (Phases 0–6)
+- [Operator Backlog](docs/OPERATOR_BACKLOG.md) — human-gated items
+- [Product Roadmap](ROADMAP.md)
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [Development Guide](docs/DEVELOPMENT.md)
 - [Human-in-the-Loop Flow](docs/HITL_FLOW.md)
 - [MADFAM Integration Guide](docs/INTEGRATION.md)
 - [Autonomous Cleanroom Protocol (ACP)](docs/AUTONOMOUS_CLEANROOM_PROTOCOL.md)
+- [Tulana SKU Campaign Orchestration](docs/TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
 - [Ecosystem Context (self-contained)](ECOSYSTEM.md)
 
 ## MADFAM Ecosystem

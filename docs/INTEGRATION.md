@@ -1,9 +1,12 @@
 # MADFAM Ecosystem Integration
 
 AutoSwarm Office integrates with three sibling MADFAM platform services:
-Janua (authentication), Dhanam (billing), and Enclii (deployment). For the
-Tulana -> Selva -> Phynd CRM SKU campaign path, see
-`docs/TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md`.
+Janua (authentication), Dhanam (billing), and Enclii (deployment).
+
+**North-star orchestration plan:** [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md)
+(cross-service Phases 0–6). **Tulana → Selva → Phynd CRM** campaign path:
+[TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](./TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
+(Program Phase 2).
 
 ## Janua Auth Setup
 
@@ -175,3 +178,19 @@ Secrets are managed via Kubernetes SealedSecrets. The template is at
 - `openrouter-api-key` -- OpenRouter API key for model routing
 
 For the full Enclii API surface, read the `llms-full.txt` file in the Enclii repository.
+
+## Tulana campaign orchestration (Phase 2)
+
+Selva imports Tulana SKU campaign packs and ranks them before agent dispatch.
+Contract: [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](./TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md).
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `POST /api/v1/campaigns/import-tulana-pack` | Bearer (Janua JWT) | Validate Tulana export JSON, rank SKUs, optional `dispatch_tasks` |
+
+Implementation: `apps/nexus-api/nexus_api/routers/campaigns.py`,
+`schemas/tulana_campaign.py`, `services/tulana_campaign.py`.
+Tests: `apps/nexus-api/tests/test_tulana_campaign_import.py`.
+
+Tulana webhook outcomes (pricing apply) use existing `TULANA_API_URL` +
+`tulana_selva_webhook_secret` settings — see `services/pricing_apply.py`.

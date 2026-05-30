@@ -3,6 +3,10 @@
 AutoSwarm Office enforces a zero-surprise architecture where all destructive or
 outbound agent actions require explicit human approval before execution.
 
+**Autonomy graduation:** Lanes move from **ask** → **allow** per
+[AUTONOMOUS_OPERATIONS_PROGRAM.md § Phase 6](./AUTONOMOUS_OPERATIONS_PROGRAM.md#phase-6--autonomy-graduation-ongoing-from-phase-1)
+after a documented clean-run period — never by default.
+
 ## Permission Matrix
 
 The default permission matrix defines which actions agents can take autonomously

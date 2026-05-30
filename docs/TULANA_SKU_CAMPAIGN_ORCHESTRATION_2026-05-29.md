@@ -2,7 +2,8 @@
 
 Date: 2026-05-29
 
-Status: proposed implementation contract
+Status: **Program Phase 2** — implementation contract for
+[Autonomous Operations Program § Phase 2](./AUTONOMOUS_OPERATIONS_PROGRAM.md#phase-2--campaign-planning--execution-4-6-weeks)
 
 ## Direct surfaces
 
@@ -80,6 +81,12 @@ Selva should reject campaign tasks that lack:
 - at least one proof point or explicit waiver;
 - `do_not_claim` guardrails;
 - verification timestamp.
+
+## Selva import API
+
+`POST /api/v1/campaigns/import-tulana-pack` — validates packs, returns ranked
+accept/reject lists, optional `dispatch_tasks` to enqueue `sku_campaign_planning`
+tasks on the `intelligence` graph.
 
 ## Agent workflow
 

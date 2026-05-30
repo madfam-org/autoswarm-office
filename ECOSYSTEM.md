@@ -23,7 +23,7 @@ Selva Office (repo `selva-office`, formerly `autoswarm-office`) is MADFAM's AI i
 
 **Pillar**: Intelligence / Agents + LLM routing
 **Type**: platform
-**Status**: production
+**Status**: production (staging tier live 2026-05-30; north-star program in [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md))
 
 ### Deployed services
 

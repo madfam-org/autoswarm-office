@@ -1,0 +1,12 @@
+# PP.4 — pin KEDA workers scaler to a single replica in staging.
+#
+# Workers mount selva-memory-pvc (ReadWriteOnce). KEDA maxReplicaCount=10
+# from the prod base causes Multi-Attach failures when a second pod starts.
+# Staging matches the HPA pin pattern (hpa-disable-patch.yaml): one replica
+# is enough for soak/smoke and keeps PVC semantics valid.
+- op: replace
+  path: /spec/minReplicaCount
+  value: 1
+- op: replace
+  path: /spec/maxReplicaCount
+  value: 1

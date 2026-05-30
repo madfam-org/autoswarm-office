@@ -6,7 +6,9 @@
 > a vendor pick, a budget approval, a config flip, or a manual operation.
 >
 > **Read this first** when picking the work back up. Then read
-> [ROADMAP.md](../ROADMAP.md) for engineering context and
+> [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)
+> for the full north-star plan (Phases 0–6), then
+> [ROADMAP.md](../ROADMAP.md) for product phase context and
 > [CHANGELOG.md](../CHANGELOG.md) for what shipped.
 >
 > **Doc truth remediation (2026-05-30):** Port, health, and count claims
@@ -27,6 +29,8 @@ Each item lists:
 - **Cross-refs** — the RFCs / runbooks / PRs with the detail
 
 Items are roughly priority-ordered. Highest value at top.
+
+**Program mapping:** Tier 1–3 items = [Autonomous Operations Program Phase 0](AUTONOMOUS_OPERATIONS_PROGRAM.md#phase-0--operational-foundation-2-3-weeks). Tier 5 items = Program Phases 4–5. Completing Phase 0 gates Phase 1 (live revenue loop).
 
 ---
 
@@ -250,7 +254,8 @@ Items are roughly priority-ordered. Highest value at top.
 
 | File | Purpose |
 |---|---|
-| [ROADMAP.md](../ROADMAP.md) | Honest scorecard + phase tracking. Read after this doc. |
+| [AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md) | **North star** — Phases 0–6 toward full autonomous digital ops |
+| [ROADMAP.md](../ROADMAP.md) | Honest scorecard + product phases (F/E). Read after this doc. |
 | [CHANGELOG.md](../CHANGELOG.md) | What shipped. v2.3.0 entry covers today's work. |
 | [CLAUDE.md](../CLAUDE.md) | Patterns + invariants reference. "Patterns Added in v2.3.0" section is the most current. |
 | [docs/SLOS.md](SLOS.md) | Per-endpoint SLO definitions + burn-rate alert specs. |
@@ -265,16 +270,17 @@ Items are roughly priority-ordered. Highest value at top.
 | [docs/rfcs/0019-cross-service-cdc-audit-topic.md](rfcs/0019-cross-service-cdc-audit-topic.md) | CDC audit topic. Phase A pilot pending operator approval. |
 | [docs/rfcs/0020-per-tenant-data-residency.md](rfcs/0020-per-tenant-data-residency.md) | Per-tenant data residency. Implementation pending MX-region cluster. |
 | [docs/rfcs/0021-multi-region-failover.md](rfcs/0021-multi-region-failover.md) | Multi-region failover. Implementation pending RFC 0020 topology. |
+| [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md) | Phase 2 campaign contract (Tulana ↔ Selva ↔ Phynd) |
 
 ---
 
 ## Picking this work back up — recommended reading order
 
 1. **This doc** — what's blocked + why
-2. **CLAUDE.md "Patterns Added in v2.3.0"** — the new patterns to know
+2. **[AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)** — north star + phase gates
 3. **ROADMAP.md "Honest scorecard"** — where we actually are
-4. **CHANGELOG.md `[2.3.0]`** — what shipped + the operator todo at the bottom
-5. **The RFC for whichever item you're tackling** — the design context
+4. **CHANGELOG.md** — what shipped
+5. **The RFC or contract for whichever phase you're executing**
 
 If you're picking up after several weeks: also check `git log --oneline -30`
 for any new merges and `gh pr list --state open` for any new PRs that

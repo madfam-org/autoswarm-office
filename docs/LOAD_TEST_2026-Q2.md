@@ -120,7 +120,25 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 | **Recommended `TIER_DAILY_TASK_LIMIT` changes** | Use dedicated load-test org or Redis tier cache bump (script now sets 100k for 24h) |
 | Notes | 654/836 dispatches 2xx (78%); poll timeouts under load; post-run queue pending ~681. Staging overlay patches in `infra/k8s/overlays/staging/patch-nexus-api.yaml`. Raw: `docs/load-test-runs/20260530T213124Z.k6.json`. |
 
-### Run 3 — TBD (post-recommendation, validate the change)
+### Run 3 — 2026-05-30 (MAX_CONCURRENT_TASKS=15, clean queue — thresholds failed)
+
+| Field | Value |
+|---|---|
+| Date | 2026-05-30 |
+| Staging SHA | `ad7394c` + live patches |
+| Operator | autonomous ops agent |
+| `MAX_CONCURRENT_TASKS` at run | **15** (worker live patch + kustomize) |
+| `dispatch_rate_limit` at run | 500 |
+| `RATE_LIMIT_PER_MINUTE` at run | 10000 |
+| Worker pod replicas | 1 (RWO PVC — cannot scale horizontally on staging) |
+| **Hard thresholds passed?** | **No** (errors 55.77%; p99 dispatch 5.06s = k6 5s POST timeout) |
+| `dispatch_latency_ms` p50 / p95 / p99 | 5s / 5s / 5.06s (median pinned at client timeout) |
+| `queue_depth` p50 / max | 0 / 0 (health gauge; stream backlog not reflected) |
+| `dlq_depth` final | 0 |
+| **Recommended next step** | Add **`passthrough`/`literal` no-LLM graph** for calibration OR scale **nexus-api** replicas on staging; single API replica saturates before workers at 100 VU |
+| Notes | 582/1316 dispatches 2xx (44%). Pre-run `./scripts/drain-staging-task-queue.sh` cleared stream. Campaign loop re-verified green post-run. Raw: `docs/load-test-runs/20260530T215200Z.k6.json`. |
+
+### Run 4 — TBD (lighter graph or scaled API)
 
 | Field | Value |
 |---|---|

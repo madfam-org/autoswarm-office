@@ -69,9 +69,8 @@ if command -v kubectl >/dev/null 2>&1; then
 fi
 
 if ! $SKIP_DRAIN; then
-  echo "--- drain stale tasks (best-effort) ---"
-  curl -sf -X POST "${BASE_URL}/api/v1/swarms/tasks/reap-stale" \
-    "${HDR_AUTH[@]}" "${HDR_TENANT[@]}" >/dev/null 2>&1 || echo "SKIP: reap-stale unavailable (needs admin JWT or service role)"
+  echo "--- drain staging queue (Redis + open tasks) ---"
+  "${ROOT}/scripts/drain-staging-task-queue.sh" || echo "WARN: queue drain failed — results may be skewed"
 fi
 
 if [[ -n "$TENANT_ORG" ]] && command -v kubectl >/dev/null 2>&1; then

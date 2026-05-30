@@ -28,6 +28,9 @@ spec:
               value: "false"
             - name: FEATURE_REDDIT_BOT
               value: "false"
+            # Load-test calibration (Run 3+): default 3 cannot drain 100-VU inventory on 1 replica.
+            - name: MAX_CONCURRENT_TASKS
+              value: "15"
             - name: DHANAM_API_URL
               value: "https://staging-api.dhan.am"
             - name: ENCLII_API_URL

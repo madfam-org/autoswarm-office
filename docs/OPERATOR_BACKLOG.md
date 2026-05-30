@@ -96,12 +96,11 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 
 ### 3. Configure Dhanam price→tier map + Selva webhook
 
-- **Status (2026-05-30)**: **Selva + Dhanam staging fan-out wired** —
-  `./scripts/verify-dhanam-billing-path.sh --staging` passes; ran
-  `./scripts/reconcile-dhanam-selva-webhook.sh` to set
-  `PRODUCT_WEBHOOK_URLS=selva:https://staging-api.selva.town/api/v1/billing/webhooks/dhanam`
-  and align `DHANAM_WEBHOOK_SECRET` in `enclii-dhanam-staging`. **Remaining:** map
-  Stripe price IDs → tiers in Dhanam catalog (prod + staging checkout paths).
+- **Status (2026-05-30)**: **Selva + Dhanam staging fan-out wired** (reconcile is
+  idempotent — re-run if `PRODUCT_WEBHOOK_URLS` drifts empty). **Run 3 load test**
+  recorded in `docs/LOAD_TEST_2026-Q2.md` — thresholds failed; API single-replica
+  saturates at 100 VU before workers. **Remaining:** map Stripe price IDs → tiers
+  in Dhanam catalog (prod + staging checkout paths).
 - **What**: In **Dhanam** (canonical Stripe/POS router), map production
   Stripe price IDs to `starter`, `professional`, `enterprise`. Point Dhanam
   billing webhooks at Selva
@@ -141,12 +140,10 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 ### 5. Run k6 100-concurrent-tasks load scenario in staging
 
 - **Status (2026-05-30)**: `.github/workflows/load-test.yml` ships with
-  `workflow_dispatch`. **Precursor smoke:** `./scripts/run-staging-load-smoke.sh`
-  (1 VU). **Full scenario:** `./scripts/run-staging-load-full.sh` (requires
-  staging `DISPATCH_RATE_LIMIT=500`, `RATE_LIMIT_PER_MINUTE=10000` in
-  `patch-nexus-api.yaml`). **Run 2 recorded** in `docs/LOAD_TEST_2026-Q2.md`
-  — thresholds failed (p99 dispatch 5s, 22% errors); recommends raising
-  `MAX_CONCURRENT_TASKS` before Run 3.
+  `./scripts/run-staging-load-full.sh` (requires staging rate-limit patches in
+  `patch-nexus-api.yaml`; pre-run `./scripts/drain-staging-task-queue.sh`).
+  **Runs 1–3 recorded** in `docs/LOAD_TEST_2026-Q2.md` — none pass hard thresholds;
+  Run 4 needs lighter graph or scaled nexus-api replicas.
 - **What**: Provision `k6` in the operator workstation or staging
   CI runner. Provision a staging API token. Run
   `k6 run -e BASE_URL=https://staging-api.selva.town -e AUTH_TOKEN=<token> tests/load/concurrent-100-swarmtasks.js`.
@@ -179,6 +176,7 @@ pack on staging → approve HITL social → CRM handoff → Tulana feedback row.
 - **Cross-refs**:
   - [docs/INTEGRATION.md](INTEGRATION.md) — campaign endpoints + UI
   - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
+  - `./scripts/drain-staging-task-queue.sh` — break-glass Redis stream trim + consumer group reset (pre–load-test)
   - `./scripts/reconcile-dhanam-selva-webhook.sh` — wire Dhanam `PRODUCT_WEBHOOK_URLS` → Selva staging
   - `./scripts/verify-dhanam-price-tier-map.sh` — check Dhanam Stripe price→tier keys (SKIP until catalog wired)
   - `./scripts/bootstrap-staging-observability.sh` — create `autoswarm-observability-secrets` (Tier 1)

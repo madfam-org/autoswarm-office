@@ -64,6 +64,7 @@ class TestDispatchRequestSchema:
             "sequential", "parallel", "coding", "research", "crm",
             "custom", "deployment", "puppeteer", "meeting", "billing",
             "accounting", "sales", "intelligence", "operations",
+            "campaign", "calibration",
         ):
             req = DispatchRequest(description="x", graph_type=gt)
             assert req.graph_type == gt

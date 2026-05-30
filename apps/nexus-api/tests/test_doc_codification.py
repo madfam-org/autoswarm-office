@@ -11,8 +11,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
-
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PORTS_MD = _REPO_ROOT / "docs" / "PORTS.md"
 _DOCS_DIR = _REPO_ROOT / "docs"

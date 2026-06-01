@@ -17,7 +17,7 @@
     "test": "turbo test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
-    "clean": "turbo clean && rm -rf node_modules",
+    "clean": "node scripts/require-local-destructive.mjs && turbo clean && rm -rf node_modules",
     "prepare": "husky",
     "generate-assets": "node scripts/generate-assets.js",
     "generate-variants": "node scripts/generate-variants.js && node scripts/generate-tile-variants.js",

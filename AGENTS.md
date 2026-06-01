@@ -16,6 +16,17 @@ redirect and should not become the source of truth again.
 
 ## Required operating doctrine
 
+- Selva Office is an agent and inference platform. Treat tool execution,
+  worker dispatch, autonomous actions, social posting, email or marketing
+  send, GitHub writes, database writes, payment/webhook calls, provider API
+  calls, load tests, deploys, promotions, and rollbacks as side-effectful
+  operations. Do not run them against production, tenant, customer, or shared
+  data unless the user explicitly requests the action and names the target
+  environment.
+- Examples and templates must stay placeholder-only. Do not add provider keys,
+  worker tokens, org configs, customer data, prompts, tool payloads, social
+  account credentials, webhooks, or GitHub tokens to repository files or MCP
+  memory.
 - Read this file before making repo changes.
 - Prefer existing repo conventions, scripts, and docs over introducing new
   patterns.

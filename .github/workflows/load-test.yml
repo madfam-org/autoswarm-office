@@ -22,6 +22,10 @@ on:
         description: Bearer token (use repo secret STAGING_LOAD_TEST_TOKEN when empty)
         required: false
         default: ""
+      target_ack:
+        description: Type "staging" or "approved-production" to acknowledge the target.
+        required: true
+        default: ""
 
 jobs:
   load-test:
@@ -37,9 +41,27 @@ jobs:
           BASE_URL: ${{ inputs.base_url }}
           AUTH_TOKEN: ${{ inputs.auth_token != '' && inputs.auth_token || secrets.STAGING_LOAD_TEST_TOKEN }}
           TENANT_ORG: madfam
+          TARGET_ACK: ${{ inputs.target_ack }}
         run: |
+          set -euo pipefail
+          if [ "$TARGET_ACK" != "staging" ] && [ "$TARGET_ACK" != "approved-production" ]; then
+            echo "::error::target_ack must be staging or approved-production"
+            exit 1
+          fi
           if [ -z "${AUTH_TOKEN}" ]; then
-            echo "::warning::AUTH_TOKEN unset — using dev-token (local smoke only)"
-            export AUTH_TOKEN="dev-token"
+            echo "::error::STAGING_LOAD_TEST_TOKEN or auth_token input is required; refusing to use a fallback token"
+            exit 1
+          fi
+          case "$BASE_URL" in
+            https://staging-api.selva.town*|https://api.selva.town*|http://localhost:*)
+              ;;
+            *)
+              echo "::error::Unsupported load-test base_url: $BASE_URL"
+              exit 1
+              ;;
+          esac
+          if [ "$TARGET_ACK" = "staging" ] && [ "${BASE_URL#https://staging-api.selva.town}" = "$BASE_URL" ] && [ "${BASE_URL#http://localhost:}" = "$BASE_URL" ]; then
+            echo "::error::target_ack=staging only permits staging or localhost targets"
+            exit 1
           fi
           k6 run -e BASE_URL="${BASE_URL}" -e AUTH_TOKEN="${AUTH_TOKEN}" -e TENANT_ORG="${TENANT_ORG}" "tests/load/${{ inputs.script }}"

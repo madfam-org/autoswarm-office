@@ -8,7 +8,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: autoswarm
-      POSTGRES_PASSWORD: autoswarm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in an untracked local env file}
       POSTGRES_DB: autoswarm
     volumes:
       - pgdata:/var/lib/postgresql/data

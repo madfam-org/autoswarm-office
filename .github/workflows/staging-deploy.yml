@@ -39,6 +39,7 @@ concurrency:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 env:
   REGISTRY: ghcr.io
@@ -155,6 +156,17 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:staging-${{ steps.sha.outputs.short }}
             ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:staging-latest
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: v2.5.3
+
+      - name: Sign staging image digest
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
 
       # Export per-service digest under a keyed output so the patch
       # job can read all 6 simultaneously.

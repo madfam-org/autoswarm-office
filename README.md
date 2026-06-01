@@ -1,5 +1,13 @@
 # Selva Office
 
+Selva Office is an agent and inference platform. Treat autonomous worker
+dispatch, tool execution, social posting, email/marketing send, GitHub writes,
+database writes, provider API calls, load tests, deploys, promotions, and
+rollbacks as side-effectful operations. Use Enclii/Vault as the normal
+production operations path, keep examples placeholder-only, and do not run
+production or tenant-impacting actions without an explicit environment and
+operator request.
+
 > [!IMPORTANT]
 > MADFAM-ENCLII-FIRST-LEGACY-RAW v1: This document contains legacy raw infrastructure command examples.
 > Routine production operations must use Enclii web, API, or CLI. Treat raw

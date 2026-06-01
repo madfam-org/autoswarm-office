@@ -5,6 +5,7 @@ DOCKER_COMPOSE := $(shell command -v docker-compose 2>/dev/null || echo "docker 
 
 # ── Development ─────────────────────────────────────
 dev:
+	@if [ "$$LOCAL_SERVICES" != "yes" ]; then echo "Refusing to start local services without LOCAL_SERVICES=yes"; exit 1; fi
 	@bash -c '\
 	trap "kill 0" EXIT SIGINT SIGTERM; \
 	pnpm dev & \
@@ -25,6 +26,8 @@ db-wait:
 	@echo "PostgreSQL is ready."
 
 dev-full:
+	@if [ "$$LOCAL_SERVICES" != "yes" ]; then echo "Refusing full local service stack without LOCAL_SERVICES=yes"; exit 1; fi
+	@if [ "$$LOCAL_DB" != "yes" ]; then echo "Refusing local database migration/seed without LOCAL_DB=yes"; exit 1; fi
 	@test -f .env || (echo "Creating .env from .env.example..." && cp .env.example .env)
 	@echo "Installing dependencies..."
 	$(MAKE) install
@@ -47,10 +50,12 @@ dev-full:
 	@sleep 3 && $(MAKE) smoke-test
 
 dev-seed:
+	@if [ "$$LOCAL_DB" != "yes" ]; then echo "Refusing local database seed without LOCAL_DB=yes"; exit 1; fi
 	@echo "Seeding departments and agents..."
 	uv run python scripts/seed-agents.py
 
 worker:
+	@if [ "$$LOCAL_WORKER" != "yes" ]; then echo "Refusing to start local worker without LOCAL_WORKER=yes"; exit 1; fi
 	uv run --directory apps/workers python -m autoswarm_workers
 
 build:
@@ -78,6 +83,7 @@ format:
 	uv run ruff format .
 
 clean:
+	@if [ "$$LOCAL_DESTRUCTIVE" != "yes" ]; then echo "Refusing destructive cleanup without LOCAL_DESTRUCTIVE=yes"; exit 1; fi
 	pnpm clean
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
@@ -86,28 +92,36 @@ clean:
 
 # ── Docker ──────────────────────────────────────────
 docker-up:
+	@if [ "$$LOCAL_SERVICES" != "yes" ]; then echo "Refusing to start local containers without LOCAL_SERVICES=yes"; exit 1; fi
 	$(DOCKER_COMPOSE) -f infra/docker/docker-compose.yml up -d
 
 docker-down:
+	@if [ "$$LOCAL_DESTRUCTIVE" != "yes" ]; then echo "Refusing to stop/remove local containers without LOCAL_DESTRUCTIVE=yes"; exit 1; fi
 	$(DOCKER_COMPOSE) -f infra/docker/docker-compose.yml down
 
 docker-dev:
+	@if [ "$$LOCAL_SERVICES" != "yes" ]; then echo "Refusing to start local dev containers without LOCAL_SERVICES=yes"; exit 1; fi
 	$(DOCKER_COMPOSE) -f infra/docker/docker-compose.dev.yml up -d
 
 # ── Database ────────────────────────────────────────
 db-migrate:
+	@if [ "$$LOCAL_DB" != "yes" ]; then echo "Refusing database migration without LOCAL_DB=yes"; exit 1; fi
 	uv run --directory apps/nexus-api alembic upgrade head
 
 db-seed:
+	@if [ "$$LOCAL_DB" != "yes" ]; then echo "Refusing database seed without LOCAL_DB=yes"; exit 1; fi
 	uv run python scripts/seed-agents.py
 
 db-backup:
+	@if [ "$$LOCAL_DB_BACKUP" != "yes" ]; then echo "Refusing database backup without LOCAL_DB_BACKUP=yes"; exit 1; fi
 	bash scripts/backup-postgres.sh
 
 db-restore:
+	@if [ "$$LOCAL_DB_RESTORE" != "yes" ]; then echo "Refusing database restore without LOCAL_DB_RESTORE=yes"; exit 1; fi
 	bash scripts/restore-postgres.sh $(BACKUP_FILE)
 
 db-verify-backup:
+	@if [ "$$LOCAL_DB_VERIFY" != "yes" ]; then echo "Refusing backup verification without LOCAL_DB_VERIFY=yes"; exit 1; fi
 	bash scripts/verify-backup.sh $(BACKUP_FILE)
 
 # ── Assets ─────────────────────────────────────────
@@ -138,9 +152,11 @@ setup:
 	bash scripts/setup.sh
 
 smoke-test:
+	@if [ "$$LOCAL_SMOKE" != "yes" ]; then echo "Refusing smoke test without LOCAL_SMOKE=yes"; exit 1; fi
 	bash scripts/smoke-test.sh
 
 worktree-cleanup:
+	@if [ "$$LOCAL_DESTRUCTIVE" != "yes" ]; then echo "Refusing worktree cleanup without LOCAL_DESTRUCTIVE=yes"; exit 1; fi
 	bash scripts/cleanup-worktrees.sh
 
 install:

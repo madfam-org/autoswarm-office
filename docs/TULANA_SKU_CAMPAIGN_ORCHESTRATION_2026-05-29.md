@@ -136,3 +136,9 @@ Definition of done:
 - Human approval gates outbound campaign actions.
 - Phynd CRM receives traceable campaign payloads.
 - Tulana receives engagement outcomes as evidence, not free-form anecdotes.
+
+## Commercial GA orchestration addendum - 2026-06-01
+
+Selva campaign agents must now follow [Commercial GA campaign orchestration gates](./COMMERCIAL_GA_CAMPAIGN_ORCHESTRATION_GATES_2026-06-01.md). Agents may plan and draft for `candidate` SKUs, but paid-GA campaign handoff to PhyndCRM is blocked until the SKU has `commercial_ga_status=ga_ready` with G0-G9 evidence.
+
+The first-pesos primary lane is `karafiel__contador`; `coforma__startup` is the backup lane. Selva must preserve human-in-the-loop approval and PhyndCRM consent/suppression gates for all outbound actions.

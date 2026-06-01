@@ -84,7 +84,7 @@ class TestStripeWebhookSignature:
         settings = get_settings()
         original_secret = settings.stripe_webhook_secret
         original_billing = settings.billing_via_dhanam
-        settings.stripe_webhook_secret = "whsec_test_real_secret"
+        settings.stripe_webhook_secret = "DUMMY_WEBHOOK_SECRET_DO_NOT_USE"
         settings.billing_via_dhanam = False
 
         try:
@@ -110,7 +110,7 @@ class TestStripeWebhookSignature:
         settings = get_settings()
         original_secret = settings.stripe_webhook_secret
         original_billing = settings.billing_via_dhanam
-        settings.stripe_webhook_secret = "whsec_test_real_secret"
+        settings.stripe_webhook_secret = "DUMMY_WEBHOOK_SECRET_DO_NOT_USE"
         settings.billing_via_dhanam = False
 
         event_payload = json.dumps(
@@ -122,7 +122,7 @@ class TestStripeWebhookSignature:
                 "created": int(time.time()),
             }
         ).encode()
-        sig_header = _build_stripe_signature(event_payload, "whsec_test_real_secret")
+        sig_header = _build_stripe_signature(event_payload, "DUMMY_WEBHOOK_SECRET_DO_NOT_USE")
 
         try:
             resp = await client.post(
@@ -158,14 +158,14 @@ class TestStripeWebhookSignature:
         settings = get_settings()
         original_secret = settings.stripe_webhook_secret
         original_billing = settings.billing_via_dhanam
-        settings.stripe_webhook_secret = "whsec_test_real_secret"
+        settings.stripe_webhook_secret = "DUMMY_WEBHOOK_SECRET_DO_NOT_USE"
         settings.billing_via_dhanam = False
 
         # Sign a payload with a timestamp 1 hour in the past.
         event_payload = b'{"id": "evt_replay", "type": "ping"}'
         old_ts = int(time.time()) - 3600
         sig_header = _build_stripe_signature(
-            event_payload, "whsec_test_real_secret", timestamp=old_ts
+            event_payload, "DUMMY_WEBHOOK_SECRET_DO_NOT_USE", timestamp=old_ts
         )
 
         try:

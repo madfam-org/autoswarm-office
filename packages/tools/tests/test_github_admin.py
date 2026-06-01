@@ -51,7 +51,7 @@ from selva_tools.builtins.github_admin import (
 )
 
 # A PAT value that must never appear in logs, data, or errors.
-FAKE_PAT = "ghp_FAKE_TOKEN_DO_NOT_LEAK_0123456789abcdef"
+FAKE_PAT = "DUMMY_GITHUB_TOKEN_DO_NOT_USE"
 FAKE_PAT_PREFIX = token_sha256_prefix(FAKE_PAT)
 
 

@@ -51,8 +51,8 @@ from selva_tools.builtins.webhooks import (
 )
 
 # Sentinels that MUST NEVER appear in logs, returned data, audit rows, or errors.
-STRIPE_SIGNING_SECRET = "whsec_supersecret_stripe_DO_NOT_LEAK_aaaaaaaa"
-RESEND_SIGNING_SECRET = "resend_whsec_DO_NOT_LEAK_bbbbbbbb"
+STRIPE_SIGNING_SECRET = "DUMMY_WEBHOOK_SECRET_DO_NOT_USE_stripe_DO_NOT_LEAK_aaaaaaaa"
+RESEND_SIGNING_SECRET = "resend_DUMMY_WEBHOOK_SECRET_DO_NOT_USE"
 STRIPE_API_KEY = "sk_test_FAKE_KEY_DO_NOT_LEAK_cccccccc"
 RESEND_API_KEY = "re_test_FAKE_KEY_DO_NOT_LEAK_dddddddd"
 JANUA_ADMIN_TOKEN = "janua_admin_DO_NOT_LEAK_eeeeeeee"

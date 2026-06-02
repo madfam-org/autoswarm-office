@@ -192,7 +192,8 @@ async def queue_stats() -> dict[str, object]:
             stats["consumer_groups"] = []
 
         # k6 calibration gauges (Run 4+)
-        stream_len = int(stats.get("stream_length", 0) or 0)
+        stream_length_value = stats.get("stream_length", 0)
+        stream_len = stream_length_value if isinstance(stream_length_value, int) else 0
         stats["queue_depth"] = stream_len + pending_total
         stats["pending_total"] = pending_total
 

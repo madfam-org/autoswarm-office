@@ -69,7 +69,7 @@ images:
 - digest: sha256:91eb20cad5f758ae9f847bd603a42c70bde388cf97e952cc0d3ce464c7b0b1fb
   name: ghcr.io/madfam-org/autoswarm-office-ui
   newName: ghcr.io/madfam-org/autoswarm-office-ui
-- digest: sha256:fe2cb96ca0201329c9d5436ba5d32ce3adf70d69ca9343e5e126b5935caa0005
+- digest: sha256:b749040a6b4ecbbe6ebebba2929fdcbd77b55edf79d2566327649acbf874f7b7
   name: ghcr.io/madfam-org/selva-workers
   newName: ghcr.io/madfam-org/selva-workers
 

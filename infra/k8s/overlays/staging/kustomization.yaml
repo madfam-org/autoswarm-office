@@ -57,7 +57,7 @@ images:
   - name: ghcr.io/madfam-org/autoswarm-nexus-api
     digest: sha256:975e83bc5659ef430cb729703da62fc8bbf226bee69bc9be6112a16b3f1ddca2
   - name: ghcr.io/madfam-org/autoswarm-office-ui
-    digest: sha256:6ed73ea6ec026651069df0cabb15ca733308b1ea58f2d213374c616af5e6d620
+    digest: sha256:75da7a0a436298291d4250675c1d6ebfe6ed779658ea0a90830a2cb11ac14e4c
   - name: ghcr.io/madfam-org/autoswarm-colyseus
     digest: sha256:5373be0e966c61434af560bcbfa1eba9c4e64156e79e2e6bce4861054bb10907
   - name: ghcr.io/madfam-org/autoswarm-admin
@@ -65,7 +65,7 @@ images:
   - name: ghcr.io/madfam-org/autoswarm-gateway
     digest: sha256:2b2ac8212bc51eb2bd2f6861ddd6e5ac72e4301725ac28d2a76d2b980a60e21c
   - name: ghcr.io/madfam-org/selva-workers
-    digest: sha256:245a029f707236594bf2286b7aaa014c562f091e9fcdb6c744935a435af3328f
+    digest: sha256:ef29bbc5518bd5218b07c3ba0b3b6721f3f6c78cce7570ea4187436773d95b65
 
 # Per-deployment strategic-merge-patches. Each file is a single-doc
 # patch with explicit `metadata.name` so kustomize's patch matcher

@@ -16,7 +16,9 @@ spec:
   pollingInterval: 30
   cooldownPeriod: 300
   minReplicaCount: 1
-  maxReplicaCount: 10
+  # Workers mount selva-memory-pvc (ReadWriteOnce); keep production at a
+  # single replica until worker state is moved to per-replica or RWX storage.
+  maxReplicaCount: 1
   triggers:
     - type: redis-streams
       metadata:

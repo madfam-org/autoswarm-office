@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from madfam_inference.org_config import OrgConfig
 from madfam_inference.router import ModelRouter
 from madfam_inference.types import (
     InferenceRequest,
@@ -136,6 +137,26 @@ async def test_fallback_skips_failed_providers() -> None:
 
     assert result.content == "ok"
     assert result.model == "groq"
+
+
+@pytest.mark.asyncio
+async def test_fallback_respects_org_priority_override() -> None:
+    """DeepInfra-only org config must not fall through to registered Anthropic."""
+    primary = _make_provider("deepinfra", fail=True)
+    excluded = _make_provider("anthropic")
+    router = ModelRouter(
+        providers={"deepinfra": primary, "anthropic": excluded},
+        org_config=OrgConfig(
+            cloud_priority=["deepinfra"],
+            cheapest_priority=["deepinfra"],
+        ),
+    )
+
+    with patch("madfam_inference.router.asyncio.sleep", new_callable=AsyncMock):
+        with pytest.raises(RuntimeError, match="All providers failed"):
+            await router.complete(_make_request())
+
+    excluded.complete.assert_not_awaited()
 
 
 @pytest.mark.asyncio

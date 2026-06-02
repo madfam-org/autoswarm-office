@@ -101,12 +101,6 @@ spec:
                 secretKeyRef:
                   name: autoswarm-secrets
                   key: CONSENT_LEDGER_SIGNING_SECRET
-            - name: ANTHROPIC_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: autoswarm-llm-secrets
-                  key: ANTHROPIC_API_KEY
-                  optional: true
             - name: DEEPINFRA_API_KEY
               valueFrom:
                 secretKeyRef:

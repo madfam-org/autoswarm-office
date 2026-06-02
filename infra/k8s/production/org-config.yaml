@@ -12,19 +12,16 @@ data:
     # MADFAM Production Org Config
     # ═══════════════════════════════════════════════════════════════════════
     # Deployed via ConfigMap → mounted at /etc/autoswarm/org-config.yaml.
-    # Providers are auto-registered from env vars (ANTHROPIC_API_KEY, etc.)
+    # Providers are auto-registered from env vars (DEEPINFRA_API_KEY, etc.)
     # — only add here if overriding base_url or timeout.
     # ═══════════════════════════════════════════════════════════════════════
 
     providers: {}
 
     # ── Task-type model assignments ───────────────────────────────────────
-    # All chat/completion task types route through DeepInfra during the
-    # initial inference-consumption testing window (operator decision
-    # 2026-05-04 — Anthropic credits deferred). Embeddings stay on OpenAI
-    # (text-embedding-3-small is healthy + cheap and not blocking testing).
-    # When Anthropic is restored, flip planning/coding/review/research/
-    # vision back to anthropic + claude-{opus,sonnet,haiku}-4-X.
+    # DeepInfra is the only provider with active credits right now, so all
+    # chat/completion and embedding task types are pinned there. When another
+    # provider has funded capacity again, widen the priority lists first.
     model_assignments:
       planning:
         provider: deepinfra
@@ -67,35 +64,17 @@ data:
         max_tokens: 4096
         temperature: 0.5
       embedding:
-        provider: openai
-        model: text-embedding-3-small
+        provider: deepinfra
+        model: BAAI/bge-base-en-v1.5
         max_tokens: 512
         temperature: 0.0
 
     # ── Priority lists ────────────────────────────────────────────────────
     cloud_priority:
-      - anthropic
-      - openai
       - deepinfra
-      - groq
-      - together
-      - fireworks
-      - mistral
-      - moonshot
-      - siliconflow
-      - openrouter
 
     cheapest_priority:
       - deepinfra
-      - groq
-      - together
-      - siliconflow
-      - fireworks
-      - mistral
-      - moonshot
-      - openrouter
-      - openai
-      - anthropic
 
     # ── External service accounts ─────────────────────────────────────────
     services:
@@ -127,8 +106,8 @@ data:
             - claude-sonnet-4-6
             - claude-haiku-4-5-20251001
         consumption_tracking: true
-        status: active
-        notes: "Primary provider for planning, coding, review, vision tasks."
+        status: disabled
+        notes: "Disabled in Selva production while credits are unavailable; do not mount ANTHROPIC_API_KEY until funded capacity is restored."
 
       deepinfra:
         provider: deepinfra
@@ -143,7 +122,7 @@ data:
             - BAAI/bge-base-en-v1.5
         consumption_tracking: true
         status: active
-        notes: "Cheapest in CHEAPEST_PRIORITY list. Target for fast_coding, CRM fallback, embedding."
+        notes: "Only funded Selva LLM provider right now. Primary route for chat, vision, and embeddings."
 
       stripe:
         provider: stripe
@@ -239,10 +218,10 @@ data:
       - topic: verified_domains
         fact: "Verified sender domains: madfam.io, janua.dev. Pending: selva.town, karafiel.mx, dhan.am, tezca.mx, forj.design, cotiza.studio, fortuna.tube, yantra4d.com."
       - topic: llm_providers
-        fact: "Primary LLM: Anthropic (planning, coding, review, vision). Economy LLM: DeepInfra (fast_coding, CRM fallback). All ecosystem inference centralized through Selva nexus-api /v1 proxy."
+        fact: "Primary LLM: DeepInfra for planning, coding, review, research, CRM, support, vision, and embeddings while other providers have no active credits. All ecosystem inference centralized through Selva nexus-api /v1 proxy."
       - topic: billing_infrastructure
         fact: "Stripe Mexico (MXN) via Dhanam. 6 products, 15 prices. Checkout domains: selva.town, karafiel.mx, tezca.mx, fortuna.tube, forgesight.quest, avala.studio, cotiza.studio, forj.design, yantra4d.com."
 
     # ── Embedding config ──────────────────────────────────────────────────
-    embedding_provider: openai
-    embedding_model: text-embedding-3-small
+    embedding_provider: deepinfra
+    embedding_model: BAAI/bge-base-en-v1.5

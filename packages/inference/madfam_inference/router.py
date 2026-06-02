@@ -285,10 +285,20 @@ class ModelRouter:
         if policy.sensitivity in (Sensitivity.RESTRICTED, Sensitivity.CONFIDENTIAL):
             return []  # Cannot fall back from local-only constraint
 
+        cloud_priority = CLOUD_PRIORITY
+        cheapest_priority = CHEAPEST_PRIORITY
+        if self._org_config is not None:
+            org_cloud = getattr(self._org_config, "cloud_priority", None)
+            org_cheap = getattr(self._org_config, "cheapest_priority", None)
+            if org_cloud:
+                cloud_priority = org_cloud
+            if org_cheap:
+                cheapest_priority = org_cheap
+
         if policy.sensitivity == Sensitivity.INTERNAL:
-            candidates = list(CLOUD_PRIORITY)
+            candidates = list(cloud_priority)
         else:
-            candidates = list(CHEAPEST_PRIORITY)
+            candidates = list(cheapest_priority)
         return [
             n
             for n in candidates

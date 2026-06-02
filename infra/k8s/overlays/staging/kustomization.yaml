@@ -55,7 +55,7 @@ replicas:
 # digest below will be overwritten by the first staging deploy.
 images:
   - name: ghcr.io/madfam-org/autoswarm-nexus-api
-    digest: sha256:4936ca41368934056ae4ea7a7cfb1642b34f45bc615cc744795d277e8c59ff1b
+    digest: sha256:975e83bc5659ef430cb729703da62fc8bbf226bee69bc9be6112a16b3f1ddca2
   - name: ghcr.io/madfam-org/autoswarm-office-ui
     digest: sha256:6ed73ea6ec026651069df0cabb15ca733308b1ea58f2d213374c616af5e6d620
   - name: ghcr.io/madfam-org/autoswarm-colyseus

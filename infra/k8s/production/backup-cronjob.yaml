@@ -30,7 +30,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
+      storage: 20Gi
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -49,6 +49,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      ttlSecondsAfterFinished: 86400  # Avoid completed pods pinning PVC deletion
       backoffLimit: 2
       activeDeadlineSeconds: 1800  # 30 minute timeout
       template:

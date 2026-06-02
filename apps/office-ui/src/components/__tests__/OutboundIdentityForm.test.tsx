@@ -115,7 +115,12 @@ describe('OutboundIdentityForm', () => {
   it('submits PUT with the right payload and shows a success toast', async () => {
     // Initial GET
     apiFetchMock.mockResolvedValueOnce(
-      jsonResponse({ user_email: null, user_name: null, org_name: null, agent_slug: null }),
+      jsonResponse({
+        user_email: 'old@tenant.example',
+        user_name: 'Old Name',
+        org_name: null,
+        agent_slug: 'sales',
+      }),
     );
     // PUT response — server echoes back the new resolved identity.
     apiFetchMock.mockResolvedValueOnce(
@@ -134,6 +139,11 @@ describe('OutboundIdentityForm', () => {
     )) as HTMLInputElement;
     const nameInput = screen.getByLabelText(/Display name/i) as HTMLInputElement;
     const slugSelect = screen.getByLabelText(/Pinned agent slug/i) as HTMLSelectElement;
+    await waitFor(() => {
+      expect(emailInput.value).toBe('old@tenant.example');
+      expect(nameInput.value).toBe('Old Name');
+      expect(slugSelect.value).toBe('sales');
+    });
 
     await act(async () => {
       fireEvent.change(emailInput, { target: { value: 'ceo@tenant.example' } });

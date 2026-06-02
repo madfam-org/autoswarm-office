@@ -14,7 +14,6 @@ class CalibrationState(BaseGraphState, TypedDict, total=False):
     """Minimal state for k6 concurrency calibration runs."""
 
     org_id: str
-    result: dict[str, object]
 
 
 @instrumented_node

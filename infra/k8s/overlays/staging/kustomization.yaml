@@ -55,17 +55,17 @@ replicas:
 # digest below will be overwritten by the first staging deploy.
 images:
   - name: ghcr.io/madfam-org/autoswarm-nexus-api
-    digest: sha256:975e83bc5659ef430cb729703da62fc8bbf226bee69bc9be6112a16b3f1ddca2
+    digest: sha256:aecd27252f3ae1b67d0a16db65d5771aa6f2e08d89ea0b9ffffb0921239b80b5
   - name: ghcr.io/madfam-org/autoswarm-office-ui
-    digest: sha256:75da7a0a436298291d4250675c1d6ebfe6ed779658ea0a90830a2cb11ac14e4c
+    digest: sha256:c4ad26c5691bd1fce39baaf17b6e745349eba3c4f92938e8ec628c97a4cd5fcd
   - name: ghcr.io/madfam-org/autoswarm-colyseus
-    digest: sha256:5373be0e966c61434af560bcbfa1eba9c4e64156e79e2e6bce4861054bb10907
+    digest: sha256:4711212d7df75b0fcba16dd10521707c18e12a999405d30c8a97f76a624289e0
   - name: ghcr.io/madfam-org/autoswarm-admin
-    digest: sha256:b9f762553ab760991144d01ff20353cfc9d3350fa1a2c996fbc5e4f182f3ea07
+    digest: sha256:f14d4c0de8c7cf6630674fa0f0b9b128eed92aaf958a554e70d22768a442c099
   - name: ghcr.io/madfam-org/autoswarm-gateway
-    digest: sha256:2b2ac8212bc51eb2bd2f6861ddd6e5ac72e4301725ac28d2a76d2b980a60e21c
+    digest: sha256:470b85b7522db4ff4b37a29f92451e432132b1cf42ce81f49b076cf1c72d5066
   - name: ghcr.io/madfam-org/selva-workers
-    digest: sha256:ef29bbc5518bd5218b07c3ba0b3b6721f3f6c78cce7570ea4187436773d95b65
+    digest: sha256:8e0dba981abbf26af3736af7fac002b7fab7c40b49e3365391749a4cacde1134
 
 # Per-deployment strategic-merge-patches. Each file is a single-doc
 # patch with explicit `metadata.name` so kustomize's patch matcher

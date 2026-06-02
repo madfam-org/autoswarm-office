@@ -2367,6 +2367,9 @@ export interface paths {
          *     cannot specify a target ``org_id`` in the body. Workers declare their
          *     tenant via the ``X-Selva-Tenant-Org`` header (resolved by ``auth.py``).
          *
+         *     Uses ``tenant_session(org_id)`` instead of ``get_db`` so RLS sees the
+         *     worker/JWT tenant before insert (``get_db`` would run before ``user``).
+         *
          *     Broadcasts only to WebSocket clients in the same tenant.
          */
         post: operations["create_event_api_v1_events__post"];

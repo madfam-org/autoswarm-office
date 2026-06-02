@@ -38,9 +38,10 @@ class TestPrepareSocialPostSchedulePayload:
 
 @pytest.mark.asyncio
 async def test_create_schedule_injects_org_for_social_post(db_session) -> None:
+    from sqlalchemy import select
+
     from nexus_api.models import Schedule
     from nexus_api.routers.schedules import ScheduleCreate, create_schedule
-    from sqlalchemy import select
 
     body = ScheduleCreate(
         cron_expr="0 9 * * 1",

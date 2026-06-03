@@ -21,7 +21,7 @@ from typing import Any
 
 import yaml
 
-from .plugin_base import SelvaPlugin, HookType
+from .plugin_base import HookType, SelvaPlugin
 
 logger = logging.getLogger(__name__)
 

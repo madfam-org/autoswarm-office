@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from .exceptions import AuthenticationError, SelvaError, NotFoundError, TaskTimeoutError
+from .exceptions import AuthenticationError, NotFoundError, SelvaError, TaskTimeoutError
 from .models import (
     AgentResponse,
     DispatchRequest,

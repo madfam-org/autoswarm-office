@@ -11,8 +11,8 @@ import pytest
 from selva_sdk import Selva, SelvaSync
 from selva_sdk.exceptions import (
     AuthenticationError,
-    SelvaError,
     NotFoundError,
+    SelvaError,
     TaskTimeoutError,
 )
 

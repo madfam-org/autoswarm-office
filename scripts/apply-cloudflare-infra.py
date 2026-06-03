@@ -184,19 +184,34 @@ def apply_tunnel(*, dry_run: bool, merge: bool) -> None:
         if not ingress or ingress[-1].get("hostname"):
             print("error: live tunnel ingress missing catch-all", file=sys.stderr)
             sys.exit(1)
-        existing = {r.get("hostname") for r in ingress if r.get("hostname")}
+        existing = {r.get("hostname"): idx for idx, r in enumerate(ingress) if r.get("hostname")}
         added: list[str] = []
+        updated: list[str] = []
         for rule in desired_named:
             host = rule.get("hostname")
-            if host in existing:
+            idx = existing.get(host)
+            if idx is not None:
+                current = ingress[idx]
+                if current.get("service") != rule.get("service"):
+                    ingress[idx] = {**current, **rule}
+                    updated.append(str(host))
                 continue
             ingress.insert(-1, rule)
+            existing[str(host)] = len(ingress) - 2
             added.append(str(host))
-        if not added:
-            print(f"OK   tunnel {tunnel_name}: all {len(desired_named)} hostname rule(s) present")
+        if not added and not updated:
+            print(
+                f"OK   tunnel {tunnel_name}: "
+                f"all {len(desired_named)} hostname rule(s) present and current"
+            )
             return
         payload_ingress = ingress
-        summary = f"added {len(added)} rule(s): {', '.join(added)}"
+        summary_parts: list[str] = []
+        if added:
+            summary_parts.append(f"added {len(added)} rule(s): {', '.join(added)}")
+        if updated:
+            summary_parts.append(f"updated {len(updated)} rule(s): {', '.join(updated)}")
+        summary = "; ".join(summary_parts)
     else:
         if not desired or desired[-1].get("hostname"):
             print(

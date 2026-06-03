@@ -1,7 +1,7 @@
 """Selva SDK — Python client for Selva Office."""
 
 from .client import Selva, SelvaSync
-from .exceptions import AuthenticationError, SelvaError, NotFoundError, TaskTimeoutError
+from .exceptions import AuthenticationError, NotFoundError, SelvaError, TaskTimeoutError
 
 __all__ = [
     "Selva",

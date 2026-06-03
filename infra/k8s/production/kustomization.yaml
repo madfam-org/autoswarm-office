@@ -16,7 +16,6 @@ resources:
 - office-ui.yaml
 - colyseus.yaml
 - admin.yaml
-- admin-external-secret.yaml
 - gateway.yaml
 - workers.yaml
 - service-monitors.yaml

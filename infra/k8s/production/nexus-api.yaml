@@ -107,6 +107,11 @@ spec:
                 secretKeyRef:
                   name: selva-secrets
                   key: DHANAM_WEBHOOK_SECRET
+            - name: COLYSEUS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: colyseus-secret
             - name: BILLING_VIA_DHANAM
               value: "true"
             - name: DEEPINFRA_API_KEY

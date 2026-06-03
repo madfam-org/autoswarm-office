@@ -43,7 +43,7 @@ if ! kubectl kustomize infra/k8s/production >/dev/null; then
 fi
 echo "OK   production kustomize build"
 
-if ! kubectl kustomize infra/k8s/production | grep -q 'autoswarm-observability-secrets'; then
+if ! kubectl kustomize infra/k8s/production | grep -q 'selva-observability-secrets'; then
   echo "FAIL: production overlay missing observability secret refs"
   exit 1
 fi

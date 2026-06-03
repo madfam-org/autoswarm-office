@@ -13,7 +13,7 @@
 > which paths rely on that escape hatch (count: **9 distinct categories,
 > ~13 concrete code locations**). This doc enumerates them, recommends
 > **Option B** (separate `app_admin` Postgres role with `BYPASSRLS` for
-> ops, force-RLS for `autoswarm_app`), and drafts the migration SQL +
+> ops, force-RLS for `selva_app`), and drafts the migration SQL +
 > rollout/rollback plan.
 
 ---
@@ -73,7 +73,7 @@ tables does it touch?**, and **what happens after tightening?**.
 
 | Path | Sets var? | Tables touched | After tightening |
 |---|---|---|---|
-| `apps/nexus-api/alembic/env.py` (Alembic up/down) | no — runs as DB superuser | every tenant table during DDL backfills | Migrations run as the DB role configured in `DATABASE_URL`. If that role is the app role (`autoswarm_app`), data backfills inside future migrations break. If it's a superuser, RLS is bypassed automatically. **Need: a documented requirement that Alembic must run as a `BYPASSRLS` role**. |
+| `apps/nexus-api/alembic/env.py` (Alembic up/down) | no — runs as DB superuser | every tenant table during DDL backfills | Migrations run as the DB role configured in `DATABASE_URL`. If that role is the app role (`selva_app`), data backfills inside future migrations break. If it's a superuser, RLS is bypassed automatically. **Need: a documented requirement that Alembic must run as a `BYPASSRLS` role**. |
 | `scripts/seed-agents.py` | no — calls HTTP API at `localhost:4300` | `departments`, `agents`, permission rows | Goes through nexus-api → `get_db` → `_set_session_org_id`. JWT-derived `org_id` ("dev-org" via dev bypass) flows through. **Works after tightening** as long as the dev bypass continues to set `org_id_var.set("dev-org")` in `auth.py:131`. |
 | `scripts/seed-madfam-org.py` | no — calls HTTP API too | `departments`, `agents` | Same as above. |
 | (no other seed/fixture scripts found) | — | — | — |
@@ -152,7 +152,7 @@ ops covers everything.
 |---|---|---|---|
 | `apps/nexus-api/nexus_api/celery_app.py` Celery Beat | no — Celery workers run outside HTTP request flow, no `TenantRLSMiddleware` runs, no JWT, no `org_id_var` | depends on the task | See per-task. |
 | `tasks/skill_tasks.py:refine_skills_task` (daily) | no | uses `selva_skills.refiner.SkillRefiner` — operates on the in-process skill registry + LLM, **does not touch Postgres tenant tables** | Safe. |
-| `tasks/skill_tasks.py:compact_memory_task` (weekly) | no | uses `nexus_api.tasks.memory_tasks.compact_memory` which operates on the **SQLite memory store** (`autoswarm_state.db`) via `nexus_api.memory_store.db.memory_store`, NOT the main Postgres | Safe — wrong DB entirely. |
+| `tasks/skill_tasks.py:compact_memory_task` (weekly) | no | uses `nexus_api.tasks.memory_tasks.compact_memory` which operates on the **SQLite memory store** (`selva_state.db`) via `nexus_api.memory_store.db.memory_store`, NOT the main Postgres | Safe — wrong DB entirely. |
 | `tasks/acp_tasks.py:run_acp_workflow_task` | no | `memory_store` (SQLite) | Safe. |
 
 **Verdict for category F**: Celery tasks today don't touch Postgres
@@ -202,7 +202,7 @@ data backfills).
 
 Two DB roles:
 
-- `autoswarm_app` — what nexus-api connects as in normal operation.
+- `selva_app` — what nexus-api connects as in normal operation.
   RLS is enforced via `FORCE ROW LEVEL SECURITY` (so the table-owner
   bypass doesn't apply).
 - `app_admin` — what Alembic, the `reap-stale` endpoint, the audit
@@ -219,7 +219,7 @@ Pros:
 Cons:
 - Two `DATABASE_URL`-ish env vars (`DATABASE_URL` for app, `DATABASE_ADMIN_URL` for ops).
 - One more thing to bootstrap in dev (the migration that creates the role + grants).
-- Need to grant `app_admin` to `autoswarm_app` (or have ops scripts switch role explicitly) so that hot-path code can `SET ROLE app_admin` for very brief cross-tenant work, but we'd avoid this and prefer a separate connection pool.
+- Need to grant `app_admin` to `selva_app` (or have ops scripts switch role explicitly) so that hot-path code can `SET ROLE app_admin` for very brief cross-tenant work, but we'd avoid this and prefer a separate connection pool.
 
 **Option C — per-table `FORCE ROW LEVEL SECURITY`, mixed bypass**
 
@@ -289,10 +289,10 @@ async def admin_session() -> AsyncGenerator[AsyncSession, None]:
 -- (BYPASSRLS) via a separate connection pool.
 
 -- 1. Create the app_admin role with BYPASSRLS. Grant it the same
---    table privileges as autoswarm_app so ops paths work identically
+--    table privileges as selva_app so ops paths work identically
 --    minus the row filter. The role is LOGIN so it can be the
 --    DATABASE_ADMIN_URL connection user; if your deployment prefers
---    SET ROLE-from-app-role, drop LOGIN and GRANT app_admin TO autoswarm_app.
+--    SET ROLE-from-app-role, drop LOGIN and GRANT app_admin TO selva_app.
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_admin') THEN
@@ -410,7 +410,7 @@ pass in CI before merge.
     return ZERO rows (not the `"default"` slice as today).
   - **New**: verify that `app_admin` role queries return rows from
     multiple orgs.
-  - **New**: verify INSERT into tenant table from `autoswarm_app`
+  - **New**: verify INSERT into tenant table from `selva_app`
     role with no session var FAILS (policy WITH CHECK violation).
   - **New**: verify INSERT into tenant table from `app_admin` role
     with no session var SUCCEEDS.
@@ -526,7 +526,7 @@ You should be able to answer YES to all of these after reading:
 
 - **Alembic role in production**: I don't know which Postgres role
   the production `DATABASE_URL` connects as. If it's the application
-  role (`autoswarm_app`), data-backfilling migrations break under
+  role (`selva_app`), data-backfilling migrations break under
   Phase 1.5. Need to verify with ops + add to the runbook: "Alembic
   must run as a `BYPASSRLS` role".
 - **Onboarding voice-mode preview**: §2.C lists this as

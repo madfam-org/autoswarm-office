@@ -149,7 +149,7 @@ async def _seed_marketplace_entry(db_session: Any) -> str:
     entry = SkillMarketplaceEntry(
         name="idem-test-skill",
         description="seed",
-        author="seed@autoswarm.local",
+        author="seed@selva.local",
         yaml_content=VALID_SKILL_MD,
         org_id="dev-org",
     )

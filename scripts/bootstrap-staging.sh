@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PP.4 — operator bootstrap for autoswarm-office staging tier.
+# PP.4 — operator bootstrap for selva-office staging tier.
 #
 # Runs in ROI order:
 #   1. Cloudflare DNS + tunnel ingress (requires CF API token)
@@ -86,16 +86,16 @@ echo "== Step 3: Cluster bootstrap (operator) =="
 cat <<'EOF'
 When DNS resolves, on the prod cluster:
 
-  # Register staging ArgoCD app (creates autoswarm-staging namespace)
+  # Register staging ArgoCD app (creates selva-staging namespace)
   kubectl apply -f infra/argocd/staging.yaml
-  argocd app sync autoswarm-office-staging
+  argocd app sync selva-office-staging
 
   # If sync fails on backup prune or nexus-api CreateContainerConfigError:
   ./scripts/reconcile-staging-argocd.sh --ensure-dhanam-secret
 
   # Provision secrets (see infra/k8s/overlays/staging/staging-secrets-template.yaml)
-  kubectl create namespace autoswarm-staging --dry-run=client -o yaml | kubectl apply -f -
-  # ... create autoswarm-staging-{secrets,llm-secrets,admin-auth}
+  kubectl create namespace selva-staging --dry-run=client -o yaml | kubectl apply -f -
+  # ... create selva-staging-{secrets,llm-secrets,admin-auth}
 
   # Trigger staging image build (after STAGING_ENABLED=true):
   gh workflow run staging-deploy.yml --ref main

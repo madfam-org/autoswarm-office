@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import type { AvatarConfig } from '@autoswarm/shared-types';
-import { resolveColorMap } from '@autoswarm/shared-types';
+import type { AvatarConfig } from '@selva/shared-types';
+import { resolveColorMap } from '@selva/shared-types';
 import { composeLayers } from './sprite-data/renderer';
-import bodyTemplates from '@autoswarm/shared-types/src/sprite-data/body.json';
-import hairTemplates from '@autoswarm/shared-types/src/sprite-data/hair.json';
-import accessoryTemplates from '@autoswarm/shared-types/src/sprite-data/accessories.json';
+import bodyTemplates from '@selva/shared-types/src/sprite-data/body.json';
+import hairTemplates from '@selva/shared-types/src/sprite-data/hair.json';
+import accessoryTemplates from '@selva/shared-types/src/sprite-data/accessories.json';
 
 const HAIR_STYLE_KEYS = ['short', 'long', 'spiky', 'curly', 'ponytail', 'bob', 'mohawk', 'bun'] as const;
 

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: subreddit-policies
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: selva
     app.kubernetes.io/component: reddit-policy

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { PixelButton } from '@autoswarm/ui';
+import { PixelButton } from '@selva/ui';
 import type { WorkflowSummary, WorkflowStatus, ValidationResult } from '@/hooks/useWorkflow';
 
 interface EditorToolbarProps {

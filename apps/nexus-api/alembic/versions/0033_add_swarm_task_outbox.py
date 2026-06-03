@@ -50,7 +50,7 @@ def upgrade() -> None:
                 "stream_name",
                 sa.String(length=255),
                 nullable=False,
-                server_default=sa.text("'autoswarm:task-stream'"),
+                server_default=sa.text("'selva:task-stream'"),
             ),
             sa.Column("payload", json_type, nullable=False),
             sa.Column(

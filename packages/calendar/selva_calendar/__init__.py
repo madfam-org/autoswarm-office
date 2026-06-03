@@ -1,4 +1,4 @@
-"""AutoSwarm calendar integration — Google and Microsoft calendar adapters."""
+"""Selva calendar integration — Google and Microsoft calendar adapters."""
 
 from .google import GoogleCalendarAdapter
 from .microsoft import MicrosoftCalendarAdapter

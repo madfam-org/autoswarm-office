@@ -1,15 +1,15 @@
-# PP.4 (RFC 0001 Phase 2) — autoswarm-office staging deploy.
+# PP.4 (RFC 0001 Phase 2) — selva-office staging deploy.
 #
 # Builds the 6 service images in parallel, patches their digests into
 # infra/k8s/overlays/staging/kustomization.yaml, commits, and lets the
-# autoswarm-office-staging ArgoCD Application reconcile. Post-reconcile
+# selva-office-staging ArgoCD Application reconcile. Post-reconcile
 # smoke hits every service's /health endpoint with 6 retries x 20s
 # (matches Karafiel + Dhanam).
 #
 # Triggered on every push to main. Does NOT touch production — that's
 # promote-to-prod.yml's job.
 #
-# Multi-pod adaptation: autoswarm-office has 6 deployables (nexus-api,
+# Multi-pod adaptation: selva-office has 6 deployables (nexus-api,
 # office-ui, colyseus, admin, gateway, workers). We fan out the build
 # step into 6 parallel jobs, then collect all digests in a single
 # patch job that updates the overlay atomically. This avoids 6 racing
@@ -64,7 +64,7 @@ jobs:
           set -euo pipefail
           if [[ "${STAGING_ENABLED:-}" != "true" ]]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Staging deploy skipped: set STAGING_ENABLED=true after provisioning autoswarm-staging ArgoCD app, secrets, DNS, and tunnel routes."
+            echo "::notice::Staging deploy skipped: set STAGING_ENABLED=true after provisioning selva-staging ArgoCD app, secrets, DNS, and tunnel routes."
             exit 0
           fi
 
@@ -92,19 +92,19 @@ jobs:
       matrix:
         include:
           - service: nexus-api
-            image: autoswarm-nexus-api
+            image: selva-nexus-api
             dockerfile: infra/docker/Dockerfile.nexus-api
           - service: office-ui
-            image: autoswarm-office-ui
+            image: selva-office-ui
             dockerfile: infra/docker/Dockerfile.office-ui
           - service: colyseus
-            image: autoswarm-colyseus
+            image: selva-colyseus
             dockerfile: infra/docker/Dockerfile.colyseus
           - service: admin
-            image: autoswarm-admin
+            image: selva-admin
             dockerfile: infra/docker/Dockerfile.admin
           - service: gateway
-            image: autoswarm-gateway
+            image: selva-gateway
             dockerfile: infra/docker/Dockerfile.gateway
           - service: workers
             image: selva-workers
@@ -148,7 +148,7 @@ jobs:
             NEXT_PUBLIC_API_URL=https://staging-api.selva.town
             NEXT_PUBLIC_COLYSEUS_URL=wss://staging-ws.selva.town
             NEXT_PUBLIC_JANUA_ISSUER_URL=${{ secrets.JANUA_STAGING_ISSUER_URL || 'https://auth.selva.town' }}
-            NEXT_PUBLIC_JANUA_CLIENT_ID=${{ secrets.JANUA_STAGING_CLIENT_ID || 'autoswarm-office-staging' }}
+            NEXT_PUBLIC_JANUA_CLIENT_ID=${{ secrets.JANUA_STAGING_CLIENT_ID || 'selva-office-staging' }}
             NEXT_PUBLIC_DEMO_ENABLED=true
             NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true
             NEXT_PUBLIC_APP_URL=https://staging.selva.town
@@ -204,11 +204,11 @@ jobs:
           text = path.read_text()
 
           updates = {
-            "ghcr.io/madfam-org/autoswarm-nexus-api": os.environ.get("NEXUS_API_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-office-ui": os.environ.get("OFFICE_UI_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-colyseus":  os.environ.get("COLYSEUS_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-admin":     os.environ.get("ADMIN_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-gateway":   os.environ.get("GATEWAY_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-nexus-api": os.environ.get("NEXUS_API_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-office-ui": os.environ.get("OFFICE_UI_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-colyseus":  os.environ.get("COLYSEUS_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-admin":     os.environ.get("ADMIN_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-gateway":   os.environ.get("GATEWAY_DIGEST", ""),
             "ghcr.io/madfam-org/selva-workers":       os.environ.get("WORKERS_DIGEST", ""),
           }
 
@@ -224,8 +224,8 @@ jobs:
           path.write_text(text)
           PY
 
-          git config user.name "autoswarm-bot"
-          git config user.email "bot@autoswarm.dev"
+          git config user.name "selva-bot"
+          git config user.email "bot@selva.town"
           git add "$FILE"
           git commit -m "deploy(staging): update digests to $SHORT" || {
             echo "No digest change — skipping push"
@@ -264,7 +264,7 @@ jobs:
             echo "attempt ${attempt}/12: campaign routes not ready, retrying in 30s"
             sleep 30
           done
-          echo "::error::Campaign routes never appeared on staging after 6 minutes (check ArgoCD autoswarm-office-staging sync)"
+          echo "::error::Campaign routes never appeared on staging after 6 minutes (check ArgoCD selva-office-staging sync)"
           exit 1
 
       - name: Run staging smoke script

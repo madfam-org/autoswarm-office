@@ -1,12 +1,12 @@
 # ═══════════════════════════════════════════════════════════════════════
-# AutoSwarm Org Config Template
+# Selva Org Config Template
 # ═══════════════════════════════════════════════════════════════════════
 #
-# Copy this file to ~/.autoswarm/org-config.yaml and customise.
+# Copy this file to ~/.selva/org-config.yaml and customise.
 # API keys are referenced by env var name — never paste plaintext here.
 #
 # This file is committed as a reference; the ACTUAL config lives
-# outside the repo at ~/.autoswarm/org-config.yaml.
+# outside the repo at ~/.selva/org-config.yaml.
 # ═══════════════════════════════════════════════════════════════════════
 
 # ── Provider definitions ──────────────────────────────────────────────

@@ -18,7 +18,7 @@ import pytest
 V1_SKILL = textwrap.dedent("""\
     SKILL_SCHEMA_VERSION = "agentskills/v1"
     SKILL_VERSION = "1.0.0"
-    SKILL_AUTHOR = "autoswarm-qa-oracle"
+    SKILL_AUTHOR = "selva-qa-oracle"
     SKILL_TAGS = ["web", "scraping"]
     SKILL_DESCRIPTION = "Scrapes product data from a public catalogue API."
     SKILL_METADATA = {"run_id": "run-v1-001", "last_validated": "2026-04-13T00:00:00+00:00"}
@@ -94,7 +94,7 @@ class TestQAOracleV1Synthesis:
 
     def test_stub_fallback_includes_run_id(self, tmp_path, monkeypatch):
         """Stub compiler should at minimum embed the run_id in SKILL_METADATA."""
-        monkeypatch.setenv("AUTOSWARM_SKILLS_DIR", str(tmp_path))
+        monkeypatch.setenv("SELVA_SKILLS_DIR", str(tmp_path))
 
         from selva_workflows.acp_qa_oracle import ACPQAOracleNode
 

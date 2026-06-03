@@ -23,7 +23,7 @@ def _redis_span(command: str) -> Iterator[None]:
     try:
         from opentelemetry import trace
 
-        tracer = trace.get_tracer("autoswarm-redis-pool")
+        tracer = trace.get_tracer("selva-redis-pool")
         with tracer.start_as_current_span(
             f"redis.{command}",
             attributes={"db.system": "redis", "db.operation": command},

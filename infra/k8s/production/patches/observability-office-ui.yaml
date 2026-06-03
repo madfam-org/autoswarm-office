@@ -11,7 +11,7 @@ spec:
             - name: NEXT_PUBLIC_SENTRY_DSN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-observability-secrets
+                  name: selva-observability-secrets
                   key: SENTRY_DSN_OFFICE_UI
                   optional: true
             - name: SENTRY_ENVIRONMENT

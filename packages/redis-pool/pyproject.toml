@@ -1,7 +1,7 @@
 [project]
 name = "selva-redis-pool"
 version = "0.1.0"
-description = "Shared Redis connection pool with circuit breaker for AutoSwarm services"
+description = "Shared Redis connection pool with circuit breaker for Selva services"
 requires-python = ">=3.12"
 dependencies = [
   "redis>=5.2.1",

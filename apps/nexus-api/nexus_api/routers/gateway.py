@@ -1602,14 +1602,14 @@ async def generic_webhook(
 ) -> dict[str, Any]:
     """Generic HMAC-signed webhook. channel_id used for routing/logging.
 
-    Requires ``AUTOSWARM_WEBHOOK_SECRET`` env var. Endpoint refuses requests
+    Requires ``SELVA_WEBHOOK_SECRET`` env var. Endpoint refuses requests
     when the secret is unset OR when the X-Webhook-Signature header is missing
     (no fail-open).
     """
     body = await request.body()
     from ..config import get_settings as _get_settings
 
-    secret = _get_settings().autoswarm_webhook_secret
+    secret = _get_settings().selva_webhook_secret
     if not secret:
         raise HTTPException(
             status_code=503,

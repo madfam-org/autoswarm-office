@@ -1,20 +1,20 @@
 # KEDA TriggerAuthentication for Redis streams trigger.
-# References the Redis password from autoswarm-keda-redis secret.
+# References the Redis password from selva-keda-redis secret.
 # Secret created manually on cluster (interim until Vault ESO):
-#   kubectl create secret generic autoswarm-keda-redis -n autoswarm \
+#   kubectl create secret generic selva-keda-redis -n selva \
 #     --from-literal=password='<redis-password>'
 ---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:
   name: redis-trigger-auth
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: workers
     app.kubernetes.io/component: worker
-    app.kubernetes.io/part-of: autoswarm
+    app.kubernetes.io/part-of: selva
 spec:
   secretTargetRef:
     - parameter: password
-      name: autoswarm-keda-redis
+      name: selva-keda-redis
       key: password

@@ -49,7 +49,7 @@ Optional UI soak remains; Phase 0 remediation is the critical path — see
 - **Status (2026-05-30)**: K8s optional secret refs shipped on all 6
   Deployments (`infra/k8s/production/patches/observability-*.yaml`).
   **Staging check:** `./scripts/verify-staging-observability.sh` (SKIP until
-  `autoswarm-observability-secrets` exists in `autoswarm-staging`).
+  `selva-observability-secrets` exists in `selva-staging`).
   Operator action remains: create secret + verify trace.
 - **What**: Pick a backend, provision the endpoint URL + auth header,
   set the env var on every service in production K8s. Verify a trace
@@ -75,7 +75,7 @@ Optional UI soak remains; Phase 0 remediation is the critical path — see
 
 - **Status (2026-05-30)**: Per-service optional `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
   secret refs wired in the same observability patches. Operator creates DSN keys
-  in `autoswarm-observability-secrets` per
+  in `selva-observability-secrets` per
   `infra/k8s/production/observability-secrets-template.yaml`.
 - **What**: Create 5 separate Sentry projects (nexus-api, workers,
   gateway, colyseus, office-ui), grab the DSN for each, set the
@@ -197,7 +197,7 @@ Optional UI soak remains; Phase 0 remediation is the critical path — see
   - `./scripts/drain-staging-task-queue.sh` — break-glass Redis stream trim + consumer group reset (pre–load-test)
   - `./scripts/reconcile-dhanam-selva-webhook.sh` — wire Dhanam `PRODUCT_WEBHOOK_URLS` → Selva staging
   - `./scripts/verify-dhanam-price-tier-map.sh` — check Dhanam Stripe price→tier keys (SKIP until catalog wired)
-  - `./scripts/bootstrap-staging-observability.sh` — create `autoswarm-observability-secrets` (Tier 1)
+  - `./scripts/bootstrap-staging-observability.sh` — create `selva-observability-secrets` (Tier 1)
 
 ### 3b. Deploy Tulana buyer-signal ingest route — **DONE (2026-05-30)**
 
@@ -246,7 +246,7 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
 
 - **What**: Pick the first Tuesday of the next quarter (Q3 2026 →
   2026-07-07 14:00 MX). Add to ops calendar with the runbook link.
-  Run `./scripts/rotate-secret.sh --all --namespace=autoswarm` from
+  Run `./scripts/rotate-secret.sh --all --namespace=selva` from
   a workstation with `kubectl` access + bash 4+. Now safely includes
   `consent-ledger-signing` (PR #145 closed the §6 limitation).
 - **Why blocking**: Three production secrets (`WORKER_API_TOKEN`,

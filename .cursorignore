@@ -16,5 +16,5 @@ htmlcov/
 .coverage
 data/
 apps/gateway/data/
-.autoswarm/
+.selva/
 .claude/

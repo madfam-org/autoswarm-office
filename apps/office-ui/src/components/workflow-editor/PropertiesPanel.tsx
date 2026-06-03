@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
-import type { NodeDefinition, NodeType, ContextWindowPolicy } from '@autoswarm/shared-types';
+import type { NodeDefinition, NodeType, ContextWindowPolicy } from '@selva/shared-types';
 import type { WorkflowSummary } from '@/hooks/useWorkflow';
 
 interface PropertiesPanelProps {

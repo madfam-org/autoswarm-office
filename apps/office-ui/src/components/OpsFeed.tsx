@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, type FC } from 'react';
-import { CloseButton } from '@autoswarm/ui';
+import { CloseButton } from '@selva/ui';
 import { useEventStream } from '@/hooks/useEventStream';
-import type { EventCategory, WireTaskEvent } from '@autoswarm/shared-types';
+import type { EventCategory, WireTaskEvent } from '@selva/shared-types';
 import { formatHMS } from '@/lib/format-time';
 
 /**

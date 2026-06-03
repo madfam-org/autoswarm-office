@@ -1,13 +1,13 @@
 # PP.4 — staging namespace with Enclii/Kyverno exemption labels.
-# Prod `autoswarm` carries `enclii.dev/type=application`, which excludes
+# Prod `selva` carries `enclii.dev/type=application`, which excludes
 # the namespace from Kyverno block-host-ports + require-health-probes.
 # Staging must match or Deployments fail admission.
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: autoswarm-staging
+  name: selva-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
-    autoswarm.dev/environment: staging
+    app.kubernetes.io/part-of: selva-office
+    selva.town/environment: staging
     enclii.dev/type: application
     enclii.dev/data-access: "true"

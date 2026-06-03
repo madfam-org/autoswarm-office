@@ -299,7 +299,7 @@ async def test_install_skill_emits_marketplace_installed(
     entry = SkillMarketplaceEntry(
         name="install-target",
         description="for install test",
-        author="dev@autoswarm.local",
+        author="dev@selva.local",
         yaml_content=_VALID_SKILL_YAML,
         org_id=_CALLER_ORG_ID,
     )
@@ -339,7 +339,7 @@ async def test_rate_skill_emits_marketplace_rated(
     entry = SkillMarketplaceEntry(
         name="rate-target",
         description="for rate test",
-        author="dev@autoswarm.local",
+        author="dev@selva.local",
         yaml_content=_VALID_SKILL_YAML,
         org_id=_CALLER_ORG_ID,
     )
@@ -379,7 +379,7 @@ async def test_unpublish_skill_emits_marketplace_deleted(
     entry = SkillMarketplaceEntry(
         name="delete-target",
         description="for delete test",
-        author="dev@autoswarm.local",
+        author="dev@selva.local",
         yaml_content=_VALID_SKILL_YAML,
         org_id=_CALLER_ORG_ID,
     )
@@ -400,7 +400,7 @@ async def test_unpublish_skill_emits_marketplace_deleted(
     assert event.org_id == _CALLER_ORG_ID
     assert event.payload["entry_id"] == entry_id
     assert event.payload["name"] == "delete-target"
-    # The entry's ``author`` field is dev@autoswarm.local — the event
+    # The entry's ``author`` field is dev@selva.local — the event
     # payload MUST NOT carry that PII.
     assert "author" not in event.payload
     _assert_no_pii(event.payload)

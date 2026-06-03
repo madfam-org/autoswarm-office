@@ -11,7 +11,7 @@ import httpx
 
 from ..base import BaseTool, ToolResult
 
-logger = logging.getLogger("autoswarm.notifications")
+logger = logging.getLogger("selva.notifications")
 
 
 class SendNotificationTool(BaseTool):

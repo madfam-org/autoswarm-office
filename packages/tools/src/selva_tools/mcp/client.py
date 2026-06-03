@@ -92,7 +92,7 @@ class StdioMcpTransport(McpTransport):
             {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "autoswarm", "version": "0.1.0"},
+                "clientInfo": {"name": "selva", "version": "0.1.0"},
             },
         )
 
@@ -156,7 +156,7 @@ class HttpMcpTransport(McpTransport):
                 json={
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "autoswarm", "version": "0.1.0"},
+                    "clientInfo": {"name": "selva", "version": "0.1.0"},
                 },
                 headers=self._headers,
             )

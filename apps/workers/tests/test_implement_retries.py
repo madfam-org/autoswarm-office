@@ -136,7 +136,7 @@ def test_implement_placeholder_only_without_llm(tmp_path):
         result = implement(state)
 
     assert result["status"] == "implementing"
-    assert (wt / "AUTOSWARM_PLACEHOLDER.md").exists()
+    assert (wt / "SELVA_PLACEHOLDER.md").exists()
 
 
 def test_write_files_no_placeholder_when_not_ok(tmp_path):
@@ -147,7 +147,7 @@ def test_write_files_no_placeholder_when_not_ok(tmp_path):
 
     result = _write_files_to_worktree(str(wt), None, state, placeholder_ok=False)
     assert result == []
-    assert not (wt / "AUTOSWARM_PLACEHOLDER.md").exists()
+    assert not (wt / "SELVA_PLACEHOLDER.md").exists()
 
 
 def test_write_files_placeholder_when_ok(tmp_path):
@@ -157,5 +157,5 @@ def test_write_files_placeholder_when_ok(tmp_path):
     state = _make_state(worktree_path=str(wt))
 
     result = _write_files_to_worktree(str(wt), None, state, placeholder_ok=True)
-    assert "AUTOSWARM_PLACEHOLDER.md" in result
-    assert (wt / "AUTOSWARM_PLACEHOLDER.md").exists()
+    assert "SELVA_PLACEHOLDER.md" in result
+    assert (wt / "SELVA_PLACEHOLDER.md").exists()

@@ -139,7 +139,7 @@ def _base_stripe_create_args(**overrides: Any) -> dict[str, Any]:
         "events": ["payment_intent.succeeded"],
         "api_key_env": "STRIPE_MX_SECRET_KEY",
         "destination_cluster": "madfam-dev",
-        "destination_namespace": "autoswarm-office",
+        "destination_namespace": "selva-office",
         "destination_secret_name": "dhanam-secrets",
         "destination_secret_key": "STRIPE_MX_WEBHOOK_SECRET",
         "rationale": "initial webhook setup for dhanam billing relay",
@@ -156,8 +156,8 @@ def _base_resend_create_args(**overrides: Any) -> dict[str, Any]:
         "events": ["email.sent"],
         "api_key_env": "RESEND_API_KEY",
         "destination_cluster": "madfam-dev",
-        "destination_namespace": "autoswarm-office",
-        "destination_secret_name": "autoswarm-office-secrets",
+        "destination_namespace": "selva-office",
+        "destination_secret_name": "selva-office-secrets",
         "destination_secret_key": "RESEND_WEBHOOK_SECRET",
         "rationale": "initial webhook setup for resend bounce events",
     }
@@ -228,7 +228,7 @@ async def test_stripe_create_captures_secret_and_never_leaks(
     call = secret_writer_spy.recorded[0]
     assert call["value"] == STRIPE_SIGNING_SECRET
     assert call["cluster"] == "madfam-dev"
-    assert call["namespace"] == "autoswarm-office"
+    assert call["namespace"] == "selva-office"
     assert call["secret_name"] == "dhanam-secrets"
     assert call["key"] == "STRIPE_MX_WEBHOOK_SECRET"
     assert call["source"] == "stripe_api"
@@ -821,7 +821,7 @@ async def test_create_links_linked_secret_audit_id(
     row = audit_spy["rows"][-1]
     assert row["linked_secret_audit_id"] == "22222222-2222-2222-2222-222222222222"
     assert row["resulting_secret_name"] == (
-        "autoswarm-office/dhanam-secrets:STRIPE_MX_WEBHOOK_SECRET"
+        "selva-office/dhanam-secrets:STRIPE_MX_WEBHOOK_SECRET"
     )
 
 

@@ -2,7 +2,7 @@
  * Singleton Redis client for Colyseus with reconnect backoff.
  */
 import { createClient, type RedisClientType } from "redis";
-import { createLogger } from "@autoswarm/config/logging";
+import { createLogger } from "@selva/config/logging";
 
 const logger = createLogger({ service: "colyseus" }).child({ component: "redis" });
 

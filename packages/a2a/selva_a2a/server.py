@@ -29,7 +29,7 @@ TaskStatusGetter = Callable[[str], Awaitable[TaskResponse]]
 
 
 def create_a2a_router(
-    agent_name: str = "AutoSwarm Office",
+    agent_name: str = "Selva Office",
     base_url: str = "",
     get_skills: SkillsProvider | None = None,
     dispatch_task: TaskDispatcher | None = None,

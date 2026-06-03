@@ -1,15 +1,15 @@
-# KEDA ScaledObject for AutoSwarm workers.
+# KEDA ScaledObject for Selva workers.
 # Requires KEDA v2.10+ installed in the cluster.
 # See docs/KEDA_QUEUE_SCALING.md for details.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: workers-keda
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: workers
     app.kubernetes.io/component: worker
-    app.kubernetes.io/part-of: autoswarm
+    app.kubernetes.io/part-of: selva
 spec:
   scaleTargetRef:
     name: workers
@@ -24,7 +24,7 @@ spec:
       metadata:
         address: redis.data.svc.cluster.local:6379
         databaseIndex: "8"
-        stream: autoswarm:task-stream
+        stream: selva:task-stream
         consumerGroup: selva-workers
         # Target: 5 pending messages per replica.
         pendingEntriesCount: "5"

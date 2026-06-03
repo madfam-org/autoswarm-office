@@ -142,7 +142,7 @@ class WebExtractTool(BaseTool):
                 import httpx
 
                 async with httpx.AsyncClient(timeout=15.0) as client:
-                    resp = await client.get(url, headers={"User-Agent": "AutoSwarm-WebExtract/1.0"})
+                    resp = await client.get(url, headers={"User-Agent": "Selva-WebExtract/1.0"})
                     resp.raise_for_status()
                     content = resp.text
             except Exception as req_exc:
@@ -257,16 +257,16 @@ class DelegateTaskTool(BaseTool):
 # B8 — Credential File Passthrough
 # ---------------------------------------------------------------------------
 
-_CRED_DIR = Path.home() / ".autoswarm" / "credentials"
+_CRED_DIR = Path.home() / ".selva" / "credentials"
 _ALLOWED_EXTENSIONS = {".yaml", ".yml", ".json", ".env"}
 
 
 class ReadCredentialFileTool(BaseTool):
-    """Read an allowlisted credential file from ~/.autoswarm/credentials/."""
+    """Read an allowlisted credential file from ~/.selva/credentials/."""
 
     name = "read_credential_file"
     description = (
-        "Read a credential file from ~/.autoswarm/credentials/. "
+        "Read a credential file from ~/.selva/credentials/. "
         "Only files within that directory are accessible — no path traversal."
     )
 
@@ -276,7 +276,7 @@ class ReadCredentialFileTool(BaseTool):
             "properties": {
                 "filename": {
                     "type": "string",
-                    "description": "Filename within ~/.autoswarm/credentials/ (e.g. 'github.yaml')",
+                    "description": "Filename within ~/.selva/credentials/ (e.g. 'github.yaml')",
                 },
             },
             "required": ["filename"],

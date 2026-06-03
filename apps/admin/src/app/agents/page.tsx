@@ -6,8 +6,8 @@ import type {
   AgentRole,
   AgentStatus,
   Department,
-} from '@autoswarm/shared-types';
-import { Button } from '@autoswarm/ui';
+} from '@selva/shared-types';
+import { Button } from '@selva/ui';
 import { apiFetch } from '@/lib/api';
 
 const ROLE_COLORS: Record<AgentRole, string> = {

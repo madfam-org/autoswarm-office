@@ -101,7 +101,7 @@ revenue-loop-probe --live         # requires typed LIVE confirmation
 ### In production (K8s)
 
 ```bash
-kubectl create secret generic revenue-loop-probe-tokens -n autoswarm \
+kubectl create secret generic revenue-loop-probe-tokens -n selva \
   --from-literal=PHYND_CRM_PROBE_TOKEN=... \
   --from-literal=NEXUS_PROBE_TOKEN=... \
   --from-literal=DHANAM_STRIPE_WEBHOOK_SECRET=... \

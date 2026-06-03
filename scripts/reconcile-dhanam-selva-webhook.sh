@@ -12,7 +12,7 @@
 set -euo pipefail
 
 DRY_RUN=false
-SELVA_NS="${SELVA_STAGING_NS:-autoswarm-staging}"
+SELVA_NS="${SELVA_STAGING_NS:-selva-staging}"
 DHANAM_NS="${DHANAM_STAGING_NS:-enclii-dhanam-staging}"
 SELVA_WEBHOOK_URL="${SELVA_DHANAM_WEBHOOK_URL:-https://staging-api.selva.town/api/v1/billing/webhooks/dhanam}"
 
@@ -32,10 +32,10 @@ if ! command -v kubectl >/dev/null 2>&1; then
   exit 0
 fi
 
-SELVA_SECRET="$(kubectl -n "$SELVA_NS" get secret autoswarm-staging-secrets \
+SELVA_SECRET="$(kubectl -n "$SELVA_NS" get secret selva-staging-secrets \
   -o jsonpath='{.data.DHANAM_WEBHOOK_SECRET}' 2>/dev/null | base64 -d || true)"
 if [[ -z "$SELVA_SECRET" ]]; then
-  echo "FAIL: DHANAM_WEBHOOK_SECRET missing in ${SELVA_NS}/autoswarm-staging-secrets"
+  echo "FAIL: DHANAM_WEBHOOK_SECRET missing in ${SELVA_NS}/selva-staging-secrets"
   echo "      Run ./scripts/reconcile-staging-argocd.sh --ensure-dhanam-secret first"
   exit 1
 fi

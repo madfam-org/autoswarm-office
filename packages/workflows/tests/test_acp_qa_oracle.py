@@ -145,7 +145,7 @@ class TestCompileSkillStub:
         node = ACPQAOracleNode(source_code="x = 1", test_suite="")
         run_id = "stub-run-001"
 
-        with patch.dict(os.environ, {"AUTOSWARM_SKILLS_DIR": str(tmp_path)}):
+        with patch.dict(os.environ, {"SELVA_SKILLS_DIR": str(tmp_path)}):
             filepath = node._compile_skill_stub(run_id)
 
         assert filepath is not None

@@ -9,18 +9,18 @@ import {
   TILE_SIZE_PX,
   WORLD_COLS as SHARED_WORLD_COLS,
   WORLD_ROWS as SHARED_WORLD_ROWS,
-} from '@autoswarm/shared-types';
+} from '@selva/shared-types';
 
 // === Layout ===
 // World dimensions are owned by packages/shared-types/src/world.ts (the
 // canonical source). The local re-exports below keep existing import paths
 // (`./constants`) working for game-layer modules; do not redefine the
 // numeric literals here.
-/** @deprecated Re-exported from `@autoswarm/shared-types` (see world.ts). */
+/** @deprecated Re-exported from `@selva/shared-types` (see world.ts). */
 export const TILE_SIZE = TILE_SIZE_PX;
-/** @deprecated Re-exported from `@autoswarm/shared-types` (see world.ts). */
+/** @deprecated Re-exported from `@selva/shared-types` (see world.ts). */
 export const WORLD_COLS = SHARED_WORLD_COLS;
-/** @deprecated Re-exported from `@autoswarm/shared-types` (see world.ts). */
+/** @deprecated Re-exported from `@selva/shared-types` (see world.ts). */
 export const WORLD_ROWS = SHARED_WORLD_ROWS;
 
 // === Movement & Interaction ===

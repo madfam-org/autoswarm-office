@@ -21,7 +21,7 @@ spec:
             - name: NEXT_PUBLIC_JANUA_ISSUER_URL
               value: https://auth.selva.town
             - name: NEXT_PUBLIC_JANUA_CLIENT_ID
-              value: autoswarm-office-staging
+              value: selva-office-staging
             - name: NEXT_PUBLIC_DEMO_ENABLED
               value: "true"
             - name: NEXT_PUBLIC_GUEST_ACCESS_ENABLED

@@ -1,6 +1,6 @@
-# Contributing to AutoSwarm Office
+# Contributing to Selva Office
 
-Thank you for your interest in contributing to AutoSwarm Office! This guide covers everything you need to get started.
+Thank you for your interest in contributing to Selva Office! This guide covers everything you need to get started.
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ brew install node pnpm python uv docker
 ## Project Structure
 
 ```
-autoswarm-office/
+selva-office/
   apps/
     nexus-api/       # Agent orchestration API (Python/FastAPI)
     office-ui/       # Management console (Next.js)
@@ -34,8 +34,8 @@ autoswarm-office/
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR-ORG/autoswarm-office
-cd autoswarm-office
+git clone https://github.com/YOUR-ORG/selva-office
+cd selva-office
 
 # 2. Install Node.js dependencies
 pnpm install
@@ -92,8 +92,8 @@ uv run --directory apps/nexus-api ruff check .
 uv run --directory apps/workers ruff check .
 
 # TypeScript
-pnpm --filter @autoswarm/office-ui lint
-pnpm --filter @autoswarm/admin lint
+pnpm --filter @selva/office-ui lint
+pnpm --filter @selva/admin lint
 ```
 
 ### Testing
@@ -107,8 +107,8 @@ uv run --directory apps/nexus-api pytest
 uv run --directory apps/workers pytest
 
 # Node.js tests
-pnpm --filter @autoswarm/office-ui test
-pnpm --filter @autoswarm/colyseus test
+pnpm --filter @selva/office-ui test
+pnpm --filter @selva/colyseus test
 ```
 
 ## Pull Request Process
@@ -158,4 +158,4 @@ for the conversion convention.
 
 ## License
 
-By contributing to AutoSwarm Office, you agree that your contributions will be licensed under the [AGPL-3.0 License](./LICENSE).
+By contributing to Selva Office, you agree that your contributions will be licensed under the [AGPL-3.0 License](./LICENSE).

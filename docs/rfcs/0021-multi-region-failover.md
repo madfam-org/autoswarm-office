@@ -12,7 +12,7 @@
 
 Selva is a single-region deployment today. Concretely:
 
-- One ArgoCD application (`autoswarm-office` in production) syncs
+- One ArgoCD application (`selva-office` in production) syncs
   one Kustomize overlay to one Kubernetes cluster.
 - One Postgres StatefulSet (`pgvector/pgvector:pg16`) holds every
   tenant's data — see RFC 0020 §1.1 for the residency analysis of
@@ -224,7 +224,7 @@ failover pair. For US-region (no regulatory RPO requirement),
 ## 5. Redis HA
 
 Redis backs (a) the worker queue (Redis Streams +
-`autoswarm:task-stream`), (b) Colyseus state pub/sub, (c) the rate
+`selva:task-stream`), (b) Colyseus state pub/sub, (c) the rate
 limiter and circuit breaker state.
 
 Two viable approaches:
@@ -311,7 +311,7 @@ Two approaches:
    standby (deployed but with `HEARTBEAT_ENABLED=false`). Failover
    flips the env var in the secondary.
 2. **Leader election via Redis lock**: both gateways try to acquire
-   `autoswarm:gateway-leader` lock; only the holder runs the
+   `selva:gateway-leader` lock; only the holder runs the
    heartbeat.
 
 Recommend (2) — it's a small amount of code, removes a manual step
@@ -389,29 +389,29 @@ If the answer is "yes, primary region is gone," declare failover.
 
 ```bash
 # 1. Promote the secondary Postgres to primary
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva \
     exec -it postgres-0 -- pg_ctl promote -D /var/lib/postgresql/data
 
 # 2. Verify promotion
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva \
     exec -it postgres-0 -- psql -c "SELECT pg_is_in_recovery();"
 # Expect: f (false — no longer in recovery, is now primary)
 
 # 3. Scale up the stateless services
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva \
     scale deployment nexus-api --replicas=3
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva \
     scale deployment office-ui --replicas=2
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva \
     scale deployment colyseus --replicas=2
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva \
     scale deployment workers --replicas=3
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva \
     scale deployment gateway --replicas=1
 
 # 4. Confirm pods are healthy
-kubectl --context=selva-secondary -n autoswarm get pods
-kubectl --context=selva-secondary -n autoswarm \
+kubectl --context=selva-secondary -n selva get pods
+kubectl --context=selva-secondary -n selva \
     exec deployment/nexus-api -- curl -sf http://localhost:4300/api/v1/health
 
 # 5. Flip Cloudflare LB to route to secondary

@@ -11,11 +11,11 @@ from selva_workflows.memory_provider import (
 
 @pytest.mark.asyncio
 async def test_memory_provider_factory():
-    os.environ["AUTOSWARM_MEMORY_PROVIDER"] = "sqlite"
+    os.environ["SELVA_MEMORY_PROVIDER"] = "sqlite"
     provider = get_memory_provider()
     assert isinstance(provider, SQLiteMemoryProvider)
 
-    os.environ["AUTOSWARM_MEMORY_PROVIDER"] = "redis"
+    os.environ["SELVA_MEMORY_PROVIDER"] = "redis"
     provider = get_memory_provider()
     # If redis not installed, might log warning and return subclass or error
     # For now check if it tries to instantiate Redis

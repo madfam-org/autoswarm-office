@@ -3,12 +3,12 @@ kind: Pod
 metadata:
   name: acp-clean-swarm
   labels:
-    app: autoswarm-office
+    app: selva-office
     component: acp-clean-env
 spec:
   containers:
   - name: clean-agent
-    image: my-registry/autoswarm-engineer:latest
+    image: my-registry/selva-engineer:latest
     env:
     - name: ACP_PHASE
       value: "III"

@@ -46,7 +46,7 @@ Overdue scans should call `POST /api/v1/swarms/tasks/notify-overdue`. Provider-s
 
 Outbound notification fanout:
 
-- Redis channel: `autoswarm:task-notifications` by default.
+- Redis channel: `selva:task-notifications` by default.
 - Override channel: `SELVA_TASK_NOTIFICATION_REDIS_CHANNEL`.
 - Generic webhooks: comma-separated `SELVA_TASK_NOTIFICATION_WEBHOOK_URLS`.
 - Webhook signing: optional `SELVA_TASK_NOTIFICATION_WEBHOOK_SECRET`, emitted as `X-Selva-Signature: sha256=<hmac>`.

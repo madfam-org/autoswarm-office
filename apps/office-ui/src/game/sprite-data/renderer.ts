@@ -2,7 +2,7 @@
  * Browser/Phaser pixel-data renderer.
  * Same logic as scripts/sprite-data/renderer.js in TypeScript.
  */
-import type { PixelGrid } from '@autoswarm/shared-types';
+import type { PixelGrid } from '@selva/shared-types';
 
 /**
  * Render a pixel-data grid onto a canvas context.

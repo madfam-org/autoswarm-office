@@ -1,7 +1,7 @@
 [project]
 name = "selva-tools"
 version = "0.1.0"
-description = "Tool registry and built-in tools for AutoSwarm agent workflows"
+description = "Tool registry and built-in tools for Selva agent workflows"
 requires-python = ">=3.12,<3.15"
 dependencies = [
   "pydantic>=2.10.5",

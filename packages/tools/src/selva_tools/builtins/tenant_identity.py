@@ -37,7 +37,7 @@ from ..base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
 
-NEXUS_API_URL = os.environ.get("NEXUS_API_URL", "http://nexus-api.autoswarm.svc.cluster.local")
+NEXUS_API_URL = os.environ.get("NEXUS_API_URL", "http://nexus-api.selva.svc.cluster.local")
 WORKER_API_TOKEN = os.environ.get("WORKER_API_TOKEN", "")
 
 

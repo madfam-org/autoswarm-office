@@ -177,8 +177,8 @@ def upgrade() -> None:
         """
         DO $$
         BEGIN
-          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-            REVOKE UPDATE, DELETE ON github_admin_audit_log FROM autoswarm_app;
+          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+            REVOKE UPDATE, DELETE ON github_admin_audit_log FROM selva_app;
           END IF;
         END
         $$;
@@ -191,8 +191,8 @@ def downgrade() -> None:
         """
         DO $$
         BEGIN
-          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-            GRANT UPDATE, DELETE ON github_admin_audit_log TO autoswarm_app;
+          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+            GRANT UPDATE, DELETE ON github_admin_audit_log TO selva_app;
           END IF;
         END
         $$;

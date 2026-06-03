@@ -1,4 +1,4 @@
-"""Built-in tools for AutoSwarm agents."""
+"""Built-in tools for Selva agents."""
 
 from __future__ import annotations
 

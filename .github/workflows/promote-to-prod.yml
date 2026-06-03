@@ -5,7 +5,7 @@
 # rebuild — promotion is strictly a pointer update. This is the
 # single most important invariant of the pipeline.
 #
-# autoswarm-office is RFC 0001 Pattern B (manual gate) because the
+# selva-office is RFC 0001 Pattern B (manual gate) because the
 # workers run agent code that touches prod customer data via
 # SendEmail, SendMarketingEmail, git pushes, Stripe/Resend API calls,
 # and database writes. Mistakes would email real customers or push
@@ -46,7 +46,7 @@ on:
         required: true
         type: string
 
-  # Auto-promote gate — autoswarm-office is Pattern B, so this job
+  # Auto-promote gate — selva-office is Pattern B, so this job
   # exits early unless the repo variable AUTO_PROMOTE_ENABLED == "true".
   schedule:
     - cron: "*/15 * * * *"
@@ -88,7 +88,7 @@ jobs:
 
           if [[ "$EVENT" == "schedule" ]]; then
             if [[ "$AUTO_ENABLED" != "true" ]]; then
-              echo "Auto-promote disabled for autoswarm-office (Pattern B — manual gate)."
+              echo "Auto-promote disabled for selva-office (Pattern B — manual gate)."
               echo "should_promote=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -98,11 +98,11 @@ jobs:
             REASON="manual:$INPUT_REASON"
           fi
 
-          IMAGE_MAP_NEXUS_API="ghcr.io/madfam-org/autoswarm-nexus-api"
-          IMAGE_MAP_OFFICE_UI="ghcr.io/madfam-org/autoswarm-office-ui"
-          IMAGE_MAP_COLYSEUS="ghcr.io/madfam-org/autoswarm-colyseus"
-          IMAGE_MAP_ADMIN="ghcr.io/madfam-org/autoswarm-admin"
-          IMAGE_MAP_GATEWAY="ghcr.io/madfam-org/autoswarm-gateway"
+          IMAGE_MAP_NEXUS_API="ghcr.io/madfam-org/selva-nexus-api"
+          IMAGE_MAP_OFFICE_UI="ghcr.io/madfam-org/selva-office-ui"
+          IMAGE_MAP_COLYSEUS="ghcr.io/madfam-org/selva-colyseus"
+          IMAGE_MAP_ADMIN="ghcr.io/madfam-org/selva-admin"
+          IMAGE_MAP_GATEWAY="ghcr.io/madfam-org/selva-gateway"
           IMAGE_MAP_WORKERS="ghcr.io/madfam-org/selva-workers"
 
           image_for() {
@@ -239,11 +239,11 @@ jobs:
           text = path.read_text()
 
           updates = {
-            "ghcr.io/madfam-org/autoswarm-nexus-api": os.environ.get("NEXUS_API_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-office-ui": os.environ.get("OFFICE_UI_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-colyseus":  os.environ.get("COLYSEUS_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-admin":     os.environ.get("ADMIN_DIGEST", ""),
-            "ghcr.io/madfam-org/autoswarm-gateway":   os.environ.get("GATEWAY_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-nexus-api": os.environ.get("NEXUS_API_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-office-ui": os.environ.get("OFFICE_UI_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-colyseus":  os.environ.get("COLYSEUS_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-admin":     os.environ.get("ADMIN_DIGEST", ""),
+            "ghcr.io/madfam-org/selva-gateway":   os.environ.get("GATEWAY_DIGEST", ""),
             "ghcr.io/madfam-org/selva-workers":       os.environ.get("WORKERS_DIGEST", ""),
           }
 
@@ -259,8 +259,8 @@ jobs:
           path.write_text(text)
           PY
 
-          git config user.name "autoswarm-bot"
-          git config user.email "bot@autoswarm.dev"
+          git config user.name "selva-bot"
+          git config user.email "bot@selva.town"
           git add "$FILE"
           git commit -m "deploy(prod): promote $SHORT
 

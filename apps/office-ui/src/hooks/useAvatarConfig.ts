@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AvatarConfig } from '@autoswarm/shared-types';
-import { DEFAULT_AVATAR_CONFIG } from '@autoswarm/shared-types';
+import type { AvatarConfig } from '@selva/shared-types';
+import { DEFAULT_AVATAR_CONFIG } from '@selva/shared-types';
 
-const STORAGE_KEY = 'autoswarm:avatar-config';
+const STORAGE_KEY = 'selva:avatar-config';
 
 /**
  * Load and save avatar config from localStorage.

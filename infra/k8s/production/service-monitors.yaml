@@ -1,10 +1,10 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: autoswarm-nexus-api
-  namespace: autoswarm
+  name: selva-nexus-api
+  namespace: selva
   labels:
-    app.kubernetes.io/name: autoswarm
+    app.kubernetes.io/name: selva
 spec:
   selector:
     matchLabels:
@@ -17,10 +17,10 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: autoswarm-colyseus
-  namespace: autoswarm
+  name: selva-colyseus
+  namespace: selva
   labels:
-    app.kubernetes.io/name: autoswarm
+    app.kubernetes.io/name: selva
 spec:
   selector:
     matchLabels:
@@ -33,10 +33,10 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: autoswarm-gateway
-  namespace: autoswarm
+  name: selva-gateway
+  namespace: selva
   labels:
-    app.kubernetes.io/name: autoswarm
+    app.kubernetes.io/name: selva
 spec:
   selector:
     matchLabels:
@@ -50,9 +50,9 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: selva-workers
-  namespace: autoswarm
+  namespace: selva
   labels:
-    app.kubernetes.io/name: autoswarm
+    app.kubernetes.io/name: selva
 spec:
   selector:
     matchLabels:

@@ -1,6 +1,6 @@
 # selva_observability
 
-Shared logging, Sentry, and OpenTelemetry helpers for AutoSwarm Office.
+Shared logging, Sentry, and OpenTelemetry helpers for Selva Office.
 
 ## Public API
 

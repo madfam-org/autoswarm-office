@@ -64,11 +64,11 @@ class WorkflowCompiler:
             workflow_loader: Optional callable(subgraph_id) -> WorkflowDefinition
                             used for resolving subgraph references.
             workspace_path: Optional path to the workspace root. If provided,
-                            context files (AGENTS.md, .autoswarm.md) are loaded
+                            context files (AGENTS.md, .selva.md) are loaded
                             and injected into agent node system prompts (Gap 5).
         """
         self._loader = workflow_loader
-        self._workspace_path = workspace_path or os.environ.get("AUTOSWARM_WORKSPACE_PATH", "")
+        self._workspace_path = workspace_path or os.environ.get("SELVA_WORKSPACE_PATH", "")
         self._validator = WorkflowValidator()
         self._pending_batch_nodes: list[tuple[NodeDefinition, Any]] = []
 
@@ -92,7 +92,7 @@ class WorkflowCompiler:
         try:
             from selva_plugins.manager import PluginManager  # type: ignore
 
-            plugin_dirs_str = os.environ.get("AUTOSWARM_PLUGIN_DIRS", "")
+            plugin_dirs_str = os.environ.get("SELVA_PLUGIN_DIRS", "")
             extra_dirs = [d for d in plugin_dirs_str.split(":") if d]
             manager = PluginManager(extra_dirs=extra_dirs)
             count = manager.discover()

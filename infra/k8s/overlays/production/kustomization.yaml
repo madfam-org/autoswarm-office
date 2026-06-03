@@ -31,7 +31,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: autoswarm
+namespace: selva
 
 resources:
   - ../../production
@@ -39,18 +39,18 @@ resources:
 # Production image digests. promote-to-prod.yml writes here on every
 # manual promote. All zero-digests until the first promote runs.
 images:
-  - name: ghcr.io/madfam-org/autoswarm-nexus-api
+  - name: ghcr.io/madfam-org/selva-nexus-api
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
-  - name: ghcr.io/madfam-org/autoswarm-office-ui
+  - name: ghcr.io/madfam-org/selva-office-ui
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
-  - name: ghcr.io/madfam-org/autoswarm-colyseus
+  - name: ghcr.io/madfam-org/selva-colyseus
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
-  - name: ghcr.io/madfam-org/autoswarm-admin
+  - name: ghcr.io/madfam-org/selva-admin
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
-  - name: ghcr.io/madfam-org/autoswarm-gateway
+  - name: ghcr.io/madfam-org/selva-gateway
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   - name: ghcr.io/madfam-org/selva-workers
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
 
 commonLabels:
-  autoswarm.dev/environment: production
+  selva.town/environment: production

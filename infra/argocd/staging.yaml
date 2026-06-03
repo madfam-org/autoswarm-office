@@ -1,12 +1,12 @@
-# PP.4 — ArgoCD Application for the autoswarm-office staging tier.
+# PP.4 — ArgoCD Application for the selva-office staging tier.
 #
 # Peer of infra/argocd/application.yaml (prod). Watches the staging
 # overlay path on the same `main` branch and reconciles into the
-# `autoswarm-staging` namespace.
+# `selva-staging` namespace.
 #
 # Operator registers this by:
 #   kubectl apply -f infra/argocd/staging.yaml
-#   argocd app sync autoswarm-office-staging
+#   argocd app sync selva-office-staging
 #
 # Post-registration the sync loop is pull-based: staging-deploy.yml
 # patches the overlay's image digests, commits, pushes; ArgoCD picks
@@ -15,15 +15,15 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: autoswarm-office-staging
+  name: selva-office-staging
   namespace: argocd
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
-    autoswarm.dev/project: autoswarm
-    autoswarm.dev/environment: staging
+    app.kubernetes.io/part-of: selva-office
+    selva.town/project: selva
+    selva.town/environment: staging
   annotations:
-    enclii.dev/stability-audit: gated
-    enclii.dev/stability-gate-reason: "operator registration is deferred until staging secrets and smoke targets are provisioned"
+    enclii.dev/stability-audit: active
+    enclii.dev/stability-gate-reason: "selva-staging namespace and canonical secrets are provisioned; monitor first renamed sync before pruning legacy apps"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -34,7 +34,7 @@ spec:
     path: infra/k8s/overlays/staging
   destination:
     server: https://kubernetes.default.svc
-    namespace: autoswarm-staging
+    namespace: selva-staging
   syncPolicy:
     automated:
       prune: true

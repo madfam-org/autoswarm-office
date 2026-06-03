@@ -26,7 +26,7 @@ Behaviour preserved (no production change from this refactor):
 Operator follow-up:
     When Dhanam exposes its tier-fetch API, replace ``_load_pricing()``
     with a Redis-cached call against that API (the
-    ``autoswarm:tier:{org_id}`` cache key already follows this
+    ``selva:tier:{org_id}`` cache key already follows this
     pattern). The JSON file then becomes the bootstrap fallback only.
 """
 

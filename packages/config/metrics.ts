@@ -1,5 +1,5 @@
 /**
- * Shared Prometheus metrics registry for AutoSwarm TypeScript services.
+ * Shared Prometheus metrics registry for Selva TypeScript services.
  */
 
 export interface MetricsRegistryOptions {

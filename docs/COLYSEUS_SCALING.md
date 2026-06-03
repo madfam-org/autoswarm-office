@@ -8,7 +8,7 @@
 > missing Enclii adapter gap.
 
 
-This document covers the current capacity profile of the AutoSwarm Office Colyseus
+This document covers the current capacity profile of the Selva Office Colyseus
 server, explains why it runs as a single instance today, and outlines a progressive
 scaling path for increasing concurrent user counts.
 
@@ -45,7 +45,7 @@ A single Colyseus process on port 4303 serves the `office` room.
 Colyseus rooms are **in-memory, single-process** constructs. The `OfficeRoom` holds:
 
 1. **Department and agent state** synced from nexus-api at room creation, then updated
-   in real time via a Redis `autoswarm:agent-status` subscription.
+   in real time via a Redis `selva:agent-status` subscription.
 2. **Player state** (`MapSchema<TacticianSchema>`) tracking position, direction, and
    avatar config for every connected client.
 3. **Chat history** (`ArraySchema<ChatMessageSchema>`) with the last 50 messages.
@@ -74,7 +74,7 @@ tasks belong to a single `org_id`.
 2. The client joins room `office-{org_id}` instead of a generic `office` room.
 3. `OfficeRoom.onCreate` receives `org_id` in the room options and scopes its
    nexus-api fetch to that organization's departments and agents.
-4. Redis subscription channel becomes `autoswarm:agent-status:{org_id}`.
+4. Redis subscription channel becomes `selva:agent-status:{org_id}`.
 
 **Capacity**: ~50-100 concurrent users per organization, limited by the per-room
 serialization cost. Total server capacity scales with the number of active orgs
@@ -165,7 +165,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: colyseus
-  namespace: autoswarm
+  namespace: selva
 spec:
   selector:
     app: colyseus
@@ -185,7 +185,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: colyseus
-  namespace: autoswarm
+  namespace: selva
   annotations:
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-name: "COLYSEUS_AFFINITY"
@@ -194,7 +194,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   rules:
-    - host: colyseus.autoswarm.example.com
+    - host: colyseus.selva.example.com
       http:
         paths:
           - path: /

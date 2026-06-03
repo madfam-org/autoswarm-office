@@ -1,5 +1,5 @@
 {
-  "name": "@autoswarm/admin",
+  "name": "@selva/admin",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@autoswarm/shared-types": "workspace:*",
-    "@autoswarm/ui": "workspace:*",
+    "@selva/shared-types": "workspace:*",
+    "@selva/ui": "workspace:*",
     "@janua/nextjs-sdk": "^0.5.0",
     "jose": "^5.2.0",
     "next": "^15.5.18",
@@ -21,7 +21,7 @@
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
-    "@autoswarm/config": "workspace:*",
+    "@selva/config": "workspace:*",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.1.0",
     "@types/node": "25.9.1",

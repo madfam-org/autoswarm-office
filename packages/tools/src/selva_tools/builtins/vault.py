@@ -15,7 +15,7 @@ Security model:
 Env vars:
 - ENCLII_API_URL: Enclii Switchyard API base URL
 - ENCLII_API_TOKEN: Bearer token for API authentication
-- SELVA_VAULT_NAMESPACE: K8s namespace for vault secrets (default: autoswarm)
+- SELVA_VAULT_NAMESPACE: K8s namespace for vault secrets (default: selva)
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 ENCLII_API_URL = os.environ.get("ENCLII_API_URL", "")
 ENCLII_API_TOKEN = os.environ.get("ENCLII_API_TOKEN", "")
-VAULT_NAMESPACE = os.environ.get("SELVA_VAULT_NAMESPACE", "autoswarm")
+VAULT_NAMESPACE = os.environ.get("SELVA_VAULT_NAMESPACE", "selva")
 
 
 def _headers() -> dict[str, str]:
@@ -78,7 +78,7 @@ class VaultStoreTool(BaseTool):
                 },
                 "namespace": {
                     "type": "string",
-                    "description": "K8s namespace (default: autoswarm)",
+                    "description": "K8s namespace (default: selva)",
                 },
                 "description": {
                     "type": "string",
@@ -151,7 +151,7 @@ class VaultRetrieveTool(BaseTool):
                 },
                 "namespace": {
                     "type": "string",
-                    "description": "K8s namespace (default: autoswarm)",
+                    "description": "K8s namespace (default: selva)",
                 },
             },
             "required": ["key"],
@@ -205,7 +205,7 @@ class VaultListTool(BaseTool):
             "properties": {
                 "namespace": {
                     "type": "string",
-                    "description": "K8s namespace (default: autoswarm)",
+                    "description": "K8s namespace (default: selva)",
                 },
             },
             "required": [],
@@ -256,7 +256,7 @@ class VaultDeleteTool(BaseTool):
                 },
                 "namespace": {
                     "type": "string",
-                    "description": "K8s namespace (default: autoswarm)",
+                    "description": "K8s namespace (default: selva)",
                 },
             },
             "required": ["key"],
@@ -312,7 +312,7 @@ class VaultRotateTool(BaseTool):
                 },
                 "namespace": {
                     "type": "string",
-                    "description": "K8s namespace (default: autoswarm)",
+                    "description": "K8s namespace (default: selva)",
                 },
             },
             "required": ["key", "new_value"],

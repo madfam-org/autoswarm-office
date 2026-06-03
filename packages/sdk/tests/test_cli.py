@@ -1,4 +1,4 @@
-"""Tests for the AutoSwarm CLI."""
+"""Tests for the Selva CLI."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from click.testing import CliRunner
 
 from selva_sdk.cli import cli
-from selva_sdk.exceptions import AutoSwarmError
+from selva_sdk.exceptions import SelvaError
 from selva_sdk.models import (
     AgentResponse,
     KanbanMetricsResponse,
@@ -175,7 +175,7 @@ def test_kanban_move_command(mock_get: MagicMock) -> None:
 def test_help_text() -> None:
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    assert "AutoSwarm CLI" in result.output
+    assert "Selva CLI" in result.output
 
 
 def test_dispatch_missing_description() -> None:
@@ -187,7 +187,7 @@ def test_dispatch_missing_description() -> None:
 @patch("selva_sdk.cli._get_client")
 def test_dispatch_error_display(mock_get: MagicMock) -> None:
     mock = _mock_client()
-    mock.dispatch.side_effect = AutoSwarmError("Budget exceeded", 402)
+    mock.dispatch.side_effect = SelvaError("Budget exceeded", 402)
     mock_get.return_value = mock
     result = runner.invoke(cli, ["dispatch", "Test"])
     assert result.exit_code == 1
@@ -201,6 +201,6 @@ def test_env_var_configuration(mock_get: MagicMock) -> None:
     result = runner.invoke(
         cli,
         ["agents", "list"],
-        env={"AUTOSWARM_API_URL": "http://custom:9999", "AUTOSWARM_TOKEN": "secret"},
+        env={"SELVA_API_URL": "http://custom:9999", "SELVA_TOKEN": "secret"},
     )
     assert result.exit_code == 0

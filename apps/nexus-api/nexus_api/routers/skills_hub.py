@@ -62,8 +62,8 @@ async def install_skill(body: InstallRequest) -> dict:
     import os
 
     target_dir = body.target_dir or os.environ.get(
-        "AUTOSWARM_SKILLS_DIR",
-        "/var/lib/autoswarm/skills",
+        "SELVA_SKILLS_DIR",
+        "/var/lib/selva/skills",
     )
     client = SkillsHubClient()
     try:

@@ -13,7 +13,7 @@
 ### 1.1 The single-region default
 
 Selva runs one production Postgres (the `pgvector/pgvector:pg16`
-StatefulSet behind the `autoswarm` namespace). Every tenant — Mexican
+StatefulSet behind the `selva` namespace). Every tenant — Mexican
 SMEs using Karafiel for CFDI submission, US enterprise pilots, the
 internal MADFAM org, future EU customers — shares the same database
 host. The legal jurisdiction of every byte of customer data is
@@ -398,8 +398,8 @@ is tracked in §7 Q3.
 
 Two viable options, picked at the cluster-design level:
 
-(a) **Namespace per region in the same cluster** — `autoswarm-mx`,
-   `autoswarm-us`. Simple if all regions are in the same physical
+(a) **Namespace per region in the same cluster** — `selva-mx`,
+   `selva-us`. Simple if all regions are in the same physical
    cloud (which defeats the purpose for SAT — MX must be on
    MX-jurisdiction infra). Acceptable as a transitional state.
 

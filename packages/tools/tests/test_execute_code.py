@@ -24,7 +24,7 @@ async def test_execute_bash_basic():
 @pytest.mark.asyncio
 async def test_execute_code_block_dangerous():
     # Set policy to block
-    os.environ["AUTOSWARM_EXEC_POLICY"] = "block"
+    os.environ["SELVA_EXEC_POLICY"] = "block"
     tool = ExecuteCodeTool()
     # Pattern: rm -rf
     result = await tool.execute(code="import os; os.system('rm -rf /')", language="python")

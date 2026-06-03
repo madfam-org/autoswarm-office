@@ -2,7 +2,7 @@
 
 > **Selva** is the autonomous virtual office product by **Innovaciones MADFAM SAS de CV**.
 > It runs at `selva.town` and integrates with the full MADFAM ecosystem.
-> _The legacy "AutoSwarm Office" name is retained only inside historical migration
+> _The legacy "Selva Office" name is retained only inside historical migration
 > identifiers and a few infra namespaces. The product, repo, and brand are Selva._
 >
 > **Need to know what's blocked on a human decision right now?** See
@@ -731,7 +731,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 ├── 🔒 Primavera3D (primavera3d/) — 3D Security
 ├── 📋 Rondelio (rondelio/) — Inspections
 ├── 🛡️ Internal DevOps (internal-devops/) — Infrastructure
-└── 📦 Autoswarm Sandbox (autoswarm-sandbox/) — Agent Testing
+└── 📦 Selva Sandbox (selva-sandbox/) — Agent Testing
 ```
 
 ---
@@ -753,7 +753,7 @@ MADFAM Ecosystem (Innovaciones MADFAM SAS de CV)
 ### Inference Centralization
 - `[x]` OpenAI-compatible proxy at `/v1/chat/completions` + `/v1/embeddings` (`inference_proxy.py`)
 - `[x]` Shared `build_router_from_env()` factory (`packages/inference/madfam_inference/factory.py`)
-- `[x]` Org-config ConfigMap deployed to K8s, mounted at `/etc/autoswarm/org-config.yaml`
+- `[x]` Org-config ConfigMap deployed to K8s, mounted at `/etc/selva/org-config.yaml`
 - `[x]` ServiceConfig model for tracking external accounts (Resend, Anthropic, DeepInfra, Stripe, etc.)
 - `[x]` PhyndCRM, Fortuna, Yantra4D secrets patched for Selva inference routing
 - `[x]` 196 inference tests passing (org_config + router + factory + worker wiring)

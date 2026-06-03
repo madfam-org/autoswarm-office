@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ApprovalPanel } from '../ApprovalPanel';
-import type { ApprovalRequest } from '@autoswarm/shared-types';
+import type { ApprovalRequest } from '@selva/shared-types';
 
 // Mock gameEventBus to avoid Phaser dependency
 vi.mock('../../game/PhaserGame', () => ({

@@ -61,9 +61,9 @@ class TestDashboardList:
             {
                 "id": 1,
                 "uid": "abc",
-                "title": "Autoswarm Overview",
+                "title": "Selva Overview",
                 "url": "/d/abc/overview",
-                "tags": ["autoswarm", "prod"],
+                "tags": ["selva", "prod"],
                 "folderId": 0,
                 "folderTitle": "General",
             },
@@ -85,7 +85,7 @@ class TestDashboardList:
                 new=AsyncMock(return_value=(200, body)),
             ),
         ):
-            r = await GrafanaDashboardListTool().execute(query="autoswarm")
+            r = await GrafanaDashboardListTool().execute(query="selva")
             assert r.success is True
             assert len(r.data["dashboards"]) == 2
             assert r.data["dashboards"][0]["uid"] == "abc"

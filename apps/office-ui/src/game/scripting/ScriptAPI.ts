@@ -27,25 +27,25 @@ export function buildScriptAPISource(): string {
   window.AS = {
     chat: {
       sendMessage: function(content) {
-        parent.postMessage({ __autoswarm: true, type: 'chat.sendMessage', content: content }, '*');
+        parent.postMessage({ __selva: true, type: 'chat.sendMessage', content: content }, '*');
       }
     },
     camera: {
       moveTo: function(x, y) {
-        parent.postMessage({ __autoswarm: true, type: 'camera.moveTo', x: x, y: y }, '*');
+        parent.postMessage({ __selva: true, type: 'camera.moveTo', x: x, y: y }, '*');
       }
     },
     player: {
       moveTo: function(x, y) {
-        parent.postMessage({ __autoswarm: true, type: 'player.moveTo', x: x, y: y }, '*');
+        parent.postMessage({ __selva: true, type: 'player.moveTo', x: x, y: y }, '*');
       }
     },
     ui: {
       openPopup: function(title, content) {
-        parent.postMessage({ __autoswarm: true, type: 'ui.openPopup', title: title, content: content }, '*');
+        parent.postMessage({ __selva: true, type: 'ui.openPopup', title: title, content: content }, '*');
       },
       openCoWebsite: function(url, title) {
-        parent.postMessage({ __autoswarm: true, type: 'ui.openCoWebsite', url: url, title: title }, '*');
+        parent.postMessage({ __selva: true, type: 'ui.openCoWebsite', url: url, title: title }, '*');
       }
     },
     onPlayerEntersArea: function(areaName, callback) {
@@ -60,7 +60,7 @@ export function buildScriptAPISource(): string {
 
   window.addEventListener('message', function(event) {
     var data = event.data;
-    if (!data || !data.__autoswarm_event) return;
+    if (!data || !data.__selva_event) return;
     var callbacks;
     if (data.type === 'area.onEnter') {
       callbacks = _areaCallbacks.enter[data.areaName] || [];
@@ -76,7 +76,7 @@ export function buildScriptAPISource(): string {
           // dev-only logger can surface them; raw console.* would leak
           // into production browser consoles for end users.
           parent.postMessage(
-            { __autoswarm: true, type: 'script.error', message: String(e) },
+            { __selva: true, type: 'script.error', message: String(e) },
             '*'
           );
         }

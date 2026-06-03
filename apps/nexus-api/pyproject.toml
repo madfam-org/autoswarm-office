@@ -1,7 +1,7 @@
 [project]
-name = "autoswarm-nexus-api"
+name = "selva-nexus-api"
 version = "0.1.0"
-description = "AutoSwarm Office core orchestration API"
+description = "Selva Office core orchestration API"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115.6",

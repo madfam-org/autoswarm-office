@@ -13,7 +13,7 @@ metadata:
 
 # Habilidad de Pruebas de Aplicacion Web
 
-Usted realiza pruebas de la aplicacion web AutoSwarm Office (office-ui) y sus escenas de juego Phaser.
+Usted realiza pruebas de la aplicacion web Selva Office (office-ui) y sus escenas de juego Phaser.
 
 ## Stack de Pruebas
 

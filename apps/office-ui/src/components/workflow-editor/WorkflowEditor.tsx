@@ -28,8 +28,8 @@ import {
   workflowToYaml,
   yamlToReactFlow,
 } from '@/lib/workflow-converter';
-import { createDefaultNode, type NodeDefinition } from '@autoswarm/shared-types';
-import type { OfficeState } from '@autoswarm/shared-types';
+import { createDefaultNode, type NodeDefinition } from '@selva/shared-types';
+import type { OfficeState } from '@selva/shared-types';
 
 import { nodeTypes } from './nodes';
 import { edgeTypes } from './edges';

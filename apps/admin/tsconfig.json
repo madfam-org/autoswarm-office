@@ -1,5 +1,5 @@
 {
-  "extends": "@autoswarm/config/typescript/nextjs.json",
+  "extends": "@selva/config/typescript/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
     "types": ["vitest/globals"],

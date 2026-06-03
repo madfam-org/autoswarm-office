@@ -1,6 +1,6 @@
 import { Client } from "@colyseus/core";
 import { OfficeStateSchema, AgentSchema } from "../schema/OfficeState";
-import { createLogger } from "@autoswarm/config/logging";
+import { createLogger } from "@selva/config/logging";
 
 const logger = createLogger({ service: "colyseus" }).child({ component: "interaction" });
 

@@ -1,5 +1,5 @@
 /**
- * Shared Sentry initialization for AutoSwarm TypeScript services.
+ * Shared Sentry initialization for Selva TypeScript services.
  */
 
 export interface SentryOptions {

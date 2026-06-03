@@ -1,4 +1,4 @@
-"""Grant autoswarm app roles access to all public tables (fresh DB bootstrap).
+"""Grant selva app roles access to all public tables (fresh DB bootstrap).
 
 Revision ID: 0038
 Revises: 0037
@@ -7,7 +7,7 @@ Create Date: 2026-05-30
 Migration 0037 granted only tables added in the Phase 2.x window. Fresh
 databases created via ``alembic upgrade head`` leave core tables (e.g.
 ``swarm_tasks``, ``agents``) owned by the migration role without grants
-to the runtime ``autoswarm`` connection — campaign CRM handoff and dispatch
+to the runtime ``selva`` connection — campaign CRM handoff and dispatch
 then fail with ``permission denied for table swarm_tasks``.
 """
 
@@ -21,7 +21,7 @@ down_revision = "0037"
 branch_labels = None
 depends_on = None
 
-_APP_ROLES = ("autoswarm", "autoswarm_app")
+_APP_ROLES = ("selva", "selva_app")
 
 
 def _is_postgres() -> bool:

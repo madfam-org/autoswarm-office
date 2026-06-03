@@ -42,14 +42,14 @@ describe('ScriptAPI', () => {
     expect(source).toContain('onPlayerLeavesArea');
   });
 
-  it('sends __autoswarm marker via postMessage', () => {
+  it('sends __selva marker via postMessage', () => {
     const source = buildScriptAPISource();
-    expect(source).toContain('__autoswarm: true');
+    expect(source).toContain('__selva: true');
   });
 
-  it('listens for __autoswarm_event messages', () => {
+  it('listens for __selva_event messages', () => {
     const source = buildScriptAPISource();
-    expect(source).toContain('__autoswarm_event');
+    expect(source).toContain('__selva_event');
   });
 
   it('handles area.onEnter and area.onLeave events', () => {

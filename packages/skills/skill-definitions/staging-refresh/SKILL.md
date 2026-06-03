@@ -66,7 +66,7 @@ TABLE_MASK_RULES = {
     "customers": ["email", "shipping_address", "billing_address"],
     # Karafiel
     "sat_certs": ["password_hash"],
-    # AutoSwarm Office
+    # Selva Office
     "tenant_configs": ["contact_email"],
     "consent_ledger": ["signer_ip", "signer_user_agent", "user_email"],
 }

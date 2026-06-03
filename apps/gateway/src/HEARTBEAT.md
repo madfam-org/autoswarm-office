@@ -1,4 +1,4 @@
-# AutoSwarm Heartbeat Configuration
+# Selva Heartbeat Configuration
 
 ## Schedule
 - Interval: 30 minutes

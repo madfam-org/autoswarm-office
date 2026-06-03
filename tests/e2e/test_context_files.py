@@ -1,5 +1,5 @@
 """
-E2E tests — Gap 5: Project Context Files (AGENTS.md / .autoswarm.md)
+E2E tests — Gap 5: Project Context Files (AGENTS.md / .selva.md)
 """
 
 
@@ -14,15 +14,15 @@ class TestContextFileLoader:
         assert "Project Architecture" in result
         assert "hexagonal architecture" in result
 
-    def test_autoswarm_md_takes_precedence(self, tmp_path):
-        """Both present: both injected, .autoswarm.md listed last (highest priority)."""
+    def test_selva_md_takes_precedence(self, tmp_path):
+        """Both present: both injected, .selva.md listed last (highest priority)."""
         (tmp_path / "AGENTS.md").write_text("# AGENTS\nBase instructions.")
-        (tmp_path / ".autoswarm.md").write_text("# Local Override\nWorkspace-specific override.")
+        (tmp_path / ".selva.md").write_text("# Local Override\nWorkspace-specific override.")
         from selva_workflows.context_files import ContextFileLoader
 
         loader = ContextFileLoader()
         result = loader.load_context(str(tmp_path))
-        # Both present, .autoswarm.md appears after AGENTS.md
+        # Both present, .selva.md appears after AGENTS.md
         agents_pos = result.index("AGENTS")
         local_pos = result.index("Local Override")
         assert local_pos > agents_pos

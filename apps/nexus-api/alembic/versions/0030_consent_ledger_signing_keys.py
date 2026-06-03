@@ -44,7 +44,7 @@ Bootstrap:
   new ledger rows can be signed.
 
 - INSERT-only at the application layer: UPDATE/DELETE are
-  REVOKEd from ``autoswarm_app`` so the registry is itself
+  REVOKEd from ``selva_app`` so the registry is itself
   append-only. Promotion is handled via DDL-grade SQL inside
   the admin endpoint's transaction (it uses the migration role).
 
@@ -233,8 +233,8 @@ def upgrade() -> None:
         """
         DO $$
         BEGIN
-          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-            REVOKE UPDATE, DELETE ON consent_ledger_signing_keys FROM autoswarm_app;
+          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+            REVOKE UPDATE, DELETE ON consent_ledger_signing_keys FROM selva_app;
           END IF;
         END
         $$;
@@ -251,8 +251,8 @@ def downgrade() -> None:
             """
             DO $$
             BEGIN
-              IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-                GRANT UPDATE, DELETE ON consent_ledger_signing_keys TO autoswarm_app;
+              IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+                GRANT UPDATE, DELETE ON consent_ledger_signing_keys TO selva_app;
               END IF;
             END
             $$;

@@ -23,7 +23,7 @@ describe("verifyToken — demo tokens", () => {
         sub: "demo-abc123",
         org_id: "demo-public",
         roles: ["demo"],
-        email: "demo@autoswarm.dev",
+        email: "demo@selva.town",
         name: "Test Visitor",
       }),
     ).toString("base64");

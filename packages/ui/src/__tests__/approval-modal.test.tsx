@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ApprovalModal } from '../approval-modal';
-import type { ApprovalRequest } from '@autoswarm/shared-types';
+import type { ApprovalRequest } from '@selva/shared-types';
 
 function makeRequest(overrides: Partial<ApprovalRequest> = {}): ApprovalRequest {
   return {

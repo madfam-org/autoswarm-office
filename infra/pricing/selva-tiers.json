@@ -30,7 +30,7 @@
     }
   },
   "dhanam_subscription_daily_limits": {
-    "_doc": "Per-tier daily compute-token budget. These were the hardcoded fallback in apps/nexus-api/nexus_api/billing_tiers.py before this codification. Same numbers, now JSON-sourced. Stripe webhook handlers (apps/nexus-api/nexus_api/routers/stripe_webhooks.py) override at runtime via the autoswarm:tier:<org_id> Redis key when a customer.subscription.* event lands. This dict is the cache-miss fallback only.",
+    "_doc": "Per-tier daily compute-token budget. These were the hardcoded fallback in apps/nexus-api/nexus_api/billing_tiers.py before this codification. Same numbers, now JSON-sourced. Stripe webhook handlers (apps/nexus-api/nexus_api/routers/stripe_webhooks.py) override at runtime via the selva:tier:<org_id> Redis key when a customer.subscription.* event lands. This dict is the cache-miss fallback only.",
     "confidence": "high (existing production behaviour)",
     "default_tier": "starter",
     "tiers": {

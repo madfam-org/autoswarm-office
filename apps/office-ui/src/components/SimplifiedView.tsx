@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, type FC } from 'react';
-import type { Department, Agent, ApprovalRequest, ChatMessage } from '@autoswarm/shared-types';
+import type { Department, Agent, ApprovalRequest, ChatMessage } from '@selva/shared-types';
 import { formatHM } from '@/lib/format-time';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -87,12 +87,12 @@ export const SimplifiedView: FC<SimplifiedViewProps> = ({
   const totalAgents = departments.reduce((sum, d) => sum + d.agents.length, 0);
 
   return (
-    <div className="flex h-full flex-col bg-slate-900 text-slate-200" role="main" aria-label="AutoSwarm Office - Simplified View">
+    <div className="flex h-full flex-col bg-slate-900 text-slate-200" role="main" aria-label="Selva Office - Simplified View">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-slate-700 bg-slate-900/95 px-4 py-3">
         <div className="flex items-center gap-3">
           <h1 className="pixel-text text-[12px] uppercase tracking-wider text-indigo-400">
-            AutoSwarm Office
+            Selva Office
           </h1>
           <div className="flex items-center gap-2 font-mono text-[8px]">
             <span

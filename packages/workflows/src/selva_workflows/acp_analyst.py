@@ -83,7 +83,7 @@ class ACPAnalystNode:
                 resp = requests.get(
                     self.target_url,
                     timeout=10,
-                    headers={"User-Agent": "AutoSwarm-Analyst/1.0"},
+                    headers={"User-Agent": "Selva-Analyst/1.0"},
                 )
                 extracted_text = resp.text[:4000]
             except Exception as req_exc:

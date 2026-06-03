@@ -277,7 +277,7 @@ class TestNotifyTeamNode:
         with patch(
             "selva_tools.storage.local.LocalFSStorage.save",
             new_callable=AsyncMock,
-            return_value="/tmp/autoswarm-artifacts/ab/cd/abcd1234",
+            return_value="/tmp/selva-artifacts/ab/cd/abcd1234",
         ):
             result = notify_team(
                 {

@@ -12,7 +12,7 @@ describe("MemoryManager", () => {
   beforeEach(() => {
     // Create a unique temporary directory for each test to avoid cross-test
     // contamination. The directory is cleaned up in afterEach.
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "autoswarm-memory-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "selva-memory-test-"));
     manager = new MemoryManager(tmpDir, mockLogger());
     manager.ensureDir();
   });
@@ -64,7 +64,7 @@ describe("MemoryManager", () => {
   describe("writeMemory / readMemory roundtrip", () => {
     it("reads back exactly what was written", () => {
       const content =
-        "# AutoSwarm Office Memory\n\n## Log Entries\n\n- Entry one\n- Entry two";
+        "# Selva Office Memory\n\n## Log Entries\n\n- Entry one\n- Entry two";
       manager.writeMemory(content);
       expect(manager.readMemory()).toBe(content);
     });
@@ -90,7 +90,7 @@ describe("MemoryManager", () => {
       const result = manager.readMemory();
 
       // Should contain the auto-generated header
-      expect(result).toContain("# AutoSwarm Office Memory");
+      expect(result).toContain("# Selva Office Memory");
       expect(result).toContain("## Log Entries");
 
       // Should contain the entry text
@@ -102,7 +102,7 @@ describe("MemoryManager", () => {
     });
 
     it("appends to existing content without overwriting", () => {
-      manager.writeMemory("# AutoSwarm Office Memory\n\n## Log Entries\n");
+      manager.writeMemory("# Selva Office Memory\n\n## Log Entries\n");
       manager.appendToMemory("First entry");
       manager.appendToMemory("Second entry");
 
@@ -113,7 +113,7 @@ describe("MemoryManager", () => {
 
     it("preserves existing non-empty memory content", () => {
       const existingContent =
-        "# AutoSwarm Office Memory\n\n## Log Entries\n\n- [2026-03-01T00:00:00.000Z] Initial setup";
+        "# Selva Office Memory\n\n## Log Entries\n\n- [2026-03-01T00:00:00.000Z] Initial setup";
       manager.writeMemory(existingContent);
       manager.appendToMemory("New event");
 

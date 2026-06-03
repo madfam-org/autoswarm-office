@@ -17,7 +17,7 @@ from selva_redis_pool import get_redis_pool
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_CHANNEL = "autoswarm:task-notifications"
+_DEFAULT_CHANNEL = "selva:task-notifications"
 _WEBHOOK_TIMEOUT_SECONDS = 3.0
 
 
@@ -50,7 +50,7 @@ async def publish_task_notification(
     """Best-effort fanout for task lifecycle notification events.
 
     Delivery channels:
-    - Redis pub/sub channel `autoswarm:task-notifications` by default.
+    - Redis pub/sub channel `selva:task-notifications` by default.
     - Optional generic HTTP webhooks from `SELVA_TASK_NOTIFICATION_WEBHOOK_URLS`.
 
     Failures are logged and swallowed so task mutations are never blocked by

@@ -3,17 +3,17 @@ version: "3.9"
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: autoswarm-postgres
+    container_name: selva-postgres
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: autoswarm
-      POSTGRES_PASSWORD: autoswarm
-      POSTGRES_DB: autoswarm
+      POSTGRES_USER: selva
+      POSTGRES_PASSWORD: selva
+      POSTGRES_DB: selva
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U autoswarm -d autoswarm"]
+      test: ["CMD-SHELL", "pg_isready -U selva -d selva"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,7 +23,7 @@ services:
 
   coturn:
     image: coturn/coturn:latest
-    container_name: autoswarm-coturn
+    container_name: selva-coturn
     ports:
       - "3478:3478"
       - "3478:3478/udp"
@@ -34,7 +34,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: autoswarm-redis
+    container_name: selva-redis
     ports:
       - "6379:6379"
     command: >
@@ -58,7 +58,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.nexus-api
-    container_name: autoswarm-nexus-api
+    container_name: selva-nexus-api
     ports:
       - "4300:4300"
     depends_on:
@@ -67,7 +67,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://autoswarm:autoswarm@postgres:5432/autoswarm
+      DATABASE_URL: postgresql://selva:selva@postgres:5432/selva
       REDIS_URL: redis://redis:6379/0  # DB 0: nexus-api (task queue, rate limits, pub/sub)
       NEXUS_API_PORT: "4300"
       ENVIRONMENT: development
@@ -78,7 +78,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.office-ui
-    container_name: autoswarm-office-ui
+    container_name: selva-office-ui
     ports:
       - "4301:3000"
     depends_on:
@@ -93,7 +93,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.colyseus
-    container_name: autoswarm-colyseus
+    container_name: selva-colyseus
     ports:
       - "4303:4303"
     environment:
@@ -106,7 +106,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.gateway
-    container_name: autoswarm-gateway
+    container_name: selva-gateway
     ports:
       - "4304:4304"
     environment:
@@ -122,7 +122,7 @@ services:
 
   livekit:
     image: livekit/livekit-server:latest
-    container_name: autoswarm-livekit
+    container_name: selva-livekit
     ports:
       - "7880:7880"
       - "7881:7881"

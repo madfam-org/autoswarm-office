@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { ChatMessage } from '@autoswarm/shared-types';
+import type { ChatMessage } from '@selva/shared-types';
 import { gameEventBus } from '@/game/PhaserGame';
 import { EVENT_CHAT_FOCUS } from '@/lib/constants';
 import { formatHM } from '@/lib/format-time';

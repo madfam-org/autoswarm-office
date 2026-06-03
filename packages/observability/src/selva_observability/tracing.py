@@ -34,7 +34,7 @@ def init_tracing(service_name: str) -> None:
     except ImportError:
         logger.warning(
             "opentelemetry packages not installed -- tracing disabled. "
-            "Install with: pip install autoswarm-observability[tracing]"
+            "Install with: pip install selva-observability[tracing]"
         )
         return
 

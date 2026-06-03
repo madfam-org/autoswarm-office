@@ -12,9 +12,9 @@ from .pool import get_redis_pool
 
 logger = logging.getLogger(__name__)
 
-STREAM_KEY = "autoswarm:task-stream"
-DLQ_KEY = "autoswarm:task-dlq"
-GROUP_NAME = "autoswarm-workers"
+STREAM_KEY = "selva:task-stream"
+DLQ_KEY = "selva:task-dlq"
+GROUP_NAME = "selva-workers"
 MAX_RETRIES = 3
 
 

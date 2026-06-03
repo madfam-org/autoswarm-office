@@ -224,7 +224,7 @@ async def _persist_and_broadcast(request_id: str, run_id: str, command: str, rea
 
         redis = await get_redis()
         await redis.publish(
-            "autoswarm:approval_requests",
+            "selva:approval_requests",
             json.dumps(
                 {
                     "id": request_id,

@@ -11,7 +11,7 @@ helper introduced alongside this migration in
 
 Drives Option B from ``docs/RLS_PHASE_1_5_AUDIT.md`` §3:
 
-  - ``autoswarm_app`` -- normal-traffic role. Loses the escape hatch.
+  - ``selva_app`` -- normal-traffic role. Loses the escape hatch.
     Every query must carry a session var matching the row's ``org_id``
     or the policy denies it. ``FORCE ROW LEVEL SECURITY`` is enabled
     so the table-owner bypass does NOT apply -- there is no way for
@@ -45,7 +45,7 @@ Backwards-compatibility invariants this migration preserves:
   3. **Role grants**: ``app_admin`` is created BEFORE policies are
      tightened so any administrative SQL run during the migration
      continues to work. The role is granted the same table
-     privileges as ``autoswarm_app`` plus default privileges on
+     privileges as ``selva_app`` plus default privileges on
      future tables (so newly created tenant tables inherit ops
      access without a manual grant).
 
@@ -204,17 +204,17 @@ def _create_app_admin_role() -> None:
         )
     )
 
-    # Make ``app_admin`` a member of ``autoswarm_app`` (so the app role can
+    # Make ``app_admin`` a member of ``selva_app`` (so the app role can
     # SET ROLE to admin if a deployment chooses to use a single pool with
     # role-switching instead of two pools). Wrapped in DO $$ so a missing
-    # autoswarm_app role doesn't abort the migration in dev environments.
+    # selva_app role doesn't abort the migration in dev environments.
     op.execute(
         sa.text(
             """
             DO $$
             BEGIN
-                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-                    GRANT app_admin TO autoswarm_app;
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+                    GRANT app_admin TO selva_app;
                 END IF;
             END
             $$;

@@ -138,7 +138,7 @@ def wired(
 def _base_read_args(**overrides: Any) -> dict[str, Any]:
     args: dict[str, Any] = {
         "cluster": "madfam-dev",
-        "namespace": "autoswarm-office",
+        "namespace": "selva-office",
         "configmap_name": "karafiel-config",
         "rationale": "pre-flight read before flag flip per runbook ops-045",
         "agent_id": None,
@@ -151,7 +151,7 @@ def _base_read_args(**overrides: Any) -> dict[str, Any]:
 def _base_set_args(**overrides: Any) -> dict[str, Any]:
     args: dict[str, Any] = {
         "cluster": "madfam-dev",
-        "namespace": "autoswarm-office",
+        "namespace": "selva-office",
         "configmap_name": "karafiel-config",
         "key": "EMAIL_FROM",  # non-flag key by default
         "value": CONFIG_VALUE,
@@ -327,7 +327,7 @@ async def test_delete_key_dev_applies_and_records_predecessor(
     """Dev delete: removes key, records predecessor hash, no new-value hash."""
     args = {
         "cluster": "madfam-dev",
-        "namespace": "autoswarm-office",
+        "namespace": "selva-office",
         "configmap_name": "karafiel-config",
         "key": "FEATURE_CFDI_AUTO_ISSUE",
         "reason": "deprecating this flag; CFDI auto-issue is now default on",
@@ -360,7 +360,7 @@ async def test_list_configmaps_passes_label_selector_through(
     """list_configmaps hands label_selector to K8s and returns compact summary."""
     result = await wired["list"].execute(
         cluster="madfam-dev",
-        namespace="autoswarm-office",
+        namespace="selva-office",
         label_selector="app.kubernetes.io/part-of=karafiel",
         rationale="drift audit: are our declared ConfigMaps still on-cluster?",
         actor_user_sub="auth0|tester",
@@ -390,7 +390,7 @@ async def test_list_configmaps_passes_label_selector_through(
 @pytest.mark.parametrize(
     ("cluster", "namespace", "expected_hitl"),
     [
-        ("madfam-dev", "autoswarm-office", "allow"),
+        ("madfam-dev", "selva-office", "allow"),
         ("madfam-staging", "karafiel-staging", "ask"),
         ("madfam-prod", "karafiel", "ask"),
     ],
@@ -637,7 +637,7 @@ def test_allowed_clusters_and_namespaces_are_frozenset() -> None:
     assert isinstance(ALLOWED_CLUSTERS, frozenset)
     assert isinstance(ALLOWED_NAMESPACES, frozenset)
     assert "madfam-prod" in ALLOWED_CLUSTERS
-    assert "autoswarm-office" in ALLOWED_NAMESPACES
+    assert "selva-office" in ALLOWED_NAMESPACES
 
 
 def test_tool_names_are_unique_and_config_prefixed() -> None:

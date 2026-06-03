@@ -38,14 +38,14 @@
 #     - consent-ledger-signing (rotates CONSENT_LEDGER_SIGNING_SECRET)
 #     - colyseus-service       (rotates COLYSEUS_SERVICE_TOKEN)
 #
-#   --namespace defaults to autoswarm; common alt: autoswarm-staging
+#   --namespace defaults to selva; common alt: selva-staging
 #   --dry-run prints the kubectl commands that would run, without executing them
 #
 # Cadence (per docs/SECRET_ROTATION_POLICY.md):
 #   Quarterly under normal ops. Immediately on suspected compromise.
 #
 # Audit:
-#   Logs to stderr (script output) AND emits an event to autoswarm:audit
+#   Logs to stderr (script output) AND emits an event to selva:audit
 #   stream so the SRE Grafana board reflects rotation history. NEVER logs
 #   the actual secret value — only the first/last 4 chars (mask middle).
 
@@ -64,7 +64,7 @@ fi
 # Constants — derived from infra/k8s/production/*.yaml inspection
 # -----------------------------------------------------------------------------
 
-readonly K8S_SECRET_NAME="autoswarm-secrets"
+readonly K8S_SECRET_NAME="selva-secrets"
 
 # Map: rotation-target → (env var name, deployments to restart).
 # The deployments list MUST cover every Deployment that env-references the
@@ -77,9 +77,9 @@ declare -rA ENV_KEY_FOR_TARGET=(
 )
 
 declare -rA DEPLOYMENTS_FOR_TARGET=(
-  [worker-api-token]="autoswarm-nexus-api autoswarm-workers autoswarm-gateway"
-  [consent-ledger-signing]="autoswarm-nexus-api"
-  [colyseus-service]="autoswarm-colyseus autoswarm-nexus-api"
+  [worker-api-token]="selva-nexus-api selva-workers selva-gateway"
+  [consent-ledger-signing]="selva-nexus-api"
+  [colyseus-service]="selva-colyseus selva-nexus-api"
 )
 
 # -----------------------------------------------------------------------------
@@ -307,7 +307,7 @@ usage() {
 main() {
   require_kubectl
 
-  local namespace="autoswarm"
+  local namespace="selva"
   local dry_run="false"
   local target=""
   local rotate_all="false"

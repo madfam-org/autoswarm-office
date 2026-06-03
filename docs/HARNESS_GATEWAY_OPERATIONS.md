@@ -24,10 +24,10 @@ All manifests are managed via Kustomize in `infra/k8s/harness/`.
 kubectl apply -k infra/k8s/harness/
 
 # Verify volumes are bound
-kubectl get pvc -n autoswarm
+kubectl get pvc -n selva
 # Expected:
-#   autoswarm-skills-pvc       Bound   2Gi  RWX
-#   autoswarm-edge-memory-pvc  Bound   5Gi  RWO
+#   selva-skills-pvc       Bound   2Gi  RWX
+#   selva-edge-memory-pvc  Bound   5Gi  RWO
 ```
 
 > [!WARNING]
@@ -42,23 +42,23 @@ Add these blocks to the **Nexus API Deployment** and **Celery worker Deployment*
 ```yaml
 # spec.template.spec.containers[*].volumeMounts
 volumeMounts:
-  - name: autoswarm-skills
-    mountPath: /var/lib/autoswarm/skills
-  - name: autoswarm-edge-memory   # Nexus API only — single writer (RWO)
-    mountPath: /var/lib/autoswarm
+  - name: selva-skills
+    mountPath: /var/lib/selva/skills
+  - name: selva-edge-memory   # Nexus API only — single writer (RWO)
+    mountPath: /var/lib/selva
 
 # spec.template.spec.volumes
 volumes:
-  - name: autoswarm-skills
+  - name: selva-skills
     persistentVolumeClaim:
-      claimName: autoswarm-skills-pvc
-  - name: autoswarm-edge-memory
+      claimName: selva-skills-pvc
+  - name: selva-edge-memory
     persistentVolumeClaim:
-      claimName: autoswarm-edge-memory-pvc
+      claimName: selva-edge-memory-pvc
 ```
 
 > [!NOTE]
-> Mount `autoswarm-edge-memory-pvc` **only on the Nexus API pod**. SQLite WAL mode is single-writer. Celery workers only need the `autoswarm-skills-pvc` (RWX).
+> Mount `selva-edge-memory-pvc` **only on the Nexus API pod**. SQLite WAL mode is single-writer. Celery workers only need the `selva-skills-pvc` (RWX).
 
 ---
 
@@ -75,11 +75,11 @@ kubectl run alembic-migrate \
   --image=ghcr.io/madfam-org/nexus-api:latest \
   --restart=Never \
   --env="DATABASE_URL=$DATABASE_URL" \
-  -n autoswarm \
+  -n selva \
   -- alembic upgrade head
 
 # Verify:
-kubectl exec -n autoswarm deploy/autoswarm-nexus-api -- \
+kubectl exec -n selva deploy/selva-nexus-api -- \
   python -c "from nexus_api.models import Schedule; print('Schedule table OK')"
 ```
 
@@ -91,7 +91,7 @@ The `secret-harness.yaml` contains **placeholder** base64 values for all credent
 
 ### Full Secret — Manual (dev/staging only)
 ```bash
-kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
+kubectl create secret generic selva-harness-secrets -n selva \
   --from-literal=TELEGRAM_BOT_TOKEN="<token from @BotFather>" \
   --from-literal=TELEGRAM_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
   --from-literal=DISCORD_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
@@ -107,7 +107,7 @@ kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
 ```bash
 kubeseal --fetch-cert --controller-namespace=kube-system > pub-cert.pem
 
-kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
+kubectl create secret generic selva-harness-secrets -n selva \
   --from-literal=SLACK_SIGNING_SECRET="..." \
   --from-literal=TWILIO_AUTH_TOKEN="..." \
   ... \
@@ -120,9 +120,9 @@ kubectl apply -f infra/k8s/harness/sealed-secret-harness.yaml
 
 ### ConfigMap — Non-secret values
 ```bash
-kubectl create configmap autoswarm-harness-config -n autoswarm \
-  --from-literal=AUTOSWARM_SKILLS_DIR=/var/lib/autoswarm/skills \
-  --from-literal=AUTOSWARM_STATE_DB_PATH=/var/lib/autoswarm/autoswarm_state.db \
+kubectl create configmap selva-harness-config -n selva \
+  --from-literal=SELVA_SKILLS_DIR=/var/lib/selva/skills \
+  --from-literal=SELVA_STATE_DB_PATH=/var/lib/selva/selva_state.db \
   --from-literal=GATEWAY_EMAIL_WHITELIST="ops@yourdomain.com,alerts@yourdomain.com" \
   --from-literal=MEMORY_RETENTION_DAYS=30 \
   --from-literal=SKILL_REFINE_INTERVAL_DAYS=7 \
@@ -133,9 +133,9 @@ Reference both from Deployments:
 ```yaml
 envFrom:
   - secretRef:
-      name: autoswarm-harness-secrets
+      name: selva-harness-secrets
   - configMapRef:
-      name: autoswarm-harness-config
+      name: selva-harness-config
 ```
 
 ---
@@ -164,8 +164,8 @@ app.conf.beat_schedule = {
 
 Restart the Celery Beat worker to pick up the new schedules:
 ```bash
-kubectl rollout restart deployment/autoswarm-celery-beat -n autoswarm
-kubectl rollout status deployment/autoswarm-celery-beat -n autoswarm
+kubectl rollout restart deployment/selva-celery-beat -n selva
+kubectl rollout status deployment/selva-celery-beat -n selva
 ```
 
 ---
@@ -179,7 +179,7 @@ kubectl rollout status deployment/autoswarm-celery-beat -n autoswarm
 # 2. Register the webhook — replace variables:
 TELEGRAM_TOKEN="<your-bot-token>"
 WEBHOOK_SECRET="<your-TELEGRAM_WEBHOOK_SECRET>"
-API_HOST="https://api.autoswarm.yourdomain.com"
+API_HOST="https://api.selva.yourdomain.com"
 
 curl -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
@@ -209,7 +209,7 @@ curl -X POST "https://discord.com/api/v10/applications/${APP_ID}/commands" \
 
 # In Discord Developer Portal → your app → General Information:
 # Set "Interactions Endpoint URL" to:
-#   https://api.autoswarm.yourdomain.com/api/v1/gateway/discord/webhook
+#   https://api.selva.yourdomain.com/api/v1/gateway/discord/webhook
 ```
 
 ### 6c. Slack
@@ -218,7 +218,7 @@ curl -X POST "https://discord.com/api/v10/applications/${APP_ID}/commands" \
 # 2. Under "OAuth & Permissions" → add Bot Scopes: commands, chat:write
 # 3. Under "Slash Commands" → Create New Command:
 #      Command:      /initiate_acp
-#      Request URL:  https://api.autoswarm.yourdomain.com/api/v1/gateway/slack/webhook
+#      Request URL:  https://api.selva.yourdomain.com/api/v1/gateway/slack/webhook
 #      Description:  Trigger an ACP run
 #      Usage Hint:   <target-url>
 # 4. Under "Basic Information" → copy "Signing Secret" → add to SLACK_SIGNING_SECRET secret
@@ -228,12 +228,12 @@ curl -X POST "https://discord.com/api/v10/applications/${APP_ID}/commands" \
 ### 6d. Email — SendGrid Inbound Parse
 ```bash
 # 1. In SendGrid: Settings → Inbound Parse → Add Host & URL
-#      Hostname:    mail.autoswarm.yourdomain.com  (or configure MX record)
-#      Destination: https://api.autoswarm.yourdomain.com/api/v1/gateway/email/inbound
+#      Hostname:    mail.selva.yourdomain.com  (or configure MX record)
+#      Destination: https://api.selva.yourdomain.com/api/v1/gateway/email/inbound
 #      Check "POST the raw, full MIME message"
 
 # 2. Confirm the MX record for your email subdomain points to mx.sendgrid.net
-dig MX mail.autoswarm.yourdomain.com
+dig MX mail.selva.yourdomain.com
 
 # 3. Whitelist operator addresses in GATEWAY_EMAIL_WHITELIST (ConfigMap above)
 ```
@@ -243,7 +243,7 @@ dig MX mail.autoswarm.yourdomain.com
 # 1. Purchase or configure a Twilio number at console.twilio.com
 # 2. Under Phone Numbers → Manage → Active Numbers → select your number:
 #      A message comes in → Webhook:
-#      https://api.autoswarm.yourdomain.com/api/v1/gateway/sms/inbound
+#      https://api.selva.yourdomain.com/api/v1/gateway/sms/inbound
 #      HTTP POST
 # 3. Confirm TWILIO_AUTH_TOKEN and TWILIO_ACCOUNT_SID are in the secret
 
@@ -262,9 +262,9 @@ Ensure the following env vars reach the **Celery worker** container (sourced fro
 
 | Variable | Source | Purpose |
 |---|---|---|
-| `TAVILY_API_KEY` | `autoswarm-harness-secrets` | Tavily web-search MCP server |
-| `GITHUB_TOKEN` | `autoswarm-harness-secrets` | GitHub MCP server |
-| `AUTOSWARM_SKILLS_DIR` | `autoswarm-harness-config` | Override default skills PVC path |
+| `TAVILY_API_KEY` | `selva-harness-secrets` | Tavily web-search MCP server |
+| `GITHUB_TOKEN` | `selva-harness-secrets` | GitHub MCP server |
+| `SELVA_SKILLS_DIR` | `selva-harness-config` | Override default skills PVC path |
 
 The `mcp_config.json` in `packages/workflows/` is baked into the container image. No runtime configuration needed beyond the env vars above.
 
@@ -276,36 +276,36 @@ Run these checks after completing all steps above:
 
 ```bash
 # 1. Skills volume writable from Celery worker
-kubectl exec -n autoswarm deploy/autoswarm-celery -it -- \
-  ls -la /var/lib/autoswarm/skills
+kubectl exec -n selva deploy/selva-celery -it -- \
+  ls -la /var/lib/selva/skills
 
 # 2. Schedules table exists
-kubectl exec -n autoswarm deploy/autoswarm-nexus-api -it -- \
+kubectl exec -n selva deploy/selva-nexus-api -it -- \
   python -c "from nexus_api.models import Schedule; print('OK')"
 
 # 3. Trigger an ACP run → confirm a skill file appears within 60s
-curl -X POST https://api.autoswarm.yourdomain.com/api/v1/acp/initiate \
+curl -X POST https://api.selva.yourdomain.com/api/v1/acp/initiate \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"target_url": "https://example.com", "description": "ops smoke test"}'
 
 # 4. FTS5 edge memory is recording
-kubectl exec -n autoswarm deploy/autoswarm-nexus-api -it -- python -c "
+kubectl exec -n selva deploy/selva-nexus-api -it -- python -c "
 from nexus_api.memory_store.db import memory_store
 hits = memory_store.fts_search('smoke test')
 print(f'FTS hits: {len(hits)}')
 "
 
 # 5. SkillRefiner beat task fire manually
-kubectl exec -n autoswarm deploy/autoswarm-celery -it -- \
+kubectl exec -n selva deploy/selva-celery -it -- \
   celery -A nexus_api.celery_app call tasks.refine_skills
 
 # 6. MemoryCompactor fire manually
-kubectl exec -n autoswarm deploy/autoswarm-celery -it -- \
+kubectl exec -n selva deploy/selva-celery -it -- \
   celery -A nexus_api.celery_app call tasks.compact_memory --kwargs '{"retention_days": 30}'
 
 # 7. Create a schedule via API
-curl -X POST https://api.autoswarm.yourdomain.com/api/v1/schedules \
+curl -X POST https://api.selva.yourdomain.com/api/v1/schedules \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"cron_expr": "0 9 * * 1", "action": "skill_refine", "description": "Weekly skill tune-up"}'
@@ -334,8 +334,8 @@ All variables are declared in `apps/nexus-api/nexus_api/config.py`.
 | `TWILIO_ACCOUNT_SID` | `""` | ✅ | If using SMS | From console.twilio.com |
 | `TAVILY_API_KEY` | `""` | ✅ | For MCP web search | From app.tavily.com |
 | `GITHUB_TOKEN` | `""` | ✅ | For MCP GitHub access | Fine-grained PAT, read:repo scope |
-| `AUTOSWARM_SKILLS_DIR` | `/var/lib/autoswarm/skills` | ConfigMap | ✅ | PVC mount path for skill scripts |
-| `AUTOSWARM_STATE_DB_PATH` | `/var/lib/autoswarm/autoswarm_state.db` | ConfigMap | ✅ | SQLite FTS5 edge memory location |
+| `SELVA_SKILLS_DIR` | `/var/lib/selva/skills` | ConfigMap | ✅ | PVC mount path for skill scripts |
+| `SELVA_STATE_DB_PATH` | `/var/lib/selva/selva_state.db` | ConfigMap | ✅ | SQLite FTS5 edge memory location |
 | `SKILL_REFINE_INTERVAL_DAYS` | `7` | ConfigMap | Optional | Days before a skill is considered stale |
 | `MEMORY_RETENTION_DAYS` | `30` | ConfigMap | Optional | Transcripts older than N days are compacted |
 
@@ -351,10 +351,10 @@ All manifests live in `infra/k8s/harness/`.
 kubectl apply -k infra/k8s/harness/
 
 # Verify volumes are bound
-kubectl get pvc -n autoswarm
+kubectl get pvc -n selva
 # Expected:
-#   autoswarm-skills-pvc       Bound   ...
-#   autoswarm-edge-memory-pvc  Bound   ...
+#   selva-skills-pvc       Bound   ...
+#   selva-edge-memory-pvc  Bound   ...
 ```
 
 > [!WARNING]
@@ -369,23 +369,23 @@ Add the following `volumeMounts` and `volumes` blocks to the **Nexus API** and *
 ```yaml
 # In spec.template.spec.containers[*]:
 volumeMounts:
-  - name: autoswarm-skills
-    mountPath: /var/lib/autoswarm/skills
-  - name: autoswarm-edge-memory
-    mountPath: /var/lib/autoswarm         # SQLite db lives here
+  - name: selva-skills
+    mountPath: /var/lib/selva/skills
+  - name: selva-edge-memory
+    mountPath: /var/lib/selva         # SQLite db lives here
 
 # In spec.template.spec:
 volumes:
-  - name: autoswarm-skills
+  - name: selva-skills
     persistentVolumeClaim:
-      claimName: autoswarm-skills-pvc
-  - name: autoswarm-edge-memory
+      claimName: selva-skills-pvc
+  - name: selva-edge-memory
     persistentVolumeClaim:
-      claimName: autoswarm-edge-memory-pvc
+      claimName: selva-edge-memory-pvc
 ```
 
 > [!NOTE]
-> `autoswarm-edge-memory-pvc` is `ReadWriteOnce` — mount it **only on the Nexus API pod** (single writer). Celery workers only need `autoswarm-skills-pvc` (`ReadWriteMany`).
+> `selva-edge-memory-pvc` is `ReadWriteOnce` — mount it **only on the Nexus API pod** (single writer). Celery workers only need `selva-skills-pvc` (`ReadWriteMany`).
 
 ---
 
@@ -395,7 +395,7 @@ The `secret-harness.yaml` file contains **placeholder** base64 values. Replace t
 
 ### Option A — Manual (dev/staging only)
 ```bash
-kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
+kubectl create secret generic selva-harness-secrets -n selva \
   --from-literal=TELEGRAM_BOT_TOKEN="<token from @BotFather>" \
   --from-literal=TELEGRAM_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
   --from-literal=DISCORD_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
@@ -409,7 +409,7 @@ kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
 # Encrypt each literal into a SealedSecret
 kubeseal --fetch-cert --controller-namespace=kube-system > pub-cert.pem
 
-kubectl create secret generic autoswarm-harness-secrets -n autoswarm \
+kubectl create secret generic selva-harness-secrets -n selva \
   --from-literal=TELEGRAM_BOT_TOKEN="..." \
   --dry-run=client -o yaml \
   | kubeseal --cert pub-cert.pem -o yaml > infra/k8s/harness/sealed-secret-harness.yaml
@@ -427,7 +427,7 @@ kubectl apply -f infra/k8s/harness/sealed-secret-harness.yaml
 ```bash
 curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://api.autoswarm.yourdomain.com/api/v1/gateway/telegram/webhook"}'
+  -d '{"url": "https://api.selva.yourdomain.com/api/v1/gateway/telegram/webhook"}'
 ```
 3. Optionally set a `secret_token` for payload verification:
 ```bash
@@ -437,7 +437,7 @@ curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 
 ### Discord
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications) → your app → Interactions Endpoint URL.
-2. Set it to: `https://api.autoswarm.yourdomain.com/api/v1/gateway/discord/webhook`
+2. Set it to: `https://api.selva.yourdomain.com/api/v1/gateway/discord/webhook`
 3. For slash command triggering (`/initiate_acp`), register the command:
 ```bash
 curl -X POST "https://discord.com/api/v10/applications/<APP_ID>/commands" \
@@ -454,15 +454,15 @@ The Phase I Analyst bootstraps MCP servers using `packages/workflows/mcp_config.
 
 | Variable | Source | Purpose |
 |---|---|---|
-| `TAVILY_API_KEY` | `autoswarm-harness-secrets` | Tavily web-search MCP server |
-| `GITHUB_TOKEN` | `autoswarm-harness-secrets` | GitHub MCP server |
-| `AUTOSWARM_SKILLS_DIR` | ConfigMap or env | Override default skills PVC path |
+| `TAVILY_API_KEY` | `selva-harness-secrets` | Tavily web-search MCP server |
+| `GITHUB_TOKEN` | `selva-harness-secrets` | GitHub MCP server |
+| `SELVA_SKILLS_DIR` | ConfigMap or env | Override default skills PVC path |
 
 Reference these from the Deployment `envFrom`:
 ```yaml
 envFrom:
   - secretRef:
-      name: autoswarm-harness-secrets
+      name: selva-harness-secrets
 ```
 
 ---
@@ -471,17 +471,17 @@ envFrom:
 
 ```bash
 # 1. Check the skills volume is writable from the Celery worker
-kubectl exec -n autoswarm deploy/autoswarm-celery -it -- \
-  ls /var/lib/autoswarm/skills
+kubectl exec -n selva deploy/selva-celery -it -- \
+  ls /var/lib/selva/skills
 
 # 2. Trigger a test ACP run and confirm a skill file appears
-curl -X POST https://api.autoswarm.yourdomain.com/api/v1/acp/initiate \
+curl -X POST https://api.selva.yourdomain.com/api/v1/acp/initiate \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"target_url": "https://example.com", "description": "parity smoke test"}'
 
 # 3. Validate FTS5 edge memory is recording transcripts
-kubectl exec -n autoswarm deploy/autoswarm-nexus-api -it -- \
+kubectl exec -n selva deploy/selva-nexus-api -it -- \
   python -c "
 from nexus_api.memory_store.db import memory_store
 results = memory_store.fts_search('smoke test')
@@ -489,7 +489,7 @@ print(f'FTS hits: {len(results)}')
 "
 
 # 4. Confirm gateway is reachable
-curl -X POST https://api.autoswarm.yourdomain.com/api/v1/gateway/telegram/webhook \
+curl -X POST https://api.selva.yourdomain.com/api/v1/gateway/telegram/webhook \
   -H "Content-Type: application/json" \
   -d '{"message":{"text":"/initiate_acp https://example.com"}}'
 ```
@@ -507,8 +507,8 @@ All new variables are declared in `apps/nexus-api/nexus_api/config.py` and read 
 | `DISCORD_WEBHOOK_SECRET` | `""` | ✅ if using Discord | HMAC secret for Discord payload validation |
 | `TAVILY_API_KEY` | `""` | ✅ for MCP web search | From app.tavily.com |
 | `GITHUB_TOKEN` | `""` | ✅ for MCP GitHub access | Fine-grained PAT |
-| `AUTOSWARM_SKILLS_DIR` | `/var/lib/autoswarm/skills` | ✅ | PVC mount path for skill scripts |
-| `AUTOSWARM_STATE_DB_PATH` | `/var/lib/autoswarm/autoswarm_state.db` | ✅ | SQLite edge memory location |
+| `SELVA_SKILLS_DIR` | `/var/lib/selva/skills` | ✅ | PVC mount path for skill scripts |
+| `SELVA_STATE_DB_PATH` | `/var/lib/selva/selva_state.db` | ✅ | SQLite edge memory location |
 
 ## Harness gateway coverage addendum
 

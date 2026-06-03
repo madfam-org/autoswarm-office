@@ -6,7 +6,7 @@ import type {
   ApprovalRequest,
   WireApprovalAction,
   WireApprovalRequest,
-} from '@autoswarm/shared-types';
+} from '@selva/shared-types';
 import { apiFetch, getSessionToken, isDemo } from '@/lib/api';
 import { MAX_RECONNECT_DELAY_MS } from '@/lib/constants';
 

@@ -21,7 +21,7 @@ class ToolResult(BaseModel):
 
 
 class BaseTool(abc.ABC):
-    """Abstract base class for all tools in the AutoSwarm tool registry.
+    """Abstract base class for all tools in the Selva tool registry.
 
     Each tool must define:
     - ``name``: unique identifier used in function-calling specs

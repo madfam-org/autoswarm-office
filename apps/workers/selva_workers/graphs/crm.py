@@ -224,7 +224,7 @@ def draft_communication(state: CRMState) -> CRMState:
                 f"Me permito dar seguimiento a los puntos clave que discutimos.\n\n"
                 f"Quedo a sus ordenes para cualquier comentario.\n\n"
                 f"Atentamente,\n"
-                f"Agente CRM AutoSwarm"
+                f"Agente CRM Selva"
             )
         else:
             draft = (
@@ -234,7 +234,7 @@ def draft_communication(state: CRMState) -> CRMState:
                 f"I wanted to follow up on the key points we discussed.\n\n"
                 f"Looking forward to hearing from you.\n\n"
                 f"Best regards,\n"
-                f"AutoSwarm CRM Agent"
+                f"Selva CRM Agent"
             )
 
     draft_message = AIMessage(
@@ -349,7 +349,7 @@ def send(state: CRMState) -> CRMState:
             activity = _run_async(
                 adapter.create_activity(
                     type=crm_action,
-                    title=f"AutoSwarm: {crm_action} to {recipient}",
+                    title=f"Selva: {crm_action} to {recipient}",
                     description=draft[:500],
                     entity_type="contact",
                     entity_id=contact_uuid,

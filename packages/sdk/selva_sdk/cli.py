@@ -1,4 +1,4 @@
-"""CLI for dispatching tasks and querying AutoSwarm."""
+"""CLI for dispatching tasks and querying Selva."""
 
 from __future__ import annotations
 
@@ -9,20 +9,20 @@ from pathlib import Path
 
 import click
 
-from .client import AutoSwarmSync
-from .exceptions import AutoSwarmError
+from .client import SelvaSync
+from .exceptions import SelvaError
 
 
-def _get_client() -> AutoSwarmSync:
+def _get_client() -> SelvaSync:
     """Build a sync client from environment variables."""
-    base_url = os.environ.get("AUTOSWARM_API_URL", "http://localhost:4300")
-    token = os.environ.get("AUTOSWARM_TOKEN", "dev-token")
-    return AutoSwarmSync(base_url=base_url, token=token)
+    base_url = os.environ.get("SELVA_API_URL", "http://localhost:4300")
+    token = os.environ.get("SELVA_TOKEN", "dev-token")
+    return SelvaSync(base_url=base_url, token=token)
 
 
 @click.group()
 def cli() -> None:
-    """AutoSwarm CLI — interact with the AutoSwarm Office API."""
+    """Selva CLI — interact with the Selva Office API."""
 
 
 # -- dispatch ----------------------------------------------------------------
@@ -64,7 +64,7 @@ def dispatch(
             due_date=due_date,
         )
         click.echo(json.dumps(task.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -86,7 +86,7 @@ def agents_list() -> None:
     try:
         agent_list = client.list_agents()
         click.echo(json.dumps([a.model_dump() for a in agent_list], indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -109,7 +109,7 @@ def tasks_get(task_id: str) -> None:
     try:
         task = client.get_task(task_id)
         click.echo(json.dumps(task.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -126,7 +126,7 @@ def tasks_wait(task_id: str, timeout: float, poll_interval: float) -> None:
     try:
         task = client.wait_for_task(task_id, poll_interval=poll_interval, timeout=timeout)
         click.echo(json.dumps(task.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -153,7 +153,7 @@ def kanban_list(status_filter: str | None) -> None:
             click.echo(json.dumps(tasks_out, indent=2))
         else:
             click.echo(json.dumps(board.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -185,7 +185,7 @@ def kanban_create(
             due_date=due_date,
         )
         click.echo(json.dumps(task.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -201,7 +201,7 @@ def kanban_move(task_id: str, status: str) -> None:
     try:
         task = client.update_task_kanban(task_id, kanban_status=status)
         click.echo(json.dumps(task.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -217,7 +217,7 @@ def kanban_comment(task_id: str, body: str) -> None:
     try:
         comment = client.add_task_comment(task_id, body)
         click.echo(json.dumps(comment.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -232,7 +232,7 @@ def kanban_history(task_id: str) -> None:
     try:
         history = client.get_task_history(task_id)
         click.echo(json.dumps([item.model_dump() for item in history], indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -249,7 +249,7 @@ def kanban_claim(agent_id: str | None, graph_type: str | None, label: tuple[str,
     try:
         claimed = client.claim_task(agent_id=agent_id, graph_type=graph_type, labels=list(label))
         click.echo(json.dumps(claimed.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -263,7 +263,7 @@ def kanban_notify_overdue() -> None:
     try:
         result = client.notify_overdue_tasks()
         click.echo(json.dumps(result.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -282,7 +282,7 @@ def kanban_export(export_format: str, status_filter: str | None) -> None:
             click.echo(exported, nl=False)
         else:
             click.echo(json.dumps(exported, indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -300,7 +300,7 @@ def kanban_import(path: Path, import_format: str) -> None:
         payload = raw if import_format == "csv" else json.loads(raw)
         imported = client.import_kanban_tasks(payload, format=import_format)
         click.echo(json.dumps(imported.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:
@@ -314,7 +314,7 @@ def kanban_metrics() -> None:
     try:
         metrics = client.get_kanban_metrics()
         click.echo(json.dumps(metrics.model_dump(), indent=2))
-    except AutoSwarmError as exc:
+    except SelvaError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
     finally:

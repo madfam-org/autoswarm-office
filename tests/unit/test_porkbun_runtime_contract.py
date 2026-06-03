@@ -5,14 +5,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_workers_mount_porkbun_credentials_from_autoswarm_secrets() -> None:
+def test_workers_mount_porkbun_credentials_from_selva_secrets() -> None:
     manifest = (ROOT / "infra/k8s/production/workers.yaml").read_text()
 
     assert "name: PORKBUN_API_KEY" in manifest
     assert "key: PORKBUN_API_KEY" in manifest
     assert "name: PORKBUN_SECRET_KEY" in manifest
     assert "key: PORKBUN_SECRET_KEY" in manifest
-    assert manifest.count("name: autoswarm-secrets") >= 2
+    assert manifest.count("name: selva-secrets") >= 2
 
 
 def test_madfam_org_config_declares_porkbun_provider_contract() -> None:

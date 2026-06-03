@@ -71,7 +71,7 @@ class TestRoomConfig:
             resp = await client.post(
                 "/api/v1/admin/room-config",
                 headers=auth_headers,
-                json={"motd": "Welcome to AutoSwarm!"},
+                json={"motd": "Welcome to Selva!"},
             )
 
         assert resp.status_code == 200

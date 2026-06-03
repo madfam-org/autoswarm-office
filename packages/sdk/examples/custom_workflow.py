@@ -1,19 +1,19 @@
 """Dispatch a task using a custom workflow.
 
 Usage:
-    export AUTOSWARM_API_URL=http://localhost:4300
-    export AUTOSWARM_TOKEN=<your-token>
+    export SELVA_API_URL=http://localhost:4300
+    export SELVA_TOKEN=<your-token>
     python custom_workflow.py <workflow-id>
 """
 
 import asyncio
 import sys
 
-from selva_sdk import AutoSwarm
+from selva_sdk import Selva
 
 
 async def main(workflow_id: str) -> None:
-    client = AutoSwarm()
+    client = Selva()
 
     task = await client.dispatch(
         description="Process quarterly report data",

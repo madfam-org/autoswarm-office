@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap autoswarm-observability-secrets in staging (Tier 1 operator gate).
+# Bootstrap selva-observability-secrets in staging (Tier 1 operator gate).
 #
 # Does NOT invent credentials — operator must export real values first:
 #   export OTEL_EXPORTER_OTLP_ENDPOINT='https://otlp-gateway-...grafana.net/otlp'
@@ -13,8 +13,8 @@
 #
 set -euo pipefail
 
-NS="${STAGING_NAMESPACE:-autoswarm-staging}"
-SECRET="${OBSERVABILITY_SECRET:-autoswarm-observability-secrets}"
+NS="${STAGING_NAMESPACE:-selva-staging}"
+SECRET="${OBSERVABILITY_SECRET:-selva-observability-secrets}"
 DRY_RUN=false
 
 for arg in "$@"; do

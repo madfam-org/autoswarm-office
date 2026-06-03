@@ -1,18 +1,18 @@
 """List all agents and their statuses.
 
 Usage:
-    export AUTOSWARM_API_URL=http://localhost:4300
-    export AUTOSWARM_TOKEN=<your-token>
+    export SELVA_API_URL=http://localhost:4300
+    export SELVA_TOKEN=<your-token>
     python list_agents.py
 """
 
 import asyncio
 
-from selva_sdk import AutoSwarm
+from selva_sdk import Selva
 
 
 async def main() -> None:
-    client = AutoSwarm()
+    client = Selva()
 
     agents = await client.list_agents()
     print(f"Found {len(agents)} agents:\n")

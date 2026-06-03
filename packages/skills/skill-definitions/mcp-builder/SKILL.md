@@ -47,7 +47,7 @@ Each tool must define:
 - Log tool invocations for debugging.
 - Rate-limit external API calls.
 
-## Integration with AutoSwarm
+## Integration with Selva
 
 MCP servers in the MADFAM platform register via the nexus-api configuration.
 Each agent can access MCP tools based on their skill permissions.

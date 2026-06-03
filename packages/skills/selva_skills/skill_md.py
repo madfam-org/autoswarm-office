@@ -90,7 +90,7 @@ class SkillMDRegistry:
         import os
 
         self._skills_dir = Path(
-            skills_dir or os.environ.get("AUTOSWARM_SKILLS_DIR", "/var/lib/autoswarm/skills")
+            skills_dir or os.environ.get("SELVA_SKILLS_DIR", "/var/lib/selva/skills")
         )
         self._md_skills: dict[str, SkillDocument] = {}
 

@@ -127,14 +127,14 @@ def plan(state: CodingState) -> CodingState:
             git_tool = GitTool()
             task_id = state.get("task_id", "unknown")
             worktree_path = _run_async(
-                git_tool.create_worktree(repo_path, f"autoswarm/task-{task_id}")
+                git_tool.create_worktree(repo_path, f"selva/task-{task_id}")
             )
             logger.info("Created worktree at %s", worktree_path)
         except Exception:
             logger.warning("Failed to create worktree; working in-place", exc_info=True)
 
     task_id = state.get("task_id", "unknown")
-    branch = state.get("branch_name") or f"autoswarm/task-{task_id}"
+    branch = state.get("branch_name") or f"selva/task-{task_id}"
 
     return {
         **state,
@@ -359,9 +359,9 @@ def _write_files_to_worktree(
     # Placeholder only when no LLM was configured (not when LLM failed).
     if not files_written and placeholder_ok:
         desc = state.get("description", "Agent task")
-        placeholder = wt / "AUTOSWARM_PLACEHOLDER.md"
-        placeholder.write_text(f"# AutoSwarm Placeholder\n\nTask: {desc}\n")
-        files_written.append("AUTOSWARM_PLACEHOLDER.md")
+        placeholder = wt / "SELVA_PLACEHOLDER.md"
+        placeholder.write_text(f"# Selva Placeholder\n\nTask: {desc}\n")
+        files_written.append("SELVA_PLACEHOLDER.md")
 
     return files_written
 
@@ -542,7 +542,7 @@ def push_gate(state: CodingState) -> CodingState:
                         settings.git_author_email,
                     )
                 )
-                commit_msg = f"autoswarm: {state.get('description', 'agent changes')[:200]}"
+                commit_msg = f"selva: {state.get('description', 'agent changes')[:200]}"
                 commit_result = _run_async(git_tool.commit(worktree_path, commit_msg))
                 if commit_result.return_code == 0:
                     push_result = _run_async(
@@ -617,9 +617,9 @@ def _create_pr_after_push(
         description = state.get("description", "Agent changes")
         code_changes = state.get("code_changes", [])
         file_count = sum(len(c.get("files_modified", [])) for c in code_changes)
-        title = f"autoswarm: {description[:60]}"
+        title = f"selva: {description[:60]}"
         body = (
-            f"## AutoSwarm Agent PR\n\n"
+            f"## Selva Agent PR\n\n"
             f"**Task**: {state.get('task_id', 'unknown')}\n"
             f"**Description**: {description}\n"
             f"**Files changed**: {file_count}\n"

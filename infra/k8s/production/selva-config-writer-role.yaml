@@ -27,7 +27,7 @@ metadata:
   # namespace is template-substituted; each target namespace gets its
   # own Role instance (kustomize/overlays or manual apply).
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: config-writer
     rfc: "0007"
 rules:

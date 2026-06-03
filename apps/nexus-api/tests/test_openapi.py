@@ -12,7 +12,7 @@ class TestOpenAPI:
         resp = await client.get("/api/v1/openapi.json")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["info"]["title"] == "AutoSwarm Nexus API"
+        assert data["info"]["title"] == "Selva Nexus API"
         assert "/api/v1/chat/history" in data["paths"]
 
     async def test_docs_page(self, client: httpx.AsyncClient) -> None:

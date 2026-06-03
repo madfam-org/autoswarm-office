@@ -94,7 +94,7 @@ service's `infra/debezium/connector.json`:
     "database.port": "5432",
     "database.user": "${DEBEZIUM_USER}",
     "database.password": "${DEBEZIUM_PASSWORD}",
-    "database.dbname": "autoswarm",
+    "database.dbname": "selva",
     "database.server.name": "selva",
     "table.include.list": "public.swarm_tasks,public.tenant_configs,public.consent_ledger,...",
     "plugin.name": "pgoutput",

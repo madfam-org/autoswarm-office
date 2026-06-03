@@ -1,9 +1,9 @@
 {
-  "extends": "@autoswarm/config/typescript/base.json",
+  "extends": "@selva/config/typescript/base.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@autoswarm/*": ["packages/*/src"]
+      "@selva/*": ["packages/*/src"]
     }
   },
   "exclude": ["node_modules", "dist", ".next", ".turbo"]

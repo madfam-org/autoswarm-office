@@ -1,6 +1,6 @@
-# @autoswarm/shared-types
+# @selva/shared-types
 
-Shared TypeScript types for AutoSwarm Office. Two layers, two conventions.
+Shared TypeScript types for Selva Office. Two layers, two conventions.
 
 ## Domain types (hand-written, camelCase)
 
@@ -14,7 +14,7 @@ internal business logic. They use camelCase, often add UI-only fields
 representation when that helps the UI.
 
 ```ts
-import type { Agent, AgentStatus } from '@autoswarm/shared-types';
+import type { Agent, AgentStatus } from '@selva/shared-types';
 
 const agent: Agent = {
   id: 'agt_123',
@@ -36,7 +36,7 @@ models exactly (snake_case, the same nullability rules, the same enum
 literals) so the compiler catches drift.
 
 ```ts
-import type { api } from '@autoswarm/shared-types';
+import type { api } from '@selva/shared-types';
 
 type DispatchRequest = api.components['schemas']['SwarmDispatchRequest'];
 type DispatchResponse = api.components['schemas']['SwarmDispatchResponse'];
@@ -62,7 +62,7 @@ the codebase free of snake_case and means every external-facing payload
 shape is one renaming step away from the FastAPI route signature.
 
 ```ts
-import type { Agent, api } from '@autoswarm/shared-types';
+import type { Agent, api } from '@selva/shared-types';
 
 function fromWire(wire: api.components['schemas']['Agent']): Agent {
   return {

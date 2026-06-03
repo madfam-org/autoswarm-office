@@ -27,7 +27,7 @@ from ..base import BaseTool, ToolResult
 from ._email_signatures import build_identity
 from ._spf_check import check_alignment
 
-logger = logging.getLogger("autoswarm.email")
+logger = logging.getLogger("selva.email")
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 

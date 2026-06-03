@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  transpilePackages: ['@autoswarm/ui', '@autoswarm/shared-types', '@janua/nextjs-sdk'],
+  transpilePackages: ['@selva/ui', '@selva/shared-types', '@janua/nextjs-sdk'],
 };
 module.exports = nextConfig;

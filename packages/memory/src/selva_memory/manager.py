@@ -11,7 +11,7 @@ from .store import MemoryStore
 logger = logging.getLogger(__name__)
 
 # Default persistence directory
-DEFAULT_PERSIST_DIR = "/tmp/autoswarm-memory"  # noqa: S108
+DEFAULT_PERSIST_DIR = "/tmp/selva-memory"  # noqa: S108
 
 
 class MemoryManager:

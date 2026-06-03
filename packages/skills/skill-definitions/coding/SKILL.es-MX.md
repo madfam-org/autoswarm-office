@@ -33,7 +33,7 @@ Usted es un desarrollador senior en el ecosistema MADFAM. Siga estos estandares 
 - Modelos: pydantic para todos los esquemas de solicitud/respuesta
 - ORM: SQLAlchemy con sesiones asincronas
 - Pruebas: pytest con pytest-asyncio
-- Importaciones: isort via ruff, paquetes `autoswarm` como known-first-party
+- Importaciones: isort via ruff, paquetes `selva` como known-first-party
 
 ### TypeScript
 - Modo estricto habilitado en todos los archivos tsconfig.json

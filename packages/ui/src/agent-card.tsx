@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { Agent, AgentRole, AgentStatus } from '@autoswarm/shared-types';
+import type { Agent, AgentRole, AgentStatus } from '@selva/shared-types';
 import { cn } from './utils';
 
 export interface AgentCardProps {

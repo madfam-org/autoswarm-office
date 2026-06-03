@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Postgres restore script for AutoSwarm Office
+# Postgres restore script for Selva Office
 # Restores a custom-format dump created by backup-postgres.sh.
 #
 # Usage: ./scripts/restore-postgres.sh <backup_file> [--skip-migrations] [--force]

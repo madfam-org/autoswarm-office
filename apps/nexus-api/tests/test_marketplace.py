@@ -39,7 +39,7 @@ async def _create_entry(
     db: AsyncSession,
     *,
     name: str = "test-skill",
-    author: str = "dev@autoswarm.local",
+    author: str = "dev@selva.local",
     category: str | None = None,
     downloads: int = 0,
     org_id: str = "dev-org",
@@ -166,7 +166,7 @@ async def test_publish_skill_valid(client: httpx.AsyncClient, auth_headers: dict
     assert resp.status_code == 201
     data = resp.json()
     assert data["name"] == "my-new-skill"
-    assert data["author"] == "dev@autoswarm.local"
+    assert data["author"] == "dev@selva.local"
     assert data["category"] == "productivity"
     assert data["tags"] == ["automation", "coding"]
     assert data["downloads"] == 0
@@ -352,7 +352,7 @@ async def test_delete_skill_author(
     db_session: AsyncSession,
 ) -> None:
     """The original author can unpublish their skill."""
-    entry = await _create_entry(db_session, author="dev@autoswarm.local")
+    entry = await _create_entry(db_session, author="dev@selva.local")
     await db_session.commit()
 
     resp = await client.delete(f"/api/v1/marketplace/skills/{entry.id}", headers=auth_headers)

@@ -79,13 +79,13 @@ class TestPortsDoc:
 
 
 class TestDocsLegacyPaths:
-    def test_docs_do_not_reference_autoswarm_workers(self) -> None:
+    def test_docs_do_not_reference_selva_workers(self) -> None:
         offenders: list[str] = []
         for md_file in _DOCS_DIR.rglob("*.md"):
-            if "autoswarm_workers" in md_file.read_text(encoding="utf-8"):
+            if "selva_workers" in md_file.read_text(encoding="utf-8"):
                 offenders.append(str(md_file.relative_to(_REPO_ROOT)))
         assert not offenders, (
-            "docs/ must use selva_workers paths, not autoswarm_workers. "
+            "docs/ must use selva_workers paths, not selva_workers. "
             f"Offenders: {offenders}"
         )
 
@@ -127,8 +127,8 @@ class TestCloudflareInfra:
         assert "tunnel: enclii-prod" in text, (
             "dns-records.yaml must CNAME to enclii-prod (shared live tunnel)"
         )
-        assert "autoswarm-office.cfargotunnel.com" not in text, (
-            "dns-records.yaml must not point at the defunct autoswarm-office tunnel"
+        assert "selva-office.cfargotunnel.com" not in text, (
+            "dns-records.yaml must not point at the defunct selva-office tunnel"
         )
 
     def test_tunnel_routes_lists_prod_and_staging_hostnames(self) -> None:
@@ -137,8 +137,8 @@ class TestCloudflareInfra:
             assert f"hostname: {hostname}" in text, (
                 f"infra/cloudflare/tunnel-routes.yaml must route {hostname}"
             )
-        assert "autoswarm-staging.svc.cluster.local" in text, (
-            "tunnel-routes.yaml must target autoswarm-staging namespace"
+        assert "selva-staging.svc.cluster.local" in text, (
+            "tunnel-routes.yaml must target selva-staging namespace"
         )
 
 
@@ -196,5 +196,5 @@ class TestCampaignsApi:
             path = patch_dir / name
             assert path.exists(), f"missing {name}"
             text = path.read_text(encoding="utf-8")
-            assert "autoswarm-observability-secrets" in text
+            assert "selva-observability-secrets" in text
             assert "optional: true" in text

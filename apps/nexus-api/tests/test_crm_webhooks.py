@@ -239,7 +239,7 @@ class TestCRMAutoDispatch:
             mock_redis_pool.execute_with_retry.assert_awaited_once()
             call_args = mock_redis_pool.execute_with_retry.call_args
             assert call_args[0][0] == "xadd"
-            assert call_args[0][1] == "autoswarm:task-stream"
+            assert call_args[0][1] == "selva:task-stream"
 
     async def test_dispatch_includes_crm_data_in_task(self, client: httpx.AsyncClient) -> None:
         """The dispatched task message includes CRM event data for the agent."""

@@ -11,7 +11,7 @@ from ..probe import ProbeContext, ProbeStep, StageResult, StageStatus
 class DraftStep(ProbeStep):
     """Hit the draft endpoint and confirm we got a non-placeholder body.
 
-    Autoswarm CRM graph refuses to send when the LLM returns the literal
+    Selva CRM graph refuses to send when the LLM returns the literal
     ``[LLM unavailable`` sentinel (see CLAUDE.md v2.1.1). We check for that
     explicitly so the probe can distinguish "LLM is down" from "everything
     else is broken".

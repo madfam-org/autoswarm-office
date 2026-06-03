@@ -1,5 +1,5 @@
 {
-  "name": "@autoswarm/config",
+  "name": "@selva/config",
   "version": "0.1.0",
   "private": true,
   "files": ["eslint", "typescript", "logging.ts", "sentry.ts", "metrics.ts"],

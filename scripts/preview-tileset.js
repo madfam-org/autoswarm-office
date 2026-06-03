@@ -101,7 +101,7 @@ async function main() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AutoSwarm Tileset Preview</title>
+<title>Selva Tileset Preview</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; padding: 2rem; }
@@ -118,7 +118,7 @@ async function main() {
 </style>
 </head>
 <body>
-<h1>AutoSwarm Tileset Preview — All Palette Presets</h1>
+<h1>Selva Tileset Preview — All Palette Presets</h1>
 ${sections.map((s) => `
 <div class="preset">
   <h2>${s.preset.name ?? s.presetName}</h2>

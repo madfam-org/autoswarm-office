@@ -26,7 +26,7 @@ _settings = get_settings()
 # enforce the append-only invariant. Migration 0018 REVOKEs UPDATE/DELETE
 # from this role. Configurable via env in case a deployment uses a
 # different app role name.
-_CONSENT_LEDGER_APP_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE", "autoswarm")
+_CONSENT_LEDGER_APP_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE", "selva")
 
 
 @router.get("/health")
@@ -157,14 +157,14 @@ async def queue_stats() -> dict[str, object]:
 
         # Stream length
         try:
-            stats["stream_length"] = await client.xlen("autoswarm:task-stream")
+            stats["stream_length"] = await client.xlen("selva:task-stream")
         except Exception:
             logger.debug("Failed to fetch stream length", exc_info=True)
             stats["stream_length"] = 0
 
         # DLQ depth
         try:
-            stats["dlq_depth"] = await client.xlen("autoswarm:task-dlq")
+            stats["dlq_depth"] = await client.xlen("selva:task-dlq")
         except Exception:
             logger.debug("Failed to fetch DLQ depth", exc_info=True)
             stats["dlq_depth"] = 0
@@ -172,7 +172,7 @@ async def queue_stats() -> dict[str, object]:
         # Consumer group info
         pending_total = 0
         try:
-            groups = await client.xinfo_groups("autoswarm:task-stream")
+            groups = await client.xinfo_groups("selva:task-stream")
             stats["consumer_groups"] = [
                 {
                     "name": g.get("name", ""),
@@ -232,7 +232,7 @@ async def dlq_stats() -> dict[str, object]:
         client = await pool.client()
 
         try:
-            result["depth"] = await client.xlen("autoswarm:task-dlq")
+            result["depth"] = await client.xlen("selva:task-dlq")
         except Exception:
             logger.debug("Failed to fetch DLQ depth", exc_info=True)
             result["depth"] = 0
@@ -240,7 +240,7 @@ async def dlq_stats() -> dict[str, object]:
         # Return the N most recent DLQ entries (Settings.dlq_recent_limit).
         try:
             entries = await client.xrevrange(
-                "autoswarm:task-dlq", count=_settings.dlq_recent_limit
+                "selva:task-dlq", count=_settings.dlq_recent_limit
             )
             result["recent"] = [{"id": eid, "data": data} for eid, data in entries]
         except Exception:
@@ -262,7 +262,7 @@ async def consent_ledger_grants(
     """Verify the append-only invariant on `consent_ledger` is enforced at the DB level.
 
     Migration 0018 REVOKEs UPDATE/DELETE on `consent_ledger` from the
-    application role (default ``autoswarm``). This endpoint exposes
+    application role (default ``selva``). This endpoint exposes
     a runtime check so a re-applied migration, manual ``GRANT ALL``, or
     a superuser-mode test seed that silently re-mutates the grants will
     surface in monitoring.

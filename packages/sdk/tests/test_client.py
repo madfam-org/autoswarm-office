@@ -1,4 +1,4 @@
-"""Tests for the AutoSwarm async and sync clients."""
+"""Tests for the Selva async and sync clients."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from typing import Any
 import httpx
 import pytest
 
-from selva_sdk import AutoSwarm, AutoSwarmSync
+from selva_sdk import Selva, SelvaSync
 from selva_sdk.exceptions import (
     AuthenticationError,
-    AutoSwarmError,
+    SelvaError,
     NotFoundError,
     TaskTimeoutError,
 )
@@ -79,7 +79,7 @@ async def test_dispatch_success() -> None:
         assert body["graph_type"] == "coding"
         return httpx.Response(201, json=TASK_QUEUED)
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -94,7 +94,7 @@ async def test_dispatch_auth_error() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"detail": "Unauthorized"})
 
-    async with AutoSwarm(base_url="http://test", token="bad") as client:
+    async with Selva(base_url="http://test", token="bad") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -109,12 +109,12 @@ async def test_dispatch_budget_exceeded() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(402, json={"detail": "Compute token budget exceeded for today"})
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
         )
-        with pytest.raises(AutoSwarmError) as exc_info:
+        with pytest.raises(SelvaError) as exc_info:
             await client.dispatch("Test")
         assert exc_info.value.status_code == 402
         assert "budget exceeded" in str(exc_info.value).lower()
@@ -126,7 +126,7 @@ async def test_list_agents_success() -> None:
         assert request.url.path == "/api/v1/agents/"
         return httpx.Response(200, json=AGENTS)
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -143,7 +143,7 @@ async def test_get_task_success() -> None:
         assert "/api/v1/swarms/tasks/" in request.url.path
         return httpx.Response(200, json=TASK_QUEUED)
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -157,7 +157,7 @@ async def test_get_task_not_found() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={"detail": "Task not found"})
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -179,7 +179,7 @@ async def test_wait_for_task_success() -> None:
             return httpx.Response(200, json=TASK_QUEUED)
         return httpx.Response(200, json=TASK_COMPLETED)
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -194,7 +194,7 @@ async def test_wait_for_task_timeout() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=TASK_QUEUED)
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -210,7 +210,7 @@ async def test_context_manager() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=AGENTS)
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
@@ -226,12 +226,12 @@ async def test_generic_api_error() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, text="Internal Server Error")
 
-    async with AutoSwarm(base_url="http://test", token="tok") as client:
+    async with Selva(base_url="http://test", token="tok") as client:
         client._client = httpx.AsyncClient(
             base_url="http://test",
             transport=httpx.MockTransport(handle),
         )
-        with pytest.raises(AutoSwarmError) as exc_info:
+        with pytest.raises(SelvaError) as exc_info:
             await client.list_agents()
         assert exc_info.value.status_code == 500
 
@@ -245,7 +245,7 @@ def test_sync_dispatch() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(201, json=TASK_QUEUED)
 
-    client = AutoSwarmSync(base_url="http://test", token="tok")
+    client = SelvaSync(base_url="http://test", token="tok")
     client._async._client = httpx.AsyncClient(
         base_url="http://test",
         transport=httpx.MockTransport(handle),
@@ -259,7 +259,7 @@ def test_sync_list_agents() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=AGENTS)
 
-    client = AutoSwarmSync(base_url="http://test", token="tok")
+    client = SelvaSync(base_url="http://test", token="tok")
     client._async._client = httpx.AsyncClient(
         base_url="http://test",
         transport=httpx.MockTransport(handle),

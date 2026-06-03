@@ -1,9 +1,9 @@
-# AutoSwarm SDK Examples
+# Selva SDK Examples
 
 ## Setup
 
 ```bash
-pip install autoswarm-sdk
+pip install selva-sdk
 # or in dev:
 uv sync
 ```
@@ -12,8 +12,8 @@ uv sync
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `AUTOSWARM_API_URL` | Nexus API base URL | `http://localhost:4300` |
-| `AUTOSWARM_TOKEN` | Bearer auth token (from Janua) | — |
+| `SELVA_API_URL` | Nexus API base URL | `http://localhost:4300` |
+| `SELVA_TOKEN` | Bearer auth token (from Janua) | — |
 
 ## Examples
 

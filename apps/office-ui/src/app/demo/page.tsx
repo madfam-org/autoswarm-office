@@ -11,7 +11,7 @@ function generateDemoJWT(name: string): string {
       sub: `demo-${randomId}`,
       roles: ['demo'],
       org_id: 'demo-public',
-      email: 'demo@autoswarm.dev',
+      email: 'demo@selva.town',
       name: name || 'Visitor',
     }),
   );

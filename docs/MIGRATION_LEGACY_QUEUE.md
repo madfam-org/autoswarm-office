@@ -2,16 +2,16 @@
 
 ## Background
 
-AutoSwarm workers originally consumed tasks from a Redis LIST (`autoswarm:tasks`
+Selva workers originally consumed tasks from a Redis LIST (`selva:tasks`
 via LPUSH/BRPOP). In v0.2.0, task consumption was migrated to Redis Streams
-(`autoswarm:task-stream` with consumer groups). During the transition, the
+(`selva:task-stream` with consumer groups). During the transition, the
 nexus-api dual-wrote to both the Stream and the legacy LIST to allow gradual
 rollout.
 
 ## What changed in v0.2.0
 
-All LPUSH calls to `autoswarm:tasks` have been removed. Only Redis Streams
-(`autoswarm:task-stream`) are used for task enqueueing.
+All LPUSH calls to `selva:tasks` have been removed. Only Redis Streams
+(`selva:task-stream`) are used for task enqueueing.
 
 ## Impact
 
@@ -25,7 +25,7 @@ All LPUSH calls to `autoswarm:tasks` have been removed. Only Redis Streams
 After verifying all workers are on v0.2.0+, you can safely delete the old key:
 
 ```bash
-redis-cli DEL autoswarm:tasks
+redis-cli DEL selva:tasks
 ```
 
 ## Rollback

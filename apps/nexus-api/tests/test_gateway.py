@@ -169,7 +169,7 @@ class TestGitHubWebhookEvents:
         assert mock_pool.execute_with_retry.call_count >= 1
         first_call = mock_pool.execute_with_retry.call_args_list[0]
         assert first_call[0][0] == "xadd"
-        assert first_call[0][1] == "autoswarm:task-stream"
+        assert first_call[0][1] == "selva:task-stream"
         enqueued = json.loads(first_call[0][2]["data"])
         assert enqueued["graph_type"] == "coding"
         assert "PR #42" in enqueued["description"]

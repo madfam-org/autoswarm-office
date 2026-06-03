@@ -1,4 +1,4 @@
-# Disaster Recovery Plan -- AutoSwarm Office
+# Disaster Recovery Plan -- Selva Office
 
 > [!IMPORTANT]
 > MADFAM-ENCLII-FIRST-LEGACY-RAW v1: This document contains legacy raw infrastructure command examples.
@@ -10,7 +10,7 @@
 
 ## Overview
 
-This document defines the disaster recovery (DR) procedures for the AutoSwarm
+This document defines the disaster recovery (DR) procedures for the Selva
 Office platform. It covers backup strategy, recovery procedures for common
 failure scenarios, and verification steps to confirm successful recovery.
 
@@ -79,8 +79,8 @@ temporary database, validates all expected tables are present, reports row
 counts, and drops the temporary database on exit.
 
 ```bash
-DATABASE_URL="postgresql://user:pass@localhost:5432/autoswarm" \
-  ./scripts/verify-backup.sh ./backups/autoswarm_20260313_020000.dump
+DATABASE_URL="postgresql://user:pass@localhost:5432/selva" \
+  ./scripts/verify-backup.sh ./backups/selva_20260313_020000.dump
 ```
 
 Expected output confirms these tables exist:
@@ -117,10 +117,10 @@ cannot create SwarmTasks. UI shows stale or no data.
 
    ```bash
    # Kubernetes: restart the pod
-   kubectl -n autoswarm rollout restart deployment/postgres
+   kubectl -n selva rollout restart deployment/postgres
 
    # Verify connectivity
-   kubectl -n autoswarm exec -it deploy/nexus-api -- \
+   kubectl -n selva exec -it deploy/nexus-api -- \
      python -c "from sqlalchemy import create_engine; e = create_engine('${DATABASE_URL}'); e.connect()"
    ```
 
@@ -128,32 +128,32 @@ cannot create SwarmTasks. UI shows stale or no data.
 
    ```bash
    # List available backups (local)
-   ls -lt backups/autoswarm_*.dump | head -5
+   ls -lt backups/selva_*.dump | head -5
 
    # List available backups (S3)
-   aws s3 ls "s3://${S3_BUCKET}/autoswarm/daily/" --recursive | sort -r | head -5
+   aws s3 ls "s3://${S3_BUCKET}/selva/daily/" --recursive | sort -r | head -5
 
    # Download from S3 if needed
-   aws s3 cp "s3://${S3_BUCKET}/autoswarm/daily/autoswarm_YYYYMMDD_HHMMSS.dump" ./restore.dump
+   aws s3 cp "s3://${S3_BUCKET}/selva/daily/selva_YYYYMMDD_HHMMSS.dump" ./restore.dump
 
    # Restore
-   DATABASE_URL="postgresql://user:pass@host:5432/autoswarm" \
+   DATABASE_URL="postgresql://user:pass@host:5432/selva" \
      ./scripts/restore-postgres.sh ./restore.dump
    ```
 
 4. **Verify the restore**:
 
    ```bash
-   DATABASE_URL="postgresql://user:pass@host:5432/autoswarm" \
+   DATABASE_URL="postgresql://user:pass@host:5432/selva" \
      ./scripts/verify-backup.sh ./restore.dump
    ```
 
 5. **Restart dependent services** to clear stale connections:
 
    ```bash
-   kubectl -n autoswarm rollout restart deployment/nexus-api
-   kubectl -n autoswarm rollout restart deployment/workers
-   kubectl -n autoswarm rollout restart deployment/gateway
+   kubectl -n selva rollout restart deployment/nexus-api
+   kubectl -n selva rollout restart deployment/workers
+   kubectl -n selva rollout restart deployment/gateway
    ```
 
 6. **Verify service health**:
@@ -181,7 +181,7 @@ in PostgreSQL.
 
    ```bash
    # Kubernetes
-   kubectl -n autoswarm rollout restart deployment/redis
+   kubectl -n selva rollout restart deployment/redis
 
    # Docker (development)
    docker compose restart redis
@@ -192,14 +192,14 @@ in PostgreSQL.
 
    ```bash
    # Connect to nexus-api and re-enqueue
-   kubectl -n autoswarm exec -it deploy/nexus-api -- python -c "
+   kubectl -n selva exec -it deploy/nexus-api -- python -c "
    import asyncio, redis.asyncio as redis, json
    from sqlalchemy import select, text
 
    async def reenqueue():
        r = redis.from_url('redis://redis:6379')
        # Fetch tasks that were queued or in_progress
-       # Re-add to autoswarm:task-stream
+       # Re-add to selva:task-stream
        print('Re-enqueue via API or direct Redis XADD')
 
    asyncio.run(reenqueue())
@@ -217,13 +217,13 @@ in PostgreSQL.
 3. **Restart workers** to reconnect to Redis:
 
    ```bash
-   kubectl -n autoswarm rollout restart deployment/workers
+   kubectl -n selva rollout restart deployment/workers
    ```
 
 4. **Verify the queue**:
 
    ```bash
-   kubectl -n autoswarm exec -it deploy/redis -- redis-cli XLEN autoswarm:task-stream
+   kubectl -n selva exec -it deploy/redis -- redis-cli XLEN selva:task-stream
    ```
 
 **Estimated Recovery Time**: 5-15 minutes.
@@ -245,10 +245,10 @@ in PostgreSQL.
    kubectl apply -k infra/k8s/production/
 
    # Or use ArgoCD if configured
-   argocd app sync autoswarm-office
+   argocd app sync selva-office
    ```
 
-2. **Verify secrets** are available. The `autoswarm-secrets` Secret must contain:
+2. **Verify secrets** are available. The `selva-secrets` Secret must contain:
    - `database-url` -- PostgreSQL connection string
    - `redis-url` -- Redis connection string
    - `janua-issuer-url` -- Janua authentication issuer
@@ -258,11 +258,11 @@ in PostgreSQL.
 
    ```bash
    # Download the latest backup
-   LATEST=$(aws s3 ls "s3://${S3_BUCKET}/autoswarm/daily/" | sort -r | head -1 | awk '{print $4}')
-   aws s3 cp "s3://${S3_BUCKET}/autoswarm/daily/${LATEST}" ./restore.dump
+   LATEST=$(aws s3 ls "s3://${S3_BUCKET}/selva/daily/" | sort -r | head -1 | awk '{print $4}')
+   aws s3 cp "s3://${S3_BUCKET}/selva/daily/${LATEST}" ./restore.dump
 
    # Wait for PostgreSQL to be ready
-   kubectl -n autoswarm wait --for=condition=ready pod -l app=postgres --timeout=300s
+   kubectl -n selva wait --for=condition=ready pod -l app=postgres --timeout=300s
 
    # Restore
    DATABASE_URL="postgresql://..." ./scripts/restore-postgres.sh ./restore.dump --force
@@ -285,12 +285,12 @@ in PostgreSQL.
 6. **Deploy all services**:
 
    ```bash
-   kubectl -n autoswarm rollout status deployment/nexus-api --timeout=120s
-   kubectl -n autoswarm rollout status deployment/office-ui --timeout=120s
-   kubectl -n autoswarm rollout status deployment/colyseus --timeout=120s
-   kubectl -n autoswarm rollout status deployment/admin --timeout=120s
-   kubectl -n autoswarm rollout status deployment/gateway --timeout=120s
-   kubectl -n autoswarm rollout status deployment/workers --timeout=120s
+   kubectl -n selva rollout status deployment/nexus-api --timeout=120s
+   kubectl -n selva rollout status deployment/office-ui --timeout=120s
+   kubectl -n selva rollout status deployment/colyseus --timeout=120s
+   kubectl -n selva rollout status deployment/admin --timeout=120s
+   kubectl -n selva rollout status deployment/gateway --timeout=120s
+   kubectl -n selva rollout status deployment/workers --timeout=120s
    ```
 
 7. **Verify all services**:
@@ -306,7 +306,7 @@ in PostgreSQL.
    curl -f http://colyseus:4303/health
 
    # Redis queue accessible
-   kubectl -n autoswarm exec -it deploy/redis -- redis-cli PING
+   kubectl -n selva exec -it deploy/redis -- redis-cli PING
    ```
 
 8. **Verify end-to-end functionality**:
@@ -328,15 +328,15 @@ in PostgreSQL.
 1. **Identify the failing service**:
 
    ```bash
-   kubectl -n autoswarm get pods
-   kubectl -n autoswarm describe pod <failing-pod>
-   kubectl -n autoswarm logs <failing-pod> --tail=100
+   kubectl -n selva get pods
+   kubectl -n selva describe pod <failing-pod>
+   kubectl -n selva logs <failing-pod> --tail=100
    ```
 
 2. **Restart the service**:
 
    ```bash
-   kubectl -n autoswarm rollout restart deployment/<service-name>
+   kubectl -n selva rollout restart deployment/<service-name>
    ```
 
 3. **If the pod is in CrashLoopBackOff**, check for:
@@ -348,7 +348,7 @@ in PostgreSQL.
 4. **Verify recovery**:
 
    ```bash
-   kubectl -n autoswarm rollout status deployment/<service-name> --timeout=120s
+   kubectl -n selva rollout status deployment/<service-name> --timeout=120s
    ```
 
 **Estimated Recovery Time**: 5-10 minutes.
@@ -365,7 +365,7 @@ After any recovery operation, confirm each item:
 - [ ] office-ui loads in browser
 - [ ] Colyseus accepts WebSocket connections
 - [ ] Redis is accessible and `PING` returns `PONG`
-- [ ] Workers are running and processing tasks from `autoswarm:task-stream`
+- [ ] Workers are running and processing tasks from `selva:task-stream`
 - [ ] Gateway heartbeat service is operational
 - [ ] Janua authentication flow works (login and token validation)
 - [ ] A test task can be dispatched and completed end-to-end

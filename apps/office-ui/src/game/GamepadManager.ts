@@ -1,4 +1,4 @@
-import type { GamepadInput } from '@autoswarm/shared-types';
+import type { GamepadInput } from '@selva/shared-types';
 
 const DEADZONE = 0.15;
 const KEYBOARD_AXIS_VALUE = 1.0;

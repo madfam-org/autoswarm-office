@@ -1,6 +1,6 @@
 'use client';
 
-import type { ApprovalRequest } from '@autoswarm/shared-types';
+import type { ApprovalRequest } from '@selva/shared-types';
 
 function formatMxn(centavos: unknown): string {
   const n = typeof centavos === 'number' ? centavos : Number(centavos);

@@ -1,6 +1,6 @@
 # PP.4 — project-level promotion policy (RFC 0001 Pattern B).
 #
-# autoswarm-office is Pattern B (manual gate) because workers run
+# selva-office is Pattern B (manual gate) because workers run
 # agent code that touches prod customer data via email sends, git
 # pushes, database writes, and Stripe/Resend/GitHub API calls. A bad
 # promote here would email real customers or push real git branches.
@@ -11,7 +11,7 @@
 apiVersion: enclii.dev/v1
 kind: Project
 metadata:
-  name: autoswarm-office
+  name: selva-office
 spec:
   promotion:
     pattern: manual
@@ -21,9 +21,9 @@ spec:
 apiVersion: enclii.dev/v1
 kind: Service
 metadata:
-  name: autoswarm-nexus-api
-  project: autoswarm-office
-  description: AutoSwarm Office — Core orchestration API
+  name: selva-nexus-api
+  project: selva-office
+  description: Selva Office — Core orchestration API
 spec:
   status:
     enabled: true
@@ -57,7 +57,7 @@ spec:
     context: .
     source:
       git:
-        repository: https://github.com/madfam-org/autoswarm-office
+        repository: https://github.com/madfam-org/selva-office
         branch: main
         autoDeploy: true
   runtime:
@@ -85,21 +85,21 @@ spec:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: autoswarm-secrets
+          name: selva-secrets
           key: database-url
     - name: REDIS_URL
       valueFrom:
         secretKeyRef:
-          name: autoswarm-secrets
+          name: selva-secrets
           key: redis-url
     - name: JANUA_ISSUER_URL
       value: https://auth.selva.town
     - name: JANUA_CLIENT_ID
-      value: autoswarm-office
+      value: selva-office
     - name: JANUA_CLIENT_SECRET
       valueFrom:
         secretKeyRef:
-          name: autoswarm-secrets
+          name: selva-secrets
           key: janua-client-secret
   domains:
     - domain: api.selva.town
@@ -164,9 +164,9 @@ spec:
 apiVersion: enclii.dev/v1
 kind: Service
 metadata:
-  name: autoswarm-office-ui
-  project: autoswarm-office
-  description: AutoSwarm Office — Spatial office UI
+  name: selva-office-ui
+  project: selva-office
+  description: Selva Office — Spatial office UI
 spec:
   build:
     type: dockerfile
@@ -178,7 +178,7 @@ spec:
       NEXT_PUBLIC_COLYSEUS_URL: wss://ws.selva.town
     source:
       git:
-        repository: https://github.com/madfam-org/autoswarm-office
+        repository: https://github.com/madfam-org/selva-office
         branch: main
         autoDeploy: true
   runtime:
@@ -215,9 +215,9 @@ spec:
 apiVersion: enclii.dev/v1
 kind: Service
 metadata:
-  name: autoswarm-colyseus
-  project: autoswarm-office
-  description: AutoSwarm Office — Colyseus room server
+  name: selva-colyseus
+  project: selva-office
+  description: Selva Office — Colyseus room server
 spec:
   build:
     type: dockerfile
@@ -225,7 +225,7 @@ spec:
     context: .
     source:
       git:
-        repository: https://github.com/madfam-org/autoswarm-office
+        repository: https://github.com/madfam-org/selva-office
         branch: main
         autoDeploy: true
   runtime:
@@ -256,9 +256,9 @@ spec:
 apiVersion: enclii.dev/v1
 kind: Service
 metadata:
-  name: autoswarm-admin
-  project: autoswarm-office
-  description: AutoSwarm Office — Admin dashboard
+  name: selva-admin
+  project: selva-office
+  description: Selva Office — Admin dashboard
 spec:
   build:
     type: dockerfile
@@ -269,7 +269,7 @@ spec:
       NEXT_PUBLIC_JANUA_URL: https://auth.selva.town
     source:
       git:
-        repository: https://github.com/madfam-org/autoswarm-office
+        repository: https://github.com/madfam-org/selva-office
         branch: main
         autoDeploy: true
   runtime:
@@ -304,9 +304,9 @@ spec:
 apiVersion: enclii.dev/v1
 kind: Service
 metadata:
-  name: autoswarm-gateway
-  project: autoswarm-office
-  description: AutoSwarm Office — WebSocket gateway
+  name: selva-gateway
+  project: selva-office
+  description: Selva Office — WebSocket gateway
 spec:
   build:
     type: dockerfile
@@ -314,7 +314,7 @@ spec:
     context: .
     source:
       git:
-        repository: https://github.com/madfam-org/autoswarm-office
+        repository: https://github.com/madfam-org/selva-office
         branch: main
         autoDeploy: true
   runtime:
@@ -346,8 +346,8 @@ apiVersion: enclii.dev/v1
 kind: Service
 metadata:
   name: selva-workers
-  project: autoswarm-office
-  description: AutoSwarm Office — Background task workers
+  project: selva-office
+  description: Selva Office — Background task workers
 spec:
   build:
     type: dockerfile
@@ -355,7 +355,7 @@ spec:
     context: .
     source:
       git:
-        repository: https://github.com/madfam-org/autoswarm-office
+        repository: https://github.com/madfam-org/selva-office
         branch: main
         autoDeploy: true
   runtime:
@@ -371,10 +371,10 @@ spec:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: autoswarm-secrets
+          name: selva-secrets
           key: database-url
     - name: REDIS_URL
       valueFrom:
         secretKeyRef:
-          name: autoswarm-secrets
+          name: selva-secrets
           key: redis-url

@@ -30,7 +30,7 @@ describe('LoginPage', () => {
 
   it('renders the login page heading', () => {
     render(<LoginPage />);
-    expect(screen.getByText('AutoSwarm Admin')).toBeInTheDocument();
+    expect(screen.getByText('Selva Admin')).toBeInTheDocument();
   });
 
   it('shows the sign in description', () => {

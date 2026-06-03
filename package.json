@@ -1,8 +1,8 @@
 {
-  "name": "@autoswarm/root",
+  "name": "@selva/root",
   "version": "0.2.0",
   "private": true,
-  "description": "AutoSwarm Office — Gamified multi-agent business orchestration platform",
+  "description": "Selva Office — Gamified multi-agent business orchestration platform",
   "author": "Innovaciones MADFAM SAS de CV",
   "packageManager": "pnpm@9.15.4",
   "engines": {
@@ -32,7 +32,7 @@
     }
   },
   "devDependencies": {
-    "@autoswarm/config": "workspace:*",
+    "@selva/config": "workspace:*",
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
     "@napi-rs/canvas": "^0.1.100",

@@ -236,7 +236,7 @@ async def phynd_crm_webhook(request: Request):
             outbox = SwarmTaskOutbox(
                 task_id=task.id,
                 org_id=org_id,
-                stream_name="autoswarm:task-stream",
+                stream_name="selva:task-stream",
                 payload=task_msg_data,
             )
             db.add(outbox)
@@ -246,7 +246,7 @@ async def phynd_crm_webhook(request: Request):
             try:
                 msg_id = await pool.execute_with_retry(
                     "xadd",
-                    "autoswarm:task-stream",
+                    "selva:task-stream",
                     {"data": json.dumps(task_msg_data)},
                 )
                 task.stream_message_id = str(msg_id)

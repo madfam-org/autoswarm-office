@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_OUTCOMES_PATH = "/tmp/selva-skill-outcomes.jsonl"
-DEFAULT_BANDIT_PATH = "/tmp/autoswarm-bandit.json"
+DEFAULT_BANDIT_PATH = "/tmp/selva-bandit.json"
 
 
 def _outcomes_path() -> Path:

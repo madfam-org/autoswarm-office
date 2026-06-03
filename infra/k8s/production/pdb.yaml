@@ -2,7 +2,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: nexus-api-pdb
-  namespace: autoswarm
+  namespace: selva
 spec:
   minAvailable: 1
   selector:
@@ -13,7 +13,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: office-ui-pdb
-  namespace: autoswarm
+  namespace: selva
 spec:
   minAvailable: 1
   selector:
@@ -24,7 +24,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: colyseus-pdb
-  namespace: autoswarm
+  namespace: selva
 spec:
   minAvailable: 1
   selector:

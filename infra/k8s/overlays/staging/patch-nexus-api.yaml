@@ -3,7 +3,7 @@
 # Single-doc strategic-merge-patch: kustomize merges `env` by name,
 # so setting ENVIRONMENT here replaces the base's
 # `ENVIRONMENT=production`. Secret refs are rewritten to
-# autoswarm-staging-secrets / autoswarm-staging-llm-secrets.
+# selva-staging-secrets / selva-staging-llm-secrets.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,7 +19,7 @@ spec:
             - name: SENTRY_ENVIRONMENT
               value: staging
             - name: SENTRY_RELEASE
-              value: autoswarm-nexus-api@staging
+              value: selva-nexus-api@staging
             - name: CORS_ORIGINS
               value: "https://staging.selva.town,https://staging-admin.selva.town,https://staging-api.selva.town"
             - name: PUBLIC_APP_URL
@@ -29,56 +29,56 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: database-url
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: redis-url
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: secret-key
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: RESEND_API_KEY
             - name: WORKER_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: WORKER_API_TOKEN
             - name: COLYSEUS_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: colyseus-secret
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-llm-secrets
+                  name: selva-staging-llm-secrets
                   key: ANTHROPIC_API_KEY
                   optional: true
             - name: DEEPINFRA_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-llm-secrets
+                  name: selva-staging-llm-secrets
                   key: DEEPINFRA_API_KEY
                   optional: true
             - name: CONSENT_LEDGER_SIGNING_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: CONSENT_LEDGER_SIGNING_SECRET
             - name: DHANAM_API_URL
               value: "https://staging-api.dhan.am"
             - name: DHANAM_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: DHANAM_WEBHOOK_SECRET
                   optional: true
             - name: BILLING_VIA_DHANAM
@@ -96,6 +96,6 @@ spec:
             - name: TULANA_SELVA_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: TULANA_SELVA_WEBHOOK_SECRET
                   optional: true

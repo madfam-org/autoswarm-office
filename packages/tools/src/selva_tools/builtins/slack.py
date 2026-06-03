@@ -10,7 +10,7 @@ import httpx
 
 from ..base import BaseTool, ToolResult
 
-logger = logging.getLogger("autoswarm.slack")
+logger = logging.getLogger("selva.slack")
 
 
 class SlackMessageTool(BaseTool):

@@ -31,8 +31,8 @@ def test_hermes_paths_have_sensible_defaults(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "development")
 
     s = Settings()
-    assert s.selva_skills_dir == "/var/lib/autoswarm/skills"
-    assert s.autoswarm_state_db_path == "/var/lib/autoswarm/autoswarm_state.db"
+    assert s.selva_skills_dir == "/var/lib/selva/skills"
+    assert s.selva_state_db_path == "/var/lib/selva/selva_state.db"
 
 
 def test_hermes_secrets_read_from_env(monkeypatch):

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mastodon-policies
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: selva
     app.kubernetes.io/component: mastodon-policy

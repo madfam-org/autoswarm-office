@@ -1,4 +1,4 @@
-"""Root-level shared fixtures for the AutoSwarm Office test suite."""
+"""Root-level shared fixtures for the Selva Office test suite."""
 
 from __future__ import annotations
 

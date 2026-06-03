@@ -1,13 +1,13 @@
 """
-Gap 3: AutoSwarm Plugin Architecture
+Gap 3: Selva Plugin Architecture
 
 PluginManager — discovers and loads plugins from three sources:
-  1. ~/.autoswarm/plugins/  — user-global plugins
-  2. .autoswarm/plugins/    — project-local plugins (highest priority)
-  3. pip entry_points under group 'autoswarm.plugins'
+  1. ~/.selva/plugins/  — user-global plugins
+  2. .selva/plugins/    — project-local plugins (highest priority)
+  3. pip entry_points under group 'selva.plugins'
 
 Each plugin declares tools, hooks, and context addenda via a plugin.yaml
-manifest and a Python class extending AutoSwarmPlugin.
+manifest and a Python class extending SelvaPlugin.
 """
 
 from __future__ import annotations
@@ -21,17 +21,17 @@ from typing import Any
 
 import yaml
 
-from .plugin_base import AutoSwarmPlugin, HookType
+from .plugin_base import SelvaPlugin, HookType
 
 logger = logging.getLogger(__name__)
 
-_GLOBAL_PLUGIN_DIR = Path.home() / ".autoswarm" / "plugins"
-_PROJECT_PLUGIN_DIR = Path(".autoswarm") / "plugins"
+_GLOBAL_PLUGIN_DIR = Path.home() / ".selva" / "plugins"
+_PROJECT_PLUGIN_DIR = Path(".selva") / "plugins"
 
 
 class PluginManager:
     """
-    Discovers, loads, and coordinates AutoSwarm plugins.
+    Discovers, loads, and coordinates Selva plugins.
 
     Usage:
         manager = PluginManager()
@@ -41,7 +41,7 @@ class PluginManager:
     """
 
     def __init__(self, extra_dirs: list[str] | None = None) -> None:
-        self._plugins: list[AutoSwarmPlugin] = []
+        self._plugins: list[SelvaPlugin] = []
         self._extra_dirs = [Path(d) for d in (extra_dirs or [])]
 
     def discover(self) -> int:
@@ -123,7 +123,7 @@ class PluginManager:
 
         # Dynamically load the plugin module
         spec = importlib.util.spec_from_file_location(
-            f"autoswarm_plugin_{plugin_dir.name}",
+            f"selva_plugin_{plugin_dir.name}",
             plugin_dir / entrypoint,
         )
         if spec is None or spec.loader is None:
@@ -134,22 +134,22 @@ class PluginManager:
         spec.loader.exec_module(module)
         plugin_class = getattr(module, class_name)
 
-        plugin: AutoSwarmPlugin = plugin_class(manifest=manifest)
+        plugin: SelvaPlugin = plugin_class(manifest=manifest)
         plugin.setup()
         self._plugins.append(plugin)
         logger.info("PluginManager: loaded plugin '%s' from %s.", plugin.name, plugin_dir)
 
     def _load_from_entry_points(self) -> None:
-        """Load plugins registered via pip entry_points 'autoswarm.plugins'."""
+        """Load plugins registered via pip entry_points 'selva.plugins'."""
         try:
-            eps = importlib.metadata.entry_points(group="autoswarm.plugins")
+            eps = importlib.metadata.entry_points(group="selva.plugins")
         except Exception:
             return
 
         for ep in eps:
             try:
                 plugin_class = ep.load()
-                plugin: AutoSwarmPlugin = plugin_class(manifest={"name": ep.name})
+                plugin: SelvaPlugin = plugin_class(manifest={"name": ep.name})
                 plugin.setup()
                 self._plugins.append(plugin)
                 logger.info("PluginManager: loaded pip plugin '%s'.", ep.name)

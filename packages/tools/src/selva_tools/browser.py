@@ -1,7 +1,7 @@
 """
 Gap 1: Browser & Vision Tooling
 
-Wraps Playwright async API into callable tool functions, giving AutoSwarm
+Wraps Playwright async API into callable tool functions, giving Selva
 the same browser automation and vision capabilities as Hermes Agent.
 
 Falls back to requests if Playwright is not installed, so the package

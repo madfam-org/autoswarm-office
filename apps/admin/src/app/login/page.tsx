@@ -112,7 +112,7 @@ function LoginForm() {
       <div className="w-full max-w-sm rounded-2xl border border-gray-800 bg-gray-900 p-8 shadow-xl">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-white">AutoSwarm Admin</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Selva Admin</h1>
           <p className="mt-1 text-sm text-gray-400">Sign in to access the admin console</p>
         </div>
 

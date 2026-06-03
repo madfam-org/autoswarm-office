@@ -1,6 +1,6 @@
 import { useState, type FC } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import type { ApprovalRequest } from '@autoswarm/shared-types';
+import type { ApprovalRequest } from '@selva/shared-types';
 import { Button } from './button';
 import { cn } from './utils';
 

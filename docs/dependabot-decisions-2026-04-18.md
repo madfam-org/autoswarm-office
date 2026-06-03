@@ -2,7 +2,7 @@
 
 > **Context:** During the Enclii remediation session, dependabot PR #19 (a single
 > group bump containing 36 production-dep updates) was the standing backlog on
-> autoswarm-office. This doc records per-bump decisions so future dependabot
+> selva-office. This doc records per-bump decisions so future dependabot
 > runs (and human reviewers) have context.
 
 ## Decision
@@ -63,6 +63,6 @@ None in this PR. When dependabot next scans, expect:
 
 ## References
 
-- Closed PR: https://github.com/madfam-org/autoswarm-office/pull/19
-- ESLint 10 companion cleanup shipped today: autoswarm-office#42
+- Closed PR: https://github.com/madfam-org/selva-office/pull/19
+- ESLint 10 companion cleanup shipped today: selva-office#42
 - Brand-naming convention (Karafiel/Kafi split) verified: internal-devops/docs/brand/architecture.md

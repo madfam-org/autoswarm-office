@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for the AutoSwarm Nexus database."""
+"""SQLAlchemy ORM models for the Selva Nexus database."""
 
 from __future__ import annotations
 
@@ -244,7 +244,7 @@ class SwarmTaskOutbox(Base):
     )
     org_id: Mapped[str] = mapped_column(String(255), nullable=False)
     stream_name: Mapped[str] = mapped_column(
-        String(255), nullable=False, default="autoswarm:task-stream"
+        String(255), nullable=False, default="selva:task-stream"
     )
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
@@ -699,7 +699,7 @@ class ConsentLedgerSigningKey(Base):
     keys have ``is_current=False`` and ``retired_at=<promotion time>``.
 
     Append-only at the application layer (UPDATE/DELETE revoked from
-    ``autoswarm_app`` in migration 0030). Promotion is the one
+    ``selva_app`` in migration 0030). Promotion is the one
     documented mutation, performed via
     ``POST /api/v1/admin/consent-ledger/promote-key`` inside a
     transaction that flips the previous current row to retired and

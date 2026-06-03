@@ -46,7 +46,7 @@ def _ask(prompt: str, default: str = "") -> str:
 
 
 REQUIRED_ENV_VARS = [
-    ("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/autoswarm"),
+    ("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/selva"),
     ("REDIS_URL", "redis://localhost:6379/0"),
     ("SECRET_KEY", ""),
 ]
@@ -138,7 +138,7 @@ def step_write_env(collected: dict) -> None:
     if not collected:
         _warn("No variables collected — nothing to write")
         return
-    env_path = os.path.join(os.getcwd(), ".env.autoswarm")
+    env_path = os.path.join(os.getcwd(), ".env.selva")
     with open(env_path, "w") as f:
         for key, val in collected.items():
             f.write(f"{key}={val}\n")
@@ -165,7 +165,7 @@ def step_summary(collected: dict) -> None:
 
 
 async def _run_wizard() -> None:
-    print("\n\033[1;36m AutoSwarm Office — First-Run Setup Wizard\033[0m")
+    print("\n\033[1;36m Selva Office — First-Run Setup Wizard\033[0m")
     print("  ─────────────────────────────────────────")
     collected: dict = {}
     try:

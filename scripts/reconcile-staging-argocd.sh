@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reconcile autoswarm-office-staging when ArgoCD sync fails on backup prune
+# Reconcile selva-office-staging when ArgoCD sync fails on backup prune
 # or nexus-api rolls with CreateContainerConfigError (missing DHANAM_WEBHOOK_SECRET).
 #
 # Enclii-first: prefers `enclii ops apps sync`. kubectl deletes below are
@@ -45,19 +45,19 @@ for obj in \
   "cronjob/postgres-backup" \
   "externalsecret/postgres-backup-credentials" \
   "pvc/postgres-backup-pvc"; do
-  run kubectl -n autoswarm-staging delete "$obj" --ignore-not-found
+  run kubectl -n selva-staging delete "$obj" --ignore-not-found
 done
-run kubectl delete storageclass longhorn-autoswarm-backup --ignore-not-found
+run kubectl delete storageclass longhorn-selva-backup --ignore-not-found
 
 if $ENSURE_DHANAM; then
   echo ""
-  echo "== Step 2: Ensure DHANAM_WEBHOOK_SECRET in autoswarm-staging-secrets =="
-  if kubectl -n autoswarm-staging get secret autoswarm-staging-secrets \
+  echo "== Step 2: Ensure DHANAM_WEBHOOK_SECRET in selva-staging-secrets =="
+  if kubectl -n selva-staging get secret selva-staging-secrets \
     -o jsonpath='{.data.DHANAM_WEBHOOK_SECRET}' 2>/dev/null | grep -q .; then
     echo "OK   DHANAM_WEBHOOK_SECRET already present"
   else
     secret_val="$(openssl rand -hex 32)"
-    run kubectl -n autoswarm-staging patch secret autoswarm-staging-secrets \
+    run kubectl -n selva-staging patch secret selva-staging-secrets \
       --type merge \
       -p "{\"stringData\":{\"DHANAM_WEBHOOK_SECRET\":\"${secret_val}\"}}"
     echo "OK   DHANAM_WEBHOOK_SECRET generated and patched (configure same value in Dhanam when live)"
@@ -68,14 +68,14 @@ echo ""
 echo "== Step 3: ArgoCD sync via Enclii =="
 if command -v enclii >/dev/null 2>&1; then
   if $DRY_RUN; then
-    echo "DRY: enclii ops apps sync autoswarm-office-staging --apply --reason reconcile-staging-argocd"
+    echo "DRY: enclii ops apps sync selva-office-staging --apply --reason reconcile-staging-argocd"
   else
-    enclii ops apps sync autoswarm-office-staging \
+    enclii ops apps sync selva-office-staging \
       --apply \
       --reason "reconcile-staging-argocd.sh: prune backup stack + roll deployments"
   fi
 else
-  echo "WARN enclii not installed — run: argocd app sync autoswarm-office-staging"
+  echo "WARN enclii not installed — run: argocd app sync selva-office-staging"
 fi
 
 echo ""

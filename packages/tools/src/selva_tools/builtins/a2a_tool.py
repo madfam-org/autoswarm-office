@@ -10,7 +10,7 @@ from ..base import BaseTool, ToolResult
 class CallExternalAgentTool(BaseTool):
     """Discover and invoke an external agent via the A2A protocol.
 
-    This tool allows AutoSwarm agents to delegate tasks to other
+    This tool allows Selva agents to delegate tasks to other
     A2A-compatible agents running on different platforms (CrewAI,
     LangGraph, MS Agent Framework, etc.).
     """
@@ -85,7 +85,7 @@ class CallExternalAgentTool(BaseTool):
         except ImportError:
             return ToolResult(
                 success=False,
-                error="autoswarm-a2a package is not installed",
+                error="selva-a2a package is not installed",
             )
         except Exception as exc:
             return ToolResult(success=False, error=str(exc))

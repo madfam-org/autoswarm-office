@@ -116,7 +116,7 @@ class InterruptHandler:
 
         This is the preferred path -- no polling, instant notification.
         """
-        channel_name = f"autoswarm:approval:{request_id}"
+        channel_name = f"selva:approval:{request_id}"
         pool = get_redis_pool(url=self.redis_url)
         redis_client = await pool.client()
         pubsub = redis_client.pubsub()

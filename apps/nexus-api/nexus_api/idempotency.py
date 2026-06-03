@@ -37,7 +37,7 @@ Design choice — FastAPI dependency, not a global middleware:
       - If the caller sent the header AND it's new, we record the
         response body when save() is called and store it for the TTL.
 
-Key shape — ``autoswarm:idem:<org_id>:<method>:<path>:<key>``:
+Key shape — ``selva:idem:<org_id>:<method>:<path>:<key>``:
     Org-scoped (different tenants colliding on the same key value
     must NOT see each other's cached responses — that would be a
     cross-tenant data leak). Method+path scoped (a tenant retrying
@@ -77,9 +77,9 @@ from .config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Redis key prefix. Mirrors the autoswarm:* convention used throughout
+# Redis key prefix. Mirrors the selva:* convention used throughout
 # the codebase so ops can monitor with one glob.
-_KEY_PREFIX = "autoswarm:idem"
+_KEY_PREFIX = "selva:idem"
 
 # Default TTL — 24 hours. See module docstring for rationale.
 _DEFAULT_TTL_SECONDS: int = 86400

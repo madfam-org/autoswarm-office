@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run Alembic migrations against autoswarm_staging (operator break-glass).
+# Run Alembic migrations against selva_staging (operator break-glass).
 #
 # The app role (via pgbouncer) cannot CREATE TABLE on public; this script
 # uses postgres-credentials from the data namespace to upgrade head, then
@@ -26,20 +26,20 @@ done
 
 PG_USER=$(kubectl -n data get secret postgres-credentials -o jsonpath='{.data.username}' | base64 -d)
 PG_PASS=$(kubectl -n data get secret postgres-credentials -o jsonpath='{.data.password}' | base64 -d)
-ADMIN_URL=$(python3 -c "import os,urllib.parse; u=os.environ['PG_USER']; p=os.environ['PG_PASS']; print(f\"postgresql+asyncpg://{urllib.parse.quote(u,safe='')}:{urllib.parse.quote(p,safe='')}@postgres.data.svc.cluster.local:5432/autoswarm_staging\")")
+ADMIN_URL=$(python3 -c "import os,urllib.parse; u=os.environ['PG_USER']; p=os.environ['PG_PASS']; print(f\"postgresql+asyncpg://{urllib.parse.quote(u,safe='')}:{urllib.parse.quote(p,safe='')}@postgres.data.svc.cluster.local:5432/selva_staging\")")
 
-POD=$(kubectl -n autoswarm-staging get pod -l app.kubernetes.io/name=nexus-api -o jsonpath='{.items[0].metadata.name}')
+POD=$(kubectl -n selva-staging get pod -l app.kubernetes.io/name=nexus-api -o jsonpath='{.items[0].metadata.name}')
 
-echo "== Staging DB migrations (autoswarm_staging) =="
+echo "== Staging DB migrations (selva_staging) =="
 if $DRY_RUN; then
   echo "DRY: kubectl cp alembic -> ${POD}:/tmp/alembic-staging"
   echo "DRY: alembic upgrade head via postgres admin URL"
   exit 0
 fi
 
-kubectl -n autoswarm-staging cp "${ROOT}/apps/nexus-api/alembic" "${POD}:/tmp/alembic-staging"
+kubectl -n selva-staging cp "${ROOT}/apps/nexus-api/alembic" "${POD}:/tmp/alembic-staging"
 
-kubectl -n autoswarm-staging exec "$POD" -- sh -c "
+kubectl -n selva-staging exec "$POD" -- sh -c "
 set -e
 cat > /tmp/alembic-staging.ini <<'INI'
 [alembic]
@@ -77,7 +77,7 @@ DATABASE_URL='${ADMIN_URL}' /app/.venv/bin/alembic -c /tmp/alembic-staging.ini u
 "
 
 echo "--- verify scheduled_actions (postgres admin) ---"
-kubectl -n data exec deploy/postgres -- psql -U postgres -d autoswarm_staging -tAc \
+kubectl -n data exec deploy/postgres -- psql -U postgres -d selva_staging -tAc \
   "SELECT COALESCE(to_regclass('public.scheduled_actions')::text, 'MISSING')"
 
 echo "OK   staging migrations complete"

@@ -1,7 +1,7 @@
 # Autonomous Cleanroom Protocol (ACP)
 
 **Document Status:** Approved Feature  
-**Target Platform:** autoswarm-office (Selva Instance)
+**Target Platform:** selva-office (Selva Instance)
 
 ## Core Ethos
 **High Tech, Deep Roots** — Emancipating utility from proprietary walled gardens via digitally sovereign reverse-engineering.
@@ -55,8 +55,8 @@ To operate securely and efficiently within our existing ecosystem, the ACP hooks
 
 The ACP pipeline has been extended with the following capabilities inspired by the `NousResearch/hermes-agent` architecture:
 
-*   **Procedural Skill Compilation:** On every successful Phase IV validation, the QA Oracle invokes the `madfam_inference` LLM router to synthesize the Phase III output into a standalone Python `.py` Playbook Skill, stored in the `autoswarm-skills` registry. Future swarms can load these skills directly, reducing both context overhead and generation time for repeated engineering patterns.
-*   **FTS5 Episodic Memory:** All pipeline events are archived into an SQLite WAL database (`autoswarm_state.db`) with FTS5 virtual tables, enabling sub-millisecond full-text recall across all historical ACP runs.
+*   **Procedural Skill Compilation:** On every successful Phase IV validation, the QA Oracle invokes the `madfam_inference` LLM router to synthesize the Phase III output into a standalone Python `.py` Playbook Skill, stored in the `selva-skills` registry. Future swarms can load these skills directly, reducing both context overhead and generation time for repeated engineering patterns.
+*   **FTS5 Episodic Memory:** All pipeline events are archived into an SQLite WAL database (`selva_state.db`) with FTS5 virtual tables, enabling sub-millisecond full-text recall across all historical ACP runs.
 *   **Multi-Channel Operator Gateway:** Human operators can trigger ACP runs and query swarm status via Telegram and Discord slash commands, eliminating dashboard dependency during mobile/field operations.
 *   **MCP Dynamic Tooling:** The Phase I Analyst bootstraps Model Context Protocol servers (Tavily search, GitHub, filesystem) in its RPC subprocess, enabling dynamic tool expansion without container rebuilds.
 *   **Dialectic User Profiling:** The `HonchoProfiler` maintains per-operator behavioral profiles, injecting preference context into swarm system prompts for personalized output quality.

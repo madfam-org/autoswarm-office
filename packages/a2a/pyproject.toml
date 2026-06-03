@@ -1,7 +1,7 @@
 [project]
 name = "selva-a2a"
 version = "0.1.0"
-description = "A2A protocol implementation for AutoSwarm agents"
+description = "A2A protocol implementation for Selva agents"
 requires-python = ">=3.12"
 dependencies = [
   "pydantic>=2.0.0",

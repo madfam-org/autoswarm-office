@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, type FC } from 'react';
-import type { Department } from '@autoswarm/shared-types';
+import type { Department } from '@selva/shared-types';
 import type { DispatchRequest, DispatchResponse, DispatchStatus } from '@/hooks/useTaskDispatch';
 import { gameEventBus } from '@/game/PhaserGame';
 import { EVENT_CHAT_FOCUS } from '@/lib/constants';

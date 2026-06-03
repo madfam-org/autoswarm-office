@@ -44,7 +44,7 @@ class TestWriteFilesToWorktree:
         result = _write_files_to_worktree(str(tmp_path), llm_output, {})
 
         # Should fall back to placeholder since no valid files were written.
-        assert result == ["AUTOSWARM_PLACEHOLDER.md"]
+        assert result == ["SELVA_PLACEHOLDER.md"]
         assert not Path("/etc/passwd").exists() or Path("/etc/passwd").read_text() != "malicious"
 
     def test_rejects_directory_traversal(self, tmp_path: Path) -> None:
@@ -60,15 +60,15 @@ class TestWriteFilesToWorktree:
 
         result = _write_files_to_worktree(str(tmp_path), llm_output, {})
 
-        assert result == ["AUTOSWARM_PLACEHOLDER.md"]
+        assert result == ["SELVA_PLACEHOLDER.md"]
 
     def test_writes_placeholder_on_invalid_json(self, tmp_path: Path) -> None:
         from selva_workers.graphs.coding import _write_files_to_worktree
 
         result = _write_files_to_worktree(str(tmp_path), "not valid json", {})
 
-        assert result == ["AUTOSWARM_PLACEHOLDER.md"]
-        assert (tmp_path / "AUTOSWARM_PLACEHOLDER.md").exists()
+        assert result == ["SELVA_PLACEHOLDER.md"]
+        assert (tmp_path / "SELVA_PLACEHOLDER.md").exists()
 
     def test_writes_placeholder_when_no_llm_output(self, tmp_path: Path) -> None:
         from selva_workers.graphs.coding import _write_files_to_worktree
@@ -79,8 +79,8 @@ class TestWriteFilesToWorktree:
             {"description": "Create hello world"},
         )
 
-        assert result == ["AUTOSWARM_PLACEHOLDER.md"]
-        content = (tmp_path / "AUTOSWARM_PLACEHOLDER.md").read_text()
+        assert result == ["SELVA_PLACEHOLDER.md"]
+        content = (tmp_path / "SELVA_PLACEHOLDER.md").read_text()
         assert "Create hello world" in content
 
     def test_returns_empty_when_no_worktree(self) -> None:
@@ -183,8 +183,8 @@ class TestImplementWritesFiles:
                 }
             )
 
-        assert (tmp_path / "AUTOSWARM_PLACEHOLDER.md").exists()
-        assert "AUTOSWARM_PLACEHOLDER.md" in result["code_changes"][-1]["files_modified"]
+        assert (tmp_path / "SELVA_PLACEHOLDER.md").exists()
+        assert "SELVA_PLACEHOLDER.md" in result["code_changes"][-1]["files_modified"]
 
     def test_implement_blocked_by_permission_deny(self) -> None:
         from selva_workers.graphs.coding import implement

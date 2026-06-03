@@ -176,7 +176,7 @@ The tool is gated by:
    <https://www.reddit.com/prefs/apps>.
 2. Use the script-app installed-flow to mint a refresh token (see PRAW
    docs).
-3. Store the four secrets in Vault, sync to the `autoswarm` namespace
+3. Store the four secrets in Vault, sync to the `selva` namespace
    K8s Secret used by the worker Deployment.
 4. `kubectl apply -f infra/k8s/configmaps/subreddit-policies-default.yaml`
    to ship the policy ConfigMap.
@@ -230,7 +230,7 @@ tool mirrors the Reddit MVP shape and is gated by:
    like an API token — rotate quarterly per
    `docs/SECRET_ROTATION_POLICY.md`.
 3. Store the handle + app password as Vault secrets, sync to the
-   `autoswarm` namespace K8s Secret used by the worker Deployment.
+   `selva` namespace K8s Secret used by the worker Deployment.
    Naming convention:
    - `BLUESKY_HANDLE_DEFAULT` = `madfam.bsky.social`
    - `BLUESKY_APP_PASSWORD_DEFAULT` = `xxxx-xxxx-xxxx-xxxx`

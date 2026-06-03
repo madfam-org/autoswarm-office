@@ -1,9 +1,9 @@
 'use client';
 
 import { type FC } from 'react';
-import { CloseButton } from '@autoswarm/ui';
+import { CloseButton } from '@selva/ui';
 import { useMetrics, type MetricsPeriod } from '@/hooks/useMetrics';
-import type { TrendPoint } from '@autoswarm/shared-types';
+import type { TrendPoint } from '@selva/shared-types';
 import { formatHM } from '@/lib/format-time';
 
 interface MetricsDashboardProps {

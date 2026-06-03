@@ -1,13 +1,13 @@
 [project]
-name = "autoswarm-office"
+name = "selva-office"
 version = "0.1.0"
-description = "AutoSwarm Office — Gamified multi-agent business orchestration platform"
+description = "Selva Office — Gamified multi-agent business orchestration platform"
 requires-python = ">=3.12"
 dependencies = [
   "selva-orchestrator",
   "madfam-inference",
   "selva-permissions",
-  "autoswarm-nexus-api",
+  "selva-nexus-api",
   "selva-workers",
   "selva-skills",
   "selva-observability",
@@ -44,7 +44,7 @@ members = [
 selva-orchestrator = { workspace = true }
 madfam-inference = { workspace = true }
 selva-permissions = { workspace = true }
-autoswarm-nexus-api = { workspace = true }
+selva-nexus-api = { workspace = true }
 selva-workers = { workspace = true }
 selva-skills = { workspace = true }
 selva-observability = { workspace = true }

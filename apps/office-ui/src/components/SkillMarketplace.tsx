@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type FC } from 'react';
-import { CloseButton } from '@autoswarm/ui';
+import { CloseButton } from '@selva/ui';
 import { gameEventBus } from '@/game/PhaserGame';
 import { EVENT_CHAT_FOCUS } from '@/lib/constants';
 import { useFocusTrap } from '@/hooks/useFocusTrap';

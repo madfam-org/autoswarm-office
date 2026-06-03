@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "AutoSwarm Next.js TypeScript Config",
+  "display": "Selva Next.js TypeScript Config",
   "extends": "./base.json",
   "compilerOptions": {
     "plugins": [{ "name": "next" }],

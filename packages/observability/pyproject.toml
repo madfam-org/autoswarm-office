@@ -1,7 +1,7 @@
 [project]
 name = "selva-observability"
 version = "0.1.0"
-description = "Shared logging and observability for AutoSwarm services"
+description = "Shared logging and observability for Selva services"
 requires-python = ">=3.12"
 dependencies = [
   "structlog>=24.0",

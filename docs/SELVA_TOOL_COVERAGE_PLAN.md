@@ -53,7 +53,7 @@ Tools:
 - `argocd_refresh_app` — soft / hard refresh
 - `argocd_register_project` — writes a `config.json` to enclii's ApplicationSet watched path + commits via `github_admin`
 
-All via `argocd` service account token mounted in the autoswarm namespace. Falls through to direct K8s API if server unreachable.
+All via `argocd` service account token mounted in the selva namespace. Falls through to direct K8s API if server unreachable.
 
 ### 1.2 `k8s_diagnostics.py` — read-side Kubernetes
 
@@ -197,7 +197,7 @@ Tools:
 - `tenant_create_identity_record` — a new row in a central `tenant_identities` table with all four IDs
 - `tenant_validate_consistency` — flags drift (e.g. Dhanam active but Janua deleted)
 
-Requires a new table + migration in `autoswarm-nexus-api`.
+Requires a new table + migration in `selva-nexus-api`.
 
 **Deliverable:** 8 modules + migration 0024 + tests. No skill yet — Phase 3 composes.
 

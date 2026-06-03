@@ -1,6 +1,6 @@
 """Org-level configuration for inference routing and agent personnel.
 
-Loads ``~/.autoswarm/org-config.yaml`` (or a custom path) and provides
+Loads ``~/.selva/org-config.yaml`` (or a custom path) and provides
 typed models for provider registration, task-type model assignments,
 and agent templates.  All API keys are referenced by *env var name*,
 never stored as plaintext.
@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_CONFIG_PATH = Path.home() / ".autoswarm" / "org-config.yaml"
+_DEFAULT_CONFIG_PATH = Path.home() / ".selva" / "org-config.yaml"
 
 
 class TaskType(StrEnum):

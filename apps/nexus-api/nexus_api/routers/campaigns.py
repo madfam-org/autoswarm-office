@@ -112,7 +112,7 @@ async def _dispatch_planning_tasks(
         outbox = SwarmTaskOutbox(
             task_id=task.id,
             org_id=tenant.org_id,
-            stream_name="autoswarm:task-stream",
+            stream_name="selva:task-stream",
             payload=task_msg_data,
         )
         db.add(outbox)
@@ -122,7 +122,7 @@ async def _dispatch_planning_tasks(
             pool = get_redis_pool(url=settings.redis_url)
             msg_id = await pool.execute_with_retry(
                 "xadd",
-                "autoswarm:task-stream",
+                "selva:task-stream",
                 {"data": json.dumps(task_msg_data)},
             )
             task.stream_message_id = str(msg_id)
@@ -276,7 +276,7 @@ async def crm_campaign_handoff(
     outbox = SwarmTaskOutbox(
         task_id=task.id,
         org_id=tenant.org_id,
-        stream_name="autoswarm:task-stream",
+        stream_name="selva:task-stream",
         payload=task_msg_data,
     )
     db.add(outbox)
@@ -286,7 +286,7 @@ async def crm_campaign_handoff(
         pool = get_redis_pool(url=settings.redis_url)
         msg_id = await pool.execute_with_retry(
             "xadd",
-            "autoswarm:task-stream",
+            "selva:task-stream",
             {"data": json.dumps(task_msg_data)},
         )
         task.stream_message_id = str(msg_id)

@@ -1,4 +1,4 @@
-"""AutoSwarm worker process -- Redis Streams consumer for LangGraph execution."""
+"""Selva worker process -- Redis Streams consumer for LangGraph execution."""
 
 from __future__ import annotations
 
@@ -59,9 +59,9 @@ configure_logging(service_name="worker")
 init_sentry("worker")
 init_tracing("worker")
 
-logger = logging.getLogger("autoswarm.worker")
+logger = logging.getLogger("selva.worker")
 
-AGENT_STATUS_CHANNEL = "autoswarm:agent-status"
+AGENT_STATUS_CHANNEL = "selva:agent-status"
 GRAPH_BUILDERS = {
     "accounting": build_accounting_graph,
     "billing": build_billing_graph,
@@ -508,7 +508,7 @@ async def process_task(task_data: dict) -> None:
         try:
             resolved_repo.mkdir(parents=True, exist_ok=True)
             # Quick writability check.
-            _probe = resolved_repo / ".autoswarm-probe"
+            _probe = resolved_repo / ".selva-probe"
             _probe.touch()
             _probe.unlink()
         except OSError as exc:
@@ -1057,7 +1057,7 @@ async def _publish_retryable_outbox(settings, limit: int) -> int:
             for row in rows:
                 outbox_id = str(row["id"])
                 task_id = str(row["task_id"])
-                stream_name = str(row["stream_name"] or "autoswarm:task-stream")
+                stream_name = str(row["stream_name"] or "selva:task-stream")
                 payload = _coerce_json_field(row.get("payload"), {})
                 if not isinstance(payload, dict):
                     payload = {}
@@ -1276,7 +1276,7 @@ async def main() -> None:
 
     logger.info(
         "Worker listening on stream '%s' (max_concurrent=%d)",
-        "autoswarm:task-stream",
+        "selva:task-stream",
         settings.max_concurrent_tasks,
     )
 

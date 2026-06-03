@@ -70,7 +70,7 @@ async def list_connected_users(
         # redis-py overloads `hgetall` to return either `Awaitable[dict]`
         # (async client) or `dict` (sync client) — the union breaks
         # `await`.  Our `client` is the async variant, so coerce via cast.
-        data = await cast(Awaitable[dict[Any, Any]], client.hgetall("autoswarm:connected-players"))
+        data = await cast(Awaitable[dict[Any, Any]], client.hgetall("selva:connected-players"))
         users: list[ConnectedUser] = []
         for session_id, raw in data.items():
             import json
@@ -104,7 +104,7 @@ async def kick_user(
         import json
 
         await client.publish(
-            "autoswarm:admin-actions",
+            "selva:admin-actions",
             json.dumps({"action": "kick", "session_id": body.session_id, "reason": body.reason}),
         )
         return {"status": "kick_published", "session_id": body.session_id}
@@ -129,7 +129,7 @@ async def update_room_config(
 
         config = body.model_dump(exclude_unset=True)
         await client.publish(
-            "autoswarm:admin-actions",
+            "selva:admin-actions",
             json.dumps({"action": "room_config", "config": config}),
         )
         return {"status": "config_published"}

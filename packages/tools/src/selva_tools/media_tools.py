@@ -152,7 +152,7 @@ class TextToSpeechTool(BaseTool):
         voice: str = kwargs.get("voice", "alloy")
         fmt: str = kwargs.get("format", "mp3")
         model: str = kwargs.get("model", "tts-1")
-        save_path: str = kwargs.get("save_path") or f"/tmp/autoswarm_tts_{voice}.{fmt}"
+        save_path: str = kwargs.get("save_path") or f"/tmp/selva_tts_{voice}.{fmt}"
 
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:

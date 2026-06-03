@@ -14,8 +14,8 @@
 
 ```bash
 # 1. Clone and enter the repo
-git clone https://github.com/YOUR-ORG/autoswarm-office.git
-cd autoswarm-office
+git clone https://github.com/YOUR-ORG/selva-office.git
+cd selva-office
 
 # 2. Run first-time setup (checks prereqs, installs deps, creates .env)
 bash scripts/setup.sh
@@ -116,14 +116,14 @@ uv run pytest tests/test_permissions.py -v
 
 | Package | Suite | Tests |
 |---------|-------|-------|
-| `@autoswarm/shared-types` | Type guards and validators | 22 |
-| `@autoswarm/colyseus` | Movement handlers | 25 |
-| `@autoswarm/colyseus` | Interaction handlers | 15 |
-| `@autoswarm/gateway` | Memory management | 20 |
-| `@autoswarm/ui` | Button component | 14 |
-| `@autoswarm/ui` | AgentCard component | 12 |
-| `@autoswarm/ui` | ApprovalModal component | 12 |
-| `@autoswarm/office-ui` | useApprovals hook | 17 |
+| `@selva/shared-types` | Type guards and validators | 22 |
+| `@selva/colyseus` | Movement handlers | 25 |
+| `@selva/colyseus` | Interaction handlers | 15 |
+| `@selva/gateway` | Memory management | 20 |
+| `@selva/ui` | Button component | 14 |
+| `@selva/ui` | AgentCard component | 12 |
+| `@selva/ui` | ApprovalModal component | 12 |
+| `@selva/office-ui` | useApprovals hook | 17 |
 
 ## Linting and Formatting
 

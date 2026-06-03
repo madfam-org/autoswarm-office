@@ -10,7 +10,7 @@
 #
 set -euo pipefail
 
-NS="${STAGING_NAMESPACE:-autoswarm-staging}"
+NS="${STAGING_NAMESPACE:-selva-staging}"
 REQUIRE_TRACE=false
 
 for arg in "$@"; do
@@ -28,7 +28,7 @@ echo "== Observability trace verification (namespace=${NS}) =="
 
 TOKEN=""
 if command -v kubectl >/dev/null 2>&1; then
-  TOKEN="$(kubectl -n "$NS" get secret autoswarm-staging-secrets \
+  TOKEN="$(kubectl -n "$NS" get secret selva-staging-secrets \
     -o jsonpath='{.data.WORKER_API_TOKEN}' 2>/dev/null | base64 -d || true)"
 fi
 

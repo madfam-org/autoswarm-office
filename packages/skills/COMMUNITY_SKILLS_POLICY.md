@@ -5,7 +5,7 @@
 Community skills are vendored from
 [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) and
 other third-party sources. They follow their own coding conventions that may not
-align with AutoSwarm's strict `ruff` configuration (target py312, line-length
+align with Selva's strict `ruff` configuration (target py312, line-length
 100, strict rule selection). Enforcing our project-level linting on externally
 authored code would create two problems:
 
@@ -66,7 +66,7 @@ Community skills are **disabled by default**. There are three ways to enable the
 ### 1. Environment Variable
 
 ```bash
-export AUTOSWARM_COMMUNITY_SKILLS_ENABLED=true
+export SELVA_COMMUNITY_SKILLS_ENABLED=true
 ```
 
 Set this before starting the application. The skill registry reads the variable
@@ -75,7 +75,7 @@ on startup.
 ### 2. Runtime API (Python)
 
 ```python
-from autoswarm_skills import get_skill_registry
+from selva_skills import get_skill_registry
 
 registry = get_skill_registry()
 registry.enable_community_skills()

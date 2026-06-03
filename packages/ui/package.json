@@ -1,5 +1,5 @@
 {
-  "name": "@autoswarm/ui",
+  "name": "@selva/ui",
   "version": "0.1.0",
   "private": true,
   "main": "src/index.ts",
@@ -17,8 +17,8 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
-    "@autoswarm/config": "workspace:*",
-    "@autoswarm/shared-types": "workspace:*",
+    "@selva/config": "workspace:*",
+    "@selva/shared-types": "workspace:*",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.2.15",

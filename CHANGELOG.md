@@ -50,7 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   approved Tulana campaign drafts (Phase 2.4).
 - **`campaign` worker graph** — Tulana SKU planning lane + draft generation with
   `do_not_claim` guardrail scrubbing (Phase 2.2–2.3).
-- **Phase 0 observability k8s wiring** — optional `autoswarm-observability-secrets`
+- **Phase 0 observability k8s wiring** — optional `selva-observability-secrets`
   env refs on all 6 Deployments + `observability-secrets-template.yaml` +
   `./scripts/verify-phase0-gates.sh`.
 - **OTel gRPC exporter deps** on nexus-api and workers (activates when endpoint set).
@@ -301,7 +301,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `dyad_selva_plus_user`, and `agent_identified` — stored on
   `tenant_configs.voice_mode` (nullable; NULL means onboarding incomplete).
 - **Append-Only Consent Ledger**: `consent_ledger` table (migration 0018)
-  with UPDATE/DELETE REVOKEd from the `autoswarm_app` role at the database
+  with UPDATE/DELETE REVOKEd from the `selva_app` role at the database
   level. SHA-256 signature replay verifiable via `compute_signature()`.
 - **Onboarding Flow**: `/onboarding` full-page gate forces voice-mode
   selection before `/office` loads. `VoiceModeChangeModal` for later changes.
@@ -455,7 +455,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **Skills Package**: Resolved dual-path collision — `pyproject.toml`
-  `where=["src"]` was hiding the real `autoswarm_skills/` root package.
+  `where=["src"]` was hiding the real `selva_skills/` root package.
 - **Worker Settings**: Added missing `environment` field that was crashing
   validator with AttributeError on every instantiation.
 - **Colyseus State Sync**: Moved megaphone and spotlight from module-level
@@ -525,7 +525,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Worker Auth Hardening**: `WORKER_API_TOKEN` env var (default `dev-bypass`).
   `auth.py:get_worker_auth_headers()` centralizes all worker-to-API auth.
 - **Org Config Bootstrap**: `make setup-org-config` copies template to
-  `~/.autoswarm/org-config.yaml`. Wired into `make dev-full`.
+  `~/.selva/org-config.yaml`. Wired into `make dev-full`.
 - **Enhanced System Prompts**: `prompts.py` provides repo-context-aware plan/
   implement/review prompts with strict JSON format instructions.
 - **Docker Compose Compat**: `DOCKER_COMPOSE` Makefile variable auto-detects
@@ -592,7 +592,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
-- Legacy Redis LIST dual-write (`LPUSH autoswarm:tasks`). Workers consume
+- Legacy Redis LIST dual-write (`LPUSH selva:tasks`). Workers consume
   exclusively from Redis Streams. See `docs/MIGRATION_LEGACY_QUEUE.md`.
 - `legacy_queue_depth` field from `/api/v1/health/queue-stats`.
 
@@ -617,7 +617,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Interactive Tiled map with 10 interactable types, click-to-move pathfinding,
   and multi-room navigation.
 - Skill Marketplace for community skill discovery and installation.
-- Python SDK with CLI (`autoswarm dispatch/agents/tasks`).
+- Python SDK with CLI (`selva dispatch/agents/tasks`).
 - Full-stack observability: TaskEvent stream, OpsFeed, MetricsDashboard.
 - MADFAM Intelligence Architecture: org-config-driven model routing, task-type
   assignments, Thompson Sampling orchestration.

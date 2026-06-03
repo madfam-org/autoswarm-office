@@ -69,11 +69,11 @@ jobs:
 
           image_for() {
             case "$1" in
-              nexus-api) echo "ghcr.io/madfam-org/autoswarm-nexus-api" ;;
-              office-ui) echo "ghcr.io/madfam-org/autoswarm-office-ui" ;;
-              colyseus)  echo "ghcr.io/madfam-org/autoswarm-colyseus" ;;
-              admin)     echo "ghcr.io/madfam-org/autoswarm-admin" ;;
-              gateway)   echo "ghcr.io/madfam-org/autoswarm-gateway" ;;
+              nexus-api) echo "ghcr.io/madfam-org/selva-nexus-api" ;;
+              office-ui) echo "ghcr.io/madfam-org/selva-office-ui" ;;
+              colyseus)  echo "ghcr.io/madfam-org/selva-colyseus" ;;
+              admin)     echo "ghcr.io/madfam-org/selva-admin" ;;
+              gateway)   echo "ghcr.io/madfam-org/selva-gateway" ;;
               workers)   echo "ghcr.io/madfam-org/selva-workers" ;;
               *) echo ""; return 1 ;;
             esac
@@ -149,8 +149,8 @@ jobs:
           p.write_text(t)
           PY
           SHORT="${TARGET:7:15}"
-          git config user.name "autoswarm-bot"
-          git config user.email "bot@autoswarm.dev"
+          git config user.name "selva-bot"
+          git config user.email "bot@selva.town"
           git add "$FILE"
           git commit -m "rollback(prod): restore $COMPONENT $SHORT
 
@@ -161,4 +161,4 @@ jobs:
       - name: Notify
         if: always()
         run: |
-          echo "::notice::autoswarm-office ${{ inputs.component }} rolled back to ${{ steps.target.outputs.target }}. Monitor ArgoCD (autoswarm-office Application) for reconcile completion."
+          echo "::notice::selva-office ${{ inputs.component }} rolled back to ${{ steps.target.outputs.target }}. Monitor ArgoCD (selva-office Application) for reconcile completion."

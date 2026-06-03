@@ -1,4 +1,4 @@
-"""AutoSwarm dynamic workflow engine — YAML-defined DAGs compiled to LangGraph."""
+"""Selva dynamic workflow engine — YAML-defined DAGs compiled to LangGraph."""
 
 from .compiler import WorkflowCompiler
 from .schema import (

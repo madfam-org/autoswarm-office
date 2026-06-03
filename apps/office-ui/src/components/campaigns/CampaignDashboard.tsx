@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
-import { CloseButton } from '@autoswarm/ui';
-import type { TaskBoardItem } from '@autoswarm/shared-types';
+import { CloseButton } from '@selva/ui';
+import type { TaskBoardItem } from '@selva/shared-types';
 
 import { TulanaReadinessBadge } from '@/components/campaigns/TulanaReadinessBadge';
 import type {

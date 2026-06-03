@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { AvatarConfig } from '@autoswarm/shared-types';
+import type { AvatarConfig } from '@selva/shared-types';
 import {
   SKIN_TONES,
   HAIR_COLORS,
@@ -9,12 +9,12 @@ import {
   HAIR_STYLE_NAMES,
   ACCESSORY_NAMES,
   resolveColorMap,
-} from '@autoswarm/shared-types';
+} from '@selva/shared-types';
 import { composeLayers } from '@/game/sprite-data/renderer';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import bodyTemplates from '@autoswarm/shared-types/src/sprite-data/body.json';
-import hairTemplates from '@autoswarm/shared-types/src/sprite-data/hair.json';
-import accessoryTemplates from '@autoswarm/shared-types/src/sprite-data/accessories.json';
+import bodyTemplates from '@selva/shared-types/src/sprite-data/body.json';
+import hairTemplates from '@selva/shared-types/src/sprite-data/hair.json';
+import accessoryTemplates from '@selva/shared-types/src/sprite-data/accessories.json';
 
 const HAIR_STYLE_KEYS = ['short', 'long', 'spiky', 'curly', 'ponytail', 'bob', 'mohawk', 'bun'] as const;
 const PLAYER_ACC_KEYS = ['glasses', 'crown', 'headphones', 'hat', 'scarf', 'backpack', 'badge', 'visor'] as const;

@@ -3,12 +3,12 @@
 # Apply with:  kubectl apply -k infra/k8s/hermes/
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: autoswarm
+namespace: selva
 
 resources:
   - pvc-skills.yaml
   - secret-hermes.yaml
 
 commonLabels:
-  app.kubernetes.io/part-of: autoswarm-office
+  app.kubernetes.io/part-of: selva-office
   app.kubernetes.io/managed-by: kustomize

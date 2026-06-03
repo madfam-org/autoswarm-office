@@ -1,5 +1,5 @@
 {
-  "name": "@autoswarm/shared-types",
+  "name": "@selva/shared-types",
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "@autoswarm/config": "workspace:*",
+    "@selva/config": "workspace:*",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

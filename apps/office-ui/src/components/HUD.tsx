@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useRef, useEffect, type FC } from 'react';
-import type { Department } from '@autoswarm/shared-types';
+import type { Department } from '@selva/shared-types';
 
 /**
  * Player position changes faster than 4px (one minimap pixel at default scale)

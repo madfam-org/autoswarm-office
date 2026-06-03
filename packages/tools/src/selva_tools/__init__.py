@@ -1,4 +1,4 @@
-"""AutoSwarm tool registry and built-in tools for agent workflows."""
+"""Selva tool registry and built-in tools for agent workflows."""
 
 from .audience import (
     Audience,

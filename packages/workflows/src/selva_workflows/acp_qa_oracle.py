@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 SKILL_SYNTHESIS_PROMPT = """\
 You are an expert Python engineer. A Clean Swarm agent has successfully reverse-engineered \
 the logic of a third-party service. Your task is to synthesize this into a reusable, \
-standalone Python skill script that conforms to the AutoSwarm agentskills/v1 interface.
+standalone Python skill script that conforms to the Selva agentskills/v1 interface.
 
 ## Source Code Produced by the Clean Swarm
 ```python
@@ -22,7 +22,7 @@ standalone Python skill script that conforms to the AutoSwarm agentskills/v1 int
 - Define exactly these module-level variables (ALL required):
   - `SKILL_SCHEMA_VERSION = "agentskills/v1"`  (literal string, required for interop)
   - `SKILL_VERSION = "1.0.0"`  (semver string)
-  - `SKILL_AUTHOR = "autoswarm-qa-oracle"`
+  - `SKILL_AUTHOR = "selva-qa-oracle"`
   - `SKILL_TAGS: list[str]`  (2-5 relevant tags describing the skill domain)
   - `SKILL_DESCRIPTION: str`  (one clear sentence describing what this skill does)
   - `SKILL_METADATA: dict`  (must include keys: "run_id", "last_validated" as ISO-8601 UTC string)
@@ -66,7 +66,7 @@ class ACPQAOracleNode:
             )
             return self._compile_skill_stub(run_id)
 
-        skills_dir = os.environ.get("AUTOSWARM_SKILLS_DIR", "/var/lib/autoswarm/skills")
+        skills_dir = os.environ.get("SELVA_SKILLS_DIR", "/var/lib/selva/skills")
         os.makedirs(skills_dir, exist_ok=True)
 
         request = InferenceRequest(
@@ -112,7 +112,7 @@ class ACPQAOracleNode:
 
     def _compile_skill_stub(self, run_id: str) -> str:
         """Fallback stub writer when the LLM router is unavailable."""
-        skills_dir = os.environ.get("AUTOSWARM_SKILLS_DIR", "/var/lib/autoswarm/skills")
+        skills_dir = os.environ.get("SELVA_SKILLS_DIR", "/var/lib/selva/skills")
         os.makedirs(skills_dir, exist_ok=True)
 
         skill_name = f"skill_{run_id.replace('-', '_')}_{uuid.uuid4().hex[:4]}.py"

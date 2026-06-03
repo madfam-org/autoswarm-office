@@ -3,7 +3,7 @@
 # list from this file. Apply with merge mode:
 #   python3 scripts/apply-cloudflare-infra.py --tunnel --merge
 #
-# Prod routes target `autoswarm`; staging routes target `autoswarm-staging`.
+# Prod routes target `selva`; staging routes target `selva-staging`.
 # ClusterIP services expose port 80 → containerPort.
 
 tunnel: enclii-prod
@@ -11,32 +11,32 @@ tunnel: enclii-prod
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:
-  # --- Production (autoswarm namespace) ---
+  # --- Production (selva namespace) ---
   - hostname: api.selva.town
-    service: http://nexus-api.autoswarm.svc.cluster.local:80
+    service: http://nexus-api.selva.svc.cluster.local:80
   - hostname: app.selva.town
-    service: http://office-ui.autoswarm.svc.cluster.local:80
+    service: http://office-ui.selva.svc.cluster.local:80
   - hostname: selva.town
-    service: http://office-ui.autoswarm.svc.cluster.local:80
+    service: http://office-ui.selva.svc.cluster.local:80
   - hostname: www.selva.town
-    service: http://office-ui.autoswarm.svc.cluster.local:80
+    service: http://office-ui.selva.svc.cluster.local:80
   - hostname: ws.selva.town
-    service: http://colyseus.autoswarm.svc.cluster.local:80
+    service: http://colyseus.selva.svc.cluster.local:80
   - hostname: admin.selva.town
-    service: http://admin.autoswarm.svc.cluster.local:80
+    service: http://admin.selva.svc.cluster.local:80
   - hostname: gw.selva.town
-    service: http://gateway.autoswarm.svc.cluster.local:80
+    service: http://gateway.selva.svc.cluster.local:80
 
-  # --- Staging (autoswarm-staging namespace) ---
+  # --- Staging (selva-staging namespace) ---
   - hostname: staging-api.selva.town
-    service: http://nexus-api.autoswarm-staging.svc.cluster.local:80
+    service: http://nexus-api.selva-staging.svc.cluster.local:80
   - hostname: staging.selva.town
-    service: http://office-ui.autoswarm-staging.svc.cluster.local:80
+    service: http://office-ui.selva-staging.svc.cluster.local:80
   - hostname: staging-admin.selva.town
-    service: http://admin.autoswarm-staging.svc.cluster.local:80
+    service: http://admin.selva-staging.svc.cluster.local:80
   - hostname: staging-ws.selva.town
-    service: http://colyseus.autoswarm-staging.svc.cluster.local:80
+    service: http://colyseus.selva-staging.svc.cluster.local:80
   - hostname: staging-gw.selva.town
-    service: http://gateway.autoswarm-staging.svc.cluster.local:80
+    service: http://gateway.selva-staging.svc.cluster.local:80
 
   - service: http_status:404

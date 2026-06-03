@@ -9,8 +9,8 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "autoswarm-nexus-api",
-    "autoswarm-office",
+    "selva-nexus-api",
+    "selva-office",
     "madfam-budget-gate",
     "madfam-inference",
     "selva-a2a",
@@ -294,7 +294,7 @@ wheels = [
 ]
 
 [[package]]
-name = "autoswarm-nexus-api"
+name = "selva-nexus-api"
 version = "0.1.0"
 source = { editable = "apps/nexus-api" }
 dependencies = [
@@ -361,11 +361,11 @@ requires-dist = [
 ]
 
 [[package]]
-name = "autoswarm-office"
+name = "selva-office"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "autoswarm-nexus-api" },
+    { name = "selva-nexus-api" },
     { name = "madfam-budget-gate" },
     { name = "madfam-inference" },
     { name = "selva-a2a" },
@@ -395,7 +395,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "autoswarm-nexus-api", editable = "apps/nexus-api" },
+    { name = "selva-nexus-api", editable = "apps/nexus-api" },
     { name = "madfam-budget-gate", editable = "packages/budget-gate" },
     { name = "madfam-inference", editable = "packages/inference" },
     { name = "selva-a2a", editable = "packages/a2a" },

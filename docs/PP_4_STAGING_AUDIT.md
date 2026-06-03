@@ -1,4 +1,4 @@
-# PP.4 — autoswarm-office staging audit vs RFC 0001
+# PP.4 — selva-office staging audit vs RFC 0001
 
 > [!IMPORTANT]
 > MADFAM-ENCLII-FIRST-LEGACY-RAW v1: This document contains legacy raw infrastructure command examples.
@@ -18,10 +18,10 @@
 
 ## TL;DR
 
-autoswarm-office (rebranded to Selva, target apex `selva.town`) is the
+selva-office (rebranded to Selva, target apex `selva.town`) is the
 most complex service in the ecosystem to converge: **6 deployments**
 (nexus-api, office-ui, colyseus, admin, gateway, workers) and 3 HPAs
-sitting on top of a single `autoswarm` namespace. The current state is
+sitting on top of a single `selva` namespace. The current state is
 **direct-to-prod** with no staging tier whatsoever:
 
 1. `infra/k8s/production/` is the canonical base and is the only
@@ -52,8 +52,8 @@ optional PP.6 masked DB restore).
 - `infra/k8s/production/` holds the canonical base — 6 Deployments +
   3 HPAs + PDBs + ServiceMonitors + KEDA ScaledObject + backup CronJob +
   RFC 0005 secret-writer SA/Role/RoleBinding.
-- Namespace: `autoswarm` (per `kustomization.yaml`).
-- Images (in GHCR) are still `ghcr.io/madfam-org/autoswarm-*` except
+- Namespace: `selva` (per `kustomization.yaml`).
+- Images (in GHCR) are still `ghcr.io/madfam-org/selva-*` except
   `selva-workers`. This PR does NOT rename registry paths per
   constraint; the kustomization overlay references the existing paths.
 - `.github/workflows/deploy.yml` is the single deploy path: detect
@@ -62,7 +62,7 @@ optional PP.6 masked DB restore).
 - `.enclii.yml` (actually `enclii.yaml`) declares 6 Enclii Services with
   `autoDeploy: true` on `main`. No `promotion:` key.
 - `infra/argocd/application.yaml` watches `infra/k8s/production` →
-  `autoswarm` namespace with `automated: { prune, selfHeal }`. No
+  `selva` namespace with `automated: { prune, selfHeal }`. No
   staging Application.
 
 ## Gap vs RFC 0001
@@ -74,11 +74,11 @@ optional PP.6 masked DB restore).
    promote-to-prod writes to). A future PR does the full
    `production/` → `base/` rename.
 2. **No staging namespace.** RFC 0001 expects `<service>-staging`.
-   For autoswarm-office the ecosystem convention (matches Karafiel's
+   For selva-office the ecosystem convention (matches Karafiel's
    `karafiel-staging`, Dhanam's `dhanam-staging`) is
-   **`autoswarm-staging`** — not `selva-staging`, because the K8s
+   **`selva-staging`** — not `selva-staging`, because the K8s
    namespace follows the repo name to avoid breaking the RFC 0005
-   secret-writer RBAC references already scoped to `autoswarm`.
+   secret-writer RBAC references already scoped to `selva`.
 3. **No staging image digests pinned separately from prod.** Prod is
    the only digest pin target today. Staging needs its own 6-digest
    block that CI updates on every main merge.
@@ -89,9 +89,9 @@ optional PP.6 masked DB restore).
    fire in staging — it would spam real customer emails via Resend),
    and flip any `FEATURE_*` that could cause real-world side effects
    (voice mode email, Reddit bot, Stripe relay).
-5. **No staging secrets template.** Prod uses `autoswarm-secrets`,
-   `autoswarm-llm-secrets`, `autoswarm-admin-auth`,
-   `autoswarm-org-config` ConfigMap. Staging needs analogous
+5. **No staging secrets template.** Prod uses `selva-secrets`,
+   `selva-llm-secrets`, `selva-admin-auth`,
+   `selva-org-config` ConfigMap. Staging needs analogous
    `-staging` variants (except the ConfigMap, which the overlay
    inherits unchanged).
 6. **HPAs not disabled for staging.** `hpa.yaml` declares 3 HPAs
@@ -107,7 +107,7 @@ optional PP.6 masked DB restore).
    branch.
 8. **No promote workflow.** Prod digests are committed directly by
    `deploy.yml` on every merge. RFC 0001 Pattern B (manual gate) is
-   required for autoswarm-office because the workers run agent code
+   required for selva-office because the workers run agent code
    that touches prod customer data via SendEmail, SendMarketingEmail,
    database writes, and Stripe/Resend/GitHub API calls. Mistakes
    here would email real customers or push real git branches.
@@ -124,7 +124,7 @@ optional PP.6 masked DB restore).
     matches ecosystem convention per `domain_conventions` memory).
     **Operator action** — Cloudflare DNS + tunnel route changes are
     out-of-band for this PR.
-13. **No staging Janua OAuth client.** Janua's `autoswarm-office`
+13. **No staging Janua OAuth client.** Janua's `selva-office`
     client is prod-only. Staging needs a distinct client with
     redirect URIs for `staging-admin.selva.town` and
     `staging.selva.town`. **Operator action** — registered via
@@ -151,14 +151,14 @@ optional PP.6 masked DB restore).
 | All 6 services in staging | api + ui + colyseus + admin + gateway + workers | N/A (0%) | Aligned (100%) |
 | HPAs disabled in staging | maxReplicas=1 | N/A (0%) | Aligned (100%) |
 | KEDA workers pinned in staging | maxReplicaCount=1 (RWO PVC) | N/A (0%) | Aligned (100%) |
-| Staging namespace | `<service>-staging` | N/A (0%) | `autoswarm-staging` (100%) |
+| Staging namespace | `<service>-staging` | N/A (0%) | `selva-staging` (100%) |
 | Staging secrets template | Separate `-staging` secrets | N/A (0%) | Template shipped, operator provisions (80%; operator action pending) |
 | Staging ingress/DNS | `staging-*.<domain>` | N/A (0%) | env + Cloudflare config template shipped; operator creates DNS (60%) |
 | Staging smoke | 6×20s retry on /health | None (0%) | Shipped for api + office-ui + admin + gateway + colyseus (100%) |
 | Promote workflow | `workflow_dispatch`, Pattern B | None (0%) | Shipped, manual gate, soak check (100%) |
 | Rollback workflow | `workflow_dispatch`, RTO <5min | None (0%) | Shipped (100%) |
 | `.enclii.yml` promotion key | `pattern: manual` | None (0%) | Shipped (100%) |
-| ArgoCD staging Application | `autoswarm-office-staging` App | None (0%) | Manifest shipped, operator registers (80%) |
+| ArgoCD staging Application | `selva-office-staging` App | None (0%) | Manifest shipped, operator registers (80%) |
 | Nightly masked DB refresh | RFC 0001 open question | None (0%) | Deferred to PP.6 (0%) |
 
 **Overall**: ~15% → ~85%. Remaining 15% is operator action (register
@@ -175,21 +175,21 @@ operator actions, in order:
 
 1. **Provision staging Secrets** (K8s):
    ```bash
-   kubectl create namespace autoswarm-staging
-   kubectl create secret generic autoswarm-staging-secrets -n autoswarm-staging \
-     --from-literal=database-url='postgres://...autoswarm-staging...' \
-     --from-literal=redis-url='redis://...autoswarm-staging...' \
+   kubectl create namespace selva-staging
+   kubectl create secret generic selva-staging-secrets -n selva-staging \
+     --from-literal=database-url='postgres://...selva-staging...' \
+     --from-literal=redis-url='redis://...selva-staging...' \
      --from-literal=secret-key='<rand-64>' \
      --from-literal=RESEND_API_KEY='<staging-resend-key>' \
      --from-literal=WORKER_API_TOKEN='<rand-64>' \
      --from-literal=colyseus-secret='<rand-32>' \
      --from-literal=PHYND_CRM_TOKEN='<staging-phynd-token>' \
      --from-literal=ENCLII_API_TOKEN='<staging-enclii-token>'
-   kubectl create secret generic autoswarm-staging-llm-secrets -n autoswarm-staging \
+   kubectl create secret generic selva-staging-llm-secrets -n selva-staging \
      --from-literal=ANTHROPIC_API_KEY='<staging-anthropic-key>' \
      --from-literal=DEEPINFRA_API_KEY='<staging-deepinfra-key>' \
      --from-literal=WORKER_API_TOKEN='<rand-64>'
-   kubectl create secret generic autoswarm-staging-admin-auth -n autoswarm-staging \
+   kubectl create secret generic selva-staging-admin-auth -n selva-staging \
      --from-literal=NEXT_PUBLIC_JANUA_PUBLISHABLE_KEY='<staging-janua-client-id>' \
      --from-literal=NEXT_PUBLIC_JANUA_ISSUER_URL='https://auth.selva.town' \
      --from-literal=JANUA_SECRET_KEY='<staging-janua-client-secret>'
@@ -206,7 +206,7 @@ operator actions, in order:
 4. **Register ArgoCD staging Application**:
    ```bash
    kubectl apply -f infra/argocd/staging.yaml
-   argocd app sync autoswarm-office-staging
+   argocd app sync selva-office-staging
    ```
 5. **First staging deploy**: push any commit to `main`; observe
    `staging-deploy.yml` patch all 6 digests and `staging-smoke.yml`
@@ -233,6 +233,6 @@ operator actions, in order:
 - Karafiel PP.1 — `karafiel/infra/k8s/overlays/staging/`
 - Dhanam PP.2b/2c — `dhanam/infra/k8s/overlays/staging/` +
   `dhanam/.github/workflows/{deploy-staging,promote-to-prod,rollback-prod}.yml`
-- This PR — `feat/pp4-autoswarm-staging-convergence`
+- This PR — `feat/pp4-selva-staging-convergence`
 - Follow-up PRs — PP.5 (prod ArgoCD cutover), PP.6 (masked DB restore),
   PP.7 (decommission legacy `deploy.yml` direct-to-prod)

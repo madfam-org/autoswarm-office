@@ -22,7 +22,7 @@ We do not build businesses; we engineer operational hyperobjects. The purpose of
 - **Bare Metal:** 3-node K3s cluster on Hetzner (foundry-cp, foundry-worker-01, foundry-builder-01)
 - **PaaS:** Enclii — sovereign deployment platform with ArgoCD GitOps
 - **Identity:** Janua — self-hosted OAuth2/OIDC, zero external auth dependencies
-- **Orchestration:** Selva (AutoSwarm Office) — agent swarm platform on sovereign infra
+- **Orchestration:** Selva (Selva Office) — agent swarm platform on sovereign infra
 
 ---
 

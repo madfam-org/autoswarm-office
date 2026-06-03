@@ -17,7 +17,7 @@ import os
 
 def test_qa_oracle_validate_and_compile_skill(tmp_path, monkeypatch):
     """validate() should write a .py skill file to the skills directory."""
-    monkeypatch.setenv("AUTOSWARM_SKILLS_DIR", str(tmp_path))
+    monkeypatch.setenv("SELVA_SKILLS_DIR", str(tmp_path))
 
     from selva_workflows.acp_qa_oracle import ACPQAOracleNode
 
@@ -37,7 +37,7 @@ def test_qa_oracle_validate_and_compile_skill(tmp_path, monkeypatch):
 
 def test_qa_oracle_stub_fallback(tmp_path, monkeypatch):
     """_compile_skill_stub writes a valid PlaybookSkill-compatible file."""
-    monkeypatch.setenv("AUTOSWARM_SKILLS_DIR", str(tmp_path))
+    monkeypatch.setenv("SELVA_SKILLS_DIR", str(tmp_path))
 
     from selva_workflows.acp_qa_oracle import ACPQAOracleNode
 

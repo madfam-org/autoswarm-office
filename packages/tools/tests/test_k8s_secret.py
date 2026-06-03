@@ -130,7 +130,7 @@ def _base_args(**overrides: Any) -> dict[str, Any]:
     """Valid argset pointed at the dev cluster by default."""
     args: dict[str, Any] = {
         "cluster": "madfam-dev",
-        "namespace": "autoswarm",
+        "namespace": "selva",
         "secret_name": "karafiel-secrets",
         "key": "STRIPE_WEBHOOK_SECRET",
         "value": SECRET_VALUE,
@@ -250,7 +250,7 @@ async def test_staging_cluster_with_prod_namespace_rejected(
 ) -> None:
     """cluster=madfam-staging + non-staging namespace rejected.
 
-    ``autoswarm`` is the one documented exception (Selva's own
+    ``selva`` is the one documented exception (Selva's own
     namespace). We pick ``karafiel`` (prod-shaped) to exercise the guard.
     """
     result = await wired_tool.execute(**_base_args(cluster="madfam-staging", namespace="karafiel"))
@@ -309,7 +309,7 @@ async def test_unknown_namespace_rejected(
 @pytest.mark.parametrize(
     ("cluster", "namespace", "expected_status", "expected_hitl"),
     [
-        ("madfam-dev", "autoswarm", "applied", "allow"),
+        ("madfam-dev", "selva", "applied", "allow"),
         ("madfam-staging", "karafiel-staging", "pending_approval", "ask"),
         ("madfam-staging", "forgesight-staging", "pending_approval", "ask"),
         ("madfam-prod", "karafiel", "pending_approval", "ask_dual"),
@@ -431,7 +431,7 @@ async def test_audit_row_contents_on_success(
     row = audit_spy["rows"][0]
 
     assert row["cluster"] == "madfam-dev"
-    assert row["namespace"] == "autoswarm"
+    assert row["namespace"] == "selva"
     assert row["secret_name"] == "karafiel-secrets"
     assert row["key"] == "STRIPE_WEBHOOK_SECRET"
     assert row["source"] == "stripe_api"
@@ -465,7 +465,7 @@ def test_verify_signature_true_on_fresh_row() -> None:
     approval_id = "11111111-1111-1111-1111-111111111111"
     sig = compute_signature(
         target_cluster="madfam-dev",
-        target_namespace="autoswarm",
+        target_namespace="selva",
         target_secret_name="karafiel-secrets",
         target_key="STRIPE_WEBHOOK_SECRET",
         operation="create",
@@ -484,7 +484,7 @@ def test_verify_signature_true_on_fresh_row() -> None:
         agent_id=None,
         actor_user_sub=None,
         target_cluster="madfam-dev",
-        target_namespace="autoswarm",
+        target_namespace="selva",
         target_secret_name="karafiel-secrets",
         target_key="STRIPE_WEBHOOK_SECRET",
         operation="create",
@@ -517,7 +517,7 @@ def test_verify_signature_false_on_mutated_row() -> None:
     original_status = "applied"
     sig = compute_signature(
         target_cluster="madfam-dev",
-        target_namespace="autoswarm",
+        target_namespace="selva",
         target_secret_name="karafiel-secrets",
         target_key="STRIPE_WEBHOOK_SECRET",
         operation="create",
@@ -536,7 +536,7 @@ def test_verify_signature_false_on_mutated_row() -> None:
         agent_id=None,
         actor_user_sub=None,
         target_cluster="madfam-dev",
-        target_namespace="autoswarm",
+        target_namespace="selva",
         target_secret_name="karafiel-secrets",
         target_key="STRIPE_WEBHOOK_SECRET",
         operation="create",
@@ -646,13 +646,13 @@ def test_allowed_clusters_and_namespaces_are_frozenset() -> None:
     assert isinstance(ALLOWED_CLUSTERS, frozenset)
     assert isinstance(ALLOWED_NAMESPACES, frozenset)
     assert "madfam-prod" in ALLOWED_CLUSTERS
-    assert "autoswarm" in ALLOWED_NAMESPACES
+    assert "selva" in ALLOWED_NAMESPACES
 
 
 def test_load_k8s_config_prefers_projected_writer_token(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Workers run as autoswarm-sa but mount a narrower writer token.
+    """Workers run as selva-sa but mount a narrower writer token.
 
     The Kubernetes SDK still needs the pod's in-cluster CA/server config, but
     write calls must authenticate with the projected selva-secret-writer token.
@@ -660,13 +660,13 @@ def test_load_k8s_config_prefers_projected_writer_token(
     projected_token = tmp_path / "selva-secret-writer-token"
     default_token = tmp_path / "default-token"
     projected_token.write_text("writer-token\n")
-    default_token.write_text("autoswarm-token\n")
+    default_token.write_text("selva-token\n")
 
     calls: list[str] = []
 
     class FakeConfiguration:
         def __init__(self) -> None:
-            self.api_key: dict[str, str] = {"authorization": "Bearer autoswarm-token"}
+            self.api_key: dict[str, str] = {"authorization": "Bearer selva-token"}
 
         @staticmethod
         def get_default_copy() -> FakeConfiguration:

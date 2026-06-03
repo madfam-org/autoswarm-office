@@ -2,10 +2,10 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in AutoSwarm Office, please report it responsibly:
+If you discover a security vulnerability in Selva Office, please report it responsibly:
 
 1. **Do not** open a public GitHub issue
-2. Email security@autoswarm.dev with details
+2. Email security@selva.town with details
 3. Include steps to reproduce if possible
 4. We will acknowledge receipt within 48 hours
 
@@ -30,7 +30,7 @@ This project handles sensitive data including:
 
 ### Demo Mode Token Bypass
 
-AutoSwarm Office includes a public demo mode (`/demo`) that allows unauthenticated visitors to experience the office environment with simulated agents. This mode intentionally bypasses the normal Janua JWKS authentication flow.
+Selva Office includes a public demo mode (`/demo`) that allows unauthenticated visitors to experience the office environment with simulated agents. This mode intentionally bypasses the normal Janua JWKS authentication flow.
 
 #### What the bypass does
 

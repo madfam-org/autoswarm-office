@@ -12,7 +12,7 @@ metadata:
 
 # Web App Testing Skill
 
-You test the AutoSwarm Office web application (office-ui) and its Phaser game scenes.
+You test the Selva Office web application (office-ui) and its Phaser game scenes.
 
 ## Testing Stack
 

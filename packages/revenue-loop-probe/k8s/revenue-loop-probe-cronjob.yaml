@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: revenue-loop-probe
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: revenue-loop-probe
     app.kubernetes.io/part-of: selva

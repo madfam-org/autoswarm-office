@@ -1,7 +1,7 @@
 # madfam-inference
 
 Sensitivity-aware LLM inference routing with multi-provider support. Part of the
-[Selva](https://github.com/madfam-org/autoswarm-office) ecosystem.
+[Selva](https://github.com/madfam-org/selva-office) ecosystem.
 
 ## Installation
 
@@ -74,7 +74,7 @@ when no assignment matches.
 
 ## Org Config
 
-Place a YAML file at `~/.autoswarm/org-config.yaml` (or pass a custom path to
+Place a YAML file at `~/.selva/org-config.yaml` (or pass a custom path to
 `load_org_config()`). See `data/org-config-template.yaml` for the full schema.
 
 ```yaml
@@ -121,7 +121,7 @@ proxy use this shared factory:
 from madfam_inference.factory import build_router_from_env
 
 router = build_router_from_env(
-    org_config_path="~/.autoswarm/org-config.yaml",
+    org_config_path="~/.selva/org-config.yaml",
     anthropic_api_key="sk-...",
     deepinfra_api_key="di-...",
 )

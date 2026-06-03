@@ -52,7 +52,7 @@ import type {
   Agent,
   Player,
   AvatarConfig,
-} from '@autoswarm/shared-types';
+} from '@selva/shared-types';
 
 // === Feature Flags ===
 const ENABLE_POST_FX = process.env.NEXT_PUBLIC_ENABLE_POST_FX !== 'false';

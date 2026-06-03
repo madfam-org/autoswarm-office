@@ -5,8 +5,8 @@ import type {
   ActionCategory,
   PermissionLevel,
   PermissionMatrix,
-} from '@autoswarm/shared-types';
-import { Button } from '@autoswarm/ui';
+} from '@selva/shared-types';
+import { Button } from '@selva/ui';
 import { apiFetch } from '@/lib/api';
 
 const ACTION_CATEGORIES: { key: ActionCategory; label: string; description: string }[] = [

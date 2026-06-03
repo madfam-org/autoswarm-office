@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify all AutoSwarm services are reachable and the agent loop is functional.
+# Verify all Selva services are reachable and the agent loop is functional.
 set -euo pipefail
 
 API="${NEXUS_API_URL:-http://localhost:${NEXUS_API_PORT:-4300}}"
@@ -7,7 +7,7 @@ UI="${OFFICE_UI_URL:-http://localhost:${OFFICE_UI_PORT:-4301}}"
 COLYSEUS="${COLYSEUS_URL:-http://localhost:${COLYSEUS_PORT:-4303}}"
 WORKER="${WORKER_URL:-http://localhost:${WORKER_PORT:-4305}}"
 
-echo "=== AutoSwarm Smoke Test ==="
+echo "=== Selva Smoke Test ==="
 
 # Health checks
 curl -sf "$API/api/v1/health/health" > /dev/null && echo "✅ nexus-api healthy" || echo "❌ nexus-api unreachable"

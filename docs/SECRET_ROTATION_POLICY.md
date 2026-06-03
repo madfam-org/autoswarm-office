@@ -40,10 +40,10 @@ and never rotated."
 - **Janua JWT signing keys** — rotate via the Janua repo's own key-rotation procedure
 - **GitHub PAT (`GITHUB_TOKEN`)** — rotate via GitHub
 - **Cloudflare tunnel tokens** — rotate via Cloudflare Zero Trust dashboard
-- **Porkbun API credentials (`PORKBUN_API_KEY`, `PORKBUN_SECRET_KEY`)** — rotate via Porkbun account API keys, then update `autoswarm-secrets`
+- **Porkbun API credentials (`PORKBUN_API_KEY`, `PORKBUN_SECRET_KEY`)** — rotate via Porkbun account API keys, then update `selva-secrets`
 
 If any of those are compromised, follow the vendor's procedure AND
-rotate them in `autoswarm-secrets` so the K8s pods see the new values.
+rotate them in `selva-secrets` so the K8s pods see the new values.
 
 ---
 
@@ -71,10 +71,10 @@ The `scripts/rotate-secret.sh` tool does the rotation atomically:
 
 ```bash
 # Single-secret rotation (recommended for routine quarterly cycle)
-./scripts/rotate-secret.sh worker-api-token --namespace=autoswarm
+./scripts/rotate-secret.sh worker-api-token --namespace=selva
 
 # All three at once (use only on operator departure / suspected compromise)
-./scripts/rotate-secret.sh --all --namespace=autoswarm
+./scripts/rotate-secret.sh --all --namespace=selva
 
 # Dry-run first to see what it'll do without touching anything
 ./scripts/rotate-secret.sh worker-api-token --dry-run
@@ -84,7 +84,7 @@ The script will:
 1. Read the current secret value (for audit fingerprint logging — first/last
    4 chars only, never the full value)
 2. Generate a new 32-byte hex value (`openssl rand -hex 32`)
-3. Patch the K8s `autoswarm-secrets` Secret with the new value
+3. Patch the K8s `selva-secrets` Secret with the new value
 4. Rolling-restart every Deployment that env-references the secret
 5. Wait for each Deployment's rollout to complete (5min timeout per Deployment)
 6. Verify by `kubectl exec`-ing into one pod per Deployment and confirming
@@ -117,7 +117,7 @@ Before running the script, the operator MUST:
 
 - [ ] Confirm `kubectl` is pointing at the right cluster + namespace
       (`kubectl config current-context` and `kubectl config view --minify`)
-- [ ] Verify cluster health: `kubectl get pods -n autoswarm` — all pods in
+- [ ] Verify cluster health: `kubectl get pods -n selva` — all pods in
       `Running` state, no recent restarts
 - [ ] Check there are no in-flight long-running tasks that depend on the
       old secret. For `WORKER_API_TOKEN` specifically: a worker mid-task
@@ -127,9 +127,9 @@ Before running the script, the operator MUST:
 - [ ] Snapshot the current K8s Secret for emergency rollback:
 
       ```bash
-      kubectl -n autoswarm get secret autoswarm-secrets -o yaml > \
-        /tmp/autoswarm-secrets-pre-rotation-$(date +%Y%m%d-%H%M%S).yaml
-      chmod 600 /tmp/autoswarm-secrets-pre-rotation-*.yaml
+      kubectl -n selva get secret selva-secrets -o yaml > \
+        /tmp/selva-secrets-pre-rotation-$(date +%Y%m%d-%H%M%S).yaml
+      chmod 600 /tmp/selva-secrets-pre-rotation-*.yaml
       ```
 
       Delete this file within 7 days.
@@ -152,7 +152,7 @@ depth growing, workers can't authenticate):
 2. **Check pod restart status**:
 
    ```bash
-   kubectl -n autoswarm get pods -l app.kubernetes.io/name=autoswarm-workers \
+   kubectl -n selva get pods -l app.kubernetes.io/name=selva-workers \
      -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.startTime}{"\n"}{end}'
    ```
 
@@ -164,9 +164,9 @@ depth growing, workers can't authenticate):
    old secret value:
 
    ```bash
-   kubectl apply -f /tmp/autoswarm-secrets-pre-rotation-<timestamp>.yaml
-   for dep in autoswarm-nexus-api autoswarm-workers autoswarm-gateway autoswarm-colyseus; do
-     kubectl -n autoswarm rollout restart "deployment/$dep"
+   kubectl apply -f /tmp/selva-secrets-pre-rotation-<timestamp>.yaml
+   for dep in selva-nexus-api selva-workers selva-gateway selva-colyseus; do
+     kubectl -n selva rollout restart "deployment/$dep"
    done
    ```
 
@@ -223,7 +223,7 @@ includes `new_key_version`, `previous_key_version`, `actor_sub`, and
 ## 7. Audit trail
 
 Each rotation logs to stderr (script output, captured by the operator's
-shell) AND emits a `secret.rotated` event to the `autoswarm:audit`
+shell) AND emits a `secret.rotated` event to the `selva:audit`
 Redis stream so:
 
 - The SRE Grafana dashboard reflects rotation history (panel:

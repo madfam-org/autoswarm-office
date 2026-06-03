@@ -1,5 +1,5 @@
 import { Client } from "@colyseus/core";
-import { OFFICE_BOUNDS } from "@autoswarm/shared-types";
+import { OFFICE_BOUNDS } from "@selva/shared-types";
 import { OfficeStateSchema, AgentSchema } from "../schema/OfficeState";
 
 interface Bounds {

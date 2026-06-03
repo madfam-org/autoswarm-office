@@ -101,7 +101,7 @@ describe('AdminDashboard', () => {
     render(<AdminDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText('AutoSwarm Admin')).toBeInTheDocument();
+      expect(screen.getByText('Selva Admin')).toBeInTheDocument();
     });
   });
 

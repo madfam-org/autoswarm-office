@@ -2,10 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nexus-api
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: nexus-api
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: api
 spec:
   replicas: 1
@@ -16,10 +16,10 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: nexus-api
-        app.kubernetes.io/part-of: autoswarm-office
+        app.kubernetes.io/part-of: selva-office
         app.kubernetes.io/component: api
     spec:
-      serviceAccountName: autoswarm-sa
+      serviceAccountName: selva-sa
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: nexus-api
-          image: ghcr.io/madfam-org/autoswarm-nexus-api@sha256:122e8f65c01be96f76b6ade80244bfb228070a5bbfa98c285ebd99a78c285c26
+          image: ghcr.io/madfam-org/selva-nexus-api@sha256:122e8f65c01be96f76b6ade80244bfb228070a5bbfa98c285ebd99a78c285c26
           ports:
             - containerPort: 4300
               protocol: TCP
@@ -64,59 +64,59 @@ spec:
                 - ALL
           envFrom:
             - configMapRef:
-                name: autoswarm-config
+                name: selva-config
           env:
             - name: ENVIRONMENT
               value: production
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: database-url
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: redis-url
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: secret-key
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: RESEND_API_KEY
             - name: WORKER_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: WORKER_API_TOKEN
             # CONSENT_LEDGER_SIGNING_SECRET added 2026-05-04 — Settings()
             # validator (v2.3.0) refuses startup with the dev-default
             # sentinel in production. Bootstrap key was generated and
-            # stored in autoswarm-secrets at the same time.
+            # stored in selva-secrets at the same time.
             - name: CONSENT_LEDGER_SIGNING_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: CONSENT_LEDGER_SIGNING_SECRET
             - name: DHANAM_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: DHANAM_WEBHOOK_SECRET
             - name: BILLING_VIA_DHANAM
               value: "true"
             - name: DEEPINFRA_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-llm-secrets
+                  name: selva-llm-secrets
                   key: DEEPINFRA_API_KEY
                   optional: true
             - name: ORG_CONFIG_PATH
-              value: "/etc/autoswarm/org-config.yaml"
+              value: "/etc/selva/org-config.yaml"
           workingDir: /data
           volumeMounts:
             - name: tmp
@@ -124,7 +124,7 @@ spec:
             - name: data
               mountPath: /data
             - name: org-config
-              mountPath: /etc/autoswarm
+              mountPath: /etc/selva
               readOnly: true
       volumes:
         - name: tmp
@@ -133,16 +133,16 @@ spec:
           emptyDir: {}
         - name: org-config
           configMap:
-            name: autoswarm-org-config
+            name: selva-org-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: nexus-api
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: nexus-api
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
 spec:
   type: ClusterIP
   selector:

@@ -133,7 +133,7 @@ async def get_current_user(
             "sub": "dev-user-00000000",
             "roles": ["admin", "tactician", "enterprise-cleanroom"],
             "org_id": "dev-org",
-            "email": "dev@autoswarm.local",
+            "email": "dev@selva.local",
         }
 
     # Reject hardcoded dev token in production

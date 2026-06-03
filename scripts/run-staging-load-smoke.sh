@@ -15,10 +15,10 @@ TOKEN="${AUTH_TOKEN:-${STAGING_LOAD_TEST_TOKEN:-${STAGING_CAMPAIGN_TEST_TOKEN:-}
 TENANT_ORG="${STAGING_TENANT_ORG:-madfam}"
 
 if [[ -z "$TOKEN" ]] && command -v kubectl >/dev/null 2>&1; then
-  TOKEN="$(kubectl -n autoswarm-staging get secret autoswarm-staging-secrets \
+  TOKEN="$(kubectl -n selva-staging get secret selva-staging-secrets \
     -o jsonpath='{.data.WORKER_API_TOKEN}' 2>/dev/null | base64 -d || true)"
   if [[ -n "$TOKEN" ]]; then
-    echo "Using WORKER_API_TOKEN from autoswarm-staging-secrets (org=${TENANT_ORG})"
+    echo "Using WORKER_API_TOKEN from selva-staging-secrets (org=${TENANT_ORG})"
   fi
 fi
 

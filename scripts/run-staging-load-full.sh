@@ -31,10 +31,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$TOKEN" ]] && command -v kubectl >/dev/null 2>&1; then
-  TOKEN="$(kubectl -n autoswarm-staging get secret autoswarm-staging-secrets \
+  TOKEN="$(kubectl -n selva-staging get secret selva-staging-secrets \
     -o jsonpath='{.data.WORKER_API_TOKEN}' 2>/dev/null | base64 -d || true)"
   if [[ -n "$TOKEN" ]]; then
-    echo "Using WORKER_API_TOKEN from autoswarm-staging-secrets (org=${TENANT_ORG})"
+    echo "Using WORKER_API_TOKEN from selva-staging-secrets (org=${TENANT_ORG})"
   fi
 fi
 
@@ -57,7 +57,7 @@ fi
 echo "== Staging load calibration preflight (${BASE_URL}) =="
 
 if command -v kubectl >/dev/null 2>&1; then
-  LIMIT="$(kubectl -n autoswarm-staging get deploy nexus-api \
+  LIMIT="$(kubectl -n selva-staging get deploy nexus-api \
     -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="DISPATCH_RATE_LIMIT")].value}' 2>/dev/null || true)"
   if [[ -z "$LIMIT" || "$LIMIT" -lt 120 ]]; then
     echo "WARN: DISPATCH_RATE_LIMIT=${LIMIT:-10(default)} — worker token shares sub service:worker"
@@ -65,7 +65,7 @@ if command -v kubectl >/dev/null 2>&1; then
   else
     echo "OK: DISPATCH_RATE_LIMIT=${LIMIT}"
   fi
-  IP_LIMIT="$(kubectl -n autoswarm-staging get deploy nexus-api \
+  IP_LIMIT="$(kubectl -n selva-staging get deploy nexus-api \
     -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="RATE_LIMIT_PER_MINUTE")].value}' 2>/dev/null || true)"
   if [[ -z "$IP_LIMIT" || "$IP_LIMIT" -lt 1000 ]]; then
     echo "WARN: RATE_LIMIT_PER_MINUTE=${IP_LIMIT:-60(default)} — k6 egress is one IP; bump to 10000 for calibration"
@@ -81,14 +81,14 @@ fi
 
 if [[ -n "$TENANT_ORG" ]] && command -v kubectl >/dev/null 2>&1; then
   echo "--- staging load-test budget headroom (Redis tier cache) ---"
-  kubectl -n autoswarm-staging exec deploy/nexus-api -- python3 -c "
+  kubectl -n selva-staging exec deploy/nexus-api -- python3 -c "
 import asyncio, os
 from selva_redis_pool import get_redis_pool
 async def main():
     pool = get_redis_pool(url=os.environ['REDIS_URL'])
-    await pool.execute_with_retry('set', 'autoswarm:tier:${TENANT_ORG}', '100000', ex=86400)
+    await pool.execute_with_retry('set', 'selva:tier:${TENANT_ORG}', '100000', ex=86400)
 asyncio.run(main())
-" >/dev/null 2>&1 && echo "OK: autoswarm:tier:${TENANT_ORG}=100000 (24h TTL)"
+" >/dev/null 2>&1 && echo "OK: selva:tier:${TENANT_ORG}=100000 (24h TTL)"
 fi
 
 mkdir -p "$OUT_DIR"

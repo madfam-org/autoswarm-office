@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "AutoSwarm Base TypeScript Config",
+  "display": "Selva Base TypeScript Config",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",

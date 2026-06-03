@@ -3,17 +3,17 @@ version: "3.9"
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: autoswarm-postgres
+    container_name: selva-postgres
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: autoswarm
+      POSTGRES_USER: selva
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in an untracked local env file}
-      POSTGRES_DB: autoswarm
+      POSTGRES_DB: selva
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U autoswarm -d autoswarm"]
+      test: ["CMD-SHELL", "pg_isready -U selva -d selva"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,7 +23,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: autoswarm-redis
+    container_name: selva-redis
     ports:
       - "6379:6379"
     command: >
@@ -45,7 +45,7 @@ services:
 
   coturn:
     image: coturn/coturn:latest
-    container_name: autoswarm-coturn
+    container_name: selva-coturn
     ports:
       - "3478:3478"
       - "3478:3478/udp"
@@ -56,7 +56,7 @@ services:
 
   livekit:
     image: livekit/livekit-server:latest
-    container_name: autoswarm-livekit
+    container_name: selva-livekit
     ports:
       - "7880:7880"
       - "7881:7881"

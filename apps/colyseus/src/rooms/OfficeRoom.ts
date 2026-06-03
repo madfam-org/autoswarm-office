@@ -49,7 +49,7 @@ import { WhiteboardSchema } from "../schema/Whiteboard";
 import { MessageThrottler } from "../throttle";
 import { verifyToken, type AuthResult } from "../auth";
 import { DemoSimulator } from "../demo/DemoSimulator";
-import { createLogger } from "@autoswarm/config/logging";
+import { createLogger } from "@selva/config/logging";
 import { getRedisClient, closeRedisClient } from "../redis-client";
 import type { RedisClientType } from "redis";
 
@@ -636,7 +636,7 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
     }
 
     await this.redisSubscriber.subscribe(
-      "autoswarm:agent-status",
+      "selva:agent-status",
       (message: string) => {
         try {
           const update = JSON.parse(message) as {
@@ -658,7 +658,7 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
         }
       }
     );
-    logger.info("Subscribed to autoswarm:agent-status channel");
+    logger.info("Subscribed to selva:agent-status channel");
   }
 
   private rebuildAgentIndex(): void {

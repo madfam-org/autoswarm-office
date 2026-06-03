@@ -65,7 +65,7 @@ class MemoryStore:
 
         # Read database url from env, fallback to default docker-compose url
         db_url = os.getenv(
-            "DATABASE_URL", "postgresql+asyncpg://autoswarm:autoswarm@localhost:5432/autoswarm"
+            "DATABASE_URL", "postgresql+asyncpg://selva:selva@localhost:5432/selva"
         )
         # Ensure driver is asyncpg
         if db_url.startswith("postgresql://"):

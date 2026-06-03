@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { WireMetricsDashboard } from '@autoswarm/shared-types';
+import type { WireMetricsDashboard } from '@selva/shared-types';
 import { apiFetch } from '@/lib/api';
 
 const POLL_INTERVAL_MS = 30000;

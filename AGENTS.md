@@ -69,7 +69,7 @@ Regenerate or repair these files with
 
 <!-- BEGIN LEGACY_CLAUDE_IMPORT -->
 
-# CLAUDE.md -- AutoSwarm Office
+# CLAUDE.md -- Selva Office
 
 > **Picking this back up after a break?** Start with
 > [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) for the
@@ -168,7 +168,7 @@ boundary. Followups tracked in ROADMAP.md.
 - **Consent ledger integrity**: `signature_sha256` is now
   `hmac.new(CONSENT_LEDGER_SIGNING_SECRET, payload, sha256).hexdigest()`,
   not plain SHA-256. Append-only is enforced at the database level by
-  migration 0018 (REVOKE UPDATE/DELETE on `autoswarm_app`). Verify the
+  migration 0018 (REVOKE UPDATE/DELETE on `selva_app`). Verify the
   invariant at runtime with `GET /api/v1/health/consent-ledger-grants` —
   returns `{invariant_holds, can_insert, can_update, can_delete}`. Old
   rows signed with plain SHA-256 (pre-v2.2.x) intentionally fail HMAC
@@ -247,7 +247,7 @@ async def your_handler(
     return response
 ```
 
-Key shape: `autoswarm:idem:<org_id>:<method>:<path>:<key>` — org-
+Key shape: `selva:idem:<org_id>:<method>:<path>:<key>` — org-
 scoped (cross-tenant cache leak prevention) + method+path scoped
 (same key against /a vs /b are different operations per RFC 9457).
 24h TTL. No-op when `Idempotency-Key` header absent (caller opt-in).
@@ -391,13 +391,13 @@ modifies tenant-scoped state, the PR MUST:
 
 ## Deployment Pipeline (dev → staging → prod)
 
-autoswarm-office is the **Phase 4** target for the 3-tier pipeline
+selva-office is the **Phase 4** target for the 3-tier pipeline
 defined in [internal-devops/rfcs/0001-dev-staging-prod-pipeline.md](https://github.com/madfam-org/internal-devops/blob/main/rfcs/0001-dev-staging-prod-pipeline.md).
 
 **Current state (PP.4 shipped):** Staging now lives at
 `infra/k8s/overlays/staging/` as a Kustomize overlay of the prod
 canonical base (`infra/k8s/production/`), digest-pinned, reconciled
-by the `autoswarm-office-staging` ArgoCD Application
+by the `selva-office-staging` ArgoCD Application
 (`infra/argocd/staging.yaml`). Promote + rollback are manual workflows
 (Pattern B — agent code that touches prod customer data).
 
@@ -408,8 +408,8 @@ row-by-row gap analysis.
 
 | Action | Trigger | Workflow | Target |
 |---|---|---|---|
-| Build + deploy all 6 services to staging | push to `main` | `.github/workflows/staging-deploy.yml` | `autoswarm-staging` namespace |
-| Build + deploy to prod (legacy, still live) | push to `main` | `.github/workflows/deploy.yml` | `autoswarm` namespace |
+| Build + deploy all 6 services to staging | push to `main` | `.github/workflows/staging-deploy.yml` | `selva-staging` namespace |
+| Build + deploy to prod (legacy, still live) | push to `main` | `.github/workflows/deploy.yml` | `selva` namespace |
 | Promote one or all services to prod | manual `workflow_dispatch` | `.github/workflows/promote-to-prod.yml` | `infra/k8s/overlays/production/kustomization.yaml` |
 | Rollback prod | manual `workflow_dispatch` | `.github/workflows/rollback-prod.yml` | `infra/k8s/overlays/production/kustomization.yaml` |
 
@@ -424,7 +424,7 @@ decommission the `commit-digests` stage of `deploy.yml`.
 - Promote only after staging has soaked ≥30 min and the staging smoke
   passed (enforced by `promote-to-prod.yml` via git-log traversal of
   the staging overlay + `MIN_SOAK_MINUTES` repo var).
-- autoswarm-office is Pattern B because workers execute agent code
+- selva-office is Pattern B because workers execute agent code
   that sends real customer emails (Resend), pushes real git branches
   (GitHub API), and calls Stripe/PhyndCRM/Dhanam in production.
 
@@ -445,14 +445,14 @@ decommission the `commit-digests` stage of `deploy.yml`.
 - `FEATURE_REDDIT_BOT=false` on workers
 - HPAs pinned to `maxReplicas=1` in staging (3 HPAs: nexus-api,
   office-ui, colyseus)
-- Staging secrets (`autoswarm-staging-secrets`,
-  `autoswarm-staging-llm-secrets`, `autoswarm-staging-admin-auth`)
-  provisioned in the `autoswarm-staging` namespace — template at
+- Staging secrets (`selva-staging-secrets`,
+  `selva-staging-llm-secrets`, `selva-staging-admin-auth`)
+  provisioned in the `selva-staging` namespace — template at
   `infra/k8s/overlays/staging/staging-secrets-template.yaml`.
 
 ### Operator actions pending
 
-- Register Janua staging OAuth client (`autoswarm-office-staging`)
+- Register Janua staging OAuth client (`selva-office-staging`)
   with redirect URIs for `staging-admin.selva.town` and
   `staging.selva.town`.
 - Provision the 3 staging Secrets per the bootstrap commands in
@@ -469,7 +469,7 @@ decommission the `commit-digests` stage of `deploy.yml`.
 
 # 1. Clone and install
 git clone <repo-url>
-cd autoswarm-office
+cd selva-office
 make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all services
 
 # 2. Open the office
@@ -563,7 +563,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - **Append-only consent ledger**: Migration 0018 creates `consent_ledger`
   (id, org_id, user_sub, user_email, mode, clause_version, typed_confirmation,
   signer_ip, signer_user_agent, signature_sha256, created_at). UPDATE and
-  DELETE are REVOKEd from the `autoswarm_app` role at the database level —
+  DELETE are REVOKEd from the `selva_app` role at the database level —
   rows can only be appended. Replay `compute_signature()` in
   `routers/onboarding.py` to verify a row at audit time.
 - **Onboarding API**: `GET /api/v1/onboarding/status`,
@@ -673,7 +673,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
   0012). Populated from JWT `sub` claim.
 - **Git Identity**: `GitTool.configure_identity()` sets repo-local `user.name` /
   `user.email` before every agent commit. Config: `GIT_AUTHOR_NAME` (default
-  `autoswarm-bot`), `GIT_AUTHOR_EMAIL` (default `bot@autoswarm.dev`).
+  `selva-bot`), `GIT_AUTHOR_EMAIL` (default `bot@selva.town`).
 - **Worker-to-API Auth**: Centralized via `auth.py:get_worker_auth_headers()`.
   Reads `WORKER_API_TOKEN` env var (default `dev-bypass`). Used by
   `task_status.py`, `event_emitter.py`, `interrupt_handler.py`, and
@@ -683,7 +683,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - **PR Creation Compat**: `GitTool.create_pr()` resolves `OWNER/REPO` from git
   remote URL and uses `--repo` flag instead of `-C` (compat with older `gh` CLI).
 - **Worktree Branch Naming**: `plan()` creates worktree with branch
-  `autoswarm/task-{id}` (was `task-{id}`) to match `push_gate()` expectations.
+  `selva/task-{id}` (was `task-{id}`) to match `push_gate()` expectations.
 
 ## Enterprise Mexican Market (v2.0.0)
 
@@ -863,7 +863,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
   Fire-and-forget ops use `logger.debug`, correctness-affecting use `warning`.
 - **Settings Consolidation**: `analytics.py` and `gateway.py` now use
   centralized pydantic `Settings` instead of direct `os.environ.get()`.
-  Added `posthog_api_key`, `posthog_host`, `autoswarm_webhook_secret` to
+  Added `posthog_api_key`, `posthog_host`, `selva_webhook_secret` to
   nexus-api config.
 - **Frontend URL Config**: Landing page `APP_URL` reads
   `NEXT_PUBLIC_APP_URL` env var with production fallback.
@@ -933,8 +933,8 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
 - **Performance-Aware Dispatch**: Skill-based agent matching in `swarms.py` weighted
   by `_compute_perf_weight()` (30% performance, 70% skill overlap). New agents
   default to 0.5 (neutral). `perf_weight = 0.5 * approval_rate + 0.5 * completion_rate`.
-- **Config**: `MEMORY_PERSIST_DIR` (default `/tmp/autoswarm-memory`),
-  `BANDIT_PERSIST_PATH` (default `/tmp/autoswarm-bandit.json`).
+- **Config**: `MEMORY_PERSIST_DIR` (default `/tmp/selva-memory`),
+  `BANDIT_PERSIST_PATH` (default `/tmp/selva-bandit.json`).
 - **CSRF**: `/api/v1/agents/` stats endpoint uses Bearer auth which bypasses CSRF.
 
 ## Autonomous Dev Readiness (v0.3.1)
@@ -948,7 +948,7 @@ make dev-full    # Installs deps, starts Docker, migrates, seeds, boots all serv
   `auth.py:get_worker_auth_headers()` centralizes all worker-to-API auth.
   No hardcoded `"Bearer dev-bypass"` in source files.
 - **Org Config Bootstrap**: `make setup-org-config` copies
-  `data/org-config-template.yaml` to `~/.autoswarm/org-config.yaml`. Wired
+  `data/org-config-template.yaml` to `~/.selva/org-config.yaml`. Wired
   into `make dev-full`. Worker logs warning when org config missing.
 - **Enhanced System Prompts**: `prompts.py` provides `build_plan_prompt()`,
   `build_implement_prompt()`, `build_review_prompt()` with repo context
@@ -998,7 +998,7 @@ make db-backup        # Backup PostgreSQL database
 make db-restore       # Restore from backup (BACKUP_FILE=<path>)
 make db-verify-backup # Verify backup integrity (BACKUP_FILE=<path>)
 make worktree-cleanup # Remove stale git worktrees (STALE_HOURS=24)
-make setup-org-config # Bootstrap ~/.autoswarm/org-config.yaml from template
+make setup-org-config # Bootstrap ~/.selva/org-config.yaml from template
 
 pnpm dev              # TypeScript services only
 pnpm build            # Build TypeScript packages
@@ -1096,7 +1096,7 @@ block pattern (see any existing platform module for template).
 - **Models**: pydantic for all request/response schemas
 - **ORM**: SQLAlchemy with async sessions
 - **Tests**: pytest with pytest-asyncio
-- **Imports**: isort via ruff, `autoswarm` as known-first-party
+- **Imports**: isort via ruff, `selva` as known-first-party
 
 ### TypeScript
 - **Strict mode**: enabled in all tsconfig.json files
@@ -1124,7 +1124,7 @@ The `packages/skills/` package implements the AgentSkills standard.
 - `SkillTier` enum: `CORE` | `COMMUNITY`. Set by the registry during discovery, not
   from YAML frontmatter.
 - Enable community skills via:
-  - Env var: `AUTOSWARM_COMMUNITY_SKILLS_ENABLED=true`
+  - Env var: `SELVA_COMMUNITY_SKILLS_ENABLED=true`
   - Runtime: `get_skill_registry().enable_community_skills()`
   - REST API: `POST /api/v1/skills/community/enable`
 - Core skills always take precedence on name collision with community skills.
@@ -1231,7 +1231,7 @@ skill composes these four tools into a pre-submission gate.
 #### Artifact Management (5.1)
 - **Storage**: `packages/tools/src/selva_tools/storage/` — `ArtifactStorage` ABC +
   `LocalFSStorage` (content-addressable SHA-256 dedup, layout `<hash[:2]>/<hash[2:4]>/<hash>`).
-  `ARTIFACT_STORAGE_PATH` env var or `/tmp/autoswarm-artifacts` default.
+  `ARTIFACT_STORAGE_PATH` env var or `/tmp/selva-artifacts` default.
 - **Tools**: `SaveArtifactTool`, `RetrieveArtifactTool`, `ListArtifactsTool` in
   `builtins/artifact.py`. Registered in `get_builtin_tools()`.
 - **REST API**: `apps/nexus-api/nexus_api/routers/artifacts.py` —
@@ -1283,13 +1283,13 @@ skill composes these four tools into a pre-submission gate.
   DashboardPanel header.
 
 ### Python SDK (`packages/sdk`)
-- **AutoSwarm** async client: `dispatch()`, `list_agents()`, `get_task()`,
+- **Selva** async client: `dispatch()`, `list_agents()`, `get_task()`,
   `wait_for_task()`. Uses `httpx.AsyncClient` with Bearer auth.
-- **AutoSwarmSync**: synchronous wrapper using `asyncio.run()`.
-- **CLI**: `autoswarm dispatch "desc" --graph-type coding`, `autoswarm agents list`,
-  `autoswarm tasks get <id>`, `autoswarm tasks wait <id>`. Click-based.
-  Reads `AUTOSWARM_API_URL` and `AUTOSWARM_TOKEN` env vars.
-- **Exceptions**: `AutoSwarmError`, `AuthenticationError`, `TaskTimeoutError`,
+- **SelvaSync**: synchronous wrapper using `asyncio.run()`.
+- **CLI**: `selva dispatch "desc" --graph-type coding`, `selva agents list`,
+  `selva tasks get <id>`, `selva tasks wait <id>`. Click-based.
+  Reads `SELVA_API_URL` and `SELVA_TOKEN` env vars.
+- **Exceptions**: `SelvaError`, `AuthenticationError`, `TaskTimeoutError`,
   `NotFoundError` with `status_code` attribute.
 
 ### Workflow Templates (`data/workflow-templates/`)
@@ -1417,7 +1417,7 @@ skill composes these four tools into a pre-submission gate.
 
 ### MADFAM Intelligence Architecture
 
-- **Org config** (`~/.autoswarm/org-config.yaml`): Secure, per-org configuration
+- **Org config** (`~/.selva/org-config.yaml`): Secure, per-org configuration
   outside the repo. Defines providers, task-type model assignments, priority
   lists, embedding config, and agent templates. Template at
   `data/org-config-template.yaml`. Loaded by `load_org_config()` (cached via
@@ -1443,7 +1443,7 @@ skill composes these four tools into a pre-submission gate.
 - **Service registry**: `OrgConfig.services` tracks external accounts (Resend,
   Anthropic, DeepInfra, Stripe, etc.) with plan, capacity, and payment status.
   Production config: `infra/k8s/production/org-config.yaml` (ConfigMap mounted
-  at `/etc/autoswarm/org-config.yaml`).
+  at `/etc/selva/org-config.yaml`).
 - **Agent roster (default)**: 13 agents across 4 departments (Engineering×6, Research×3,
   CRM×2, Support×2) with cross-functional skills. Seed script is idempotent
   (skips existing agents by name).
@@ -1474,7 +1474,7 @@ skill composes these four tools into a pre-submission gate.
   pub/sub. Timeouts and exceptions also PATCH `"failed"` with error details.
   All status updates are fire-and-forget (failures logged, never raised).
 - **Coding graph execution**: `plan()` creates a git worktree and sets
-  `branch_name: "autoswarm/task-{id}"`. `implement()` calls the LLM requesting
+  `branch_name: "selva/task-{id}"`. `implement()` calls the LLM requesting
   JSON `{"files": [...]}`, parses the response, and writes files to the worktree
   via `_write_files_to_worktree()` (with path traversal security checks). Falls
   back to a placeholder file when no LLM is configured. `push_gate()` calls
@@ -1499,9 +1499,9 @@ skill composes these four tools into a pre-submission gate.
   from Enclii. Bearer token auth via `enclii_webhook_secret`. Maps
   `deploy_failed`/`deploy_rollback` → `coding`, `deploy_succeeded` → `research`.
   Creates SwarmTasks and enqueues to Redis.
-- **Task queue**: Redis Streams (`autoswarm:task-stream`) with consumer groups
-  (`autoswarm-workers`).
-  Dead letter queue at `autoswarm:task-dlq` after 3 retries. Workers auto-claim
+- **Task queue**: Redis Streams (`selva:task-stream`) with consumer groups
+  (`selva-workers`).
+  Dead letter queue at `selva:task-dlq` after 3 retries. Workers auto-claim
   stalled messages on startup via XAUTOCLAIM.
 - **Redis pool**: `packages/redis-pool/` provides a singleton `RedisPool` with circuit
   breaker and exponential backoff. All Python services use `get_redis_pool()` instead
@@ -2015,7 +2015,7 @@ skill composes these four tools into a pre-submission gate.
 
 ### WFC Procedural Map Generation
 
-- **Package**: `packages/map-gen/` (`@autoswarm/map-gen`)
+- **Package**: `packages/map-gen/` (`@selva/map-gen`)
   - `src/wfc.ts` — core WFC with `WFCGrid.run()`, `observe()`, `collapse()`,
     `propagate()`, backtracking retries, seeded PRNG (`createRng()`).
   - `src/rules.ts` — adjacency rules for office meta-tiles (wall, corridor,
@@ -2061,7 +2061,7 @@ skill composes these four tools into a pre-submission gate.
   org_id, created_at. Migration `0011`.
 - **Event emitter** (`apps/workers/selva_workers/event_emitter.py`):
   `emit_event()` — fire-and-forget POST to `/api/v1/events` + Redis PUBLISH
-  to `autoswarm:events`. 2s HTTP timeout. Follows `task_status.py` pattern.
+  to `selva:events`. 2s HTTP timeout. Follows `task_status.py` pattern.
   `@instrumented_node` decorator wraps graph nodes to emit `node.entered`,
   `node.exited`, `node.error` events with `duration_ms` measurement.
 - **Worker instrumentation**: All 6 graph types (coding, research, CRM,

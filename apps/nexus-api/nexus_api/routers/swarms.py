@@ -1323,7 +1323,7 @@ async def dispatch_task(
     outbox = SwarmTaskOutbox(
         task_id=task.id,
         org_id=tenant.org_id,
-        stream_name="autoswarm:task-stream",
+        stream_name="selva:task-stream",
         payload=task_msg_data,
     )
     db.add(outbox)
@@ -1335,7 +1335,7 @@ async def dispatch_task(
     try:
         pool = get_redis_pool(url=settings.redis_url)
         task_msg = json.dumps(task_msg_data)
-        msg_id = await pool.execute_with_retry("xadd", "autoswarm:task-stream", {"data": task_msg})
+        msg_id = await pool.execute_with_retry("xadd", "selva:task-stream", {"data": task_msg})
         task.stream_message_id = str(msg_id)
         outbox.status = "sent"
         outbox.stream_message_id = str(msg_id)

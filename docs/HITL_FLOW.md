@@ -1,6 +1,6 @@
 # Human-in-the-Loop (HITL) Flow
 
-AutoSwarm Office enforces a zero-surprise architecture where all destructive or
+Selva Office enforces a zero-surprise architecture where all destructive or
 outbound agent actions require explicit human approval before execution.
 
 **Autonomy graduation:** Lanes move from **ask** → **allow** per

@@ -1,4 +1,4 @@
-"""Tests for the AutoSwarm A2A protocol package."""
+"""Tests for the Selva A2A protocol package."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from selva_a2a.server import create_a2a_router
 class TestAgentCard:
     def test_defaults(self):
         card = AgentCard()
-        assert card.name == "AutoSwarm Office"
+        assert card.name == "Selva Office"
         assert "tasks/send" in card.capabilities
         assert "tasks/get" in card.capabilities
         assert "tasks/sendSubscribe" in card.capabilities

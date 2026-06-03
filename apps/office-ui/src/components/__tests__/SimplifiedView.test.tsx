@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SimplifiedView } from '../SimplifiedView';
-import type { Department, ApprovalRequest, ChatMessage } from '@autoswarm/shared-types';
+import type { Department, ApprovalRequest, ChatMessage } from '@selva/shared-types';
 
 const mockDepartments: Department[] = [
   {

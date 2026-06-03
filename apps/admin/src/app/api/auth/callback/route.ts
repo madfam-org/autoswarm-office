@@ -22,7 +22,7 @@ const CLIENT_ID =
   process.env.JANUA_CLIENT_ID ||
   process.env.NEXT_PUBLIC_JANUA_CLIENT_ID ||
   process.env.NEXT_PUBLIC_JANUA_PUBLISHABLE_KEY ||
-  'autoswarm-office';
+  'selva-office';
 
 const SESSION_SECRET = process.env.JANUA_SECRET_KEY || process.env.SESSION_SECRET || '';
 
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       name: userInfo.name,
       roles,
       org_id: userInfo.org_id,
-      iss: 'autoswarm-admin',
+      iss: 'selva-admin',
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()

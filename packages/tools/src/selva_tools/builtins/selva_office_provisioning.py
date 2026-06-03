@@ -12,7 +12,7 @@ Three tools:
 - ``selva_office_seat_assign_department`` — move an existing seat to a
   different department (or between zones within the same department).
 - ``selva_office_seat_revoke`` — revoke a seat (offboard a team member).
-  HITL-gated — revoking a seat removes the user's entire AutoSwarm
+  HITL-gated — revoking a seat removes the user's entire Selva
   access history from their view.
 
 Env: ``NEXUS_API_URL`` + ``WORKER_API_TOKEN`` — same surface as HITL
@@ -32,7 +32,7 @@ from ..base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
 
-NEXUS_API_URL = os.environ.get("NEXUS_API_URL", "http://nexus-api.autoswarm.svc.cluster.local")
+NEXUS_API_URL = os.environ.get("NEXUS_API_URL", "http://nexus-api.selva.svc.cluster.local")
 WORKER_API_TOKEN = os.environ.get("WORKER_API_TOKEN", "")
 HTTP_TIMEOUT = 15.0
 

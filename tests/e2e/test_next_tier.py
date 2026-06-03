@@ -134,7 +134,7 @@ class TestSoulLoader:
     def test_loads_soul_from_project_path(self, tmp_path):
         """SoulLoader reads SOUL.md from the project path."""
         soul_path = tmp_path / "SOUL.md"
-        soul_path.write_text("# AutoSwarm Agent\nYou are professional and precise.")
+        soul_path.write_text("# Selva Agent\nYou are professional and precise.")
         from selva_workflows.soul import SoulLoader
 
         loader = SoulLoader()

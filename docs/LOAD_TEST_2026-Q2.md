@@ -67,8 +67,8 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 
 ### During run
 
-5. Watch `kubectl logs -f autoswarm-worker -n autoswarm-staging` for warnings
-6. Tail `kubectl get pods -n autoswarm-staging -w` for worker pod restarts (would indicate the PostgresSaver fix is needed under load — see PR #123)
+5. Watch `kubectl logs -f selva-worker -n selva-staging` for warnings
+6. Tail `kubectl get pods -n selva-staging -w` for worker pod restarts (would indicate the PostgresSaver fix is needed under load — see PR #123)
 7. Watch the Grafana dashboard (Phase 2 SLO work, item 16) once available
 
 ### Post-run
@@ -102,7 +102,7 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 | Field | Value |
 |---|---|
 | Date | 2026-05-30 |
-| Staging SHA | `dffbb9a` + live patches (`DISPATCH_RATE_LIMIT=500`, `RATE_LIMIT_PER_MINUTE=10000`, Redis `autoswarm:tier:madfam=100000`) |
+| Staging SHA | `dffbb9a` + live patches (`DISPATCH_RATE_LIMIT=500`, `RATE_LIMIT_PER_MINUTE=10000`, Redis `selva:tier:madfam=100000`) |
 | Operator | autonomous ops agent |
 | `MAX_CONCURRENT_TASKS` at run | 3 (default) |
 | `dispatch_rate_limit` at run | 500 |

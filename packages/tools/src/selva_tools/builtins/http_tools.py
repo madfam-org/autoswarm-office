@@ -13,7 +13,7 @@ from typing import Any
 
 from ..base import BaseTool, ToolResult
 
-logger = logging.getLogger("autoswarm.http_tools")
+logger = logging.getLogger("selva.http_tools")
 
 # ---------------------------------------------------------------------------
 # SSRF protection -- mirrors the gateway.py _validate_webhook_url pattern

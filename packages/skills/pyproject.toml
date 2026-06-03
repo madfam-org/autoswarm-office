@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "selva-skills"
 version = "0.1.0"
-description = "AutoSwarm Office skills registry for storing and retrieving procedurally generated tools and agent logics."
+description = "Selva Office skills registry for storing and retrieving procedurally generated tools and agent logics."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "MADFAM" }]

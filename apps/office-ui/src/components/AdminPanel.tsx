@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CloseButton } from '@autoswarm/ui';
+import { CloseButton } from '@selva/ui';
 import { apiFetch } from '@/lib/api';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useToast } from '@/hooks/useToast';

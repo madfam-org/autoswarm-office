@@ -36,14 +36,14 @@ class TestLokiQueryRange:
                 "resultType": "streams",
                 "result": [
                     {
-                        "stream": {"namespace": "autoswarm", "pod": "nexus-api-a"},
+                        "stream": {"namespace": "selva", "pod": "nexus-api-a"},
                         "values": [
                             ["1700000000000000000", "line one"],
                             ["1700000000500000000", "line two"],
                         ],
                     },
                     {
-                        "stream": {"namespace": "autoswarm", "pod": "workers-b"},
+                        "stream": {"namespace": "selva", "pod": "workers-b"},
                         "values": [
                             ["1700000001000000000", "worker tick"],
                         ],
@@ -56,7 +56,7 @@ class TestLokiQueryRange:
             new=AsyncMock(return_value=(200, body)),
         ):
             r = await LokiQueryRangeTool().execute(
-                query='{namespace="autoswarm"}',
+                query='{namespace="selva"}',
                 start="1700000000000000000",
                 end="1700000002000000000",
             )

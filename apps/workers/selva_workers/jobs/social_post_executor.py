@@ -20,7 +20,7 @@ This executor follows the existing ``selva_workers.jobs`` pattern
 invoked on a fixed cadence by ``__main__._scheduled_action_loop``.
 We deliberately did NOT add Celery / APScheduler:
 
-- The CLAUDE.md "AutoSwarm Office" section says workers run
+- The CLAUDE.md "Selva Office" section says workers run
   Redis-Streams + asyncio. Adding a Celery broker would double the
   infrastructure surface for one job.
 - ``jobs/__init__.py`` already documents the cadence pattern as

@@ -49,9 +49,9 @@ import { SimplifiedView } from '@/components/SimplifiedView';
 import { OpsFeed } from '@/components/OpsFeed';
 import { MetricsDashboard } from '@/components/MetricsDashboard';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { ApprovalModal } from '@autoswarm/ui';
+import { ApprovalModal } from '@selva/ui';
 import type { CoWebsiteEvent, PopupEvent } from '@/game/PhaserGame';
-import type { ApprovalRequest, AvatarConfig, CompanionType } from '@autoswarm/shared-types';
+import type { ApprovalRequest, AvatarConfig, CompanionType } from '@selva/shared-types';
 import { getSessionUser } from '@/lib/api';
 
 const WorkflowEditor = dynamic(
@@ -301,7 +301,7 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   // post-mount effect, avoiding the `useState(() => localStorage.getItem(...))`
   // hydration mismatch.
   const [companionType, setCompanionType] = useLocalStorageState<CompanionType>(
-    'autoswarm:companion-type',
+    'selva:companion-type',
     '',
     {
       parse: (raw) => {
@@ -316,7 +316,7 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const [explorerMode, setExplorerMode] = useState(false);
   const [spotlightViewDismissed, setSpotlightViewDismissed] = useState(false);
   const [viewMode, setViewMode] = useLocalStorageState<'game' | 'simple'>(
-    'autoswarm:view-mode',
+    'selva:view-mode',
     'game',
     {
       parse: (raw) => (raw === 'simple' ? 'simple' : 'game'),

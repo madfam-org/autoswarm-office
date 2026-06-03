@@ -9,7 +9,7 @@ from typing import Any
 
 from ..base import BaseTool, ToolResult
 
-logger = logging.getLogger("autoswarm.database_tools")
+logger = logging.getLogger("selva.database_tools")
 
 # Patterns that indicate a write/DDL statement
 _WRITE_PATTERNS = re.compile(

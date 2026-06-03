@@ -9,7 +9,7 @@ from typing import Any
 
 from ..base import BaseTool, ToolResult
 
-logger = logging.getLogger("autoswarm.calendar_tools")
+logger = logging.getLogger("selva.calendar_tools")
 
 # Mexican federal holidays per Articulo 74 LFT
 # Note: Some holidays are observed on the nearest Monday (movable).

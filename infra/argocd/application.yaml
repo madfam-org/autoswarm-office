@@ -1,11 +1,11 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: autoswarm-services
+  name: selva-services
   namespace: argocd
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
-    autoswarm.dev/project: autoswarm
+    app.kubernetes.io/part-of: selva-office
+    selva.town/project: selva
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -16,7 +16,7 @@ spec:
     path: infra/k8s/production
   destination:
     server: https://kubernetes.default.svc
-    namespace: autoswarm
+    namespace: selva
   syncPolicy:
     automated:
       prune: true

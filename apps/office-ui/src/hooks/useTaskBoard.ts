@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { KanbanStatus, TaskBoardResponse, WireTaskTimeline } from '@autoswarm/shared-types';
+import type { KanbanStatus, TaskBoardResponse, WireTaskTimeline } from '@selva/shared-types';
 import { apiFetch, isDemo } from '@/lib/api';
 
 const POLL_INTERVAL_MS = 10000;

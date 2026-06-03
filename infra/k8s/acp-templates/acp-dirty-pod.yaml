@@ -3,12 +3,12 @@ kind: Pod
 metadata:
   name: acp-dirty-analyst
   labels:
-    app: autoswarm-office
+    app: selva-office
     component: acp-dirty-env
 spec:
   containers:
   - name: analyst-agent
-    image: my-registry/autoswarm-analyst:latest
+    image: my-registry/selva-analyst:latest
     env:
     - name: ACP_PHASE
       value: "I"

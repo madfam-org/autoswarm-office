@@ -58,7 +58,7 @@ export function useNotifications(
 
       new Notification(title, {
         body,
-        tag: "autoswarm-chat",
+        tag: "selva-chat",
         icon: "/assets/icons/favicon-32.png",
       });
     },

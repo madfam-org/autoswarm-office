@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "selva-plugins"
 version = "0.1.0"
-description = "AutoSwarm Plugin System — discover, load, and coordinate agent extensions"
+description = "Selva Plugin System — discover, load, and coordinate agent extensions"
 requires-python = ">=3.11"
 dependencies = [
     "pyyaml>=6.0",
@@ -15,6 +15,6 @@ dependencies = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/selva_plugins"]
 
-[project.entry-points."autoswarm.plugins"]
+[project.entry-points."selva.plugins"]
 # Third-party plugins register here via pip
 # example_plugin = "example_package:ExamplePlugin"

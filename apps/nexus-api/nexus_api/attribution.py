@@ -3,8 +3,8 @@
 T3.2 contract (see /internal-devops/docs/attribution-contract.md):
 
     lead.captured (phynd-crm)
-        -> lead.qualified (autoswarm-office, this module)
-            -> playbook.sent (autoswarm-office, this module)
+        -> lead.qualified (selva-office, this module)
+            -> playbook.sent (selva-office, this module)
                 -> checkout.completed (dhanam)
                     -> subscription.created (dhanam)
 

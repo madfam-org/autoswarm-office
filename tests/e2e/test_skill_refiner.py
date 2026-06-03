@@ -14,7 +14,7 @@ import pytest
 VALID_SKILL = textwrap.dedent("""\
     SKILL_SCHEMA_VERSION = "agentskills/v1"
     SKILL_VERSION = "1.0.0"
-    SKILL_AUTHOR = "autoswarm-qa-oracle"
+    SKILL_AUTHOR = "selva-qa-oracle"
     SKILL_TAGS = ["test"]
     SKILL_DESCRIPTION = "A test skill that always passes."
     SKILL_METADATA = {"run_id": "test-run", "last_validated": "2020-01-01T00:00:00+00:00"}
@@ -26,7 +26,7 @@ VALID_SKILL = textwrap.dedent("""\
 BROKEN_SKILL = textwrap.dedent("""\
     SKILL_SCHEMA_VERSION = "agentskills/v1"
     SKILL_VERSION = "1.0.0"
-    SKILL_AUTHOR = "autoswarm-qa-oracle"
+    SKILL_AUTHOR = "selva-qa-oracle"
     SKILL_TAGS = ["broken"]
     SKILL_DESCRIPTION = "Broken skill."
     SKILL_METADATA = {"run_id": "broken-run", "last_validated": "2020-01-01T00:00:00+00:00"}

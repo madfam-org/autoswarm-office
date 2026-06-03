@@ -24,7 +24,7 @@ crm = []
 all = ["pyyaml>=6.0", "anthropic>=0.43.0", "openai>=1.59.0"]
 
 [project.urls]
-Repository = "https://github.com/madfam-org/autoswarm-office"
+Repository = "https://github.com/madfam-org/selva-office"
 
 [build-system]
 requires = ["hatchling"]

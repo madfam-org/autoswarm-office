@@ -19,7 +19,7 @@ embedded below.
 
 ## 1. What this repo is
 
-Selva Office (repo `selva-office`, formerly `autoswarm-office`) is MADFAM's AI inference + agent orchestration platform. Two roles: (1) **inference proxy** — OpenAI-compatible `/v1` endpoint (`nexus-api`) that every ecosystem service routes its LLM calls through; (2) **agent platform** — LangGraph workers + Colyseus real-time state + 2D Phaser office UI for drafting agents, assigning them to departments, and approving their actions via a gamepad. Target domain: `selva.town`.
+Selva Office (repo `selva-office`) is MADFAM's AI inference + agent orchestration platform. Two roles: (1) **inference proxy** — OpenAI-compatible `/v1` endpoint (`nexus-api`) that every ecosystem service routes its LLM calls through; (2) **agent platform** — LangGraph workers + Colyseus real-time state + 2D Phaser office UI for drafting agents, assigning them to departments, and approving their actions via a gamepad. Target domain: `selva.town`.
 
 **Pillar**: Intelligence / Agents + LLM routing
 **Type**: platform
@@ -38,8 +38,7 @@ Selva Office (repo `selva-office`, formerly `autoswarm-office`) is MADFAM's AI i
 | `selva-gateway` | gw.selva.town (health/metrics) | 4304 |
 | `selva-workers` | (langgraph worker, internal) | 4305 |
 
-**Kubernetes namespace**: `autoswarm` (production) / `autoswarm-staging` (staging) — namespace
-names are retained from the legacy `autoswarm-office` rebrand and are not user-visible.
+**Kubernetes namespace**: `selva` (production) / `selva-staging` (staging) in source. Live cutover from the prior operational namespaces is sequenced through ArgoCD to avoid pruning healthy workloads.
 **Cluster**: bare-metal k3s on Hetzner (see topology section below).
 
 ### Upstream dependencies (this repo consumes)

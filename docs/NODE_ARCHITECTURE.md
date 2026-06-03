@@ -12,7 +12,7 @@ services, agents, tools, graphs, and external systems in the MADFAM ecosystem.
 |-----------|---------------|
 | Agent | Centinela (L9) |
 | Department | Executive Brain Trust |
-| Service | Selva (AutoSwarm Office) |
+| Service | Selva (Selva Office) |
 | Key Tools | PlaybookGuard, FinancialCircuitBreaker, ProductCatalogTool |
 | Responsibilities | Playbook management, budget allocation, wave coordination, autonomous dispatch gating |
 | API Routes | `GET/POST /api/v1/playbooks` (CRUD), `GET /api/v1/playbooks/match` (event matching), `GET /api/v1/metrics/roi` (revenue attribution) |
@@ -172,11 +172,11 @@ Actions within a playbook's `allowed_actions` execute autonomously if:
 ### Circuit Breakers
 - **Token budget:** Per-playbook execution cap (default 50 tokens)
 - **Financial cap:** Per-playbook $ exposure cap (default $0 for most playbooks)
-- **Daily org limit:** $50/day total autonomous financial exposure (Redis-backed, `packages/orchestrator/autoswarm_orchestrator/circuit_breaker.py`)
+- **Daily org limit:** $50/day total autonomous financial exposure (Redis-backed, `packages/orchestrator/selva_orchestrator/circuit_breaker.py`)
 - **Task retry:** 3 attempts with exponential backoff, then DLQ
 
 ### Permission Engine Extensions
-- `PlaybookGuard` in `packages/permissions/autoswarm_permissions/playbook.py` -- evaluates action permissions within playbook boundaries (action category, token budget, financial cap)
+- `PlaybookGuard` in `packages/permissions/selva_permissions/playbook.py` -- evaluates action permissions within playbook boundaries (action category, token budget, financial cap)
 - `PermissionEngine.evaluate()` accepts optional `playbook_guard` parameter -- playbooks can relax ASK to ALLOW but NEVER override DENY
 - New `ActionCategory` values: `BILLING_WRITE`, `MARKETING_SEND`, `INFRASTRUCTURE_EXEC`, `SECRET_MANAGEMENT`, `INFRASTRUCTURE_MONITOR`, `DATABASE_MIGRATION`
 

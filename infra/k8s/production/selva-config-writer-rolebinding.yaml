@@ -3,7 +3,7 @@
 #
 # Every allowed namespace gets:
 #   1. A copy of the Role (same spec, different namespace).
-#   2. A RoleBinding granting the SA (in `autoswarm`) the Role's verbs
+#   2. A RoleBinding granting the SA (in `selva`) the Role's verbs
 #      in that namespace.
 #
 # ADDING A NEW NAMESPACE requires:
@@ -26,7 +26,7 @@ metadata:
   name: selva-config-writer
   namespace: karafiel
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -39,12 +39,12 @@ metadata:
   name: selva-config-writer
   namespace: karafiel
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
@@ -59,7 +59,7 @@ metadata:
   name: selva-config-writer
   namespace: karafiel-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -72,12 +72,12 @@ metadata:
   name: selva-config-writer
   namespace: karafiel-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
@@ -92,7 +92,7 @@ metadata:
   name: selva-config-writer
   namespace: dhanam
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -105,12 +105,12 @@ metadata:
   name: selva-config-writer
   namespace: dhanam
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
@@ -125,7 +125,7 @@ metadata:
   name: selva-config-writer
   namespace: dhanam-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -138,12 +138,12 @@ metadata:
   name: selva-config-writer
   namespace: dhanam-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
@@ -158,7 +158,7 @@ metadata:
   name: selva-config-writer
   namespace: janua
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -171,12 +171,12 @@ metadata:
   name: selva-config-writer
   namespace: janua
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
@@ -191,7 +191,7 @@ metadata:
   name: selva-config-writer
   namespace: janua-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -204,27 +204,27 @@ metadata:
   name: selva-config-writer
   namespace: janua-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
   apiGroup: rbac.authorization.k8s.io
 ---
 # ----------------------------------------------------------------------
-# autoswarm-office (Selva's own -- manages its own org-config ConfigMap)
+# selva-office (Selva's own -- manages its own org-config ConfigMap)
 # ----------------------------------------------------------------------
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: selva-config-writer
-  namespace: autoswarm-office
+  namespace: selva-office
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -235,14 +235,14 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: selva-config-writer
-  namespace: autoswarm-office
+  namespace: selva-office
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
@@ -257,7 +257,7 @@ metadata:
   name: selva-config-writer
   namespace: phynd-crm
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -270,12 +270,12 @@ metadata:
   name: selva-config-writer
   namespace: phynd-crm
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer
@@ -290,7 +290,7 @@ metadata:
   name: selva-config-writer
   namespace: phynd-crm-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 rules:
   - apiGroups: [""]
@@ -303,12 +303,12 @@ metadata:
   name: selva-config-writer
   namespace: phynd-crm-staging
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     rfc: "0007"
 subjects:
   - kind: ServiceAccount
     name: selva-config-writer
-    namespace: autoswarm
+    namespace: selva
 roleRef:
   kind: Role
   name: selva-config-writer

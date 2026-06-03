@@ -47,7 +47,7 @@ Cada herramienta debe definir:
 - Registre (log) las invocaciones de herramientas para depuracion.
 - Limite la frecuencia de llamadas a APIs externas (rate limiting).
 
-## Integracion con AutoSwarm
+## Integracion con Selva
 
 Los servidores MCP en la plataforma MADFAM se registran a traves de la configuracion de nexus-api.
 Cada agente puede acceder a las herramientas MCP segun los permisos de sus habilidades.

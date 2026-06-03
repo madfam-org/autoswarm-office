@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Seed the MADFAM organizational structure into AutoSwarm Office.
+Seed the MADFAM organizational structure into Selva Office.
 
 4 Nodes, 10 Primary Agents:
   - Node 1: Executive Brain Trust (Oráculo, Centinela, Forjador)
@@ -18,9 +18,9 @@ import sys
 
 import httpx
 
-API_URL = os.environ.get("AUTOSWARM_API_URL", "https://api.selva.town")
-TOKEN = os.environ.get("AUTOSWARM_TOKEN", "dev-bypass")
-ORG_ID = os.environ.get("AUTOSWARM_ORG_ID", "madfam")
+API_URL = os.environ.get("SELVA_API_URL", "https://api.selva.town")
+TOKEN = os.environ.get("SELVA_TOKEN", "dev-bypass")
+ORG_ID = os.environ.get("SELVA_ORG_ID", "madfam")
 
 # ─── Departments ──────────────────────────────────────────────────────────────
 

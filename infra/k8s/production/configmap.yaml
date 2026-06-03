@@ -1,22 +1,22 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: autoswarm-config
-  namespace: autoswarm
+  name: selva-config
+  namespace: selva
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
 data:
   JANUA_ISSUER_URL: "https://auth.madfam.io"
-  JANUA_CLIENT_ID: "autoswarm-office"
+  JANUA_CLIENT_ID: "selva-office"
   DHANAM_API_URL: "https://api.dhan.am"
   ENVIRONMENT: "production"
   AUDIENCE_FILTER_ENABLED: "true"
   PLATFORM_ORG_ID: "madfam"
-  NEXUS_API_URL: "http://nexus-api.autoswarm.svc.cluster.local"
+  NEXUS_API_URL: "http://nexus-api.selva.svc.cluster.local"
   DEV_AUTH_BYPASS: "false"
   NEXT_PUBLIC_API_URL: "https://api.selva.town"
   NEXT_PUBLIC_JANUA_ISSUER_URL: "https://auth.madfam.io"
-  NEXT_PUBLIC_JANUA_CLIENT_ID: "autoswarm-office"
+  NEXT_PUBLIC_JANUA_CLIENT_ID: "selva-office"
   NEXT_PUBLIC_COLYSEUS_URL: "wss://ws.selva.town"
   NEXT_PUBLIC_DHANAM_URL: "https://app.dhan.am"
   NEXT_PUBLIC_DEMO_ENABLED: "true"

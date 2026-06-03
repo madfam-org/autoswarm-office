@@ -210,7 +210,7 @@ def generate_briefing(state: IntelligenceState) -> IntelligenceState:
             "============================================\n\n"
             f"REGULATORIO (DOF)\n{dof_summary}\n\n"
             f"INDICADORES ECONOMICOS\n{econ_summary}\n\n"
-            "---\nGenerado por AutoSwarm Market Intelligence"
+            "---\nGenerado por Selva Market Intelligence"
         )
 
     briefing_message = AIMessage(

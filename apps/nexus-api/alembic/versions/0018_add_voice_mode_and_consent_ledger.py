@@ -95,8 +95,8 @@ def upgrade() -> None:
         """
         DO $$
         BEGIN
-          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-            REVOKE UPDATE, DELETE ON consent_ledger FROM autoswarm_app;
+          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+            REVOKE UPDATE, DELETE ON consent_ledger FROM selva_app;
           END IF;
         END
         $$;
@@ -113,8 +113,8 @@ def downgrade() -> None:
         """
         DO $$
         BEGIN
-          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-            GRANT UPDATE, DELETE ON consent_ledger TO autoswarm_app;
+          IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+            GRANT UPDATE, DELETE ON consent_ledger TO selva_app;
           END IF;
         END
         $$;

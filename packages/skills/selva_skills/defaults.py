@@ -1,4 +1,4 @@
-"""Default role-to-skill mappings for AutoSwarm agents."""
+"""Default role-to-skill mappings for Selva agents."""
 
 from __future__ import annotations
 

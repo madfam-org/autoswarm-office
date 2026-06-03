@@ -16,10 +16,10 @@ spec:
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: redis-url
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: secret-key

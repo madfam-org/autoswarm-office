@@ -55,7 +55,7 @@ data/*
 !data/org-config-template.yaml
 
 # Org config (secrets outside repo)
-.autoswarm/
+.selva/
 
 # Gateway runtime data
 apps/gateway/data/

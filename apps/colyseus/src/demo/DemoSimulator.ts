@@ -14,7 +14,7 @@ import {
 } from "../schema/OfficeState";
 import { addSystemMessage } from "../handlers/chat";
 import { DEMO_AGENTS, DEMO_TASK_DESCRIPTIONS } from "./demo-agents";
-import { createLogger } from "@autoswarm/config/logging";
+import { createLogger } from "@selva/config/logging";
 
 const logger = createLogger({ service: "colyseus" }).child({ component: "DemoSimulator" });
 

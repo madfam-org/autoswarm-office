@@ -1,4 +1,4 @@
-"""Async and sync AutoSwarm API clients."""
+"""Async and sync Selva API clients."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from .exceptions import AuthenticationError, AutoSwarmError, NotFoundError, TaskTimeoutError
+from .exceptions import AuthenticationError, SelvaError, NotFoundError, TaskTimeoutError
 from .models import (
     AgentResponse,
     DispatchRequest,
@@ -26,8 +26,8 @@ from .models import (
 _TERMINAL_STATUSES = frozenset({"completed", "failed", "cancelled"})
 
 
-class AutoSwarm:
-    """Async AutoSwarm API client."""
+class Selva:
+    """Async Selva API client."""
 
     def __init__(
         self,
@@ -45,7 +45,7 @@ class AutoSwarm:
         """Close the underlying HTTP client."""
         await self._client.aclose()
 
-    async def __aenter__(self) -> AutoSwarm:
+    async def __aenter__(self) -> Selva:
         return self
 
     async def __aexit__(self, *args: Any) -> None:
@@ -63,7 +63,7 @@ class AutoSwarm:
             detail = resp.text
             with contextlib.suppress(Exception):
                 detail = resp.json().get("detail", detail)
-            raise AutoSwarmError(f"API error {resp.status_code}: {detail}", resp.status_code)
+            raise SelvaError(f"API error {resp.status_code}: {detail}", resp.status_code)
 
     async def dispatch(
         self,
@@ -241,21 +241,21 @@ class AutoSwarm:
             await asyncio.sleep(poll_interval)
 
 
-class AutoSwarmSync:
-    """Synchronous wrapper around the async AutoSwarm client."""
+class SelvaSync:
+    """Synchronous wrapper around the async Selva client."""
 
     def __init__(
         self,
         base_url: str = "http://localhost:4300",
         token: str = "dev-token",
     ) -> None:
-        self._async = AutoSwarm(base_url=base_url, token=token)
+        self._async = Selva(base_url=base_url, token=token)
 
     def close(self) -> None:
         """Close the underlying HTTP client."""
         asyncio.run(self._async.close())
 
-    def __enter__(self) -> AutoSwarmSync:
+    def __enter__(self) -> SelvaSync:
         return self
 
     def __exit__(self, *args: Any) -> None:

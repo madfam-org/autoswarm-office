@@ -125,7 +125,7 @@ async def generate_invoice(
             "request_id": request_id,
         }
         task_msg = json.dumps(task_msg_data)
-        await pool.execute_with_retry("xadd", "autoswarm:task-stream", {"data": task_msg})
+        await pool.execute_with_retry("xadd", "selva:task-stream", {"data": task_msg})
     except Exception:
         task.status = "pending"
         await db.flush()

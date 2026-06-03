@@ -277,8 +277,8 @@ if count_today >= limit:
 
 `_count_tasks_today` is a `SELECT COUNT(*) FROM swarm_tasks WHERE
 org_id = :org AND created_at >= date_trunc('day', now())`. Cached in
-Redis with key `autoswarm:a2a-quota:<org_id>` and 60s TTL — same
-pattern as the existing tier cache (`autoswarm:tier:<org_id>`).
+Redis with key `selva:a2a-quota:<org_id>` and 60s TTL — same
+pattern as the existing tier cache (`selva:tier:<org_id>`).
 
 `429` response includes `Retry-After: <seconds-until-midnight-UTC>`
 and a JSON body matching the A2A error envelope.

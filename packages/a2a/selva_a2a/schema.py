@@ -36,7 +36,7 @@ class AgentCard(BaseModel):
     to discover what this agent can do and how to call it.
     """
 
-    name: str = "AutoSwarm Office"
+    name: str = "Selva Office"
     description: str = "AI-powered virtual office with autonomous agent swarms"
     url: str = ""
     version: str = "0.7.0"

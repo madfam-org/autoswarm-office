@@ -1,7 +1,7 @@
 """
-Gap 3: AutoSwarm Plugin Base Class
+Gap 3: Selva Plugin Base Class
 
-Defines the AutoSwarmPlugin ABC and HookType enum.
+Defines the SelvaPlugin ABC and HookType enum.
 """
 
 from __future__ import annotations
@@ -19,9 +19,9 @@ class HookType(StrEnum):
     ON_GATEWAY_MESSAGE = "on_gateway_message"
 
 
-class AutoSwarmPlugin(ABC):
+class SelvaPlugin(ABC):
     """
-    Base class for all AutoSwarm plugins.
+    Base class for all Selva plugins.
 
     Subclass this and implement:
       - register_tools() → list of tool dicts

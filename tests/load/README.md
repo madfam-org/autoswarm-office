@@ -1,6 +1,6 @@
 # Load Tests
 
-k6 load testing scripts for the AutoSwarm Office platform.
+k6 load testing scripts for the Selva Office platform.
 
 ## Prerequisites
 
@@ -102,9 +102,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: autoswarm
-          POSTGRES_USER: autoswarm
-          POSTGRES_PASSWORD: autoswarm
+          POSTGRES_DB: selva
+          POSTGRES_USER: selva
+          POSTGRES_PASSWORD: selva
         ports:
           - 5432:5432
       redis:

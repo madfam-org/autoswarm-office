@@ -1,4 +1,4 @@
-"""AutoSwarm Skills -- AgentSkills standard integration."""
+"""Selva Skills -- AgentSkills standard integration."""
 
 from .defaults import DEFAULT_ROLE_SKILLS
 from .parser import parse_skill_md_string

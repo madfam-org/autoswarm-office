@@ -18,8 +18,8 @@
     },
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/var/lib/autoswarm"],
-      "description": "Read/write access to the local AutoSwarm skill and artifact volumes"
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/var/lib/selva"],
+      "description": "Read/write access to the local Selva skill and artifact volumes"
     }
   }
 }

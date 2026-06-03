@@ -2,7 +2,7 @@
 
 ## Overview
 
-AutoSwarm workers process tasks from a Redis Stream (`autoswarm:task-stream`).
+Selva workers process tasks from a Redis Stream (`selva:task-stream`).
 During peak load, the queue can grow faster than a fixed replica count can drain.
 [KEDA](https://keda.sh) enables queue-depth-based horizontal pod autoscaling.
 
@@ -39,7 +39,7 @@ Key parameters:
 ## Monitoring
 
 - `/health` endpoint on workers (port 4305) reports consumer group lag.
-- `autoswarm_queue_pending` Prometheus gauge (from worker `/metrics`).
+- `selva_queue_pending` Prometheus gauge (from worker `/metrics`).
 - Grafana dashboard: alert on `pending > 50` for sustained 5 minutes.
 
 ## Limitations

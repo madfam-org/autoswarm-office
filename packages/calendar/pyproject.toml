@@ -1,7 +1,7 @@
 [project]
 name = "selva-calendar"
 version = "0.1.0"
-description = "Calendar integration adapters for AutoSwarm Office"
+description = "Calendar integration adapters for Selva Office"
 requires-python = ">=3.12"
 dependencies = ["httpx>=0.27", "pydantic>=2.10"]
 

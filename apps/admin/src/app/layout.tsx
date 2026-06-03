@@ -12,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AutoSwarm Admin',
-  description: 'Administration panel for AutoSwarm Office',
+  title: 'Selva Admin',
+  description: 'Administration panel for Selva Office',
 };
 
 export default function RootLayout({

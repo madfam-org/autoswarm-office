@@ -1,6 +1,6 @@
 # Project Context Files
 
-AutoSwarm supports project-level context files that are automatically injected into ACP system prompts. This allows teams to provide architecture documentation, coding conventions, and agent-specific instructions without modifying the platform.
+Selva supports project-level context files that are automatically injected into ACP system prompts. This allows teams to provide architecture documentation, coding conventions, and agent-specific instructions without modifying the platform.
 
 ---
 
@@ -13,7 +13,7 @@ Files are scanned from the **workspace root** in this order (later files take pr
 | `CLAUDE.md` | 1 (lowest) | Cross-tool compatibility passthrough |
 | `GEMINI.md` | 2 | Cross-tool compatibility passthrough |
 | `AGENTS.md` | 3 | Project-level architecture and agent instructions |
-| `.autoswarm.md` | 4 (highest) | Workspace-local override |
+| `.selva.md` | 4 (highest) | Workspace-local override |
 
 ---
 
@@ -41,7 +41,7 @@ When synthesizing skills for this codebase:
 - Run `pytest tests/` before marking a skill complete
 ```
 
-**2. Optionally add `.autoswarm.md` for workspace-specific overrides:**
+**2. Optionally add `.selva.md` for workspace-specific overrides:**
 
 ```markdown
 # Local Override
@@ -56,13 +56,13 @@ Use localhost:5432 for PostgreSQL.
 Pass `workspace_path` in the ACP initiation request body:
 
 ```bash
-curl -X POST https://api.autoswarm.yourdomain.com/api/v1/acp/initiate \
+curl -X POST https://api.selva.yourdomain.com/api/v1/acp/initiate \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"target_url": "https://example.com", "workspace_path": "/path/to/your/project"}'
 ```
 
-If `workspace_path` is provided, `AGENTS.md` and `.autoswarm.md` are injected into Phase I (Analyst) and Phase III (Clean Swarm) system prompts.
+If `workspace_path` is provided, `AGENTS.md` and `.selva.md` are injected into Phase I (Analyst) and Phase III (Clean Swarm) system prompts.
 
 ---
 

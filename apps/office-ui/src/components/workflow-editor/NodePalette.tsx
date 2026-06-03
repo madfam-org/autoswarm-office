@@ -1,7 +1,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import type { NodeType } from '@autoswarm/shared-types';
+import type { NodeType } from '@selva/shared-types';
 
 interface PaletteItem {
   type: NodeType;

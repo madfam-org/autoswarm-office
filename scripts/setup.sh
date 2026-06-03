@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ── AutoSwarm Office - First-Time Setup ──────────────────────────────
+# ── Selva Office - First-Time Setup ──────────────────────────────
 # This script checks prerequisites, installs dependencies, and prepares
 # the local development environment.
 
@@ -15,7 +15,7 @@ warn()  { echo -e "${YELLOW}[!!]${NC}  $1"; }
 fail()  { echo -e "${RED}[ERR]${NC} $1"; exit 1; }
 
 echo ""
-echo "=== AutoSwarm Office Setup ==="
+echo "=== Selva Office Setup ==="
 echo ""
 
 # ── Check prerequisites ──────────────────────────────────────────────

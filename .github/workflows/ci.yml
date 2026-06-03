@@ -334,13 +334,13 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: autoswarm
-          POSTGRES_PASSWORD: autoswarm
-          POSTGRES_DB: autoswarm
+          POSTGRES_USER: selva
+          POSTGRES_PASSWORD: selva
+          POSTGRES_DB: selva
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U autoswarm -d autoswarm"
+          --health-cmd "pg_isready -U selva -d selva"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -385,7 +385,7 @@ jobs:
           # import. ``development`` is the only value the validators
           # whitelist for the dev-default secrets path.
           ENVIRONMENT: development
-          DATABASE_URL: postgresql://autoswarm:autoswarm@localhost:5432/autoswarm
+          DATABASE_URL: postgresql://selva:selva@localhost:5432/selva
           REDIS_URL: redis://localhost:6379
 
       - name: Upload coverage

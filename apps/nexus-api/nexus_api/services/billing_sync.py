@@ -25,7 +25,7 @@ async def cache_tier_limit(org_id: str, tier: str) -> None:
         settings = get_settings()
         pool = get_redis_pool(url=settings.redis_url)
         await pool.execute_with_retry(
-            "set", f"autoswarm:tier:{org_id}", str(daily_limit), ex=86400
+            "set", f"selva:tier:{org_id}", str(daily_limit), ex=86400
         )
     except Exception:
         logger.warning(
@@ -43,7 +43,7 @@ async def clear_overage_counter(org_id: str) -> None:
 
         settings = get_settings()
         pool = get_redis_pool(url=settings.redis_url)
-        await pool.execute_with_retry("delete", f"autoswarm:tier_overage:{org_id}")
+        await pool.execute_with_retry("delete", f"selva:tier_overage:{org_id}")
     except Exception:
         logger.warning(
             "Failed to clear tier_overage Redis key for org=%s",

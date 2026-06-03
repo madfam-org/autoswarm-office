@@ -16,7 +16,7 @@ from .http_retry import fire_and_forget_request
 
 logger = logging.getLogger(__name__)
 
-EVENTS_CHANNEL = "autoswarm:events"
+EVENTS_CHANNEL = "selva:events"
 
 
 async def emit_event(

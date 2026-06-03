@@ -1,6 +1,6 @@
 # selva-tools
 
-Tool registry and built-in tools for AutoSwarm agent workflows. ~240
+Tool registry and built-in tools for Selva agent workflows. ~240
 tools across file ops, code exec, git, web, data, communication,
 artifacts, MCP, and Mexican-market integrations
 (Karafiel/Dhanam/PhyneCRM/Tezca).

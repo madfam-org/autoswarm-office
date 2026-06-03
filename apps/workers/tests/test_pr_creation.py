@@ -77,8 +77,8 @@ class TestPrCreationAfterPush:
 
         mock_settings = MagicMock()
         mock_settings.github_token = "ghp_test"
-        mock_settings.git_author_name = "autoswarm-bot"
-        mock_settings.git_author_email = "bot@autoswarm.dev"
+        mock_settings.git_author_name = "selva-bot"
+        mock_settings.git_author_email = "bot@selva.town"
 
         with (
             patch("selva_workers.graphs.coding.interrupt", return_value={"approved": True}),
@@ -92,7 +92,7 @@ class TestPrCreationAfterPush:
                     "worktree_path": "/tmp/worktrees/task-t1",
                     "task_id": "t1",
                     "description": "Add feature X",
-                    "branch_name": "autoswarm/task-t1",
+                    "branch_name": "selva/task-t1",
                 }
             )
 
@@ -117,8 +117,8 @@ class TestPrCreationAfterPush:
 
         mock_settings = MagicMock()
         mock_settings.github_token = "ghp_test"
-        mock_settings.git_author_name = "autoswarm-bot"
-        mock_settings.git_author_email = "bot@autoswarm.dev"
+        mock_settings.git_author_name = "selva-bot"
+        mock_settings.git_author_email = "bot@selva.town"
 
         with (
             patch("selva_workers.graphs.coding.interrupt", return_value={"approved": True}),
@@ -131,7 +131,7 @@ class TestPrCreationAfterPush:
                     "code_changes": [{"iteration": 1}],
                     "worktree_path": "/tmp/worktrees/task-t1",
                     "task_id": "t1",
-                    "branch_name": "autoswarm/task-t1",
+                    "branch_name": "selva/task-t1",
                 }
             )
 
@@ -157,8 +157,8 @@ class TestPrCreationAfterPush:
 
         mock_settings = MagicMock()
         mock_settings.github_token = "ghp_test"
-        mock_settings.git_author_name = "autoswarm-bot"
-        mock_settings.git_author_email = "bot@autoswarm.dev"
+        mock_settings.git_author_name = "selva-bot"
+        mock_settings.git_author_email = "bot@selva.town"
 
         with (
             patch("selva_workers.graphs.coding.interrupt", return_value={"approved": True}),
@@ -172,7 +172,7 @@ class TestPrCreationAfterPush:
                     "worktree_path": "/tmp/worktrees/task-t1",
                     "task_id": "t1",
                     "description": "Add feature X",
-                    "branch_name": "autoswarm/task-t1",
+                    "branch_name": "selva/task-t1",
                 }
             )
 

@@ -73,8 +73,8 @@ ALLOWED_NAMESPACES = frozenset(
         "dhanam-staging",
         "janua",
         "janua-staging",
-        "autoswarm",
-        "autoswarm-office",
+        "selva",
+        "selva-office",
         "forgesight",
         "forgesight-staging",
         "phynd-crm",
@@ -145,9 +145,9 @@ def _validate_route(cluster: str, namespace: str) -> str | None:
             f"but cluster is '{cluster}'. Refusing."
         )
     if cluster == "madfam-staging" and not (
-        namespace.endswith("-staging") or namespace == "autoswarm"
+        namespace.endswith("-staging") or namespace == "selva"
     ):
-        # autoswarm is Selva's own namespace; it's the same name
+        # selva is Selva's own namespace; it's the same name
         # in both clusters and is the one documented exception.
         return (
             f"misroute guard: namespace '{namespace}' does not end with "

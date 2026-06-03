@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@autoswarm/ui';
+import { Button } from '@selva/ui';
 import { apiFetch } from '@/lib/api';
 
 interface BillingStatus {

@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # -- Search ---------------------------------------------------------------
     search_api_key: str | None = None
     search_provider: str = "tavily"
-    repo_base_path: str = "~/.autoswarm/repos"
+    repo_base_path: str = "~/.selva/repos"
 
     # -- GitHub / Deployment ---------------------------------------------------
     github_token: str | None = None
@@ -50,8 +50,8 @@ class Settings(BaseSettings):
             )
         return self
 
-    git_author_name: str = "autoswarm-bot"
-    git_author_email: str = "bot@autoswarm.dev"
+    git_author_name: str = "selva-bot"
+    git_author_email: str = "bot@selva.town"
 
     # -- Concurrency / Timeouts -----------------------------------------------
     max_concurrent_tasks: int = 3
@@ -68,8 +68,8 @@ class Settings(BaseSettings):
     kanban_overdue_scan_interval_seconds: int = 300
 
     # -- Learning / Memory ----------------------------------------------------
-    memory_persist_dir: str = "/tmp/autoswarm-memory"
-    bandit_persist_path: str = "/tmp/autoswarm-bandit.json"
+    memory_persist_dir: str = "/tmp/selva-memory"
+    bandit_persist_path: str = "/tmp/selva-bandit.json"
 
     # -- AI Inference ---------------------------------------------------------
     anthropic_api_key: str | None = None
@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     default_model: str = "claude-sonnet-4-6"
     inference_sensitivity: str = "internal"
-    org_config_path: str = "~/.autoswarm/org-config.yaml"
+    org_config_path: str = "~/.selva/org-config.yaml"
 
     model_config = {
         "env_file": (str(_PROJECT_ROOT / ".env"), ".env"),

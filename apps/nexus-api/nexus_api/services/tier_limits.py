@@ -50,7 +50,7 @@ async def resolve_org_daily_limit(
     """Return the daily compute token budget for *org_id*.
 
     Priority:
-    1. Redis ``autoswarm:tier:{org_id}`` (written by Dhanam billing webhooks)
+    1. Redis ``selva:tier:{org_id}`` (written by Dhanam billing webhooks)
     2. ``tenant_configs.subscription_tier`` (Dhanam sync / provisioning)
     3. Default starter tier from ``infra/pricing/selva-tiers.json``
     """
@@ -64,7 +64,7 @@ async def resolve_org_daily_limit(
     try:
         settings = get_settings()
         pool = get_redis_pool(url=settings.redis_url)
-        cached = await pool.execute_with_retry("get", f"autoswarm:tier:{org_id}")
+        cached = await pool.execute_with_retry("get", f"selva:tier:{org_id}")
         if cached:
             if isinstance(cached, bytes):
                 cached = cached.decode()

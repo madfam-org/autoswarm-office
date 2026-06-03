@@ -20,10 +20,10 @@
  *   1. dispatch_p99 — POST /swarms/dispatch latency at the 99th
  *      percentile during the 100-active hold. Threshold <1500ms (current
  *      production CSP-budget proxy).
- *   2. queue_depth — autoswarm:task-stream pending entries via
+ *   2. queue_depth — selva:task-stream pending entries via
  *      /api/v1/health/queue-stats. Threshold <30 — above that, workers
  *      are starved.
- *   3. dlq_depth — autoswarm:task-dlq via /api/v1/health/dlq-stats.
+ *   3. dlq_depth — selva:task-dlq via /api/v1/health/dlq-stats.
  *      Threshold <5 — anything more in 5 min means tasks are
  *      genuinely failing, not just queued.
  *   4. worker_pool_saturation — proxy via in_flight_tasks /

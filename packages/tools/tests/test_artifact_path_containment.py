@@ -4,7 +4,7 @@ Pre-fix: ``RetrieveArtifactTool`` and ``DeleteArtifactTool`` passed
 caller-supplied ``path`` directly to ``Path(path).read_bytes()`` with
 no containment. An LLM under prompt injection could read
 ``/etc/passwd``, ``/run/secrets/.../token``, or
-``~/.autoswarm/org-config.yaml``.
+``~/.selva/org-config.yaml``.
 
 Post-fix:
   - ``LocalFSStorage._resolve_safe()`` rejects anything outside ``_base``

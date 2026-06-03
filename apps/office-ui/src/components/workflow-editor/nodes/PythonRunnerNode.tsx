@@ -1,6 +1,6 @@
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
-import type { NodeDefinition } from '@autoswarm/shared-types';
+import type { NodeDefinition } from '@selva/shared-types';
 
 export function PythonRunnerNode({ data, selected }: NodeProps) {
   const nodeData = data as unknown as NodeDefinition;

@@ -10,8 +10,8 @@
     "cssVariables": false
   },
   "aliases": {
-    "components": "@autoswarm/ui",
-    "utils": "@autoswarm/ui/utils"
+    "components": "@selva/ui",
+    "utils": "@selva/ui/utils"
   },
   "registries": [
     {

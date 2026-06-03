@@ -16,7 +16,7 @@ const CLIENT_ID =
   process.env.JANUA_CLIENT_ID ||
   process.env.NEXT_PUBLIC_JANUA_CLIENT_ID ||
   process.env.NEXT_PUBLIC_JANUA_PUBLISHABLE_KEY ||
-  'autoswarm-office';
+  'selva-office';
 
 function getCallbackUrl(request: NextRequest): string {
   const proto = request.headers.get('x-forwarded-proto') || 'http';

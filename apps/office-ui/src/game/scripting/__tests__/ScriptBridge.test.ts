@@ -97,7 +97,7 @@ describe('ScriptBridge', () => {
     bridge.notifyAreaEvent('TestZone', 'enter');
 
     expect(mockPostMessage).toHaveBeenCalledWith(
-      { __autoswarm_event: true, type: 'area.onEnter', areaName: 'TestZone' },
+      { __selva_event: true, type: 'area.onEnter', areaName: 'TestZone' },
       '*',
     );
 
@@ -121,7 +121,7 @@ describe('ScriptBridge', () => {
     bridge.notifyAreaEvent('MeetingRoom', 'leave');
 
     expect(mockPostMessage).toHaveBeenCalledWith(
-      { __autoswarm_event: true, type: 'area.onLeave', areaName: 'MeetingRoom' },
+      { __selva_event: true, type: 'area.onLeave', areaName: 'MeetingRoom' },
       '*',
     );
 
@@ -156,7 +156,7 @@ describe('ScriptBridge', () => {
     // Simulate a postMessage from an iframe
     window.dispatchEvent(
       new MessageEvent('message', {
-        data: { __autoswarm: true, type: 'chat.sendMessage', content: 'Hello' },
+        data: { __selva: true, type: 'chat.sendMessage', content: 'Hello' },
       }),
     );
 
@@ -172,7 +172,7 @@ describe('ScriptBridge', () => {
     window.dispatchEvent(
       new MessageEvent('message', {
         data: {
-          __autoswarm: true,
+          __selva: true,
           type: 'ui.openPopup',
           title: 'Notice',
           content: 'Welcome!',
@@ -195,7 +195,7 @@ describe('ScriptBridge', () => {
 
     window.dispatchEvent(
       new MessageEvent('message', {
-        data: { __autoswarm: true, type: 'camera.moveTo', x: 100, y: 200 },
+        data: { __selva: true, type: 'camera.moveTo', x: 100, y: 200 },
       }),
     );
 
@@ -204,7 +204,7 @@ describe('ScriptBridge', () => {
     bridge.destroy();
   });
 
-  it('ignores messages without __autoswarm marker', () => {
+  it('ignores messages without __selva marker', () => {
     const mockScene = { cameras: { main: { pan: vi.fn() } } } as any;
     const bridge = new ScriptBridge(mockScene);
 
@@ -225,7 +225,7 @@ describe('ScriptBridge', () => {
 
     window.dispatchEvent(
       new MessageEvent('message', {
-        data: { __autoswarm: true, type: 'dangerous.eval', code: 'alert(1)' },
+        data: { __selva: true, type: 'dangerous.eval', code: 'alert(1)' },
       }),
     );
 

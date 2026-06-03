@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { CloseButton } from '@autoswarm/ui';
+import { CloseButton } from '@selva/ui';
 import { ToastContext, useToastState, type Toast as ToastType } from '@/hooks/useToast';
 import { useDemoMode } from '@/hooks/useDemoMode';
 

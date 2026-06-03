@@ -37,7 +37,7 @@ class ToolSandbox:
     def workdir(self) -> Path:
         """Get or create the sandbox working directory."""
         if self._workdir is None:
-            self._workdir = Path(tempfile.mkdtemp(prefix="autoswarm-sandbox-"))
+            self._workdir = Path(tempfile.mkdtemp(prefix="selva-sandbox-"))
         return self._workdir
 
     async def run_command(

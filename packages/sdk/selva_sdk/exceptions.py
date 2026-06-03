@@ -1,21 +1,21 @@
-"""Exception classes for the AutoSwarm SDK."""
+"""Exception classes for the Selva SDK."""
 
 
-class AutoSwarmError(Exception):
-    """Base exception for AutoSwarm SDK."""
+class SelvaError(Exception):
+    """Base exception for Selva SDK."""
 
     def __init__(self, message: str, status_code: int | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
 
 
-class AuthenticationError(AutoSwarmError):
+class AuthenticationError(SelvaError):
     """Raised when authentication fails (401/403)."""
 
 
-class TaskTimeoutError(AutoSwarmError):
+class TaskTimeoutError(SelvaError):
     """Raised when wait_for_task exceeds timeout."""
 
 
-class NotFoundError(AutoSwarmError):
+class NotFoundError(SelvaError):
     """Raised when a resource is not found (404)."""

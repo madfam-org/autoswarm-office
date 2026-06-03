@@ -218,7 +218,7 @@ uv run pytest apps/workers/tests/test_audience_integration.py
 #    (LogQL above; alternatively in your log backend)
 
 # 3. The current staging deploy has the flag flipped first
-kubectl -n autoswarm-staging get deploy nexus-api -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUDIENCE_FILTER_ENABLED")].value}'
+kubectl -n selva-staging get deploy nexus-api -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AUDIENCE_FILTER_ENABLED")].value}'
 # expected: "true"
 
 # 4. Staging soak — 30 min minimum (per MIN_SOAK_MINUTES) with the flag
@@ -262,8 +262,8 @@ Then bump the rollout annotation to force pod restart for both Deployments.
 
 ```bash
 # 1. Check the flag is live in both pods
-kubectl -n autoswarm exec deploy/nexus-api -- env | grep AUDIENCE_FILTER_ENABLED
-kubectl -n autoswarm exec deploy/workers -- env | grep AUDIENCE_FILTER_ENABLED
+kubectl -n selva exec deploy/nexus-api -- env | grep AUDIENCE_FILTER_ENABLED
+kubectl -n selva exec deploy/workers -- env | grep AUDIENCE_FILTER_ENABLED
 
 # 2. Confirm no 5xx spike on nexus-api
 #    Grafana → "nexus-api 5xx rate" panel — should remain at baseline.
@@ -288,15 +288,15 @@ If anything in 3.3 fires unexpectedly:
 
 ```bash
 # 1. Revert the env var in both Deployments
-kubectl -n autoswarm set env deploy/nexus-api AUDIENCE_FILTER_ENABLED=false
-kubectl -n autoswarm set env deploy/workers AUDIENCE_FILTER_ENABLED=false
+kubectl -n selva set env deploy/nexus-api AUDIENCE_FILTER_ENABLED=false
+kubectl -n selva set env deploy/workers AUDIENCE_FILTER_ENABLED=false
 
 # 2. Force pod restart (env change triggers rolling restart automatically,
 #    but for belt-and-braces:)
-kubectl -n autoswarm rollout restart deploy/nexus-api deploy/workers
+kubectl -n selva rollout restart deploy/nexus-api deploy/workers
 
 # 3. Confirm rollback
-kubectl -n autoswarm exec deploy/nexus-api -- env | grep AUDIENCE_FILTER_ENABLED
+kubectl -n selva exec deploy/nexus-api -- env | grep AUDIENCE_FILTER_ENABLED
 # expected: "false"
 
 # 4. Update the configmap in git so next ArgoCD sync doesn't undo the

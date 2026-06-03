@@ -304,7 +304,7 @@ async def events_websocket(
 
     On connect: sends last ``_EVENTS_INITIAL_BATCH_SIZE`` events for the
     tenant as ``event_batch``. Then relays new events from the
-    ``autoswarm:events`` Redis channel.
+    ``selva:events`` Redis channel.
     """
     if not token:
         await websocket.close(code=4401, reason="missing token")

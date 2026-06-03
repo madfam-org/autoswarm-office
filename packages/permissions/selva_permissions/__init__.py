@@ -1,4 +1,4 @@
-"""AutoSwarm Permissions -- HITL permission system with action classification."""
+"""Selva Permissions -- HITL permission system with action classification."""
 
 from .audience import (
     AUDIENCE_FILTER_ENABLED_ENV,

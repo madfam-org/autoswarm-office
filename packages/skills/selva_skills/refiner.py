@@ -49,7 +49,7 @@ class RefinerMetrics:
 REFINE_PROMPT = """\
 You are an expert Python engineer. A Playbook Skill script has either failed execution \
 or its logic is stale. Your task is to produce a corrected, improved version that \
-conforms to the AutoSwarm agentskills/v1 interface.
+conforms to the Selva agentskills/v1 interface.
 
 ## Original Skill Code
 ```python
@@ -82,7 +82,7 @@ class SkillRefiner:
         max_iterations: int = 3,
     ) -> None:
         self.skills_dir = Path(
-            skills_dir or os.environ.get("AUTOSWARM_SKILLS_DIR", "/var/lib/autoswarm/skills")
+            skills_dir or os.environ.get("SELVA_SKILLS_DIR", "/var/lib/selva/skills")
         )
         self.refine_interval_days = refine_interval_days
         self.max_iterations = max(1, max_iterations)

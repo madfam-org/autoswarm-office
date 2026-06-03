@@ -8,7 +8,7 @@ from typing import Any
 
 from ..base import BaseTool, ToolResult
 
-logger = logging.getLogger("autoswarm.document_tools")
+logger = logging.getLogger("selva.document_tools")
 
 
 class GeneratePDFTool(BaseTool):

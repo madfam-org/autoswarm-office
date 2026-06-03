@@ -1,6 +1,6 @@
 # Plugin Development Guide
 
-This guide documents how to write, register, and publish an AutoSwarm plugin. Plugins extend the platform without touching core code — you can add new tools, inject context into any ACP phase, and react to lifecycle events.
+This guide documents how to write, register, and publish an Selva plugin. Plugins extend the platform without touching core code — you can add new tools, inject context into any ACP phase, and react to lifecycle events.
 
 ---
 
@@ -16,18 +16,18 @@ This guide documents how to write, register, and publish an AutoSwarm plugin. Pl
 
 ## Plugin Discovery
 
-AutoSwarm discovers plugins from three sources, in priority order:
+Selva discovers plugins from three sources, in priority order:
 
-1. **`~/.autoswarm/plugins/`** — user-global plugins (available across all projects)
-2. **`.autoswarm/plugins/`** — project-local plugins (scoped to this workspace)
-3. **pip entry points** under the group `autoswarm.plugins` (installable packages)
+1. **`~/.selva/plugins/`** — user-global plugins (available across all projects)
+2. **`.selva/plugins/`** — project-local plugins (scoped to this workspace)
+3. **pip entry points** under the group `selva.plugins` (installable packages)
 
 ---
 
 ## Plugin Structure
 
 ```
-.autoswarm/plugins/
+.selva/plugins/
 └── my-plugin/
     ├── plugin.yaml      # Manifest (required)
     └── plugin.py        # Python implementation (required)
@@ -45,9 +45,9 @@ class: MyPlugin
 ### `plugin.py`
 
 ```python
-from autoswarm_plugins.plugin_base import AutoSwarmPlugin, HookType
+from selva_plugins.plugin_base import SelvaPlugin, HookType
 
-class MyPlugin(AutoSwarmPlugin):
+class MyPlugin(SelvaPlugin):
 
     def setup(self):
         # Register hooks here
@@ -90,19 +90,19 @@ class MyPlugin(AutoSwarmPlugin):
 To make your plugin installable via pip, add this to your `pyproject.toml`:
 
 ```toml
-[project.entry-points."autoswarm.plugins"]
+[project.entry-points."selva.plugins"]
 my-plugin = "my_package:MyPlugin"
 ```
 
 Then publish to PyPI: `python -m build && twine upload dist/*`
 
-Users install and enable it with: `pip install autoswarm-plugin-my-plugin`
+Users install and enable it with: `pip install selva-plugin-my-plugin`
 
 ---
 
 ## Testing Your Plugin
 
-AutoSwarm's test suite uses `pytest` with the `tmp_path` fixture. See `tests/e2e/test_plugin_manager.py` for a full example.
+Selva's test suite uses `pytest` with the `tmp_path` fixture. See `tests/e2e/test_plugin_manager.py` for a full example.
 
 ```bash
 pytest tests/e2e/test_plugin_manager.py -v

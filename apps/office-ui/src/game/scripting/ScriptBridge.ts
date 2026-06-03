@@ -52,7 +52,7 @@ export class ScriptBridge {
     const type = eventType === 'enter' ? 'area.onEnter' : 'area.onLeave';
     for (const iframe of this.iframes) {
       iframe.contentWindow?.postMessage(
-        { __autoswarm_event: true, type, areaName },
+        { __selva_event: true, type, areaName },
         '*',
       );
     }
@@ -68,7 +68,7 @@ export class ScriptBridge {
 
   private handleMessage(event: MessageEvent): void {
     const data = event.data as Record<string, unknown>;
-    if (!data || data.__autoswarm !== true) return;
+    if (!data || data.__selva !== true) return;
 
     const type = data.type as string | undefined;
     if (!type || !ALLOWED_COMMANDS.has(type)) return;
@@ -80,7 +80,7 @@ export class ScriptBridge {
       return;
     }
 
-    const cmd = data as unknown as ScriptCommand & { __autoswarm: boolean };
+    const cmd = data as unknown as ScriptCommand & { __selva: boolean };
     switch (cmd.type) {
       case 'chat.sendMessage':
         gameEventBus.emit('script-chat', cmd.content);

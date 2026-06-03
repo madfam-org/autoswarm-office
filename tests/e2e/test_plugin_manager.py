@@ -5,9 +5,9 @@ E2E tests — Gap 3: Plugin Architecture
 from pathlib import Path
 
 MINIMAL_PLUGIN_PY = """
-from selva_plugins.plugin_base import AutoSwarmPlugin, HookType
+from selva_plugins.plugin_base import SelvaPlugin, HookType
 
-class Plugin(AutoSwarmPlugin):
+class Plugin(SelvaPlugin):
     def setup(self):
         self.hooks[HookType.PRE_PHASE] = self._pre_phase_hook
 
@@ -40,7 +40,7 @@ class TestPluginManager:
         return tmp_path
 
     def test_discover_from_project_dir(self, tmp_path):
-        """Plugin in .autoswarm/plugins/ is discovered and loaded."""
+        """Plugin in .selva/plugins/ is discovered and loaded."""
         plugin_root = self._create_plugin_dir(tmp_path)
 
         from selva_plugins.manager import PluginManager

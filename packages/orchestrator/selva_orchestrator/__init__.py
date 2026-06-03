@@ -1,4 +1,4 @@
-"""AutoSwarm Orchestrator -- swarm coordination with Auto Chess synergy mechanics."""
+"""Selva Orchestrator -- swarm coordination with Auto Chess synergy mechanics."""
 
 from .bandit import ThompsonBandit
 from .compute_tokens import ComputeTokenManager

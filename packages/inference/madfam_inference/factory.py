@@ -30,7 +30,7 @@ def _resolve_api_key(env_name: str) -> str | None:
 
 
 def build_router_from_env(
-    org_config_path: str = "~/.autoswarm/org-config.yaml",
+    org_config_path: str = "~/.selva/org-config.yaml",
     *,
     anthropic_api_key: str | None = None,
     openai_api_key: str | None = None,

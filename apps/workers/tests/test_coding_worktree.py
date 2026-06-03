@@ -96,8 +96,8 @@ class TestCodingWorktree:
 
         mock_settings = MagicMock()
         mock_settings.github_token = None
-        mock_settings.git_author_name = "autoswarm-bot"
-        mock_settings.git_author_email = "bot@autoswarm.dev"
+        mock_settings.git_author_name = "selva-bot"
+        mock_settings.git_author_email = "bot@selva.town"
 
         with (
             patch(
@@ -179,7 +179,7 @@ class TestCodingWorktree:
             }
         )
 
-        assert result["branch_name"] == "autoswarm/task-t1"
+        assert result["branch_name"] == "selva/task-t1"
 
 
 class TestPushGateCommitPush:
@@ -205,8 +205,8 @@ class TestPushGateCommitPush:
 
         mock_settings = MagicMock()
         mock_settings.github_token = None
-        mock_settings.git_author_name = "autoswarm-bot"
-        mock_settings.git_author_email = "bot@autoswarm.dev"
+        mock_settings.git_author_name = "selva-bot"
+        mock_settings.git_author_email = "bot@selva.town"
 
         with (
             patch(
@@ -226,18 +226,18 @@ class TestPushGateCommitPush:
                     "worktree_path": "/tmp/worktrees/task-t1",
                     "task_id": "t1",
                     "description": "Add feature X",
-                    "branch_name": "autoswarm/task-t1",
+                    "branch_name": "selva/task-t1",
                 }
             )
 
         assert result["status"] == "pushed"
         mock_git.commit.assert_called_once_with(
             "/tmp/worktrees/task-t1",
-            "autoswarm: Add feature X",
+            "selva: Add feature X",
         )
         mock_git.push.assert_called_once_with(
             "/tmp/worktrees/task-t1",
-            "autoswarm/task-t1",
+            "selva/task-t1",
             token=None,
         )
         # Cleanup should still happen after commit+push.
@@ -288,8 +288,8 @@ class TestPushGateCommitPush:
 
         mock_settings = MagicMock()
         mock_settings.github_token = None
-        mock_settings.git_author_name = "autoswarm-bot"
-        mock_settings.git_author_email = "bot@autoswarm.dev"
+        mock_settings.git_author_name = "selva-bot"
+        mock_settings.git_author_email = "bot@selva.town"
 
         with (
             patch(
@@ -308,7 +308,7 @@ class TestPushGateCommitPush:
                     "code_changes": [{"iteration": 1}],
                     "worktree_path": "/tmp/worktrees/task-t1",
                     "task_id": "t1",
-                    "branch_name": "autoswarm/task-t1",
+                    "branch_name": "selva/task-t1",
                 }
             )
 

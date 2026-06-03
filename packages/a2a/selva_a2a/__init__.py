@@ -1,4 +1,4 @@
-"""AutoSwarm A2A -- Agent-to-Agent protocol implementation."""
+"""Selva A2A -- Agent-to-Agent protocol implementation."""
 
 from .client import A2AClient
 from .schema import AgentCard, AgentSkill, TaskRequest, TaskResponse, TaskStatus

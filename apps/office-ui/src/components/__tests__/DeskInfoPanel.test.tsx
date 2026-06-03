@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DeskInfoPanel } from '../DeskInfoPanel';
-import type { Department } from '@autoswarm/shared-types';
+import type { Department } from '@selva/shared-types';
 
 const mockDepartments: Department[] = [
   {

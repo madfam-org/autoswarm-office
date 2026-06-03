@@ -2,14 +2,14 @@
 # PersistentVolumeClaim: selva-skills-pvc
 # Provides durable, RWX storage for the procedurally generated Python skill
 # scripts written by the QA Oracle's Hermes continuous-learning loop.
-# Mount at: /var/lib/autoswarm/skills  (all Celery workers + Nexus API)
+# Mount at: /var/lib/selva/skills  (all Celery workers + Nexus API)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: selva-skills-pvc
-  namespace: autoswarm
+  namespace: selva
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: hermes-skills-store
 spec:
   accessModes:
@@ -20,17 +20,17 @@ spec:
   storageClassName: standard  # Replace with your cluster's RWX-capable StorageClass
 
 ---
-# PersistentVolumeClaim: autoswarm-edge-memory-pvc
+# PersistentVolumeClaim: selva-edge-memory-pvc
 # Provides durable storage for the SQLite FTS5 WAL database
-# (autoswarm_state.db) used by the Hermes episodic memory layer.
-# Mount at: /var/lib/autoswarm  (Nexus API pod only — single writer)
+# (selva_state.db) used by the Hermes episodic memory layer.
+# Mount at: /var/lib/selva  (Nexus API pod only — single writer)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: autoswarm-edge-memory-pvc
-  namespace: autoswarm
+  name: selva-edge-memory-pvc
+  namespace: selva
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: hermes-edge-memory
 spec:
   accessModes:

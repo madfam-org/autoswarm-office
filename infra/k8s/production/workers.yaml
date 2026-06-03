@@ -2,10 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: workers
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: workers
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: worker
 spec:
   replicas: 1
@@ -18,10 +18,10 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: workers
-        app.kubernetes.io/part-of: autoswarm-office
+        app.kubernetes.io/part-of: selva-office
         app.kubernetes.io/component: worker
     spec:
-      serviceAccountName: autoswarm-sa
+      serviceAccountName: selva-sa
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -55,62 +55,62 @@ spec:
                 - ALL
           envFrom:
             - configMapRef:
-                name: autoswarm-config
+                name: selva-config
           env:
             - name: ENVIRONMENT
               value: production
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: database-url
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: redis-url
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: secret-key
             - name: PHYND_CRM_URL
               value: http://phynd-crm-web.phynd-crm.svc.cluster.local
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-llm-secrets
+                  name: selva-llm-secrets
                   key: RESEND_API_KEY
                   optional: true
             - name: COLYSEUS_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: colyseus-secret
             - name: WORKER_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-llm-secrets
+                  name: selva-llm-secrets
                   key: WORKER_API_TOKEN
             # CONSENT_LEDGER_SIGNING_SECRET added 2026-05-04 — Settings()
             # validator (v2.3.0) refuses startup with the dev-default
             # sentinel in production. Bootstrap key was generated and
-            # stored in autoswarm-secrets at the same time.
+            # stored in selva-secrets at the same time.
             - name: CONSENT_LEDGER_SIGNING_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: CONSENT_LEDGER_SIGNING_SECRET
             - name: DEEPINFRA_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-llm-secrets
+                  name: selva-llm-secrets
                   key: DEEPINFRA_API_KEY
                   optional: true
             - name: MEMORY_PERSIST_DIR
-              value: /data/autoswarm/memory
+              value: /data/selva/memory
             - name: BANDIT_PERSIST_PATH
-              value: /data/autoswarm/bandit.json
+              value: /data/selva/bandit.json
             - name: DHANAM_API_URL
               value: "https://api.dhan.am"
             - name: ENCLII_API_URL
@@ -118,19 +118,19 @@ spec:
             - name: ENCLII_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: ENCLII_API_TOKEN
                   optional: true
             - name: PORKBUN_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: PORKBUN_API_KEY
                   optional: true
             - name: PORKBUN_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-secrets
+                  name: selva-secrets
                   key: PORKBUN_SECRET_KEY
                   optional: true
             - name: YANTRA4D_API_URL
@@ -140,14 +140,14 @@ spec:
             - name: PRAVARA_MES_API_URL
               value: "https://mes-api.madfam.io"
             - name: ORG_CONFIG_PATH
-              value: "/etc/autoswarm/org-config.yaml"
+              value: "/etc/selva/org-config.yaml"
           volumeMounts:
             - name: tmp
               mountPath: /tmp
             - name: selva-memory
-              mountPath: /data/autoswarm
+              mountPath: /data/selva
             - name: org-config
-              mountPath: /etc/autoswarm
+              mountPath: /etc/selva
               readOnly: true
             # RFC 0005 Sprint 1a — projected SA token for the
             # write_kubernetes_secret tool. Bound to a dedicated SA
@@ -165,7 +165,7 @@ spec:
             claimName: selva-memory-pvc
         - name: org-config
           configMap:
-            name: autoswarm-org-config
+            name: selva-org-config
         # Projected token tied to the selva-secret-writer SA. Expires
         # hourly via TokenRequest API auto-rotation. The tool falls
         # back to in-cluster default SA config if this mount is absent
@@ -183,7 +183,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: selva-memory-pvc
-  namespace: autoswarm
+  namespace: selva
 spec:
   accessModes:
     - ReadWriteOnce

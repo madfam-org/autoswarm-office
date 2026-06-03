@@ -16,7 +16,7 @@ class LocalFSStorage(ArtifactStorage):
 
     def __init__(self, base_dir: str | None = None) -> None:
         self._base = Path(
-            base_dir or os.environ.get("ARTIFACT_STORAGE_PATH", "/tmp/autoswarm-artifacts")
+            base_dir or os.environ.get("ARTIFACT_STORAGE_PATH", "/tmp/selva-artifacts")
         )
 
     def _hash_path(self, content_hash: str) -> Path:

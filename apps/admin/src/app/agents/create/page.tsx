@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AgentRole, Department } from '@autoswarm/shared-types';
-import { Button } from '@autoswarm/ui';
+import type { AgentRole, Department } from '@selva/shared-types';
+import { Button } from '@selva/ui';
 import { apiFetch } from '@/lib/api';
 
 const AGENT_ROLES: AgentRole[] = [

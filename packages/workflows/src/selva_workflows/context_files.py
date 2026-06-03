@@ -1,5 +1,5 @@
 """
-Gap 5: Project Context Files — AGENTS.md / .autoswarm.md loader
+Gap 5: Project Context Files — AGENTS.md / .selva.md loader
 
 Scans a workspace root for project-level context files and injects them
 into ACP system prompts, mirroring Hermes Agent's AGENTS.md / .hermes.md
@@ -23,7 +23,7 @@ _CONTEXT_SOURCES = [
     "CLAUDE.md",  # Cross-tool compatibility (read-only passthrough)
     "GEMINI.md",  # Cross-tool compatibility
     "AGENTS.md",  # Project-level architecture / agent instructions
-    ".autoswarm.md",  # Workspace-local override (highest priority)
+    ".selva.md",  # Workspace-local override (highest priority)
 ]
 
 _MAX_CHARS_PER_FILE = 32_000  # ~8,000 tokens at 4 chars/token
@@ -53,7 +53,7 @@ _CONTEXT_REF_RE = re.compile(r"@([\w./\-]+\.\w+)")
 
 class ContextFileLoader:
     """
-    Scans a workspace root for AutoSwarm-compatible context files and
+    Scans a workspace root for Selva-compatible context files and
     returns their concatenated content for injection into system prompts.
 
     A1: Scans each file for prompt-injection patterns before inclusion.
@@ -67,7 +67,7 @@ class ContextFileLoader:
     ) -> None:
         self._max_chars = max_chars_per_file
         # Policy: 'block' | 'strip' | 'warn'. Reads env var if not provided.
-        self._policy = injection_policy or os.environ.get("AUTOSWARM_INJECTION_POLICY", "warn")
+        self._policy = injection_policy or os.environ.get("SELVA_INJECTION_POLICY", "warn")
 
     def load_context(self, workspace_path: str) -> str:
         """

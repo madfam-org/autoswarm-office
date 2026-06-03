@@ -46,8 +46,8 @@ vi.mock('@janua/nextjs-sdk', () => ({
   ),
 }));
 
-// Mock @autoswarm/ui Button component
-vi.mock('@autoswarm/ui', () => ({
+// Mock @selva/ui Button component
+vi.mock('@selva/ui', () => ({
   Button: ({
     children,
     onClick,

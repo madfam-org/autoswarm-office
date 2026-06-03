@@ -92,7 +92,7 @@ class RedisMemoryProvider(MemoryProvider):
     Use for short-context recall where persistence across restarts is not needed.
     """
 
-    _KEY = "autoswarm:memory:episodes"
+    _KEY = "selva:memory:episodes"
     _MAX_EPISODES = 200
 
     def __init__(self) -> None:
@@ -164,7 +164,7 @@ _PROVIDERS: dict[str, type[MemoryProvider]] = {
 
 def get_memory_provider() -> MemoryProvider:
     """Return the configured memory provider (singleton per process)."""
-    name = os.environ.get("AUTOSWARM_MEMORY_PROVIDER", "sqlite")
+    name = os.environ.get("SELVA_MEMORY_PROVIDER", "sqlite")
     cls = _PROVIDERS.get(name)
     if cls is None:
         logger.warning("Unknown memory provider '%s', falling back to sqlite.", name)

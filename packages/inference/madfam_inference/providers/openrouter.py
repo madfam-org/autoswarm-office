@@ -22,7 +22,7 @@ class OpenRouterProvider(OpenAIProvider):
         *,
         model: str = DEFAULT_MODEL,
         timeout: float = 120.0,
-        app_name: str = "AutoSwarm",
+        app_name: str = "Selva",
     ) -> None:
         super().__init__(
             api_key,
@@ -34,6 +34,6 @@ class OpenRouterProvider(OpenAIProvider):
 
     def _headers(self) -> dict[str, str]:
         headers = super()._headers()
-        headers["HTTP-Referer"] = "https://autoswarm.dev"
+        headers["HTTP-Referer"] = "https://selva.town"
         headers["X-Title"] = self._app_name
         return headers

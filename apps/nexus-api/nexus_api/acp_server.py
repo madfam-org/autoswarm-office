@@ -1,6 +1,6 @@
 """
 Track E2: ACP stdio / JSON-RPC server stub
-Mirrors Hermes' acp_adapter/ — exposes AutoSwarm as an editor-native agent
+Mirrors Hermes' acp_adapter/ — exposes Selva as an editor-native agent
 over stdio (VS Code / Zed / JetBrains Agent Protocol).
 
 Start with: python -m nexus_api.acp_server
@@ -19,7 +19,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-SERVER_NAME = "autoswarm-office"
+SERVER_NAME = "selva-office"
 SERVER_VERSION = "1.0.0"
 
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import type { OfficeState } from '@autoswarm/shared-types';
+import type { OfficeState } from '@selva/shared-types';
 
 /** Custom event bus for React <-> Phaser communication */
 class GameEventBus extends EventTarget {
@@ -195,7 +195,7 @@ export default function PhaserGame({
     <div
       ref={containerRef}
       className="absolute inset-0 z-0"
-      aria-label="AutoSwarm Office game canvas"
+      aria-label="Selva Office game canvas"
       role="application"
     />
   );

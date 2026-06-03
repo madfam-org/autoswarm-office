@@ -30,7 +30,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL=https://api.selva.town
 ARG NEXT_PUBLIC_COLYSEUS_URL=wss://ws.selva.town
 ARG NEXT_PUBLIC_JANUA_ISSUER_URL=https://auth.selva.town
-ARG NEXT_PUBLIC_JANUA_CLIENT_ID=autoswarm-office
+ARG NEXT_PUBLIC_JANUA_CLIENT_ID=selva-office
 ARG NEXT_PUBLIC_DEMO_ENABLED=true
 ARG NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true
 ARG NEXT_PUBLIC_APP_URL=https://app.selva.town
@@ -45,7 +45,7 @@ ENV NEXT_PUBLIC_GUEST_ACCESS_ENABLED=$NEXT_PUBLIC_GUEST_ACCESS_ENABLED
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_MARKETING_URL=$NEXT_PUBLIC_MARKETING_URL
 
-RUN pnpm --filter @autoswarm/shared-types build && \
+RUN pnpm --filter @selva/shared-types build && \
     pnpm --filter office-ui build
 
 # Stage 3: Runner
@@ -59,7 +59,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-LABEL org.opencontainers.image.source=https://github.com/madfam-org/autoswarm-office
+LABEL org.opencontainers.image.source=https://github.com/madfam-org/selva-office
 
 COPY --from=builder --chown=nextjs:nodejs /app/apps/office-ui/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/office-ui/.next/static ./apps/office-ui/.next/static

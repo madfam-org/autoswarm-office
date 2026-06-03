@@ -7,7 +7,7 @@ import {
   yamlToReactFlow,
   reactFlowToYaml,
 } from '../workflow-converter';
-import type { WorkflowDefinition, NodeType } from '@autoswarm/shared-types';
+import type { WorkflowDefinition, NodeType } from '@selva/shared-types';
 
 function makeWorkflow(nodes: Array<{ id: string; type: NodeType }>, edges: Array<{ source: string; target: string }> = []): WorkflowDefinition {
   return {

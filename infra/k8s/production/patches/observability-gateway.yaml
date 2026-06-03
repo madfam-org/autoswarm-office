@@ -11,7 +11,7 @@ spec:
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-observability-secrets
+                  name: selva-observability-secrets
                   key: SENTRY_DSN_GATEWAY
                   optional: true
             - name: SENTRY_ENVIRONMENT

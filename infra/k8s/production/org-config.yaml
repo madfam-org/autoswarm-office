@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: autoswarm-org-config
-  namespace: autoswarm
+  name: selva-org-config
+  namespace: selva
   labels:
     app.kubernetes.io/name: org-config
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
 data:
   org-config.yaml: |
     # ═══════════════════════════════════════════════════════════════════════
     # MADFAM Production Org Config
     # ═══════════════════════════════════════════════════════════════════════
-    # Deployed via ConfigMap → mounted at /etc/autoswarm/org-config.yaml.
+    # Deployed via ConfigMap → mounted at /etc/selva/org-config.yaml.
     # Providers are auto-registered from env vars (DEEPINFRA_API_KEY, etc.)
     # — only add here if overriding base_url or timeout.
     # ═══════════════════════════════════════════════════════════════════════
@@ -195,7 +195,7 @@ data:
           dns_records: enabled
         consumption_tracking: false
         status: active
-        notes: "Selva DNS tools require both PORKBUN_API_KEY and PORKBUN_SECRET_KEY from autoswarm-secrets. Routine registrar operations should go through Enclii when the Porkbun provider adapter is wired; direct API use is break-glass."
+        notes: "Selva DNS tools require both PORKBUN_API_KEY and PORKBUN_SECRET_KEY from selva-secrets. Routine registrar operations should go through Enclii when the Porkbun provider adapter is wired; direct API use is break-glass."
 
       enclii:
         provider: enclii

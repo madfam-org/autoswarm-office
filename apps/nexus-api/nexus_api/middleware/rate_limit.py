@@ -36,7 +36,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         client_ip = request.client.host if request.client else "unknown"
         window = int(time.time()) // 60
-        key = f"autoswarm:ratelimit:{client_ip}:{window}"
+        key = f"selva:ratelimit:{client_ip}:{window}"
 
         try:
             pool = get_redis_pool(url=self.redis_url)

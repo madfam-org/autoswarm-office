@@ -1,7 +1,7 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: longhorn-autoswarm-backup
+  name: longhorn-selva-backup
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
 provisioner: driver.longhorn.io
@@ -19,13 +19,13 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-backup-pvc
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: postgres-backup
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: backup
 spec:
-  storageClassName: longhorn-autoswarm-backup
+  storageClassName: longhorn-selva-backup
   accessModes:
     - ReadWriteOnce
   resources:
@@ -36,10 +36,10 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: postgres-backup
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: postgres-backup
-    app.kubernetes.io/part-of: autoswarm-office
+    app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: backup
 spec:
   schedule: "0 2 * * *"  # Daily at 02:00 UTC
@@ -56,11 +56,11 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/name: postgres-backup
-            app.kubernetes.io/part-of: autoswarm-office
+            app.kubernetes.io/part-of: selva-office
             app.kubernetes.io/component: backup
         spec:
           restartPolicy: Never
-          serviceAccountName: autoswarm-sa
+          serviceAccountName: selva-sa
           securityContext:
             runAsNonRoot: true
             runAsUser: 1001
@@ -90,7 +90,7 @@ spec:
                 - |
                   set -euo pipefail
                   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-                  FILENAME="autoswarm_${TIMESTAMP}.dump"
+                  FILENAME="selva_${TIMESTAMP}.dump"
                   FILEPATH="/backups/${FILENAME}"
 
                   echo "[backup] Starting PostgreSQL backup at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -145,22 +145,22 @@ spec:
                     fi
                     # Use pre-installed aws CLI from init container or base image
                     if command -v aws >/dev/null 2>&1; then
-                      aws s3 cp "${FILEPATH}" "s3://${S3_BUCKET}/autoswarm/${S3_PREFIX}/${FILENAME}"
-                      echo "[backup] Uploaded to s3://${S3_BUCKET}/autoswarm/${S3_PREFIX}/${FILENAME}"
+                      aws s3 cp "${FILEPATH}" "s3://${S3_BUCKET}/selva/${S3_PREFIX}/${FILENAME}"
+                      echo "[backup] Uploaded to s3://${S3_BUCKET}/selva/${S3_PREFIX}/${FILENAME}"
                     else
                       echo "[backup] WARNING: aws CLI not available, skipping S3 upload"
                     fi
                   fi
 
                   # Rotate: keep last 30 daily backups on local PVC
-                  ls -t /backups/autoswarm_*.dump 2>/dev/null | tail -n +31 | xargs -r rm -f
+                  ls -t /backups/selva_*.dump 2>/dev/null | tail -n +31 | xargs -r rm -f
 
                   echo "[backup] Backup complete at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
               env:
                 - name: DATABASE_URL
                   valueFrom:
                     secretKeyRef:
-                      name: autoswarm-secrets
+                      name: selva-secrets
                       key: database-url
                 - name: POSTGRES_USER
                   valueFrom:
@@ -175,7 +175,7 @@ spec:
                 - name: S3_BUCKET
                   valueFrom:
                     configMapKeyRef:
-                      name: autoswarm-config
+                      name: selva-config
                       key: backup-s3-bucket
                       optional: true
               volumeMounts:
@@ -195,7 +195,7 @@ apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
   name: postgres-backup-credentials
-  namespace: autoswarm
+  namespace: selva
   labels:
     app.kubernetes.io/name: postgres-backup
     app.kubernetes.io/component: backup

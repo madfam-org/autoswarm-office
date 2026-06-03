@@ -18,7 +18,7 @@ if [ -z "${1:-}" ]; then
 fi
 
 BACKUP_FILE="$1"
-TEMP_DB="autoswarm_verify_$(date +%s)"
+TEMP_DB="selva_verify_$(date +%s)"
 
 if [ ! -f "${BACKUP_FILE}" ]; then
   echo "[verify] ERROR: Backup file not found: ${BACKUP_FILE}"

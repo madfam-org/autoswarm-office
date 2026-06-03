@@ -15,8 +15,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_SOUL_PATH = Path.home() / ".autoswarm" / "SOUL.md"
-_PROJECT_SOUL_PATH = Path(".autoswarm") / "SOUL.md"
+_DEFAULT_SOUL_PATH = Path.home() / ".selva" / "SOUL.md"
+_PROJECT_SOUL_PATH = Path(".selva") / "SOUL.md"
 _MAX_CHARS = 8_000
 
 
@@ -25,9 +25,9 @@ class SoulLoader:
     Loads the agent's SOUL.md personality file.
 
     Discovery order (first found wins):
-    1. ``AUTOSWARM_SOUL_PATH`` env var
-    2. ``.autoswarm/SOUL.md``  (project-local)
-    3. ``~/.autoswarm/SOUL.md``  (user-global)
+    1. ``SELVA_SOUL_PATH`` env var
+    2. ``.selva/SOUL.md``  (project-local)
+    3. ``~/.selva/SOUL.md``  (user-global)
     """
 
     def __init__(self) -> None:
@@ -40,7 +40,7 @@ class SoulLoader:
 
         candidates = []
 
-        env_path = os.environ.get("AUTOSWARM_SOUL_PATH")
+        env_path = os.environ.get("SELVA_SOUL_PATH")
         if env_path:
             candidates.append(Path(env_path))
         candidates.extend([_PROJECT_SOUL_PATH, _DEFAULT_SOUL_PATH])

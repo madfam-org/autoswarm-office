@@ -43,7 +43,7 @@ class ExecuteCodeTool(BaseTool):
 
     Runs arbitrary code in a sandboxed subprocess with:
     - Mandatory dangerous-pattern gate (calls request_approval for risky code)
-    - AUTOSWARM_EXEC_POLICY=allow|block|approve controls gate behaviour
+    - SELVA_EXEC_POLICY=allow|block|approve controls gate behaviour
     - Language support: python, bash, javascript (node)
     - Optional dependency pre-installation (pip)
     - Hard 10 KB output cap and configurable timeout
@@ -104,7 +104,7 @@ class ExecuteCodeTool(BaseTool):
         # ----------------------------------------------------------------
         # Approval gate
         # ----------------------------------------------------------------
-        policy = os.environ.get("AUTOSWARM_EXEC_POLICY", "approve")
+        policy = os.environ.get("SELVA_EXEC_POLICY", "approve")
         if policy != "allow":
             dangerous_matches = [p for p in _EXEC_DANGEROUS_PATTERNS if p in code]
             if dangerous_matches:

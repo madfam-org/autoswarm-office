@@ -1,4 +1,4 @@
-"""Core domain types for the AutoSwarm orchestrator."""
+"""Core domain types for the Selva orchestrator."""
 
 from __future__ import annotations
 

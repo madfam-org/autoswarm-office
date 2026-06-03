@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Postgres backup script for AutoSwarm Office
+# Postgres backup script for Selva Office
 # Creates a compressed custom-format dump and optionally uploads to S3.
 #
 # Usage: ./scripts/backup-postgres.sh [--upload]
@@ -18,7 +18,7 @@ RETENTION_DAILY="${RETENTION_DAILY:-30}"
 RETENTION_WEEKLY="${RETENTION_WEEKLY:-12}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DAY_OF_WEEK=$(date +%u)
-FILENAME="autoswarm_${TIMESTAMP}.dump"
+FILENAME="selva_${TIMESTAMP}.dump"
 FILEPATH="${BACKUP_DIR}/${FILENAME}"
 
 mkdir -p "${BACKUP_DIR}"
@@ -72,18 +72,18 @@ if [ "${1:-}" = "--upload" ]; then
     S3_PREFIX="daily"
   fi
 
-  aws s3 cp "${FILEPATH}" "s3://${S3_BUCKET}/autoswarm/${S3_PREFIX}/${FILENAME}"
-  echo "[backup] Uploaded to s3://${S3_BUCKET}/autoswarm/${S3_PREFIX}/${FILENAME}"
+  aws s3 cp "${FILEPATH}" "s3://${S3_BUCKET}/selva/${S3_PREFIX}/${FILENAME}"
+  echo "[backup] Uploaded to s3://${S3_BUCKET}/selva/${S3_PREFIX}/${FILENAME}"
 
   # Rotate remote weekly backups
   if [ "${S3_PREFIX}" = "weekly" ]; then
     echo "[backup] Rotating remote weekly backups (keeping ${RETENTION_WEEKLY})"
-    aws s3 ls "s3://${S3_BUCKET}/autoswarm/weekly/" \
+    aws s3 ls "s3://${S3_BUCKET}/selva/weekly/" \
       | sort -r \
       | tail -n +"$((RETENTION_WEEKLY + 1))" \
       | awk '{print $4}' \
       | while read -r key; do
-          aws s3 rm "s3://${S3_BUCKET}/autoswarm/weekly/${key}"
+          aws s3 rm "s3://${S3_BUCKET}/selva/weekly/${key}"
         done
   fi
 fi
@@ -91,6 +91,6 @@ fi
 # Rotate old local backups
 echo "[backup] Rotating old local backups (keeping ${RETENTION_DAILY} daily)"
 # shellcheck disable=SC2012
-ls -t "${BACKUP_DIR}"/autoswarm_*.dump 2>/dev/null | tail -n +"$((RETENTION_DAILY + 1))" | xargs -r rm -f
+ls -t "${BACKUP_DIR}"/selva_*.dump 2>/dev/null | tail -n +"$((RETENTION_DAILY + 1))" | xargs -r rm -f
 
 echo "[backup] Backup complete at $(date -u +%Y-%m-%dT%H:%M:%SZ)"

@@ -10,7 +10,7 @@ dev:
 	trap "kill 0" EXIT SIGINT SIGTERM; \
 	pnpm dev & \
 	uv run --directory apps/nexus-api uvicorn nexus_api.main:app --host 0.0.0.0 --port 4300 --reload & \
-	uv run --directory apps/workers python -m autoswarm_workers & \
+	uv run --directory apps/workers python -m selva_workers & \
 	wait'
 
 db-wait:
@@ -56,7 +56,7 @@ dev-seed:
 
 worker:
 	@if [ "$$LOCAL_WORKER" != "yes" ]; then echo "Refusing to start local worker without LOCAL_WORKER=yes"; exit 1; fi
-	uv run --directory apps/workers python -m autoswarm_workers
+	uv run --directory apps/workers python -m selva_workers
 
 build:
 	pnpm build
@@ -142,10 +142,10 @@ generate-office-map:
 	node scripts/generate-office-map.js
 
 setup-org-config:
-	@mkdir -p ~/.autoswarm
-	@test -f ~/.autoswarm/org-config.yaml || \
-		cp data/org-config-template.yaml ~/.autoswarm/org-config.yaml
-	@echo "Org config at ~/.autoswarm/org-config.yaml"
+	@mkdir -p ~/.selva
+	@test -f ~/.selva/org-config.yaml || \
+		cp data/org-config-template.yaml ~/.selva/org-config.yaml
+	@echo "Org config at ~/.selva/org-config.yaml"
 
 # ── Setup ───────────────────────────────────────────
 setup:

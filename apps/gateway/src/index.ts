@@ -5,8 +5,8 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 dotenv.config(); // CWD fallback for Docker/production
 
 import http from "node:http";
-import { createLogger } from "@autoswarm/config/logging";
-import { initSentry } from "@autoswarm/config/sentry";
+import { createLogger } from "@selva/config/logging";
+import { initSentry } from "@selva/config/sentry";
 import { HeartbeatService } from "./heartbeat";
 import { MemoryManager } from "./memory";
 
@@ -35,7 +35,7 @@ function createHealthServer(): http.Server {
     if (req.method === "GET" && req.url === "/health") {
       const body = JSON.stringify({
         status: "ok",
-        service: "autoswarm-gateway",
+        service: "selva-gateway",
         version: "0.1.0",
         uptime: process.uptime(),
         heartbeat: {
@@ -71,7 +71,7 @@ function createHealthServer(): http.Server {
 }
 
 async function main(): Promise<void> {
-  logger.info("AutoSwarm OpenClaw gateway starting...");
+  logger.info("Selva OpenClaw gateway starting...");
 
   memory.ensureDir();
   logger.info({ memoryDir: MEMORY_DIR }, "Memory directory initialized");

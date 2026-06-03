@@ -172,7 +172,7 @@ def test_env_var_controls_singleton() -> None:
 
     # Reset singleton
     reg_mod._registry = None
-    with mock.patch.dict(os.environ, {"AUTOSWARM_COMMUNITY_SKILLS_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"SELVA_COMMUNITY_SKILLS_ENABLED": "true"}):
         reg = get_skill_registry()
         assert reg.community_enabled
         assert len(reg.list_skills(tier=SkillTier.COMMUNITY)) > 0

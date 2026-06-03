@@ -1,4 +1,4 @@
-"""FastAPI application factory for the AutoSwarm Nexus API."""
+"""FastAPI application factory for the Selva Nexus API."""
 
 from __future__ import annotations
 
@@ -121,9 +121,9 @@ def create_app() -> FastAPI:
     # Gate on settings.environment so local/staging keep Swagger UI.
     _docs_enabled = settings.environment != "production"
     app = FastAPI(
-        title="AutoSwarm Nexus API",
+        title="Selva Nexus API",
         version="0.2.0",
-        description="Core orchestration API for the AutoSwarm Office platform",
+        description="Core orchestration API for the Selva Office platform",
         lifespan=lifespan,
         docs_url="/api/v1/docs" if _docs_enabled else None,
         redoc_url="/api/v1/redoc" if _docs_enabled else None,
@@ -304,7 +304,7 @@ def create_app() -> FastAPI:
                         }
                     )
                     await pool.execute_with_retry(
-                        "xadd", "autoswarm:task-stream", {"data": task_msg}
+                        "xadd", "selva:task-stream", {"data": task_msg}
                     )
                 except Exception:
                     task.status = "pending"
@@ -393,7 +393,7 @@ def create_app() -> FastAPI:
         app.include_router(a2a_router, prefix="/api/v1")
         logger.info("A2A protocol router mounted at /api/v1/a2a")
     except ImportError:
-        logger.debug("autoswarm-a2a not installed; A2A protocol disabled")
+        logger.debug("selva-a2a not installed; A2A protocol disabled")
 
     return app
 

@@ -14,11 +14,11 @@ RUN pnpm install --frozen-lockfile --shamefully-hoist
 
 COPY apps/colyseus/ apps/colyseus/
 
-RUN pnpm --filter @autoswarm/shared-types build && \
+RUN pnpm --filter @selva/shared-types build && \
     pnpm --filter colyseus build
 
 # Stage 2: Runner
-# Node.js 22 required: @autoswarm/config exports raw .ts files and Node 22's
+# Node.js 22 required: @selva/config exports raw .ts files and Node 22's
 # --experimental-strip-types (enabled by default) transparently handles them.
 # Node 20 crashes with "SyntaxError: Unexpected token 'export'" on the
 # TypeScript interface declarations in packages/config/logging.ts.
@@ -29,7 +29,7 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 appuser
 
-LABEL org.opencontainers.image.source=https://github.com/madfam-org/autoswarm-office
+LABEL org.opencontainers.image.source=https://github.com/madfam-org/selva-office
 
 COPY --from=builder --chown=appuser:nodejs /app/apps/colyseus/dist ./dist
 COPY --from=builder --chown=appuser:nodejs /app/node_modules ./node_modules

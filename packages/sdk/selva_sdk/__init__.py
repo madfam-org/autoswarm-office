@@ -1,12 +1,12 @@
-"""AutoSwarm SDK — Python client for AutoSwarm Office."""
+"""Selva SDK — Python client for Selva Office."""
 
-from .client import AutoSwarm, AutoSwarmSync
-from .exceptions import AuthenticationError, AutoSwarmError, NotFoundError, TaskTimeoutError
+from .client import Selva, SelvaSync
+from .exceptions import AuthenticationError, SelvaError, NotFoundError, TaskTimeoutError
 
 __all__ = [
-    "AutoSwarm",
-    "AutoSwarmSync",
-    "AutoSwarmError",
+    "Selva",
+    "SelvaSync",
+    "SelvaError",
     "AuthenticationError",
     "NotFoundError",
     "TaskTimeoutError",

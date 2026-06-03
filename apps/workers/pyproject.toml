@@ -1,7 +1,7 @@
 [project]
 name = "selva-workers"
 version = "0.1.0"
-description = "LangGraph execution workers for AutoSwarm Office"
+description = "LangGraph execution workers for Selva Office"
 requires-python = ">=3.12"
 dependencies = [
   "langgraph>=0.2.60",

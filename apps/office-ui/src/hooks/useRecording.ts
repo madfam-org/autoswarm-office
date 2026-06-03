@@ -82,7 +82,7 @@ export function useRecording({ localStream, peers }: UseRecordingOptions) {
         const a = document.createElement('a');
         a.href = url;
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        a.download = `autoswarm-recording-${timestamp}.webm`;
+        a.download = `selva-recording-${timestamp}.webm`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

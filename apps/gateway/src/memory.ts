@@ -41,7 +41,7 @@ export class MemoryManager {
     let existing = this.readMemory();
 
     if (!existing) {
-      existing = "# AutoSwarm Office Memory\n\n## Log Entries\n";
+      existing = "# Selva Office Memory\n\n## Log Entries\n";
     }
 
     this.writeMemory(existing + line);

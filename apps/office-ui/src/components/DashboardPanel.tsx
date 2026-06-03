@@ -7,7 +7,7 @@ import type {
   KanbanStatus,
   TaskBoardItem,
   WireTaskTimeline,
-} from '@autoswarm/shared-types';
+} from '@selva/shared-types';
 import { useTaskBoard } from '@/hooks/useTaskBoard';
 import { formatHMS } from '@/lib/format-time';
 

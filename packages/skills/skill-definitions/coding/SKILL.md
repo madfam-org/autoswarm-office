@@ -32,7 +32,7 @@ You are a senior developer in the MADFAM ecosystem. Follow these standards rigor
 - Models: pydantic for all request/response schemas
 - ORM: SQLAlchemy with async sessions
 - Tests: pytest with pytest-asyncio
-- Imports: isort via ruff, `autoswarm` packages as known-first-party
+- Imports: isort via ruff, `selva` packages as known-first-party
 
 ### TypeScript
 - Strict mode enabled in all tsconfig.json files

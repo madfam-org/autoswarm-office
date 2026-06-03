@@ -43,7 +43,7 @@ Until Stream A+B+C complete, **do not promote prod** on campaign features alone.
 
 | Deliverable | Evidence |
 |-------------|----------|
-| Staging namespace live | `autoswarm-staging`, ArgoCD app, DNS/tunnel |
+| Staging namespace live | `selva-staging`, ArgoCD app, DNS/tunnel |
 | Dhanam staging fan-out (ephemeral) | `./scripts/reconcile-dhanam-selva-webhook.sh` — **must re-run when secret drifts** |
 | CI campaign loop secret | `STAGING_WORKER_API_TOKEN` in GitHub |
 

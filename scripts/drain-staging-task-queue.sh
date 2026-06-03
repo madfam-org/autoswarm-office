@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Break-glass drain of staging Redis task stream backlog (pre–load-test calibration).
 #
-# Trims autoswarm:task-stream, clears DLQ, and fails queued/running DB rows so
+# Trims selva:task-stream, clears DLQ, and fails queued/running DB rows so
 # Run 3 k6 starts from a clean slate. Staging only.
 #
 # Usage:
@@ -10,7 +10,7 @@
 #
 set -euo pipefail
 
-NS="${STAGING_NAMESPACE:-autoswarm-staging}"
+NS="${STAGING_NAMESPACE:-selva-staging}"
 DRY_RUN=false
 
 for arg in "$@"; do
@@ -45,19 +45,19 @@ from selva_redis_pool import get_redis_pool
 async def drain_redis() -> None:
     pool = get_redis_pool(url=os.environ["REDIS_URL"])
     client = await pool.client()
-    stream = "autoswarm:task-stream"
-    dlq = "autoswarm:task-dlq"
+    stream = "selva:task-stream"
+    dlq = "selva:task-dlq"
     before = await client.xlen(stream)
     dlq_before = await client.xlen(dlq)
     await client.xtrim(stream, maxlen=0, approximate=False)
     await client.xtrim(dlq, maxlen=0, approximate=False)
     # Reset consumer group PEL (orphaned after trim).
     try:
-        await client.xgroup_destroy(stream, "autoswarm-workers")
+        await client.xgroup_destroy(stream, "selva-workers")
     except Exception:
         pass
     try:
-        await client.xgroup_create(stream, "autoswarm-workers", id="0", mkstream=True)
+        await client.xgroup_create(stream, "selva-workers", id="0", mkstream=True)
     except Exception:
         pass
     after = await client.xlen(stream)
@@ -91,7 +91,7 @@ async def main() -> None:
 asyncio.run(main())
 PY
 
-TOKEN="$(kubectl -n "$NS" get secret autoswarm-staging-secrets \
+TOKEN="$(kubectl -n "$NS" get secret selva-staging-secrets \
   -o jsonpath='{.data.WORKER_API_TOKEN}' 2>/dev/null | base64 -d || true)"
 if [[ -n "$TOKEN" ]]; then
   curl -sf -X POST "https://staging-api.selva.town/api/v1/swarms/tasks/reap-stale" \

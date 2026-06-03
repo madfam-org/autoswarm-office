@@ -1,4 +1,4 @@
-"""PostHog analytics integration for AutoSwarm Nexus API."""
+"""PostHog analytics integration for Selva Nexus API."""
 
 from __future__ import annotations
 

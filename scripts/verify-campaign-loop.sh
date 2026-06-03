@@ -3,7 +3,7 @@
 #
 # Exercises: import → schedule-social → HITL approve → CRM handoff → Tulana feedback.
 # Requires a Janua Bearer token with tenant org scope (not guest), or on
-# --staging falls back to WORKER_API_TOKEN from autoswarm-staging-secrets
+# --staging falls back to WORKER_API_TOKEN from selva-staging-secrets
 # (with X-Selva-Tenant-Org) when no JWT is set.
 #
 # Usage:
@@ -40,7 +40,7 @@ TOKEN="${AUTH_TOKEN:-${STAGING_CAMPAIGN_TEST_TOKEN:-${STAGING_LOAD_TEST_TOKEN:-}
 TENANT_ORG_HEADER=()
 if [[ -z "$TOKEN" && "$MODE" == "--staging" ]]; then
   if [[ -z "${WORKER_API_TOKEN:-}" ]] && command -v kubectl >/dev/null 2>&1; then
-    WORKER_API_TOKEN="$(kubectl -n autoswarm-staging get secret autoswarm-staging-secrets \
+    WORKER_API_TOKEN="$(kubectl -n selva-staging get secret selva-staging-secrets \
       -o jsonpath='{.data.WORKER_API_TOKEN}' 2>/dev/null | base64 -d || true)"
   fi
   if [[ -n "${WORKER_API_TOKEN:-}" ]]; then

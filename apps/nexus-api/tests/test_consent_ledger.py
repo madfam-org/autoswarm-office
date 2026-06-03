@@ -1,7 +1,7 @@
 """Regression tests for consent-ledger HMAC + healthcheck (commit e71337c).
 
 Pre-fix: ``signature_sha256`` was a plain SHA-256 over public ledger
-fields. Anyone with INSERT (the ``autoswarm_app`` role still has it,
+fields. Anyone with INSERT (the ``selva_app`` role still has it,
 intentionally) could forge a row and recompute the digest -- the
 "tamper evidence" claim was cryptographically vacuous.
 
@@ -143,7 +143,7 @@ class TestConsentLedgerGrantsHealthcheck:
 
         We don't assert specific values because they depend on the test
         DB role (SQLite has no role/grant concept; PostgreSQL with the
-        right ``autoswarm_app`` role would return real values). We
+        right ``selva_app`` role would return real values). We
         assert the SHAPE so a future refactor that drops a key is
         caught here.
         """

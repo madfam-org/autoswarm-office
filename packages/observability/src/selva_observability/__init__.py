@@ -1,4 +1,4 @@
-"""Shared logging and observability for AutoSwarm services."""
+"""Shared logging and observability for Selva services."""
 
 from selva_observability.logging import bind_task_context, clear_context, configure_logging
 from selva_observability.propagation import extract_trace_context, inject_trace_context

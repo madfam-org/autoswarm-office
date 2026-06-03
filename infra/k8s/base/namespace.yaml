@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: autoswarm
+  name: selva
   labels:
-    app.kubernetes.io/part-of: autoswarm-office
-    autoswarm.dev/project: autoswarm
+    app.kubernetes.io/part-of: selva-office
+    selva.town/project: selva

@@ -16,10 +16,10 @@ branch_labels = None
 depends_on = None
 
 
-# Production currently connects as ``autoswarm``. Older migrations assumed
-# the Enclii-standard ``autoswarm_app`` role, so keep both to support fresh
+# Production currently connects as ``selva``. Older migrations assumed
+# the Enclii-standard ``selva_app`` role, so keep both to support fresh
 # databases and the live database we are stabilizing.
-_APP_ROLES = ("autoswarm", "autoswarm_app")
+_APP_ROLES = ("selva", "selva_app")
 
 _READ_WRITE_TABLES = (
     "deployment_evidence_records",

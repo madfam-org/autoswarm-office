@@ -297,7 +297,7 @@ def get_skill_registry() -> SkillRegistry:
     """Return (or create) the global SkillRegistry singleton."""
     global _registry  # noqa: PLW0603
     if _registry is None:
-        community_enabled = os.getenv("AUTOSWARM_COMMUNITY_SKILLS_ENABLED", "false").lower() in (
+        community_enabled = os.getenv("SELVA_COMMUNITY_SKILLS_ENABLED", "false").lower() in (
             "true",
             "1",
             "yes",

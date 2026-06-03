@@ -98,23 +98,23 @@ jobs:
       matrix:
         include:
           - service: nexus-api
-            image: autoswarm-nexus-api
+            image: selva-nexus-api
             dockerfile: infra/docker/Dockerfile.nexus-api
             changed: nexus-api
           - service: office-ui
-            image: autoswarm-office-ui
+            image: selva-office-ui
             dockerfile: infra/docker/Dockerfile.office-ui
             changed: office-ui
           - service: colyseus
-            image: autoswarm-colyseus
+            image: selva-colyseus
             dockerfile: infra/docker/Dockerfile.colyseus
             changed: colyseus
           - service: admin
-            image: autoswarm-admin
+            image: selva-admin
             dockerfile: infra/docker/Dockerfile.admin
             changed: admin
           - service: gateway
-            image: autoswarm-gateway
+            image: selva-gateway
             dockerfile: infra/docker/Dockerfile.gateway
             changed: gateway
           - service: workers
@@ -170,7 +170,7 @@ jobs:
             NEXT_PUBLIC_API_URL=https://api.selva.town
             NEXT_PUBLIC_COLYSEUS_URL=wss://ws.selva.town
             NEXT_PUBLIC_JANUA_ISSUER_URL=${{ secrets.JANUA_ISSUER_URL || 'https://auth.selva.town' }}
-            NEXT_PUBLIC_JANUA_CLIENT_ID=${{ secrets.JANUA_CLIENT_ID || 'autoswarm-office' }}
+            NEXT_PUBLIC_JANUA_CLIENT_ID=${{ secrets.JANUA_CLIENT_ID || 'selva-office' }}
             NEXT_PUBLIC_DEMO_ENABLED=true
             NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true
             NEXT_PUBLIC_APP_URL=https://app.selva.town
@@ -220,10 +220,10 @@ jobs:
 
       - name: Commit digest updates
         run: |
-          git config user.name "autoswarm-bot"
-          git config user.email "bot@autoswarm.dev"
+          git config user.name "selva-bot"
+          git config user.email "bot@selva.town"
 
-          SERVICES=("nexus-api:autoswarm-nexus-api" "office-ui:autoswarm-office-ui" "colyseus:autoswarm-colyseus" "admin:autoswarm-admin" "gateway:autoswarm-gateway" "workers:selva-workers")
+          SERVICES=("nexus-api:selva-nexus-api" "office-ui:selva-office-ui" "colyseus:selva-colyseus" "admin:selva-admin" "gateway:selva-gateway" "workers:selva-workers")
 
           for ATTEMPT in 1 2 3; do
             git fetch origin main
@@ -258,7 +258,7 @@ jobs:
 
             git commit -m "chore(deploy): update service digest(s)
 
-          Co-Authored-By: autoswarm-bot <bot@autoswarm.dev>"
+          Co-Authored-By: selva-bot <bot@selva.town>"
             git push origin main && exit 0
             sleep $((ATTEMPT * 10))
           done
@@ -291,7 +291,7 @@ jobs:
               \"branch\": \"${{ github.ref_name }}\",
               \"ref\": \"${{ github.ref }}\",
               \"source\": \"ci_callback\",
-              \"message\": \"autoswarm-office ${STATUS}\",
+              \"message\": \"selva-office ${STATUS}\",
               \"metadata\": {
                 \"services\": [\"nexus-api\", \"office-ui\", \"colyseus\", \"admin\", \"gateway\", \"workers\"],
                 \"workflow\": \"deploy\",

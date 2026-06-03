@@ -284,7 +284,7 @@ class TestWaitViaRedis:
 
         assert result.result == "approved"
         assert result.feedback == "ok"
-        pubsub.subscribe.assert_awaited_once_with("autoswarm:approval:req-1")
+        pubsub.subscribe.assert_awaited_once_with("selva:approval:req-1")
         pubsub.unsubscribe.assert_awaited_once()
         pubsub.close.assert_awaited_once()
 

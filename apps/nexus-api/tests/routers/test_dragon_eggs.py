@@ -1,7 +1,7 @@
 """Router tests for /api/v1/dragon-eggs.
 
 In dev_auth_bypass mode (set in conftest.py), every request resolves
-to a user with email='dev@autoswarm.local' and roles=['admin', ...].
+to a user with email='dev@selva.local' and roles=['admin', ...].
 The 'admin' role is in ``_PHASE_1_BYPASS_ROLES`` so the dev user
 admits to the dragon-egg surface.
 

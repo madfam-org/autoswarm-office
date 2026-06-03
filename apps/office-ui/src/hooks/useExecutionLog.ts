@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { OfficeState } from '@autoswarm/shared-types';
+import type { OfficeState } from '@selva/shared-types';
 
 export interface ExecutionEvent {
   timestamp: number;

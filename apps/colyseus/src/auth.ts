@@ -6,7 +6,7 @@
  */
 
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
-import { createLogger } from "@autoswarm/config/logging";
+import { createLogger } from "@selva/config/logging";
 
 const logger = createLogger({ service: "colyseus" }).child({ component: "auth" });
 

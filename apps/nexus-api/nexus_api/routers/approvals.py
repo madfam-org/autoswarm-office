@@ -725,7 +725,7 @@ async def _handle_wave(wave_data: dict[str, Any], *, org_id: str = "default") ->
                 }
             )
             try:
-                await pool.execute_with_retry("xadd", "autoswarm:task-stream", {"data": task_msg})
+                await pool.execute_with_retry("xadd", "selva:task-stream", {"data": task_msg})
             except Exception:
                 _wave_logger.warning("Redis unavailable for wave task %s", task.id)
             created += 1

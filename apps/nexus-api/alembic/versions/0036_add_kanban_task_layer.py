@@ -59,8 +59,8 @@ def _grant_table(table: str) -> None:
             f"""
             DO $$
             BEGIN
-                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'autoswarm_app') THEN
-                    GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO autoswarm_app;
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'selva_app') THEN
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO selva_app;
                 END IF;
                 IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_admin') THEN
                     GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO app_admin;

@@ -1,5 +1,5 @@
 /**
- * Shared pino logger factory for AutoSwarm TypeScript services.
+ * Shared pino logger factory for Selva TypeScript services.
  */
 
 import pino from "pino";

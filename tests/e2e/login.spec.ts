@@ -23,9 +23,9 @@ test.describe("Login Flow", () => {
     await expect(page.locator("canvas")).toBeVisible({ timeout: 15000 });
   });
 
-  test("landing page title contains AutoSwarm", async ({ page }) => {
+  test("landing page title contains Selva", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/autoswarm|office/i);
+    await expect(page).toHaveTitle(/selva|office/i);
   });
 
   test("landing page shows demo and sign-in CTAs", async ({ page }) => {

@@ -31,7 +31,7 @@ ARG NEXT_PUBLIC_JANUA_CLIENT_ID
 ENV NEXT_PUBLIC_JANUA_ISSUER_URL=$NEXT_PUBLIC_JANUA_ISSUER_URL
 ENV NEXT_PUBLIC_JANUA_CLIENT_ID=$NEXT_PUBLIC_JANUA_CLIENT_ID
 
-RUN pnpm --filter @autoswarm/shared-types build && \
+RUN pnpm --filter @selva/shared-types build && \
     pnpm --filter admin build
 
 # Stage 3: Runner
@@ -45,7 +45,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-LABEL org.opencontainers.image.source=https://github.com/madfam-org/autoswarm-office
+LABEL org.opencontainers.image.source=https://github.com/madfam-org/selva-office
 
 COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/.next/static ./apps/admin/.next/static

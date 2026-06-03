@@ -11,7 +11,7 @@ import type {
   NodeType,
   createDefaultNode,
   createDefaultEdge,
-} from '@autoswarm/shared-types';
+} from '@selva/shared-types';
 
 /** Default grid spacing for new nodes */
 const GRID_OFFSET_X = 200;

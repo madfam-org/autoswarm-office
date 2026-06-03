@@ -11,7 +11,7 @@ const DUMMY_JWT_PAYLOAD =
 const DUMMY_JWT = `eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.${DUMMY_JWT_PAYLOAD}.`;
 
 const JANUA_ISSUER_URL = process.env.NEXT_PUBLIC_JANUA_ISSUER_URL ?? '';
-const JANUA_CLIENT_ID = process.env.NEXT_PUBLIC_JANUA_CLIENT_ID ?? 'autoswarm-office';
+const JANUA_CLIENT_ID = process.env.NEXT_PUBLIC_JANUA_CLIENT_ID ?? 'selva-office';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -56,7 +56,7 @@ function LoginForm() {
     <main className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-gray-800 bg-gray-900 p-8 shadow-xl">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-white">AutoSwarm Office</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Selva Office</h1>
           <p className="mt-1 text-sm text-gray-400">
             {hasJanua ? 'Sign in to continue' : 'Development Login'}
           </p>

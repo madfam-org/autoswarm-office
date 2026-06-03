@@ -1,25 +1,20 @@
-# PP.4 (RFC 0001 Phase 2) — autoswarm-office staging overlay.
+# PP.4 (RFC 0001 Phase 2) — selva-office staging overlay.
 #
 # Imports the production canonical base and applies staging-specific
 # patches. Mirrors Karafiel's PP.1 pilot + Dhanam's PP.2b pattern,
 # scaled to 6 Deployments (nexus-api, office-ui, colyseus, admin,
 # gateway, workers) + 3 HPAs.
 #
-# Namespace choice: `autoswarm-staging` matches the ecosystem
-# convention (karafiel-staging, dhanam-staging) and the K8s namespace
-# tracks the **repo name** even though the product is now branded
-# Selva. This is deliberate — the RFC 0005 secret-writer RBAC in the
-# prod base is hardcoded to the `autoswarm` namespace, and renaming
-# the staging namespace to `selva-staging` would force a parallel
-# rename in 3 RBAC files. That rename is tracked as a follow-up; for
-# PP.4 we take the smaller diff.
+# Namespace choice: `selva-staging` matches the ecosystem convention
+# (karafiel-staging, dhanam-staging) and keeps the staging tier aligned
+# with the Selva production namespace.
 #
 # What staging differs from prod on:
-#   - namespace: autoswarm-staging
+#   - namespace: selva-staging
 #   - replicas: 1 per deploy (HPAs pinned to maxReplicas=1 via patch)
 #   - image digests: updated by staging-deploy.yml on every main merge
 #   - env: ENVIRONMENT=staging, SENTRY_ENVIRONMENT=staging, AUTO_DISPATCH_ENABLED=false
-#   - secrets: autoswarm-staging-{secrets,llm-secrets,admin-auth}
+#   - secrets: selva-staging-{secrets,llm-secrets,admin-auth}
 #   - feature flags: voice-mode live sends off, Stripe live off,
 #     Reddit bot off, autonomous dispatch off
 #   - Cloudflare DNS + tunnel routes for staging-*.selva.town are
@@ -28,7 +23,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: autoswarm-staging
+namespace: selva-staging
 
 resources:
   - namespace.yaml
@@ -38,7 +33,7 @@ resources:
 # hpa-disable-patch.yaml — the deployments ignore HPA when at max.
 replicas:
   - name: nexus-api
-    count: 2
+    count: 1
   - name: office-ui
     count: 1
   - name: colyseus
@@ -54,15 +49,15 @@ replicas:
 # every main-branch push via a Python regex patch. The placeholder
 # digest below will be overwritten by the first staging deploy.
 images:
-  - name: ghcr.io/madfam-org/autoswarm-nexus-api
+  - name: ghcr.io/madfam-org/selva-nexus-api
     digest: sha256:aecd27252f3ae1b67d0a16db65d5771aa6f2e08d89ea0b9ffffb0921239b80b5
-  - name: ghcr.io/madfam-org/autoswarm-office-ui
+  - name: ghcr.io/madfam-org/selva-office-ui
     digest: sha256:c4ad26c5691bd1fce39baaf17b6e745349eba3c4f92938e8ec628c97a4cd5fcd
-  - name: ghcr.io/madfam-org/autoswarm-colyseus
+  - name: ghcr.io/madfam-org/selva-colyseus
     digest: sha256:4711212d7df75b0fcba16dd10521707c18e12a999405d30c8a97f76a624289e0
-  - name: ghcr.io/madfam-org/autoswarm-admin
+  - name: ghcr.io/madfam-org/selva-admin
     digest: sha256:f14d4c0de8c7cf6630674fa0f0b9b128eed92aaf958a554e70d22768a442c099
-  - name: ghcr.io/madfam-org/autoswarm-gateway
+  - name: ghcr.io/madfam-org/selva-gateway
     digest: sha256:470b85b7522db4ff4b37a29f92451e432132b1cf42ce81f49b076cf1c72d5066
   - name: ghcr.io/madfam-org/selva-workers
     digest: sha256:8e0dba981abbf26af3736af7fac002b7fab7c40b49e3365391749a4cacde1134
@@ -75,7 +70,7 @@ patches:
   - path: patch-delete-storageclass.yaml
     target:
       kind: StorageClass
-      name: longhorn-autoswarm-backup
+      name: longhorn-selva-backup
   - path: patch-delete-backup-pvc.yaml
     target:
       kind: PersistentVolumeClaim
@@ -129,5 +124,5 @@ patches:
 # environment tag so Grafana/Prometheus can slice dashboards by tier.
 labels:
   - pairs:
-      autoswarm.dev/environment: staging
+      selva.town/environment: staging
     includeSelectors: false

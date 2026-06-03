@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verify staging observability secret wiring (Phase 0 Tier 1 operator gate).
 #
-# Checks that autoswarm-observability-secrets exists in autoswarm-staging and
+# Checks that selva-observability-secrets exists in selva-staging and
 # nexus-api picked up OTel/Sentry env vars. Secret values are never printed.
 #
 # Usage:
@@ -17,8 +17,8 @@ for arg in "$@"; do
   esac
 done
 
-NS="${STAGING_NAMESPACE:-autoswarm-staging}"
-SECRET="${OBSERVABILITY_SECRET:-autoswarm-observability-secrets}"
+NS="${STAGING_NAMESPACE:-selva-staging}"
+SECRET="${OBSERVABILITY_SECRET:-selva-observability-secrets}"
 FAILURES=()
 
 pass() { echo "OK: $*"; }

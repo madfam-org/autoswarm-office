@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-REPO_BASE="${REPO_BASE_PATH:-/tmp/autoswarm-repos}"
+REPO_BASE="${REPO_BASE_PATH:-/tmp/selva-repos}"
 STALE_HOURS="${STALE_HOURS:-24}"
 
 find "$REPO_BASE" -maxdepth 2 -name "_worktrees" -type d 2>/dev/null | while read -r wt_root; do

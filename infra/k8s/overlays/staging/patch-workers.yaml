@@ -22,9 +22,9 @@ spec:
               value: staging
             - name: SENTRY_ENVIRONMENT
               value: staging
-            # Override autoswarm-config (prod namespace) — workers must PATCH staging tasks.
+            # Override selva-config (prod namespace) — workers must PATCH staging tasks.
             - name: NEXUS_API_URL
-              value: "http://nexus-api.autoswarm-staging.svc.cluster.local"
+              value: "http://nexus-api.selva-staging.svc.cluster.local"
             - name: FEATURE_STRIPE_MXN_LIVE
               value: "false"
             - name: FEATURE_VOICE_MODE_LIVE
@@ -47,66 +47,66 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: database-url
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: redis-url
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: secret-key
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-llm-secrets
+                  name: selva-staging-llm-secrets
                   key: RESEND_API_KEY
                   optional: true
             - name: COLYSEUS_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: colyseus-secret
             - name: WORKER_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-llm-secrets
+                  name: selva-staging-llm-secrets
                   key: WORKER_API_TOKEN
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-llm-secrets
+                  name: selva-staging-llm-secrets
                   key: ANTHROPIC_API_KEY
                   optional: true
             - name: DEEPINFRA_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-llm-secrets
+                  name: selva-staging-llm-secrets
                   key: DEEPINFRA_API_KEY
                   optional: true
             - name: ENCLII_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: ENCLII_API_TOKEN
                   optional: true
             - name: CONSENT_LEDGER_SIGNING_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: CONSENT_LEDGER_SIGNING_SECRET
             - name: PORKBUN_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: PORKBUN_API_KEY
                   optional: true
             - name: PORKBUN_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: autoswarm-staging-secrets
+                  name: selva-staging-secrets
                   key: PORKBUN_SECRET_KEY
                   optional: true

@@ -49,7 +49,7 @@ ECOSYSTEM_REPOS = [
     "blueprint-harvester",
     "sim4d",
     "madfam-site",
-    "autoswarm-office",
+    "selva-office",
     "solarpunk-foundry",
     "symbiosis-hcm",
     "stratum-tcg",

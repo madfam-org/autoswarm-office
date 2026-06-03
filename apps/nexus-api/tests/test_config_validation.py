@@ -12,7 +12,7 @@ from nexus_api.config import Settings
 def _make_settings(**overrides: object) -> Settings:
     """Create a Settings instance that ignores .env files."""
     defaults: dict[str, object] = {
-        "database_url": "postgresql+asyncpg://autoswarm:autoswarm@localhost:5432/autoswarm",
+        "database_url": "postgresql+asyncpg://selva:selva@localhost:5432/selva",
         "redis_url": "redis://localhost:6379",
         "environment": "development",
         "dev_auth_bypass": False,

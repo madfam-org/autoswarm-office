@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# PP.4 — staging smoke test for autoswarm-office.
+# PP.4 — staging smoke test for selva-office.
 #
 # Hits /health (or equivalent) on each of the 5 HTTP-exposed services
-# in the autoswarm-office staging tier. Workers is not HTTP-exposed
+# in the selva-office staging tier. Workers is not HTTP-exposed
 # externally — its health is checked by whether the dependent services
 # stay healthy (workers process tasks from Redis and update task
 # status on nexus-api; an unhealthy workers pod manifests as stuck

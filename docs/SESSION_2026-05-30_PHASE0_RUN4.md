@@ -21,7 +21,7 @@
 |-----|---------|
 | `67fc050` | Run 4 prep: calibration graph, queue-stats fields, k6 script, staging nexus-api replicas=2 in kustomize |
 | `14ac709` | **fix(api):** allow `graph_type=calibration` on `DispatchRequest` |
-| `9761958` | **fix(staging):** workers `NEXUS_API_URL` → `http://nexus-api.autoswarm-staging.svc.cluster.local` |
+| `9761958` | **fix(staging):** workers `NEXUS_API_URL` → `http://nexus-api.selva-staging.svc.cluster.local` |
 | `2cb7a7a` | **fix(api):** `POST /events` uses `tenant_session` (worker RLS on `task_events`) |
 | `fab8663` | **docs:** Run 4 results in `LOAD_TEST_2026-Q2.md` |
 
@@ -38,8 +38,8 @@ Staging digest bumps (`deploy(staging): update digests to …`) followed each fi
 
 ### 2. Workers PATCH/events hit prod nexus-api
 
-- **Symptom:** Worker logs showed `http://nexus-api.autoswarm.svc.cluster.local` (prod namespace); staging tasks stayed `queued` or `running` forever.
-- **Cause:** `patch-workers.yaml` overrode secrets/env but not `NEXUS_API_URL` from `autoswarm-config` ConfigMap (prod cluster-local URL).
+- **Symptom:** Worker logs showed `http://nexus-api.selva.svc.cluster.local` (prod namespace); staging tasks stayed `queued` or `running` forever.
+- **Cause:** `patch-workers.yaml` overrode secrets/env but not `NEXUS_API_URL` from `selva-config` ConfigMap (prod cluster-local URL).
 - **Fix:** `infra/k8s/overlays/staging/patch-workers.yaml` — explicit staging URL override (same pattern as `patch-gateway.yaml`).
 
 ### 3. Worker event POST failed strict RLS
@@ -60,7 +60,7 @@ Staging digest bumps (`deploy(staging): update digests to …`) followed each fi
 |------|---------|--------|
 | Dhanam webhook reconcile | `./scripts/reconcile-dhanam-selva-webhook.sh` | **OK** (re-run when fan-out drifts) |
 | Dhanam billing path | `./scripts/verify-dhanam-billing-path.sh --staging` | **OK** |
-| Staging observability | `./scripts/verify-staging-observability.sh` | **SKIP** — no `autoswarm-observability-secrets` |
+| Staging observability | `./scripts/verify-staging-observability.sh` | **SKIP** — no `selva-observability-secrets` |
 | Dhanam price→tier | `./scripts/verify-dhanam-price-tier-map.sh --staging` | **SKIP** — catalog not wired |
 | Campaign API loop | `env -u AUTH_TOKEN ./scripts/verify-campaign-loop.sh --staging` | **OK** when API stable (CI hit transient 525 on HITL during rollouts) |
 | Calibration probe | dispatch + poll `graph_type=calibration` | **OK** (~1s to `completed`) |
@@ -111,7 +111,7 @@ Staging digest bumps (`deploy(staging): update digests to …`) followed each fi
 
 ### Tier 1 — Operator
 
-1. Provision `autoswarm-observability-secrets` → `./scripts/bootstrap-staging-observability.sh`
+1. Provision `selva-observability-secrets` → `./scripts/bootstrap-staging-observability.sh`
 2. `./scripts/verify-observability-trace.sh` once OTel live
 
 ### Tier 2 — Operator (Dhanam/Stripe)
@@ -135,7 +135,7 @@ Staging digest bumps (`deploy(staging): update digests to …`) followed each fi
 
 ```bash
 # Confirm staging scale + queue
-kubectl -n autoswarm-staging get deploy nexus-api workers
+kubectl -n selva-staging get deploy nexus-api workers
 curl -sS https://staging-api.selva.town/api/v1/health/queue-stats | jq .
 
 # Run 4b

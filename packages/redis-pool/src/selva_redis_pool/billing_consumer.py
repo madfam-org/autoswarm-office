@@ -3,7 +3,7 @@ Billing event consumer for the MADFAM ecosystem event bus.
 
 Consumes billing and KYC events from the shared Redis Stream
 ``selva:billing-events`` published by Dhanam. Uses XREADGROUP
-with consumer group ``autoswarm-consumers`` for durable delivery.
+with consumer group ``selva-consumers`` for durable delivery.
 
 Events:
     billing.subscription.created   -- New subscription activated
@@ -37,8 +37,8 @@ from .pool import get_redis_pool
 logger = logging.getLogger(__name__)
 
 STREAM_KEY = os.getenv("BILLING_STREAM_KEY", "selva:billing-events")
-DLQ_KEY = "autoswarm:billing-dlq"
-GROUP_NAME = "autoswarm-consumers"
+DLQ_KEY = "selva:billing-dlq"
+GROUP_NAME = "selva-consumers"
 MAX_RETRIES = 3
 BLOCK_MS = 5000  # 5 seconds
 BATCH_SIZE = 10
@@ -46,7 +46,7 @@ BATCH_SIZE = 10
 
 def _default_consumer_name() -> str:
     """Generate a consumer name from hostname and PID."""
-    return f"autoswarm-{socket.gethostname()}-{os.getpid()}"
+    return f"selva-{socket.gethostname()}-{os.getpid()}"
 
 
 class BillingEventConsumer:

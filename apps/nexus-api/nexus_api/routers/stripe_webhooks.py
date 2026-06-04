@@ -52,7 +52,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..billing_tiers import DEFAULT_TIER
 from ..config import get_settings
-from ..database import async_session_factory
+from ..database import tenant_session
 from ..models import TenantConfig
 
 logger = logging.getLogger(__name__)
@@ -250,7 +250,7 @@ async def _handle_subscription_created(event: Any) -> None:
     customer_id = _extract_customer_id(event)
     sub_id = str(sub_obj.get("id", ""))
 
-    async with async_session_factory() as db:
+    async with tenant_session("platform") as db:
         tenant = await _resolve_tenant_by_stripe_customer(db, customer_id)
         if tenant is None:
             logger.info(
@@ -284,7 +284,7 @@ async def _handle_subscription_updated(event: Any) -> None:
     customer_id = _extract_customer_id(event)
     sub_id = str(sub_obj.get("id", ""))
 
-    async with async_session_factory() as db:
+    async with tenant_session("platform") as db:
         tenant = await _resolve_tenant_by_stripe_customer(db, customer_id)
         if tenant is None:
             logger.info(
@@ -330,7 +330,7 @@ async def _handle_subscription_deleted(event: Any) -> None:
     customer_id = _extract_customer_id(event)
     sub_id = str(sub_obj.get("id", ""))
 
-    async with async_session_factory() as db:
+    async with tenant_session("platform") as db:
         tenant = await _resolve_tenant_by_stripe_customer(db, customer_id)
         if tenant is None:
             logger.info(
@@ -367,7 +367,7 @@ async def _handle_invoice_paid(event: Any) -> None:
     amount_paid = int(inv_obj.get("amount_paid", 0))
     currency = str(inv_obj.get("currency", "")).upper()
 
-    async with async_session_factory() as db:
+    async with tenant_session("platform") as db:
         tenant = await _resolve_tenant_by_stripe_customer(db, customer_id)
         if tenant is None:
             logger.info(
@@ -429,7 +429,7 @@ async def _handle_invoice_payment_failed(event: Any) -> None:
     currency = str(inv_obj.get("currency", "")).upper()
     next_attempt = inv_obj.get("next_payment_attempt")
 
-    async with async_session_factory() as db:
+    async with tenant_session("platform") as db:
         tenant = await _resolve_tenant_by_stripe_customer(db, customer_id)
         if tenant is None:
             logger.info(
@@ -472,7 +472,7 @@ async def _handle_invoice_payment_failed(event: Any) -> None:
 
 # Map of stripe event type → handler. New entries follow the same pattern:
 # late-import any router-level dependency to avoid circular imports, run all
-# DB writes inside a single async_session_factory() block, never raise out
+# DB writes inside a single tenant_session("platform") block, never raise out
 # (Stripe retries on non-2xx).
 _EVENT_HANDLERS: dict[str, Callable[[Any], Awaitable[None]]] = {
     "customer.subscription.created": _handle_subscription_created,

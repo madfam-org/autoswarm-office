@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Any
 
 from .schema import EdgeDefinition, TriggerCondition
+from .safe_eval import UnsafeExpressionError, safe_eval_bool_expression
 
 logger = logging.getLogger(__name__)
 
@@ -98,23 +99,33 @@ def _extract_output(state: dict) -> str:
 
 
 def _eval_expression(expression: str, state: dict) -> bool:
-    """Safely evaluate a Python expression against state."""
-    # Minimal sandbox for expression evaluation
-    safe_globals: dict[str, Any] = {"__builtins__": {}}
-    safe_locals = {
-        "state": state,
-        "messages": state.get("messages", []),
-        "variables": state.get("workflow_variables", {}),
-        "result": state.get("result"),
-        "status": state.get("status", ""),
-        "len": len,
-        "int": int,
-        "float": float,
-        "str": str,
-        "bool": bool,
-    }
+    """Evaluate a restricted Python expression against workflow state."""
     try:
-        return bool(eval(expression, safe_globals, safe_locals))  # noqa: S307
+        context = {
+            "state": state,
+            "messages": state.get("messages", []),
+            "variables": state.get("workflow_variables", {}),
+            "result": state.get("result"),
+            "status": state.get("status", ""),
+            "len": len,
+            "int": int,
+            "float": float,
+            "str": str,
+            "bool": bool,
+            "sorted": sorted,
+            "sum": sum,
+            "min": min,
+            "max": max,
+        }
+        return safe_eval_bool_expression(
+            expression,
+            context,
+            allowed_call_targets={"len", "int", "float", "str", "bool", "sorted", "sum", "min", "max"},
+            allowed_get_attrs_for={"state", "variables", "messages", "result", "status"},
+        )
+    except UnsafeExpressionError as exc:
+        logger.warning("Failed to validate edge expression: %s", exc)
+        return False
     except Exception:
         logger.warning("Failed to evaluate edge expression: %s", expression)
         return False

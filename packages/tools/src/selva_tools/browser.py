@@ -192,10 +192,22 @@ async def vision_describe(image_b64: str, prompt: str = "Describe this image in 
 
 def _requests_fallback_nav(url: str) -> dict:
     try:
-        import requests
+        import httpx
 
-        r = requests.head(url, timeout=10, allow_redirects=True)
-        return {"status": r.status_code, "url": r.url}
+        from selva_tools.builtins.http_tools import _build_safe_request_kwargs
+
+        request_kwargs, resolved_url = _build_safe_request_kwargs(
+            "HEAD",
+            url,
+            headers={"User-Agent": "Selva-Browser/1.0"},
+            extra={"timeout": 10.0, "follow_redirects": True},
+        )
+        with httpx.Client(
+            trust_env=False,
+            transport=httpx.HTTPTransport(retries=0),
+        ) as client:
+            response = client.request(**request_kwargs)
+        return {"status": response.status_code, "url": resolved_url}
     except Exception as exc:
         return {"status": 0, "url": url, "error": str(exc)}
 
@@ -204,7 +216,9 @@ def _requests_fallback_extract(url: str) -> str:
     try:
         from html.parser import HTMLParser
 
-        import requests
+        import httpx
+
+        from selva_tools.builtins.http_tools import _build_safe_request_kwargs
 
         class _TextExtractor(HTMLParser):
             def __init__(self):
@@ -218,7 +232,17 @@ def _requests_fallback_extract(url: str) -> str:
             def text(self):
                 return " ".join(self._parts)
 
-        r = requests.get(url, timeout=15)
+        request_kwargs, _ = _build_safe_request_kwargs(
+            "GET",
+            url,
+            headers={"User-Agent": "Selva-Browser/1.0"},
+            extra={"timeout": 15.0, "follow_redirects": True},
+        )
+        with httpx.Client(
+            trust_env=False,
+            transport=httpx.HTTPTransport(retries=0),
+        ) as client:
+            r = client.request(**request_kwargs)
         r.raise_for_status()
         p = _TextExtractor()
         p.feed(r.text)

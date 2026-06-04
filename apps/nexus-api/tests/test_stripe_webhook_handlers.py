@@ -125,11 +125,15 @@ def _stub_redis_and_settings(monkeypatch: pytest.MonkeyPatch):
 
     # Make the webhook handlers re-use the test session factory rather
     # than creating their own (which would point at the production
-    # engine).  The fixture wires both names because handlers import the
-    # symbol directly out of nexus_api.database.
+    # engine).  Handlers now call ``tenant_session(org_id=...)`` directly,
+    # so we override it with a test-local adapter that still uses the
+    # shared test session factory.
     from nexus_api.database import async_session_factory as _real_factory
 
-    monkeypatch.setattr(stripe_webhooks, "async_session_factory", _real_factory)
+    def _tenant_session(_org_id: str):
+        return _real_factory()
+
+    monkeypatch.setattr(stripe_webhooks, "tenant_session", _tenant_session)
 
     from nexus_api.config import get_settings
 

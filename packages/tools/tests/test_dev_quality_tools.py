@@ -470,6 +470,13 @@ class TestLintAndTypeCheckTypescript:
                 fix=True,
             )
 
-        ruff_cmd = next((c for c in calls if c["command"].startswith("ruff ")), None)
+        ruff_cmd = next(
+            (
+                c
+                for c in calls
+                if isinstance(c["command"], list) and c["command"][0] == "ruff"
+            ),
+            None,
+        )
         assert ruff_cmd is not None
         assert "--fix" in ruff_cmd["command"]

@@ -131,6 +131,7 @@ These ports do not conflict with Janua (4100-4104) or Enclii (4200-4204).
 ## Documentation
 
 - [Autonomous Operations Program](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md) — north star (Phases 0–6)
+- [Phase 0 Remediation Execution Plan (2026-06-04)](docs/REMEDIATION_EXECUTION_PLAN_2026-06-04.md) — ROI-prioritized tactical execution log
 - [Operator Backlog](docs/OPERATOR_BACKLOG.md) — human-gated items
 - [Product Roadmap](ROADMAP.md)
 - [Architecture Overview](docs/ARCHITECTURE.md)

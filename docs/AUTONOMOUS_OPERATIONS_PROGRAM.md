@@ -43,7 +43,22 @@ the following are true:
 |-------|----------|-------|
 | MADFAM platform slice in Selva | **~85–90%** | Prod live; `PLATFORM_ORG_ID=madfam`; audience filter enforced; 10-agent roster |
 | Selva “production-truthful” | **~88–92%** | RLS, audit, idempotency, webhook hardening — see ROADMAP honest scorecard |
-| Full north star (this doc) | **~50–62%** | Phase 2 API + UI shipped; API campaign loop proven on staging; Phase 0 + Phase 1 revenue proof remain |
+| Full north star (this doc) | **~58–65%** | Phase 2 API + UI shipped; API campaign loop proven on staging; Phase 0 + Phase 1 revenue proof remain |
+
+### Readiness update (2026-06-04)
+
+For the **MADFAM tenant slice in prod (`admin@madfam.io`)**, the platform is close enough to unrestricted internal use for daily operator workflows.
+
+- **Current estimate:** ~**85–90%** operationally usable for tenant-slice work.
+- **Commercial GA estimate (all tenants):** ~**58–65%**.
+- **Primary blockers to full commercial GA:** OTel/Sentry proof, Dhanam pricing/webhook attribution closure, `k6` Run 4b validation, and DR evidence.
+- **Decision rule:** do not treat campaign features as “GA” until Phase 0 gates plus one attributable paid conversion are proven end-to-end.
+
+This same sequence is tracked in:
+
+- [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) (execution checklist and sprints)
+- [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) (operator gating)
+- [ROADMAP.md](../ROADMAP.md) (overall scorecard)
 
 ---
 

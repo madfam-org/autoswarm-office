@@ -40,7 +40,24 @@ executor, schedule materializer, and office-ui Campaign Dashboard are merged to
 Optional UI soak remains; Phase 0 remediation is the critical path — see
 [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md).
 
----
+## 2026-06-04 readiness snapshot (tenant slice + full GA)
+
+- **MADFAM tenant slice (`admin@madfam.io`) in prod:** ~85–90% of unrestricted in-slice operations is now enabled, with tenant isolation and scoped tooling patterns in place.
+- **Selva production-truthful baseline:** ~88–92% once core remediations are counted.
+- **Full commercial GA (all tenants):** currently **~58–65%**; blocked primarily by evidence and operations gaps, not by fundamental platform capabilities.
+
+Current ROI priority order to close this gap is aligned with this backlog:
+
+1. **OTel + Sentry productionization (Tiers 1–2, items 1–2)** → actionability on incidents.
+2. **Billing correctness (Tier 2, item 3)** → proven revenue attribution and tier enforcement.
+3. **Load calibration + DR evidence (Tier 3, items 5–6)** → safe scaling and recovery claims.
+4. **Cross-workstream hardening (Tiers 5+)** → multi-tenant evidence, residency, failover readiness.
+
+Keep this as the default triage order when multiple items are unblocked.
+
+For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-06-04.md](./REMEDIATION_EXECUTION_PLAN_2026-06-04.md).
+
+--- 
 
 ## Tier 1 — Blocks production observability (do first)
 

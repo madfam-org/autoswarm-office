@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy import func, or_, select
 
-from .database import async_session_factory
+from .database import admin_session
 from .models import DeploymentEvidenceRecord, SwarmTask, SwarmTaskOutbox
 
 try:
@@ -111,7 +111,7 @@ def record_deployment_status_update(task: SwarmTask, evidence: dict[str, Any] | 
 
 async def _refresh_db_gauges() -> None:
     stale_before = datetime.now(UTC) - timedelta(minutes=10)
-    async with async_session_factory() as db:
+    async with admin_session() as db:
         depth_result = await db.execute(
             select(SwarmTaskOutbox.status, func.count(SwarmTaskOutbox.id))
             .where(SwarmTaskOutbox.status.in_(_OUTBOX_RETRYABLE_STATUSES))

@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import signal
 import subprocess
+import shlex
 import time
 from typing import Any
 
@@ -18,6 +19,16 @@ logger = logging.getLogger(__name__)
 
 # Module-level process store: name -> {proc, command, started_at}
 _PROCESSES: dict[str, dict] = {}
+_FORBIDDEN_COMMAND_CHARS = {";", "&", "|", "<", ">", "`", "$", "\n", "\r"}
+
+
+def _split_command(command: str) -> list[str]:
+    if any(ch in command for ch in _FORBIDDEN_COMMAND_CHARS):
+        raise ValueError("Shell metacharacters are not allowed for background commands.")
+    parts = shlex.split(command)
+    if not parts:
+        raise ValueError("Empty command")
+    return parts
 
 
 def _collect_zombies() -> None:
@@ -48,9 +59,9 @@ class StartBackgroundProcessTool(BaseTool):
         name: str = kwargs.get("name") or f"proc_{len(_PROCESSES) + 1}"
         cwd: str | None = kwargs.get("cwd")
         try:
+            command_parts = _split_command(command)
             proc = subprocess.Popen(
-                command,
-                shell=True,
+                command_parts,
                 cwd=cwd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,

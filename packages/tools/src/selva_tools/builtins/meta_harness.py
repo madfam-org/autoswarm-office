@@ -35,6 +35,7 @@ import json
 import logging
 import os
 import shlex
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -48,25 +49,51 @@ CLI_TIMEOUT_SEC = 30
 
 
 def _harness_dir() -> Path:
-    return Path(os.environ.get("META_HARNESS_DIR", DEFAULT_HARNESS_DIR))
+    raw_dir = Path(os.environ.get("META_HARNESS_DIR", DEFAULT_HARNESS_DIR)).expanduser()
+    if not raw_dir.is_absolute():
+        raise ValueError("META_HARNESS_DIR must be an absolute path")
+
+    resolved_dir = raw_dir.resolve()
+    if not resolved_dir.is_dir():
+        raise FileNotFoundError(f"harness directory not found: {resolved_dir}")
+
+    allowlist_csv = os.environ.get("META_HARNESS_DIR_ALLOWLIST")
+    if allowlist_csv:
+        allowed = {
+            Path(path).expanduser().resolve()
+            for path in allowlist_csv.split(",")
+            if path.strip()
+        }
+        if resolved_dir not in allowed:
+            raise ValueError(f"harness directory not in allow-list: {resolved_dir}")
+
+    return resolved_dir
 
 
 def _python_executable(harness_dir: Path) -> str:
     override = os.environ.get("META_HARNESS_PYTHON")
     if override:
-        return override
+        override_path = Path(override)
+        if not override_path.is_absolute():
+            raise ValueError(
+                "META_HARNESS_PYTHON must be an absolute executable path when set"
+            )
+        if not override_path.exists():
+            raise FileNotFoundError(f"interpreter not found: {override_path}")
+        return str(override_path)
     venv_py = harness_dir / ".venv" / "bin" / "python"
     if venv_py.exists():
         return str(venv_py)
-    return "python3"
+    return sys.executable
 
 
 async def _run_cli(args: list[str]) -> tuple[int, str, str]:
     """Run the meta-harness CLI. Returns (returncode, stdout, stderr)."""
-    harness_dir = _harness_dir()
-    if not harness_dir.exists():
-        return 127, "", f"harness directory not found: {harness_dir}"
-    py = _python_executable(harness_dir)
+    try:
+        harness_dir = _harness_dir()
+        py = _python_executable(harness_dir)
+    except (FileNotFoundError, ValueError) as exc:
+        return 127, "", str(exc)
     cmd = [py, "-m", "meta_harness_madfam.runner", *args]
     env = {
         **os.environ,

@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import httpx
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from nexus_api import config as _cfg_mod
+from nexus_api.models import TenantConfig
 
 WORKER_TOKEN = "dev-bypass"
 
@@ -146,12 +148,22 @@ class TestResolve:
 
 @pytest.mark.asyncio
 class TestValidate:
-    async def test_validates_existing_tenant(self, client: httpx.AsyncClient) -> None:
+    async def test_validates_existing_tenant(self, client: httpx.AsyncClient, db_session: AsyncSession) -> None:
         await client.post(
             "/api/v1/tenant-identities",
             json=_payload("validate-me"),
             headers=_headers(),
         )
+        db_session.add(
+            TenantConfig(
+                org_id="validate-me",
+                janua_connection_id="madfam-test-001",
+                dhanam_space_id="sp-dhn-001",
+                phynd_tenant_id="madfam-test-001",
+                karafiel_org_id="krf-001",
+            )
+        )
+        await db_session.commit()
         resp = await client.post(
             "/api/v1/tenant-identities/validate-me/validate",
             headers=_headers(),
@@ -161,6 +173,55 @@ class TestValidate:
         assert body["canonical_id"] == "validate-me"
         assert body["services_checked"] == 4  # janua+dhanam+phyndcrm+karafiel
         assert body["drifts"] == []
+
+    async def test_validates_tenant_mismatches(self, client: httpx.AsyncClient, db_session: AsyncSession) -> None:
+        await client.post(
+            "/api/v1/tenant-identities",
+            json=_payload("validate-drift"),
+            headers=_headers(),
+        )
+        db_session.add(
+            TenantConfig(
+                org_id="validate-drift",
+                janua_connection_id="different-id",
+                dhanam_space_id="sp-dhn-001",
+                phynd_tenant_id="madfam-test-001",
+                karafiel_org_id="krf-001",
+            )
+        )
+        await db_session.commit()
+        resp = await client.post(
+            "/api/v1/tenant-identities/validate-drift/validate",
+            headers=_headers(),
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["canonical_id"] == "validate-drift"
+        assert body["services_checked"] == 4
+        assert len(body["drifts"]) == 1
+        assert body["drifts"][0]["service"] == "janua_org_id"
+        assert body["drifts"][0]["severity"] == "medium"
+        assert body["drifts"][0]["expected"] == "different-id"
+        assert body["drifts"][0]["actual"] == "madfam-test-001"
+
+    async def test_validates_missing_tenant_config_is_critical(self, client: httpx.AsyncClient) -> None:
+        await client.post(
+            "/api/v1/tenant-identities",
+            json=_payload("validate-missing-config"),
+            headers=_headers(),
+        )
+        resp = await client.post(
+            "/api/v1/tenant-identities/validate-missing-config/validate",
+            headers=_headers(),
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["canonical_id"] == "validate-missing-config"
+        assert body["services_checked"] == 4
+        assert len(body["drifts"]) == 1
+        assert body["drifts"][0]["service"] == "tenant_config"
+        assert body["drifts"][0]["severity"] == "critical"
+        assert body["drifts"][0]["actual"] == "missing"
 
     async def test_validate_unknown_returns_404(self, client: httpx.AsyncClient) -> None:
         resp = await client.post(

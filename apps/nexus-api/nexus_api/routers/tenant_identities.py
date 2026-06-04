@@ -7,9 +7,8 @@ authenticates via WORKER_API_TOKEN.
 Surface:
     POST /api/v1/tenant-identities          — create a row
     GET  /api/v1/tenant-identities/resolve  — lookup by any per-service id
-    POST /api/v1/tenant-identities/{id}/validate — drift check (stub impl;
-        returns services_checked + empty drifts until we wire per-service
-        probes — tracked as a follow-up)
+    POST /api/v1/tenant-identities/{id}/validate — consistency audit
+        comparing tenant-identities ↔ tenant_configs plus critical null checks
 """
 
 from __future__ import annotations
@@ -24,8 +23,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from ..config import get_settings
-from ..database import async_session_factory
-from ..models import TenantIdentity
+from ..database import tenant_session
+from ..models import TenantConfig, TenantIdentity
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +107,14 @@ class ValidateConsistencyResponse(BaseModel):
     checked_at: datetime
 
 
+_IDENTITY_TO_CONFIG_FIELD = {
+    "janua_org_id": "janua_connection_id",
+    "dhanam_space_id": "dhanam_space_id",
+    "phyndcrm_tenant_id": "phynd_tenant_id",
+    "karafiel_org_id": "karafiel_org_id",
+}
+
+
 def _to_response(row: TenantIdentity) -> TenantIdentityResponse:
     return TenantIdentityResponse(
         id=str(row.id),
@@ -139,7 +146,7 @@ def _to_response(row: TenantIdentity) -> TenantIdentityResponse:
 )
 async def create_tenant_identity(payload: TenantIdentityCreate) -> TenantIdentityResponse:
     """Create a tenant_identities row — call at end of onboarding."""
-    async with async_session_factory() as session:
+    async with tenant_session("platform") as session:
         existing = await session.scalar(
             select(TenantIdentity).where(TenantIdentity.canonical_id == payload.canonical_id)
         )
@@ -230,7 +237,7 @@ async def resolve_tenant_identity(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"invalid field {field!r}; must be one of {sorted(_RESOLVE_FIELDS)}",
         )
-    async with async_session_factory() as session:
+    async with tenant_session("platform") as session:
         col = getattr(TenantIdentity, field)
         row = await session.scalar(select(TenantIdentity).where(col == value))
         if row is None:
@@ -247,16 +254,19 @@ async def resolve_tenant_identity(
     dependencies=[Depends(_require_worker_token)],
 )
 async def validate_tenant_consistency(canonical_id: str) -> ValidateConsistencyResponse:
-    """Stub drift check.
+    """Run consistency checks between tenant-identity and tenant-config rows.
 
-    Real implementation needs per-service probes (Janua GET /orgs/{id},
-    Dhanam GET /spaces/{id}, PhyndCRM tenants.config, Karafiel GET
-    /orgs/{id}, Resend GET /domains/{id}). Tracked as follow-up — this
-    endpoint is a placeholder that confirms the row exists and returns
-    services_checked based on how many per-service IDs are populated on
-    the record.
+    Current implementation validates:
+
+    - The tenant row exists in both tenant_identities and tenant_configs.
+    - Per-service canonical IDs remain in sync with tenant_configs.
+    - PII and metadata fields are never echoed (only service-id drift
+      summaries are returned).
+
+    Additional external service probes (Janua/Dhanam/PhyndCRM/Karafiel/Resend)
+    are tracked separately in the operator backlog.
     """
-    async with async_session_factory() as session:
+    async with tenant_session("platform") as session:
         row = await session.scalar(
             select(TenantIdentity).where(TenantIdentity.canonical_id == canonical_id)
         )
@@ -265,6 +275,42 @@ async def validate_tenant_consistency(canonical_id: str) -> ValidateConsistencyR
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"no tenant_identities row for canonical_id={canonical_id}",
             )
+
+        tenant = await session.scalar(
+            select(TenantConfig).where(TenantConfig.org_id == canonical_id)
+        )
+
+        drifts: list[dict[str, Any]] = []
+
+        if tenant is None:
+            drifts.append(
+                {
+                    "service": "tenant_config",
+                    "severity": "critical",
+                    "expected": "tenant_configs row exists",
+                    "actual": "missing",
+                    "details": "tenant_config not found for canonical_id",
+                }
+            )
+
+        if tenant is not None:
+            for identity_field, config_field in _IDENTITY_TO_CONFIG_FIELD.items():
+                identity_value = getattr(row, identity_field)
+                config_value = getattr(tenant, config_field)
+                if identity_value != config_value:
+                    drifts.append(
+                        {
+                            "service": identity_field,
+                            "severity": "medium",
+                            "expected": config_value,
+                            "actual": identity_value,
+                            "details": (
+                                f"tenant identity field mismatch: {identity_field} "
+                                f"(tenant_configs[{config_field}]={config_value!r}, tenant_identity={identity_value!r})"
+                            ),
+                        }
+                    )
+
         populated = [
             f
             for f in (
@@ -275,9 +321,11 @@ async def validate_tenant_consistency(canonical_id: str) -> ValidateConsistencyR
             )
             if getattr(row, f)
         ]
+        services_checked = len(populated)
+
         return ValidateConsistencyResponse(
             canonical_id=canonical_id,
-            services_checked=len(populated),
-            drifts=[],
+            services_checked=services_checked,
+            drifts=drifts,
             checked_at=datetime.now(UTC),
         )

@@ -20,6 +20,24 @@ Phase 2 **campaign engineering is shipped** (#179): Tulana import → campaign g
 
 Until Stream A+B+C complete, **do not promote prod** on campaign features alone. PP.5 cutover requires Phase 0 exit gates in [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) § Phase 0.
 
+### 2026-06-04 readiness readback (MADFAM tenant slice + commercial GA)
+
+- **Tenant slice in prod (`admin@madfam.io`)**: **~85–90%** — sufficient for in-slice deterministic operations with current safeguards, but not yet formal full GA.
+- **Selva-wide production-truthful baseline:** **~88–92%**.
+- **Commercial GA for all tenants:** **~58–65%**.
+
+This plan stays the execution vehicle for closing that delta.
+
+For tactical sequencing and day-by-day status, track [docs/REMEDIATION_EXECUTION_PLAN_2026-06-04.md](./REMEDIATION_EXECUTION_PLAN_2026-06-04.md).
+
+| GA blocker | Why it matters | Evidence required before GA statement |
+|---|---|---|
+| Observability (OTel + Sentry + alert actionability) | Cannot trust incidents without telemetry | End-to-end trace on dispatch path, synthetic staging + prod Sentry capture in each service |
+| Revenue correctness | Billing tier and attribution can still drift silently | `Dhanam → Selva` mapping reconciliation, webhook replay tests, attributed paid conversion |
+| Load/resilience calibration | Queue sizing and capacity limits still guessed | `Run 4b` threshold pass, calibrated `MAX_CONCURRENT_TASKS`, `dispatch_rate_limit`, DR drill RTO logged |
+| Cross-service governance | Manual audit model is being replaced | `rfcs/0019`, RFC 0018 Phase D, tenancy and residency RFC follow-on sign-off |
+
+
 ---
 
 ## Baseline — completed (2026-05-30)

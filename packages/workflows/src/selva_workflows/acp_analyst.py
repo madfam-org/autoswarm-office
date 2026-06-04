@@ -2,6 +2,8 @@ import asyncio
 import json
 import os
 
+import httpx
+
 MCP_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "mcp_config.json")
 
 
@@ -57,13 +59,37 @@ class ACPAnalystNode:
         return "\n".join(lines) + "\n"
 
     # ------------------------------------------------------------------
+    # Safe HTTP fallback
+    # ------------------------------------------------------------------
+
+    def _safe_fetch_text(self, target_url: str) -> str:
+        from selva_tools.builtins.http_tools import _build_safe_request_kwargs
+
+        request_kwargs, _ = _build_safe_request_kwargs(
+            "GET",
+            target_url,
+            headers={"User-Agent": "Selva-Analyst/1.0"},
+            extra={"timeout": 10.0, "follow_redirects": True},
+        )
+        with httpx.Client(
+            trust_env=False,
+            transport=httpx.HTTPTransport(retries=0),
+        ) as client:
+            resp = client.request(**request_kwargs)
+        resp.raise_for_status()
+        return resp.text[:4000]
+
+    # ------------------------------------------------------------------
     # Core extraction
     # ------------------------------------------------------------------
 
     def run(self) -> dict:
         print(f"[Phase I] Launching browser extraction (with MCP) for {self.target_url} …")
 
-        self._get_mcp_bootstrap_snippet()  # Keep side-effect of warming MCP procs
+        # Backward-compat marker for future bootstrap work. The ACP path
+        # itself is intentionally best-effort; do not fail task startup if the
+        # MCP snippet is missing or malformed.
+        _ = self._get_mcp_bootstrap_snippet()
 
         # ----------------------------------------------------------------
         # Gap 1: Use browser_extract (Playwright) for JS-rendered targets
@@ -76,19 +102,14 @@ class ACPAnalystNode:
             extracted_text = asyncio.run(browser_extract(self.target_url))
             screenshot_b64 = asyncio.run(browser_screenshot(self.target_url))
         except Exception as exc:
-            print(f"[Phase I] Browser extraction failed ({exc}) — falling back to requests")
+            print(f"[Phase I] Browser extraction failed ({exc}) — falling back to safe HTTP")
             try:
-                import requests
-
-                resp = requests.get(
-                    self.target_url,
-                    timeout=10,
-                    headers={"User-Agent": "Selva-Analyst/1.0"},
-                )
-                extracted_text = resp.text[:4000]
+                extracted_text = self._safe_fetch_text(self.target_url)
             except Exception as req_exc:
                 extracted_text = f"Error fetching: {req_exc}"
 
+        if extracted_text is None:
+            extracted_text = ""
         prd = (
             f"# PRD Draft for {self.target_url}\n\n## Extracted Context\n\n{extracted_text[:2000]}"
         )

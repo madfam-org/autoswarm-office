@@ -7,6 +7,7 @@ import io
 import json
 from typing import Any
 
+from ..safe_eval import safe_eval_expression
 from ..base import BaseTool, ToolResult
 
 
@@ -123,7 +124,18 @@ class DataTransformTool(BaseTool):
                 "int": int,
                 "float": float,
             }
-            result = eval(expression, {"__builtins__": {}}, sandbox_locals)  # noqa: S307
+            result = safe_eval_expression(
+                expression,
+                sandbox_locals,
+                allowed_call_targets={
+                    "len",
+                    "sorted",
+                    "str",
+                    "int",
+                    "float",
+                },
+                allowed_get_attrs_for={"data"},
+            )
             output = json.dumps(result, indent=2) if not isinstance(result, str) else result
             return ToolResult(output=output, data={"result": result})
         except Exception as exc:

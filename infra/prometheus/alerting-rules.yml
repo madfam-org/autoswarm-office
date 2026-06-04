@@ -58,7 +58,7 @@ groups:
             rate the 30-day error budget (43.2 min) is exhausted in ~2 hours.
             Investigate immediately.
           slo: "docs/SLOS.md §3 (99.9% availability) and §5 (Tier 1 fast burn 14.4×)"
-          runbook_url: "https://runbooks.selva.town/slo/tier1-fast-burn"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaTier1SlowBurn
         expr: |
@@ -79,7 +79,7 @@ groups:
             has error rate > 0.6% over both 6h and 30m windows. At this
             rate the 30-day error budget is exhausted in ~5 hours.
           slo: "docs/SLOS.md §3 (99.9% availability) and §5 (Tier 1 slow burn 6×)"
-          runbook_url: "https://runbooks.selva.town/slo/tier1-slow-burn"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
   # ────────────────────────────────────────────────────────────────
   # Tier 2 — Notify (Slack #ops, no page)
@@ -107,7 +107,7 @@ groups:
             error budget (3h 36min) will be exhausted in ~10 days at this rate.
             Surface to #ops; no page.
           slo: "docs/SLOS.md §3 (99.5% availability) and §5 (Tier 2 fast notify 3×)"
-          runbook_url: "https://runbooks.selva.town/slo/tier2-fast-burn"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaTier2SlowBurn
         expr: |
@@ -129,7 +129,7 @@ groups:
             be fully consumed in ~30 days at this rate. Address before the
             budget runs out.
           slo: "docs/SLOS.md §3 (99.5% availability) and §5 (Tier 2 slow notify 1×)"
-          runbook_url: "https://runbooks.selva.town/slo/tier2-slow-burn"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
   # ────────────────────────────────────────────────────────────────
   # Task-level alerts — SLOS.md §6
@@ -156,7 +156,7 @@ groups:
             (Resend, Stripe, Anthropic), missing env vars on workers.
             Inspect via `GET /api/v1/health/dlq-stats`.
           slo: "docs/SLOS.md §6 (Task-level SLIs — DLQ depth < 5 sustained)"
-          runbook_url: "https://runbooks.selva.town/slo/dlq-depth"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaApprovalQueueP95High
         expr: selva:task:approval_queue_p95_age:1h > 14400  # 4h in seconds
@@ -172,7 +172,7 @@ groups:
             this notify. Likely cause: humans slow to respond. Surface
             to #ops; not an outage.
           slo: "docs/SLOS.md §6 (Approval queue p95 latency — target < 2h, alert > 4h)"
-          runbook_url: "https://runbooks.selva.town/slo/approval-queue"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaTaskSuccessRateLow
         expr: selva:task:success_rate_overall:7d < 0.95
@@ -188,7 +188,7 @@ groups:
             systemic regression in worker logic, LLM provider drift, or
             tool failure. Per-graph-type breakdown lives on the dashboard.
           slo: "docs/SLOS.md §6 (Overall task success rate — ≥ 95% over 7 days)"
-          runbook_url: "https://runbooks.selva.town/slo/task-success-rate"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
   # ────────────────────────────────────────────────────────────────
   # Recursive deployment reliability
@@ -207,7 +207,7 @@ groups:
             swarm_task_outbox has more than 25 pending or retryable rows for
             10 minutes. Recursive deploy dispatch may be lagging or Redis
             publication may be failing.
-          runbook_url: "https://runbooks.selva.town/deploy/outbox-backlog"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaSwarmTaskOutboxRowsStale
         expr: selva:swarm_task_outbox:stale_rows > 0
@@ -221,7 +221,7 @@ groups:
             At least one pending/retryable outbox row has been due for
             publication for more than 10 minutes. Recursive deploy tasks may
             be stuck before workers can observe them.
-          runbook_url: "https://runbooks.selva.town/deploy/outbox-stale"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaDeploymentEvidencePolicyFailures
         expr: selva:deployment:evidence_policy_failures:15m > 0
@@ -235,7 +235,7 @@ groups:
             Deployment evidence policy rejected one or more deploys in the
             last 15 minutes. Reason: {{ $labels.reason }}. Investigate
             missing proof phases before retrying recursive production deploys.
-          runbook_url: "https://runbooks.selva.town/deploy/evidence-policy"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaProductionDeploymentEvidenceIncomplete
         expr: |
@@ -255,7 +255,7 @@ groups:
             evidence, or a terminal production deployment task has no evidence
             ledger row. Treat production deploy state as untrusted until proof
             is reconciled.
-          runbook_url: "https://runbooks.selva.town/deploy/production-evidence"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"
 
       - alert: SelvaProductionDeployFailedAfterPolicyGate
         expr: selva:deployment:production_failures_after_policy_gate:30m > 0
@@ -269,4 +269,4 @@ groups:
             A production deployment reported failure after passing the evidence
             policy gate in the last 30 minutes. This points to a post-gate
             execution or convergence regression.
-          runbook_url: "https://runbooks.selva.town/deploy/post-policy-failure"  # TODO operator: replace with real runbook
+          runbook_url: "https://github.com/madfam-org/selva-office/blob/main/docs/RUNBOOK.md#alert-response-procedures"

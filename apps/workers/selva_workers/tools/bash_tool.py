@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import shlex
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ _DEFAULT_TIMEOUT_SECONDS = 30
 
 # Maximum output size to prevent memory exhaustion.
 _MAX_OUTPUT_BYTES = 1_048_576  # 1 MiB
+_FORBIDDEN_COMMAND_TOKENS = {";", "&", "|", "<", ">", "`", "$", "\n", "\r"}
+_FORBIDDEN_RAW_COMMAND_CHARS = {";", "&", "|", "<", ">", "`"}
 
 
 @dataclass
@@ -102,6 +105,19 @@ class BashTool:
                 return_code=126,
             )
 
+        # Reject shell meta-characters anywhere in the raw command. The
+        # executor intentionally runs without a shell, so these characters
+        # are either invalid for us or signal an attempt to smuggle shell
+        # intent (e.g. `&&`, `|`, `<`, `>`, backticks).
+        if any(ch in command for ch in _FORBIDDEN_RAW_COMMAND_CHARS):
+            logger.warning("Blocked command due to shell metachar in raw string: %s", command)
+            return BashResult(
+                command=command,
+                stdout="",
+                stderr="Command blocked by safety policy: unsupported shell metacharacter",
+                return_code=126,
+            )
+
         # -- Path containment check -------------------------------------------
         if self.allowed_cwd and re.search(r"\bcd\s+[^;|&]*\.\.", command):
             logger.warning("Blocked cd .. in sandboxed command: %s", command)
@@ -119,10 +135,31 @@ class BashTool:
         if env:
             subprocess_env = {**os.environ, **env}
 
+        # -- Parse into argv list --------------------------------------------
+        try:
+            command_argv = shlex.split(command)
+        except ValueError as exc:
+            logger.warning("Invalid shell syntax in command: %s (%s)", command, exc)
+            return BashResult(
+                command=command,
+                stdout="",
+                stderr=f"Invalid command syntax: {exc}",
+                return_code=126,
+            )
+
+        if not command_argv or any(token in _FORBIDDEN_COMMAND_TOKENS for token in command_argv):
+            logger.warning("Command blocked by token filter: %s", command)
+            return BashResult(
+                command=command,
+                stdout="",
+                stderr="Command blocked by command-token safety policy.",
+                return_code=126,
+            )
+
         # -- Execute ----------------------------------------------------------
         try:
-            process = await asyncio.create_subprocess_shell(
-                command,
+            process = await asyncio.create_subprocess_exec(
+                *command_argv,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self.allowed_cwd,

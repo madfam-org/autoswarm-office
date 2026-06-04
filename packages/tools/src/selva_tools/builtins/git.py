@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import shlex
 from pathlib import Path
 from typing import Any
 
@@ -47,12 +46,16 @@ class GitCommitTool(BaseTool):
         sandbox = ToolSandbox()
 
         if files:
-            add_cmd = f"git -C {repo_path} add {' '.join(files)}"
+            add_cmd = ["git", "-C", repo_path, "add", *files]
         else:
-            add_cmd = f"git -C {repo_path} add -A"
+            add_cmd = ["git", "-C", repo_path, "add", "-A"]
+
+        add_result = await sandbox.run_command(add_cmd, timeout=30.0)
+        if not add_result["success"]:
+            return ToolResult(success=False, error=add_result["stderr"])
 
         result = await sandbox.run_command(
-            f'{add_cmd} && git -C {repo_path} commit -m "{message}"',
+            ["git", "-C", repo_path, "commit", "-m", message],
             timeout=30.0,
         )
         if result["success"]:
@@ -77,9 +80,9 @@ class GitPushTool(BaseTool):
         branch = kwargs.get("branch", "")
         repo_path = kwargs.get("repo_path", ".")
         sandbox = ToolSandbox()
-        cmd = f"git -C {repo_path} push"
+        cmd = ["git", "-C", repo_path, "push"]
         if branch:
-            cmd += f" origin {branch}"
+            cmd.extend(["origin", branch])
         result = await sandbox.run_command(cmd, timeout=60.0)
         if result["success"]:
             return ToolResult(output=result["stdout"])
@@ -103,9 +106,9 @@ class GitDiffTool(BaseTool):
         staged = kwargs.get("staged", False)
         repo_path = kwargs.get("repo_path", ".")
         sandbox = ToolSandbox()
-        cmd = f"git -C {repo_path} diff"
+        cmd = ["git", "-C", repo_path, "diff"]
         if staged:
-            cmd += " --staged"
+            cmd.append("--staged")
         result = await sandbox.run_command(cmd, timeout=15.0)
         return ToolResult(output=result["stdout"])
 
@@ -135,11 +138,11 @@ class GitBranchTool(BaseTool):
         sandbox = ToolSandbox()
 
         if action == "list":
-            cmd = f"git -C {repo_path} branch -a"
+            cmd = ["git", "-C", repo_path, "branch", "-a"]
         elif action == "create":
-            cmd = f"git -C {repo_path} checkout -b {name}"
+            cmd = ["git", "-C", repo_path, "checkout", "-b", name]
         elif action == "checkout":
-            cmd = f"git -C {repo_path} checkout {name}"
+            cmd = ["git", "-C", repo_path, "checkout", name]
         else:
             return ToolResult(success=False, error=f"Unknown action: {action}")
 
@@ -212,7 +215,7 @@ class GitCreatePRTool(BaseTool):
 
         # 1. Current branch must not be a protected one.
         branch_probe = await sandbox.run_command(
-            f"git -C {shlex.quote(repo_path)} rev-parse --abbrev-ref HEAD",
+            ["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"],
             timeout=5.0,
         )
         if not branch_probe["success"]:
@@ -256,21 +259,20 @@ class GitCreatePRTool(BaseTool):
             "pr",
             "create",
             "--base",
-            shlex.quote(base),
+            base,
             "--head",
-            shlex.quote(current_branch),
+            current_branch,
             "--title",
-            shlex.quote(title),
+            title,
             "--body",
-            shlex.quote(resolved_body),
+            resolved_body,
         ]
         if draft:
             cmd_parts.append("--draft")
         for reviewer in all_reviewers:
-            cmd_parts.extend(["--reviewer", shlex.quote(reviewer)])
+            cmd_parts.extend(["--reviewer", reviewer])
 
-        gh_cmd = f"cd {shlex.quote(repo_path)} && {' '.join(cmd_parts)}"
-        result = await sandbox.run_command(gh_cmd, timeout=60.0)
+        result = await sandbox.run_command(cmd_parts, cwd=repo_path, timeout=60.0)
         if not result["success"]:
             return ToolResult(
                 success=False,

@@ -34,7 +34,25 @@ Canonical plan: [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIO
 | **5** | Multi-tenant GTM at scale | 8–12 wk | SSO, white-label, paying Karafiel wedge |
 | **6** | Autonomy graduation (ASK → ALLOW) | Ongoing | Per-lane 30d clean-run policy |
 
-**Baseline → north star:** MADFAM platform slice ~85–90%; production-truthful Selva ~88–92%; full autonomous digital ops **~50–62%** (Phase 2 API proven 2026-05-30). Target ~95%+ engineering completion in 6–9 months; 100% includes GTM traction (Phase 5).
+**Baseline → north star:** MADFAM platform slice ~85–90%; production-truthful Selva ~88–92%; full autonomous digital ops **~58–65%** (readback update 2026-06-04). Target ~95%+ engineering completion in 6–9 months; 100% includes GTM traction (Phase 5).
+
+### GA readiness snapshot (2026-06-04)
+
+| Scope | Current state | What still blocks full GA |
+|---|---|---|
+| MADFAM tenant slice (`admin@madfam.io`) in prod | **~85–90%** | Keep observability hardening, billing provenance, and load calibration evidence on a strict schedule |
+| Production-truthful Selva across current tenants | **~88–92%** | Attribution closure, DR proof, and cross-service audit completion |
+| Full commercial GA for all users/tenants | **~58–65%** | Stable evidence chain for money, reliability, recovery, and governance |
+
+The practical delta is mainly operational: security and tenant scoping are mostly proven; most remaining risk is unverified production behavior in finance/reliability/compliance recovery loops.
+
+Phase 0 and Phase 1 gates are now the highest-leverage path to close this gap:
+
+1. **Observability foundation (OTel + Sentry + actioning alerts)**  
+2. **Dhanam price-tier mapping + webhook correctness (proven attribution)**  
+3. **Load/run calibration (Run 4b + queue/deadline tuning)**  
+4. **Backup/restore RTO+RPO evidence**  
+5. **CDC + A2A hardening in later phases**
 
 ### Coupler consumer track (P3, Oct 2026)
 
@@ -82,10 +100,11 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 
 After the v2.2.x security + UX remediation pass landed (see commits
 on chore/full-remediation; merged to main as one combined PR), the
-platform is roughly 45-55% of "fully production stable + data-truthful."
+platform is roughly 88-92% of "fully production stable + data-truthful."
 The remediation closed the most weaponizable holes (worker token
 cross-tenant bypass, webhook fail-open, ledger forgery, email From:
-spoofing, artifact path traversal). The remaining 45% is harder:
+spoofing, artifact path traversal). The remaining gap is now mainly
+operational proof and cross-service reliability:
 schema migration discipline, cross-service alignment, operational
 maturity, and real load + chaos testing.
 
@@ -363,7 +382,7 @@ data-truthful"** as of 2026-05-04 (v2.3.0 sprint). Staging bootstrap
 (PP.4), doc-truth remediation, and DNS/tunnel fix landed 2026-05-30 —
 see [CHANGELOG.md](CHANGELOG.md) and [docs/PP_4_STAGING_AUDIT.md](docs/PP_4_STAGING_AUDIT.md).
 
-**North star gap (~50–62% → 100%):** See
+**North star gap (~58–65% → 100%):** See
 [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md)
 and sprint plan [docs/PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md).
 Phase 2 API + UI shipped (#179); Phase 2 **operator gate** met on API path;

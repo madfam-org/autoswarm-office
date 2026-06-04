@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..billing_tiers import DEFAULT_TIER, get_daily_limit
 from ..config import get_settings
+from ..database import tenant_session
 from ..models import TenantConfig
 
 logger = logging.getLogger(__name__)
@@ -152,8 +153,6 @@ async def emit_billing_task_event(
 
 async def handle_dhanam_billing_event(payload: dict[str, Any]) -> None:
     """Process a signed Dhanam billing webhook (canonical POS/Stripe router)."""
-    from ..database import async_session_factory
-
     event_type = str(payload.get("type") or "unknown")
     data = payload.get("data") or {}
     org_id = str(data.get("org_id") or "")
@@ -170,7 +169,7 @@ async def handle_dhanam_billing_event(payload: dict[str, Any]) -> None:
     )
     dhanam_space_id = data.get("dhanam_space_id")
 
-    async with async_session_factory() as db:
+    async with tenant_session(org_id=org_id) as db:
         if event_type in {"subscription.created", "subscription.updated"}:
             tenant = await apply_subscription_state(
                 db,

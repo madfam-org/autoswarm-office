@@ -36,6 +36,7 @@ import httpx
 import yaml
 
 from ..base import BaseTool, ToolResult
+from .http_tools import _build_safe_request_kwargs
 
 DEFAULT_CATALOG_URL = "https://api.dhan.am/v1/billing/catalog"
 
@@ -134,7 +135,17 @@ def _load_catalog_from_url(url: str) -> dict[str, Any]:
     remap to the YAML shape so the downstream analysers work against a
     single format regardless of source.
     """
-    resp = httpx.get(url, timeout=10.0)
+    request_kwargs, _ = _build_safe_request_kwargs(
+        "GET",
+        url,
+        headers={"User-Agent": "Selva pricing-intel bot"},
+        extra={"timeout": 10.0, "follow_redirects": True},
+    )
+    with httpx.Client(
+        trust_env=False,
+        transport=httpx.HTTPTransport(retries=0),
+    ) as client:
+        resp = client.request(**request_kwargs)
     resp.raise_for_status()
     data = resp.json()
 
@@ -537,10 +548,21 @@ class CompetitorPriceLookupTool(BaseTool):
             return ToolResult(success=False, error="url must start with http(s)://")
         ua = kwargs.get("user_agent") or "Selva pricing-intel bot (contact: ops@madfam.io)"
         try:
+            # Keep competitor lookups safe from SSRF/rebinding by using the
+            # shared request builder used across platform tools.
+            request_kwargs, original_url = _build_safe_request_kwargs(
+                "GET",
+                url,
+                headers={"User-Agent": ua},
+                extra={"timeout": 15.0, "follow_redirects": True},
+            )
             async with httpx.AsyncClient(
-                timeout=15.0, follow_redirects=True, headers={"User-Agent": ua}
+                timeout=15.0,
+                follow_redirects=True,
+                headers={"User-Agent": ua},
+                trust_env=False,
             ) as http:
-                resp = await http.get(url)
+                resp = await http.request(**request_kwargs)
         except Exception as exc:
             return ToolResult(
                 success=False,
@@ -556,9 +578,9 @@ class CompetitorPriceLookupTool(BaseTool):
         body = resp.text[:50_000]
         return ToolResult(
             success=True,
-            output=f"fetched {len(body)} chars from {url} (HTTP {resp.status_code})",
+            output=f"fetched {len(body)} chars from {original_url} (HTTP {resp.status_code})",
             data={
-                "url": url,
+                "url": original_url,
                 "status_code": resp.status_code,
                 "body": body,
                 "truncated": len(resp.text) > 50_000,

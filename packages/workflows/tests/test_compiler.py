@@ -81,6 +81,22 @@ class TestWorkflowCompiler:
         result = compiled.invoke({"messages": [], "status": "running", "workflow_variables": {}})
         assert result["workflow_variables"]["calc_result"] == 4
 
+    def test_compile_python_runner_blocks_unsafe_code(self) -> None:
+        wf = _make_workflow(
+            nodes=[
+                NodeDefinition(
+                    id="bad",
+                    type=NodeType.PYTHON_RUNNER,
+                    code="result = __import__('os').system('echo hi')",
+                ),
+            ],
+        )
+        graph = self.compiler.compile(wf)
+        compiled = graph.compile()
+        result = compiled.invoke({"messages": [], "status": "running", "workflow_variables": {}})
+        assert result["status"] == "error"
+        assert result["result"] == {"error": "Python execution blocked: call to '__import__' is not allowed"}
+
     def test_compile_loop_counter(self) -> None:
         wf = _make_workflow(
             nodes=[

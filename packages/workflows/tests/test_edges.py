@@ -49,6 +49,11 @@ class TestEvaluateCondition:
         state = {"messages": []}
         assert evaluate_condition(cond, state) is False
 
+    def test_expression_with_unsafe_name_returns_false(self) -> None:
+        cond = TriggerCondition(expression="__import__('os').system('echo hi')")
+        state = {"messages": []}
+        assert evaluate_condition(cond, state) is False
+
 
 class TestBuildConditionalRouter:
     def test_matches_first_condition(self) -> None:

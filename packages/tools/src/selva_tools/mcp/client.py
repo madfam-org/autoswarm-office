@@ -4,11 +4,53 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import shutil
 from typing import Any
 
 from ..base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_ALLOWED_STDIO_COMMANDS = {
+    "npx",
+    "node",
+    "python",
+    "python3",
+    "python3.11",
+    "python3.12",
+    "uv",
+}
+
+
+def _parse_allowed_stdio_commands() -> set[str]:
+    override = os.environ.get("MCP_STDIO_ALLOWED_COMMANDS")
+    if not override:
+        return _DEFAULT_ALLOWED_STDIO_COMMANDS
+    return {entry.strip() for entry in override.split(",") if entry.strip()}
+
+
+def _validate_stdio_command(command: list[str]) -> list[str]:
+    if not command:
+        raise ValueError("MCP stdio command cannot be empty")
+    if any(not isinstance(chunk, str) or not chunk.strip() for chunk in command):
+        raise ValueError("MCP stdio command list must contain non-empty strings")
+
+    executable = command[0]
+    executable_name = os.path.basename(executable)
+    allowed = _parse_allowed_stdio_commands()
+    if executable_name not in allowed:
+        raise ValueError(f"Disallowed MCP stdio executable: {executable_name}")
+
+    if os.path.isabs(executable):
+        if not os.path.isfile(executable) or not os.access(executable, os.X_OK):
+            raise ValueError(f"Executable is not runnable: {executable}")
+        return command
+
+    if shutil.which(executable) is None:
+        raise ValueError(f"Executable not found in PATH: {executable}")
+
+    return command
 
 
 class McpToolAdapter(BaseTool):
@@ -70,7 +112,7 @@ class StdioMcpTransport(McpTransport):
     """MCP transport via subprocess stdin/stdout JSON-RPC."""
 
     def __init__(self, command: list[str], env: dict[str, str] | None = None) -> None:
-        self._command = command
+        self._command = _validate_stdio_command(command)
         self._env = env
         self._process: Any = None
         self._request_id = 0

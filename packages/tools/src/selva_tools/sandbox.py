@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shlex
 import tempfile
+from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -41,14 +43,21 @@ class ToolSandbox:
         return self._workdir
 
     async def run_command(
-        self, command: str, *, timeout: float = 30.0, cwd: str | None = None
+        self, command: str | Sequence[str], *, timeout: float = 30.0, cwd: str | None = None
     ) -> dict[str, Any]:
         """Run a shell command within the sandbox."""
         work_cwd = cwd or str(self.workdir) if self.level != SandboxLevel.NONE else cwd
 
         try:
-            proc = await asyncio.create_subprocess_shell(
-                command,
+            cmd = (
+                shlex.split(command)
+                if isinstance(command, str)
+                else [str(part) for part in command]
+            )
+            if not cmd:
+                raise ValueError("empty command")
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=work_cwd,

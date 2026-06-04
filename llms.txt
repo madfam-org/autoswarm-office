@@ -8,6 +8,7 @@ Compact LLM context index for this repository.
 - `docs/PHASE_0_REMEDIATION_PLAN.md` — **4-sprint remediation plan** (Phase 0 → prod promote).
 - `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6).
 - `docs/OPERATOR_BACKLOG.md` — human-gated operator items.
+- `docs/REMEDIATION_EXECUTION_PLAN_2026-06-04.md` — ROI-ordered remediation execution register (read before Phase 1 promotion decisions).
 - `docs/SESSION_2026-05-30_PHASE0_RUN4.md` — **session wrap** (Run 4 fixes, results, handoff).
 - `docs/LOAD_TEST_2026-Q2.md` — k6 calibration Runs 1–4b.
 - `llms-full.txt` — full context map and durable operating contract.

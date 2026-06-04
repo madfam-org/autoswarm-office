@@ -15,10 +15,9 @@ def run_acp_workflow_task(self, target_url: str):
     time using the same SSRF check the gateway uses at admission. This
     narrows the DNS-rebinding window from minutes (queue dwell time +
     workflow setup) to seconds (Celery dequeue → re-resolve). The
-    workflow's own HTTP client (requests.get inside ACPAnalystNode) is
-    still vulnerable to a fast-rebinding attacker — that's tracked as
-    Phase 2 follow-up; the proper fix threads pre-resolved IP through
-    the workflow node's HTTP call sites.
+    workflow node still depends on browser/HTTP client behavior for page
+    rendering. The URL is revalidated at task start; remaining browser-path
+    hardening is tracked as a follow-up in the Phase 2 queue.
     """
     logger.info("Executing background ACP dirty analyst task for %s", target_url)
     try:

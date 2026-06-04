@@ -1,0 +1,7 @@
+# Run 4b: hold nexus-api at two replicas during calibration.
+- op: replace
+  path: /spec/minReplicas
+  value: 2
+- op: replace
+  path: /spec/maxReplicas
+  value: 2

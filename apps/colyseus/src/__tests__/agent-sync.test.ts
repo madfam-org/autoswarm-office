@@ -62,7 +62,8 @@ function makeState(departments: Map<string, any>, pendingApprovalCount = 0) {
 async function simulateFetchAgentsFromApi(
   state: any,
   nexusApiUrl: string,
-  token: string = "dev-token"
+  token: string = "dev-token",
+  orgId: string = "madfam"
 ): Promise<void> {
   const slugToDept = new Map<string, { stateKey: string; dept: any }>();
   state.departments.forEach((dept: any, key: string) => {
@@ -72,7 +73,10 @@ async function simulateFetchAgentsFromApi(
   let apiDepts: Array<Record<string, any>>;
   try {
     const listResp = await fetch(`${nexusApiUrl}/api/v1/departments/`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Selva-Tenant-Org": orgId,
+      },
     });
     if (!listResp.ok) return;
     apiDepts = (await listResp.json()) as Array<Record<string, any>>;
@@ -88,7 +92,12 @@ async function simulateFetchAgentsFromApi(
     try {
       const resp = await fetch(
         `${nexusApiUrl}/api/v1/departments/${apiDept.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Selva-Tenant-Org": orgId,
+          },
+        }
       );
       if (!resp.ok) continue;
       const detail = (await resp.json()) as Record<string, any>;
@@ -175,12 +184,22 @@ describe("fetchAgentsFromApi (slug-based matching)", () => {
     expect(mockFetch).toHaveBeenNthCalledWith(
       1,
       `${NEXUS_URL}/api/v1/departments/`,
-      expect.objectContaining({ headers: { Authorization: "Bearer dev-token" } })
+      expect.objectContaining({
+        headers: {
+          Authorization: "Bearer dev-token",
+          "X-Selva-Tenant-Org": "madfam",
+        },
+      })
     );
     expect(mockFetch).toHaveBeenNthCalledWith(
       2,
       `${NEXUS_URL}/api/v1/departments/uuid-eng-123`,
-      expect.objectContaining({ headers: { Authorization: "Bearer dev-token" } })
+      expect.objectContaining({
+        headers: {
+          Authorization: "Bearer dev-token",
+          "X-Selva-Tenant-Org": "madfam",
+        },
+      })
     );
   });
 

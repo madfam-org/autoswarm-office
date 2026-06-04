@@ -23,7 +23,7 @@ Selva Office (repo `selva-office`) is MADFAM's AI inference + agent orchestratio
 
 **Pillar**: Intelligence / Agents + LLM routing
 **Type**: platform
-**Status**: production (staging tier live 2026-05-30; north-star program in [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md))
+**Status**: production (staging tier live 2026-05-30; north-star program in [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md); commercial GA no-go gates in [docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md))
 
 ### Deployed services
 

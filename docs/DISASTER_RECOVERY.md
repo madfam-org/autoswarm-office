@@ -16,7 +16,7 @@ failure scenarios, and verification steps to confirm successful recovery.
 
 **Program gate:** Phase 0 item 0.5 in
 [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) requires
-a executed backup/restore drill with measured RTO/RPO before north-star Phase 1.
+an executed backup/restore drill with measured RTO/RPO before north-star Phase 1.
 
 ### Recovery Objectives
 
@@ -71,6 +71,9 @@ custom format (`--format=custom`) and maximum compression (`--compress=9`).
 - `scripts/backup-postgres.sh` -- Create a backup
 - `scripts/restore-postgres.sh` -- Restore from a backup
 - `scripts/verify-backup.sh` -- Validate backup integrity
+- `scripts/run-db-restore-drill.sh` -- Guarded Phase 0 drill wrapper +
+  evidence writer
+- `scripts/verify-dr-drill-evidence.sh` -- Strict evidence verifier
 
 ### Backup Verification
 
@@ -419,7 +422,40 @@ After any recovery operation, confirm each item:
 
 > Template for [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) Tier 3 item 6 and
 > [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) Sprint 1.
-> Fill after executing `make db-backup` → restore to staging → measure RTO.
+> Fill after executing the guarded drill wrapper against a named non-production
+> restore target.
+
+### Guarded drill command path
+
+Preflight without side effects:
+
+```bash
+DR_SOURCE_ENV=prod \
+DR_TARGET_ENV=staging \
+DR_BACKUP_DATABASE_URL="<prod-postgres-url>" \
+DR_RESTORE_DATABASE_URL="<clean-staging-postgres-url>" \
+DR_HEALTH_URL="https://staging-api.selva.town/api/v1/health/ready" \
+  ./scripts/run-db-restore-drill.sh --preflight
+```
+
+Execute after the operator confirms the restore target is clean and disposable:
+
+```bash
+DR_DRILL_EXECUTE=yes \
+DR_SOURCE_ENV=prod \
+DR_TARGET_ENV=staging \
+DR_BACKUP_DATABASE_URL="<prod-postgres-url>" \
+DR_RESTORE_DATABASE_URL="<clean-staging-postgres-url>" \
+DR_HEALTH_URL="https://staging-api.selva.town/api/v1/health/ready" \
+  ./scripts/run-db-restore-drill.sh --execute
+```
+
+The wrapper writes dated evidence to `docs/dr-drills/`. Strict Phase 0 gates
+verify that record with:
+
+```bash
+./scripts/verify-dr-drill-evidence.sh
+```
 
 | Field | Value |
 |-------|-------|
@@ -444,6 +480,9 @@ After any recovery operation, confirm each item:
 | `scripts/backup-postgres.sh` | Create PostgreSQL backup (local + S3) |
 | `scripts/restore-postgres.sh` | Restore PostgreSQL from backup |
 | `scripts/verify-backup.sh` | Validate backup integrity |
+| `scripts/run-db-restore-drill.sh` | Guarded backup/restore drill wrapper |
+| `scripts/verify-dr-drill-evidence.sh` | Phase 0 DR evidence verifier |
+| `docs/dr-drills/` | Dated drill evidence records |
 | `infra/k8s/production/backup-cronjob.yaml` | Kubernetes CronJob for automated daily backups |
 | `apps/nexus-api/alembic/` | Database migration definitions |
 | `scripts/seed-agents.py` | Seed departments and agents |

@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Column, String, delete, select
+from sqlalchemy import JSON, Column, String, delete, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
 
@@ -75,6 +75,22 @@ class MemoryStore:
         self._session_factory = async_sessionmaker(
             self._engine, expire_on_commit=False
         )
+        self._count_cache: int | None = None
+
+    def _normalize_vector(self, vector: Any) -> list[float]:
+        """Fit an embedder vector to the storage column dimension.
+
+        The database schema stores ``vector(DEFAULT_DIM)`` for production
+        index compatibility. Tests and some local embedders use smaller
+        dimensions; pad those with zeroes so search and insert vectors stay
+        comparable without changing the persisted schema.
+        """
+        values = [float(value) for value in vector]
+        if len(values) > DEFAULT_DIM:
+            return values[:DEFAULT_DIM]
+        if len(values) < DEFAULT_DIM:
+            return values + [0.0] * (DEFAULT_DIM - len(values))
+        return values
 
     async def _init_db(self) -> None:
         async with self._engine.begin() as conn:
@@ -89,7 +105,7 @@ class MemoryStore:
         entry_id = str(uuid.uuid4())
         created_at = datetime.now(UTC).isoformat()
 
-        vector = await self._embedder.embed_single(text)
+        vector = self._normalize_vector(await self._embedder.embed_single(text))
 
         db_entry = MemoryEntryModel(
             id=entry_id,
@@ -103,6 +119,7 @@ class MemoryStore:
         async with self._session_factory() as session:
             session.add(db_entry)
             await session.commit()
+        self._count_cache = (self._count_cache or 0) + 1
 
         logger.debug("Stored memory for agent %s: %s", self.agent_id, entry_id)
         return entry_id
@@ -110,7 +127,7 @@ class MemoryStore:
     async def search(self, query: str, top_k: int = 5) -> list[MemoryEntry]:
         """Search for memories similar to the query text."""
         await self._init_db()
-        query_vector = await self._embedder.embed_single(query)
+        query_vector = self._normalize_vector(await self._embedder.embed_single(query))
 
         async with self._session_factory() as session:
             # Using inner product (<#>) which matches FAISS IndexFlatIP
@@ -169,6 +186,8 @@ class MemoryStore:
             stmt = select(MemoryEntryModel).filter(MemoryEntryModel.agent_id == self.agent_id)
             result = await session.execute(stmt)
             rows = result.scalars().all()
+            if filter_metadata is None:
+                self._count_cache = len(rows)
 
             entries = []
             for row in rows:
@@ -210,14 +229,32 @@ class MemoryStore:
             await session.commit()
             # ``execute(delete(...))`` returns a CursorResult exposing
             # ``rowcount``; mypy widens to the base ``Result`` which lacks it.
-            return int(result.rowcount)  # type: ignore[attr-defined]
+            deleted_count = int(result.rowcount)  # type: ignore[attr-defined]
+            if self._count_cache is not None:
+                self._count_cache = max(0, self._count_cache - deleted_count)
+            return deleted_count
+
+    async def get_count(self) -> int:
+        """Return the current number of entries for this agent from the DB."""
+        await self._init_db()
+        async with self._session_factory() as session:
+            result = await session.execute(
+                select(func.count()).select_from(MemoryEntryModel).where(
+                    MemoryEntryModel.agent_id == self.agent_id
+                )
+            )
+            count = int(result.scalar_one())
+            self._count_cache = count
+            return count
 
     @property
     def count(self) -> int:
-        """This property is synchronous and shouldn't hit DB directly in async pg context.
-        As a fallback, it returns 0 or needs to be swapped for an async `get_count()`.
+        """Best-effort cached count for legacy synchronous callers.
+
+        Async runtime paths should call ``await get_count()`` so they do not
+        suppress memory injection because of an uninitialized cache.
         """
-        return 0
+        return self._count_cache or 0
 
     def _save(self) -> None:
         pass

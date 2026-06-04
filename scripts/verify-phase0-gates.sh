@@ -6,6 +6,7 @@
 #   ./scripts/verify-phase0-gates.sh --prod       # + verify-doc-truth.sh
 #   ./scripts/verify-phase0-gates.sh --staging    # + staging-smoke.sh
 #   ./scripts/verify-phase0-gates.sh --all        # prod + staging smokes
+#   PHASE0_REQUIRE_OPERATOR_GATES=true ./scripts/verify-phase0-gates.sh --staging
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,6 +14,7 @@ cd "$ROOT"
 
 RUN_PROD=false
 RUN_STAGING=false
+REQUIRE_OPERATOR_GATES="${PHASE0_REQUIRE_OPERATOR_GATES:-false}"
 for arg in "$@"; do
   case "$arg" in
     --prod) RUN_PROD=true ;;
@@ -59,6 +61,30 @@ if [[ "$RUN_STAGING" == true ]]; then
   ./scripts/staging-smoke.sh
   echo "== Dhanam billing path (staging) =="
   ./scripts/verify-dhanam-billing-path.sh --staging
+  echo "== Dhanam price-tier map (staging) =="
+  if [[ "$REQUIRE_OPERATOR_GATES" == "true" ]]; then
+    ./scripts/verify-dhanam-price-tier-map.sh --staging --require-all
+  else
+    ./scripts/verify-dhanam-price-tier-map.sh --staging || true
+  fi
+  echo "== Run 4b load preflight (staging) =="
+  if [[ "$REQUIRE_OPERATOR_GATES" == "true" ]]; then
+    ./scripts/verify-staging-load-run4b-preflight.sh --require-live
+  else
+    ./scripts/verify-staging-load-run4b-preflight.sh || true
+  fi
+  echo "== DR drill evidence =="
+  if [[ "$REQUIRE_OPERATOR_GATES" == "true" ]]; then
+    ./scripts/verify-dr-drill-evidence.sh
+  else
+    ./scripts/verify-dr-drill-evidence.sh || true
+  fi
+  echo "== Secret rotation schedule =="
+  if [[ "$REQUIRE_OPERATOR_GATES" == "true" ]]; then
+    ./scripts/verify-secret-rotation-schedule.sh
+  else
+    ./scripts/verify-secret-rotation-schedule.sh || true
+  fi
   echo "== Campaign path (staging) =="
   ./scripts/verify-campaign-path.sh --staging
   echo "== Campaign loop (staging) =="

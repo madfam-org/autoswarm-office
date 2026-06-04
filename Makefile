@@ -1,7 +1,7 @@
 # Portable docker compose: prefer v1 standalone, fall back to v2 plugin.
 DOCKER_COMPOSE := $(shell command -v docker-compose 2>/dev/null || echo "docker compose")
 
-.PHONY: dev dev-full dev-seed worker build test test-e2e lint clean docker-up docker-down db-migrate db-wait setup setup-org-config generate-assets generate-variants post-process generate-map db-backup db-restore db-verify-backup smoke-test worktree-cleanup
+.PHONY: dev dev-full dev-seed worker build test test-e2e lint clean docker-up docker-down db-migrate db-wait setup setup-org-config generate-assets generate-variants post-process generate-map db-backup db-restore db-verify-backup db-drill-preflight db-drill smoke-test worktree-cleanup
 
 # ── Development ─────────────────────────────────────
 dev:
@@ -123,6 +123,13 @@ db-restore:
 db-verify-backup:
 	@if [ "$$LOCAL_DB_VERIFY" != "yes" ]; then echo "Refusing backup verification without LOCAL_DB_VERIFY=yes"; exit 1; fi
 	bash scripts/verify-backup.sh $(BACKUP_FILE)
+
+db-drill-preflight:
+	bash scripts/run-db-restore-drill.sh --preflight
+
+db-drill:
+	@if [ "$$DR_DRILL_EXECUTE" != "yes" ]; then echo "Refusing DR drill without DR_DRILL_EXECUTE=yes"; exit 1; fi
+	bash scripts/run-db-restore-drill.sh --execute
 
 # ── Assets ─────────────────────────────────────────
 generate-assets:

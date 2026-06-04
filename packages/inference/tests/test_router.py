@@ -46,6 +46,22 @@ class MockProvider(InferenceProvider):
         return ["mock-model"]
 
 
+class PreYieldFailingStreamProvider(MockProvider):
+    """Streaming provider that fails before emitting a chunk."""
+
+    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+        raise RuntimeError(f"{self.name} stream failed before first chunk")
+        yield ""
+
+
+class MidStreamFailingProvider(MockProvider):
+    """Streaming provider that emits one chunk and then fails."""
+
+    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+        yield "partial chunk"
+        raise RuntimeError(f"{self.name} stream failed after first chunk")
+
+
 def _make_providers(*names: str) -> dict[str, MockProvider]:
     """Create a dict of MockProvider instances keyed by name."""
     return {name: MockProvider(name) for name in names}
@@ -331,6 +347,37 @@ class TestRouterStream:
         async for chunk in router.stream(request):
             chunks.append(chunk)
         assert chunks == ["mock chunk"]
+
+    async def test_stream_falls_back_before_first_chunk(self) -> None:
+        router = ModelRouter(
+            providers={
+                "deepinfra": PreYieldFailingStreamProvider("deepinfra"),
+                "groq": MockProvider("groq"),
+            },
+        )
+        request = _make_request(sensitivity=Sensitivity.PUBLIC)
+
+        chunks = []
+        async for chunk in router.stream(request):
+            chunks.append(chunk)
+
+        assert chunks == ["mock chunk"]
+
+    async def test_stream_does_not_fall_back_after_first_chunk(self) -> None:
+        router = ModelRouter(
+            providers={
+                "deepinfra": MidStreamFailingProvider("deepinfra"),
+                "groq": MockProvider("groq"),
+            },
+        )
+        request = _make_request(sensitivity=Sensitivity.PUBLIC)
+
+        chunks = []
+        with pytest.raises(RuntimeError, match="after first chunk"):
+            async for chunk in router.stream(request):
+                chunks.append(chunk)
+
+        assert chunks == ["partial chunk"]
 
 
 # ---------------------------------------------------------------------------

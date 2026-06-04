@@ -153,6 +153,14 @@ jobs:
             NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true
             NEXT_PUBLIC_APP_URL=https://staging.selva.town
             NEXT_PUBLIC_MARKETING_URL=https://staging.selva.town
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.SENTRY_DSN_OFFICE_UI || '' }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=staging
+            NEXT_PUBLIC_SENTRY_RELEASE=${{ github.sha }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG || secrets.SENTRY_ORG || '' }}
+            SENTRY_PROJECT=${{ vars.SENTRY_OFFICE_UI_PROJECT || 'selva-office-ui' }}
+            SENTRY_RELEASE=${{ github.sha }}
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN || '' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:staging-${{ steps.sha.outputs.short }}
             ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:staging-latest
@@ -296,6 +304,11 @@ jobs:
         run: |
           chmod +x scripts/verify-dhanam-billing-path.sh
           ./scripts/verify-dhanam-billing-path.sh --staging
+
+      - name: Dhanam price-tier map visibility (staging)
+        run: |
+          chmod +x scripts/verify-dhanam-price-tier-map.sh
+          ./scripts/verify-dhanam-price-tier-map.sh --staging || true
 
       - name: Staging observability wiring
         run: |

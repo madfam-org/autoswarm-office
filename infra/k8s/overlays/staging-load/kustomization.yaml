@@ -1,0 +1,21 @@
+# Phase 0 Run 4b load-test overlay.
+#
+# Normal staging intentionally runs one replica per service. Run 4b needs
+# nexus-api=2 so the calibration measures queue/worker capacity instead of a
+# single API pod bottleneck. Apply this overlay only for the load-test window,
+# then return to infra/k8s/overlays/staging.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../staging
+
+replicas:
+  - name: nexus-api
+    count: 2
+
+patches:
+  - path: patch-nexus-api-hpa-run4b.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: nexus-api-hpa

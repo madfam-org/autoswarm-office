@@ -63,7 +63,7 @@ make dev
 - `selva-tools`: 268 built-in tools across file ops, code exec, git, web, data, comms,
   artifacts, MCP, and Mexican-market integrations (Karafiel, Dhanam, PhyndCRM, Tezca).
 - `selva-permissions`: HITL permission engine with skill-based overrides and audience guard.
-- `selva-memory`: Per-agent FAISS vector store and Experience/Reflexion learning loop.
+- `selva-memory`: Per-agent pgvector semantic memory store and Experience/Reflexion learning loop.
 - `selva-calendar`: Google + Microsoft calendar adapters.
 - `selva-observability`: Shared structured logging, request-id correlation, Sentry, OTel.
 - `selva-a2a`: Agent-to-Agent protocol package (AgentCard discovery, task exchange, SSE).
@@ -94,7 +94,7 @@ selva-office/
     skills/            Procedural skills registry (Python, `selva_skills`)
     tools/             Built-in tool library (Python, `selva_tools`)
     workflows/         YAML→LangGraph compiler (Python, `selva_workflows`)
-    memory/            Per-agent FAISS + Experience/Reflexion (Python)
+    memory/            Per-agent pgvector memory + Experience/Reflexion (Python)
     calendar/          Google + Microsoft adapters (Python)
     a2a/               Agent-to-Agent protocol (Python)
     sdk/               Python SDK + `selva` CLI
@@ -130,6 +130,7 @@ These ports do not conflict with Janua (4100-4104) or Enclii (4200-4204).
 
 ## Documentation
 
+- [Commercial GA Remediation Plan](docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md) — no-go gates and evidence checklist toward full commercial GA
 - [Autonomous Operations Program](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md) — north star (Phases 0–6)
 - [Phase 0 Remediation Execution Plan (2026-06-04)](docs/REMEDIATION_EXECUTION_PLAN_2026-06-04.md) — ROI-prioritized tactical execution log
 - [Operator Backlog](docs/OPERATOR_BACKLOG.md) — human-gated items

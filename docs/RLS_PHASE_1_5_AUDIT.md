@@ -114,7 +114,7 @@ follow-up PR.
 
 | Path | Sets var? | Tables touched | After tightening |
 |---|---|---|---|
-| `apps/workers/selva_workers/__main__.py` startup | no Postgres at all — workers use Redis Streams + HTTP back to nexus-api | none directly | Safe. Workers never touch Postgres directly. |
+| Worker entrypoint startup | no Postgres at all — workers use Redis Streams + HTTP back to nexus-api | none directly | Safe. Workers never touch Postgres directly. |
 | `_cleanup_stale_worktrees` | filesystem only | none | Safe. |
 | `_fetch_agent_skills` global cache | calls `GET /api/v1/agents/{id}` over HTTP with `X-Selva-Tenant-Org: <org_id>` (centralized via `auth.py:get_worker_auth_headers`) | `agents` (read) via nexus-api | Safe — nexus-api scopes by header-derived `org_id`. The header MUST be set; missing header → `org_id="platform"` per `auth.py:155-160`, and the agent row is unlikely to be in the platform org. **This is correct strict behaviour** — silent miss is a bug we want surfaced. |
 | `task_status.py`, `event_emitter.py`, `interrupt_handler.py`, `learning.py` | all call nexus-api over HTTP with `X-Selva-Tenant-Org` header | various TENANT tables (writes via API) | Safe. |

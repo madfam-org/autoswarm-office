@@ -318,17 +318,7 @@ class ModelRouter:
         monthly caps stay accurate.  Default OFF — operators flip the
         flag in production after the first smoke pass.
         """
-        gate, scope = self._resolve_gate_and_scope(request)
-        if gate is not None and scope is not None:
-            decision = await gate.check(
-                scope,
-                estimated_tokens=request.policy.max_tokens,
-                estimated_cost_usd=0.0,
-            )
-            if not decision.allowed:
-                from madfam_budget_gate import BudgetExhausted  # local import
-
-                raise BudgetExhausted(decision.reason, decision.retry_after_seconds)
+        gate, scope = await self._check_budget_preflight(request)
 
         response = await self._complete_inner(request)
 
@@ -354,6 +344,34 @@ class ModelRouter:
 
         return response
 
+    async def _check_budget_preflight(self, request: InferenceRequest) -> tuple[Any, Any]:
+        """Run the opt-in budget gate before a provider call."""
+        gate, scope = self._resolve_gate_and_scope(request)
+        if gate is not None and scope is not None:
+            decision = await gate.check(
+                scope,
+                estimated_tokens=request.policy.max_tokens,
+                estimated_cost_usd=0.0,
+            )
+            if not decision.allowed:
+                from madfam_budget_gate import BudgetExhausted  # local import
+
+                raise BudgetExhausted(decision.reason, decision.retry_after_seconds)
+        return gate, scope
+
+    def _apply_prompt_cache_breakpoints(
+        self,
+        request: InferenceRequest,
+        provider: InferenceProvider,
+    ) -> None:
+        provider_name = type(provider).__name__.lower().replace("provider", "")
+        new_messages, _system_with_cache = _cache_manager.apply_cache_breakpoints(
+            request.messages,
+            system_prompt=request.system_prompt or "",
+            provider=provider_name,
+        )
+        request.messages = new_messages
+
     async def _complete_inner(self, request: InferenceRequest) -> InferenceResponse:
         provider = self._select_provider(request)
 
@@ -366,13 +384,7 @@ class ModelRouter:
         # cache breakpoints from the system prompt via ``_cache_manager``
         # directly. This also means the cache logic is idempotent if the
         # router is called twice on the same request.
-        provider_name = type(provider).__name__.lower().replace("provider", "")
-        new_messages, _system_with_cache = _cache_manager.apply_cache_breakpoints(
-            request.messages,
-            system_prompt=request.system_prompt or "",
-            provider=provider_name,
-        )
-        request.messages = new_messages
+        self._apply_prompt_cache_breakpoints(request, provider)
 
         # Try primary provider with 1 retry — but only retry when the
         # failure is fallback-eligible. Hard-failures (401/422/etc.) are
@@ -456,7 +468,59 @@ class ModelRouter:
         return self._budget_gate, scope
 
     async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
-        """Route the request to the appropriate provider and stream the response."""
+        """Route the request and stream the response.
+
+        Streaming applies the same budget preflight, prompt-cache preparation,
+        and provider fallback classification as ``complete()``. It only falls
+        back before any chunk is emitted; once a provider has started streaming,
+        switching vendors would splice two model responses into one output.
+        Usage is not recorded here because provider stream chunks do not carry
+        normalized token accounting.
+        """
+        await self._check_budget_preflight(request)
         provider = self._select_provider(request)
-        async for chunk in provider.stream(request):
-            yield chunk
+        self._apply_prompt_cache_breakpoints(request, provider)
+
+        emitted_any = False
+        last_exc: Exception | None = None
+        try:
+            async for chunk in provider.stream(request):
+                emitted_any = True
+                yield chunk
+            return
+        except Exception as exc:
+            last_exc = exc
+            eligible = _is_fallback_eligible(exc)
+            logger.warning(
+                "Streaming provider %s failed (emitted_any=%s, fallback_eligible=%s): %s",
+                type(provider).__name__,
+                emitted_any,
+                eligible,
+                exc,
+            )
+            if emitted_any or not eligible:
+                raise
+
+        for name in self._get_fallback_candidates(request, exclude=provider):
+            fallback = self._providers[name]
+            emitted_any = False
+            try:
+                logger.info("Falling back streaming inference to provider: %s", name)
+                async for chunk in fallback.stream(request):
+                    emitted_any = True
+                    yield chunk
+                return
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "Streaming fallback provider %s failed "
+                    "(emitted_any=%s, fallback_eligible=%s): %s",
+                    name,
+                    emitted_any,
+                    _is_fallback_eligible(exc),
+                    exc,
+                )
+                if emitted_any:
+                    raise
+
+        raise RuntimeError(f"All streaming providers failed for request. Last error: {last_exc}")

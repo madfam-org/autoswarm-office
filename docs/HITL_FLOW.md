@@ -35,7 +35,7 @@ per-organization or per-department.
 ### Permission Enforcement in Graph Nodes
 
 The permission engine is wired into graph execution nodes via the
-`check_permission()` helper in `apps/workers/selva_workers/graphs/base.py`:
+worker graph `check_permission()` helper:
 
 - **Coding graph `implement()`**: Checks `file_write` before writing files to the
   worktree. Returns `status: "blocked"` on DENY.

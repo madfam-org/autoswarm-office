@@ -59,7 +59,7 @@ class MemoryManager:
         Returns a formatted string of relevant memory entries.
         """
         store = self.get_store(agent_id)
-        if store.count == 0:
+        if await store.get_count() == 0:
             return ""
 
         entries = await store.search(query, top_k=top_k)

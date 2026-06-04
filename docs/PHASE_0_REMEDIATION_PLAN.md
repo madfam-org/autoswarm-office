@@ -1,8 +1,10 @@
 # Phase 0 Remediation & Implementation Plan (2026-Q2)
 
-> **Status:** Accepted (2026-05-30)  
-> **Owner:** Selva engineering + MADFAM platform operator  
+> **Status:** Accepted (2026-05-30)
+> **Owner:** Selva engineering + MADFAM platform operator
 > **Canonical for:** What to build next in `selva-office`, what requires operator/vendor action, and how it gates the [Autonomous Operations Program](./AUTONOMOUS_OPERATIONS_PROGRAM.md).
+> **Commercial GA overlay:** [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)
+> adds the no-go gates and immediate correctness lane toward full commercial GA.
 
 ---
 
@@ -10,15 +12,19 @@
 
 Phase 2 **campaign engineering is shipped** (#179): Tulana import → campaign graph → HITL social → Phynd handoff → Tulana buyer-signal, plus the office-ui Campaign Dashboard. Staging proves the **API loop green** via `./scripts/verify-campaign-loop.sh --staging`.
 
-**North-star progress is blocked on Phase 0**, not Phase 2 code. The remaining work splits into three streams:
+**North-star progress is blocked on Phase 0**, not Phase 2 code. The remaining
+work splits into four streams after the 2026-06-04 codebase ingestion:
 
 | Stream | Horizon | Blocks |
 |--------|---------|--------|
+| **D — Commercial-GA correctness** | 0–5 days | Tenant-safe service calls, dispatch contract correctness, placeholder-free live paths |
 | **A — Observability** | 3–5 days after vendor creds | SLO alerts, incident response, load-test trace correlation |
 | **B — Billing + revenue proof** | 1–2 weeks | Live tier enforcement, Phase 1 gate, prod promote confidence |
 | **C — Resilience calibration** | 1 week engineering + 1 drill | Data-driven `MAX_CONCURRENT_TASKS`, dispatch limits, DR evidence |
 
-Until Stream A+B+C complete, **do not promote prod** on campaign features alone. PP.5 cutover requires Phase 0 exit gates in [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) § Phase 0.
+Until Stream D+A+B+C complete, **do not promote prod** on campaign features
+alone. PP.5 cutover requires Phase 0 exit gates in
+[AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) § Phase 0.
 
 ### 2026-06-04 readiness readback (MADFAM tenant slice + commercial GA)
 
@@ -36,6 +42,7 @@ For tactical sequencing and day-by-day status, track [docs/REMEDIATION_EXECUTION
 | Revenue correctness | Billing tier and attribution can still drift silently | `Dhanam → Selva` mapping reconciliation, webhook replay tests, attributed paid conversion |
 | Load/resilience calibration | Queue sizing and capacity limits still guessed | `Run 4b` threshold pass, calibrated `MAX_CONCURRENT_TASKS`, `dispatch_rate_limit`, DR drill RTO logged |
 | Cross-service governance | Manual audit model is being replaced | `rfcs/0019`, RFC 0018 Phase D, tenancy and residency RFC follow-on sign-off |
+| Cross-service correctness | Service-token calls and gateway rules can still drift from tenant/API contracts | Gateway + Colyseus tenant headers, graph-type contract tests, live placeholder cleanup |
 
 
 ---
@@ -73,13 +80,14 @@ For tactical sequencing and day-by-day status, track [docs/REMEDIATION_EXECUTION
 
 | ID | Item | Owner | Status | Next action |
 |----|------|-------|--------|-------------|
-| 0.1 | OTel exporter | Operator + Enclii | **Open** | Provision Grafana Cloud → `./scripts/bootstrap-staging-observability.sh` → prod mirror |
-| 0.2 | Sentry DSNs + source maps | Operator + CI | **Open** | 5 projects + `SENTRY_AUTH_TOKEN` in office-ui CI |
-| 0.3 | Dhanam price→tier + prod webhook | Operator (Dhanam/Stripe) | **Partial** | Map Stripe prices in Dhanam; prod `PRODUCT_WEBHOOK_URLS`; fix secret drift |
-| 0.4 | k6 calibration pass | Engineering + ops | **Partial** | Run 4 done (80.9% dispatch; thresholds fail) — **Run 4b** at `nexus-api` replicas=2 — [SESSION_2026-05-30_PHASE0_RUN4.md](./SESSION_2026-05-30_PHASE0_RUN4.md) |
-| 0.5 | Backup/restore drill | Operator | **Open** | `make db-backup` → restore staging → record RTO/RPO in [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) |
+| 0.1 | OTel exporter | Operator + Enclii | **Partial** | Secret refs + deterministic trace verifier shipped; provision Grafana Cloud → `./scripts/bootstrap-staging-observability.sh` → `./scripts/verify-observability-trace.sh --require-trace` |
+| 0.2 | Sentry DSNs + source maps | Operator + CI | **Partial** | Repo source-map upload wiring is done; create Sentry projects/DSNs, set GitHub `SENTRY_AUTH_TOKEN` + `SENTRY_ORG`, then capture a synthetic staging error |
+| 0.3 | Dhanam price→tier + prod webhook | Operator (Dhanam/Stripe) | **Partial** | Strict verifier shipped; map Stripe prices in Dhanam, set `PRODUCT_WEBHOOK_URLS`, then `./scripts/verify-dhanam-price-tier-map.sh --staging --require-all` |
+| 0.4 | k6 calibration pass | Engineering + ops | **Partial** | Run 4b overlay/preflight shipped; converge `infra/k8s/overlays/staging-load`, pass `./scripts/verify-staging-load-run4b-preflight.sh --require-live`, then re-run calibration |
+| 0.5 | Backup/restore drill | Operator | **Partial** | Guarded drill wrapper/evidence verifier shipped; execute against a clean named staging target and record RTO/RPO in [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) |
 | 0.6 | Staging completion | Operator | **Partial** | Janua staging OAuth client; optional masked DB refresh (PP.6) |
-| 0.7 | Secret rotation calendar | Operator | **Open** | Schedule Q3 2026-07-07 per [SECRET_ROTATION_POLICY.md](./SECRET_ROTATION_POLICY.md) |
+| 0.7 | Secret rotation calendar | Operator | **Partial** | Repo schedule/verifier shipped for Q3 2026-07-07; operator must confirm external calendar event and later attach execution evidence |
+| 0.8 | Commercial-GA correctness | Engineering | ✅ Implemented/documented | GA-001..GA-008 closed at repo level; see [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md) and [CI_TEST_SCOPE.md](./CI_TEST_SCOPE.md) |
 
 ### Phase 1 (after Phase 0 gate)
 
@@ -110,11 +118,26 @@ For tactical sequencing and day-by-day status, track [docs/REMEDIATION_EXECUTION
 | Dhanam `PRODUCT_WEBHOOK_URLS` drift | `scripts/reconcile-dhanam-selva-webhook.sh` | Dhanam/Enclii durable secret merge |
 | Staging `DATABASE_ADMIN_URL` | Break-glass only; drain script marks 0 DB rows | Enclii env for `app_admin` role on staging |
 | Staging workers `NEXUS_API_URL` | Fixed in `patch-workers.yaml` (2026-05-30) | Enclii env overlay should override ConfigMap prod URL |
-| Staging `nexus-api` replica drift | Manual `kubectl apply -k overlays/staging` | Argo sync policy / HPA pin review |
+| Staging `nexus-api` replica drift for Run 4b | Temporary `infra/k8s/overlays/staging-load` + live preflight | Enclii/Argo load-test mode that applies and reverts the scale overlay |
 
 ---
 
-## Implementation schedule (4 sprints)
+## Implementation schedule (4 sprints + Wave 0)
+
+### Wave 0 — Commercial-GA correctness hardening (0–5 days)
+
+**Goal:** remove correctness no-go items before broad tenant GA work.
+
+| Item | Acceptance |
+|------|------------|
+| Gateway tenant header | Auto-dispatch worker-token calls include `X-Selva-Tenant-Org`; tests prove no unintended `platform` fallback |
+| Gateway graph contract | Configured gateway `graphType` values all match `DispatchRequest.graph_type` or real worker graph support is added |
+| Colyseus tenant header | Department/agent sync carries room org context, matching chat persistence behavior |
+| Inference streaming safety | Streaming has budget/fallback parity or an explicit tested no-fallback contract |
+| Live placeholder cleanup | Campaign email scheduling cannot send to placeholder recipients on live tenants |
+| Approval data shape | Approval queue renders real agent names or reliable resolved names |
+| Memory store stubs | Async count/audit replaces compatibility stubs where callers rely on them |
+| CI scope clarity | Main CI coverage of app/package tests is explicit and owned |
 
 ### Sprint 0 — Observability + billing durability (Week 1)
 
@@ -122,16 +145,20 @@ For tactical sequencing and day-by-day status, track [docs/REMEDIATION_EXECUTION
 
 | Day | Engineering (`selva-office`) | Operator / sibling |
 |-----|------------------------------|-------------------|
-| 1–2 | Wire office-ui Sentry source-map upload in CI (when `SENTRY_AUTH_TOKEN` set) | Create Grafana Cloud + Sentry projects; run bootstrap script on staging |
-| 2–3 | Add `scripts/verify-observability-trace.sh` — synthetic dispatch + OTel span check | Verify trace in Grafana; synthetic Sentry error on staging |
-| 3–4 | Investigate Dhanam secret drift; document root cause in this doc § Enclii gaps | Map Stripe price IDs in Dhanam catalog; `./scripts/verify-dhanam-price-tier-map.sh --staging` → OK |
+| 1–2 | ✅ Wire office-ui Sentry source-map upload in CI (activates when `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` are set) | Create Grafana Cloud + Sentry projects; run bootstrap script on staging |
+| 2–3 | ✅ Harden `scripts/verify-observability-trace.sh` — synthetic dispatch with known W3C trace ID + optional Tempo/Grafana API polling | Run with read-only Tempo/Grafana query credentials; synthetic Sentry error on staging |
+| 3–4 | ✅ Harden Dhanam price-tier/webhook verifier to fail when required coverage is incomplete | Map Stripe price IDs in Dhanam catalog; `./scripts/verify-dhanam-price-tier-map.sh --staging --require-all` → OK |
 | 4–5 | Prod observability secret + staging parity checklist | Set prod `PRODUCT_WEBHOOK_URLS`; align prod `DHANAM_WEBHOOK_SECRET` |
 
-**Exit:** `./scripts/verify-staging-observability.sh` → OK (not SKIP); Dhanam price-tier verify → OK.
+**Exit:** `./scripts/verify-staging-observability.sh` → OK (not SKIP);
+`./scripts/verify-observability-trace.sh --require-trace` → OK with
+read-only Tempo/Grafana query credentials;
+`./scripts/verify-dhanam-price-tier-map.sh --staging --require-all` → OK;
+Dhanam billing path verify → OK.
 
 ---
 
-### Sprint 1 — Load calibration Run 4 + DR (Week 2)
+### Sprint 1 — Load calibration Run 4b + DR (Week 2)
 
 **Goal:** Stream C — defensible concurrency numbers + DR evidence.
 
@@ -146,18 +173,27 @@ For tactical sequencing and day-by-day status, track [docs/REMEDIATION_EXECUTION
 
 **Track B2 — API scale (ops, ~1 day)**
 
-1. Patch staging `nexus-api` replicas → 2 in `patch-nexus-api.yaml` (stateless — safe).
-2. Re-run full `concurrent-100-swarmtasks.js` as Run 4b.
+1. Apply the temporary load-test overlay: `kubectl apply -k infra/k8s/overlays/staging-load`.
+2. Verify live convergence: `./scripts/verify-staging-load-run4b-preflight.sh --require-live`.
+3. Re-run calibration via `./scripts/run-staging-load-calibration.sh`.
+4. Revert to normal staging guardrails after the run: `kubectl apply -k infra/k8s/overlays/staging`.
 
 **DR drill (operator, ~1 day)**
 
-1. `make db-backup` from prod break-glass path.
-2. Restore into staging isolated DB (or PP.6 masked refresh when available).
-3. Record measured RTO/RPO in [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) § Drill log.
+1. Run `./scripts/run-db-restore-drill.sh --preflight` with source/target env
+   variables set and confirm the target is a clean non-production database.
+2. Execute `DR_DRILL_EXECUTE=yes ./scripts/run-db-restore-drill.sh --execute`.
+3. Verify `./scripts/verify-dr-drill-evidence.sh`.
+4. Copy measured RTO/RPO into [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) § Drill log.
 
 **Exit:** Run 4b passes hard thresholds in [LOAD_TEST_2026-Q2.md](./LOAD_TEST_2026-Q2.md); DR drill row filled.
 
-**Run 4 status (2026-05-30):** B1 complete; B2 partial (kustomize has replicas=2; cluster drifted to 1 during run). See [SESSION_2026-05-30_PHASE0_RUN4.md](./SESSION_2026-05-30_PHASE0_RUN4.md).
+**Run 4 status (2026-06-04):** B1 complete. B2 repo guardrails now exist:
+`infra/k8s/overlays/staging-load` renders `nexus-api` replicas/HPA at 2 and
+`./scripts/verify-staging-load-run4b-preflight.sh` blocks calibration unless
+the live cluster has converged. Threshold evidence is still pending a named
+staging run. Historical Run 4 details:
+[SESSION_2026-05-30_PHASE0_RUN4.md](./SESSION_2026-05-30_PHASE0_RUN4.md).
 
 ---
 
@@ -183,7 +219,7 @@ For tactical sequencing and day-by-day status, track [docs/REMEDIATION_EXECUTION
 | Step | Action |
 |------|--------|
 | 1 | Manual UI soak: import Tulana pack → Campaigns dashboard → HITL → handoff → feedback |
-| 2 | Schedule Q3 secret rotation + SLO review on ops calendar |
+| 2 | Confirm Q3 secret rotation external calendar event + schedule SLO review |
 | 3 | Kickoff `epic/phygital-graph` — scaffold `phygital.py` graph shell + quote-truth gate tests |
 | 4 | Begin RFC 0019 operator cost conversation (parallel, Tier 5) |
 
@@ -195,15 +231,23 @@ Priority-ordered PR-sized items:
 
 | # | Epic | Deliverable | Phase |
 |---|------|-------------|-------|
-| E1 | `epic/ops-foundation` | `calibration` graph + k6 scenario + Run 4 script | 0.4 |
+| E1 | `epic/ops-foundation` | `calibration` graph + k6 scenario + Run 4b script | 0.4 |
 | E2 | `epic/ops-foundation` | `worker_in_flight` / queue depth accuracy in health metrics | 0.4 |
-| E3 | `epic/ops-foundation` | Staging `nexus-api` replicas=2 patch | 0.4 |
+| E3 | `epic/ops-foundation` | Staging-load overlay + Run 4b live preflight for `nexus-api` replicas=2 | 0.4 |
 | E4 | `epic/ops-foundation` | `verify-observability-trace.sh` | 0.1 |
 | E5 | `epic/ops-foundation` | office-ui Sentry source maps in CI | 0.2 |
 | E6 | `epic/ops-foundation` | Enclii staging migration Job RFC draft → internal-devops | 0.6 |
-| E7 | `epic/ops-foundation` | Staging `DATABASE_ADMIN_URL` in secrets template + drain script fix | 0.5 |
+| E7 | `epic/ops-foundation` | Guarded DB restore drill wrapper + strict evidence verifier | 0.5 |
 | E8 | `epic/revenue-loop-live` | Attribution integration tests (utm → webhook → tier) | 1.3 |
 | E9 | `epic/phygital-graph` | `phygital.py` LangGraph scaffold | 3.1 |
+| E10 | `epic/commercial-ga-correctness` | Gateway tenant header propagation + tests | 0.8 |
+| E11 | `epic/commercial-ga-correctness` | Gateway graph-type contract test/remap | 0.8 |
+| E12 | `epic/commercial-ga-correctness` | Colyseus department sync tenant header + tests | 0.8 |
+| E13 | `epic/commercial-ga-correctness` | Inference streaming budget/fallback parity or explicit tested contract | 0.8 |
+| E14 | `epic/commercial-ga-correctness` | Live campaign scheduling recipient selection/no placeholder sends | 0.8 |
+| E15 | `epic/commercial-ga-correctness` | Approval queue real agent-name data path | 0.8 |
+| E16 | `epic/commercial-ga-correctness` | Memory store async count/stub audit | 0.8 |
+| E17 | `epic/commercial-ga-correctness` | CI app/package test scope audit | 0.8 |
 
 ---
 
@@ -214,11 +258,16 @@ Priority-ordered PR-sized items:
 ./scripts/verify-doc-truth.sh
 ./scripts/staging-smoke.sh
 ./scripts/verify-staging-observability.sh          # must OK, not SKIP
+./scripts/verify-observability-trace.sh --require-trace # must find generated TRACE_ID in Tempo
 ./scripts/verify-dhanam-billing-path.sh --staging
-./scripts/verify-dhanam-price-tier-map.sh --staging # must OK, not SKIP
+./scripts/verify-dhanam-price-tier-map.sh --staging --require-all # must OK, not SKIP
+./scripts/verify-staging-load-run4b-preflight.sh --require-live # must OK after applying staging-load overlay
+./scripts/verify-dr-drill-evidence.sh           # latest docs/dr-drills/*.md must be PASS
+./scripts/verify-secret-rotation-schedule.sh    # Q3 rotation window/targets scheduled
 env -u AUTH_TOKEN ./scripts/verify-campaign-loop.sh --staging
-./scripts/run-staging-load-calibration.sh          # Run 4 — thresholds pass
+./scripts/run-staging-load-calibration.sh          # Run 4b — thresholds pass
 # DR drill evidence row filled in docs/DISASTER_RECOVERY.md
+# Phase 0.8 evidence linked from COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md
 ```
 
 ---
@@ -228,6 +277,7 @@ env -u AUTH_TOKEN ./scripts/verify-campaign-loop.sh --staging
 | Doc | Role |
 |-----|------|
 | **This doc** | Sprint plan + engineering backlog + exit checklist |
+| [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md) | Commercial GA no-go gates + evidence checklist |
 | [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) | Human-gated items with owners |
 | [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) | North star phases + gates |
 | [ROADMAP.md](../ROADMAP.md) | Product scorecard + historical milestones |
@@ -242,4 +292,12 @@ env -u AUTH_TOKEN ./scripts/verify-campaign-loop.sh --staging
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | Closed Phase 0.8 at repo level: GA-001..GA-008 implemented/tested or explicitly documented; operational evidence gates remain separate |
+| 2026-06-04 | Added guarded DB restore drill wrapper, DR evidence directory, and strict evidence verifier for Phase 0.5 |
+| 2026-06-04 | Added Q3 secret rotation schedule record and verifier for Phase 0.7 |
+| 2026-06-04 | Added temporary `staging-load` overlay and Run 4b preflight so calibration cannot run against a one-replica `nexus-api` cluster without an explicit bypass |
+| 2026-06-04 | Hardened `verify-observability-trace.sh` to dispatch with a generated W3C trace ID and poll Tempo/Grafana for that exact trace when read-only query credentials are provided |
+| 2026-06-04 | Hardened `verify-dhanam-price-tier-map.sh` with canonical tier coverage checks and strict `--require-map` / `--require-webhook` / `--require-all` modes |
+| 2026-06-04 | Implemented office-ui Sentry instrumentation and CI/Docker source-map upload wiring; 0.2 remains operator-gated on real Sentry DSNs/auth token and synthetic capture evidence |
+| 2026-06-04 | Added commercial-GA correctness Stream D, Phase 0.8, Wave 0, and GA-001..GA-008 backlog mapping |
 | 2026-05-30 | Initial plan: Phase 2 done; Phase 0 remediation sequenced in 4 sprints; Run 4 tracks; Enclii gaps registry |

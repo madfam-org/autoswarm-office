@@ -197,7 +197,7 @@ Treat it as a P2 investigation, not an automatic incident:
      correctly so `swarm_audience=unbound` shows up in the log. Investigate
      `selva_permissions.audience.resolve_audience()` and the
      `with_audience()` binding at task dispatch in
-     `apps/workers/selva_workers/__main__.py`. Fix, ship, restart soak.
+     the worker entrypoint. Fix, ship, restart soak.
 
 Do NOT flip `AUDIENCE_FILTER_ENABLED=true` until the offending case is
 either resolved or accepted as a positive signal.
@@ -232,7 +232,7 @@ The flag must flip on **workers and nexus-api in the same release** because
 the three enforcement points span both processes:
 
 - Tool execute: workers (`with_audience()` is bound at task dispatch in
-  `selva_workers/__main__.py`).
+  the worker entrypoint).
 - Skill activate: workers + nexus-api (both call `SkillRegistry.activate()`).
 - Dispatch endpoint: nexus-api only.
 

@@ -7147,6 +7147,8 @@ export interface components {
             id: string;
             /** Agent Id */
             agent_id: string;
+            /** Agent Name */
+            agent_name?: string | null;
             /** Action Category */
             action_category: string;
             /** Action Type */

@@ -175,6 +175,14 @@ jobs:
             NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true
             NEXT_PUBLIC_APP_URL=https://app.selva.town
             NEXT_PUBLIC_MARKETING_URL=https://selva.town
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.SENTRY_DSN_OFFICE_UI || '' }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
+            NEXT_PUBLIC_SENTRY_RELEASE=${{ github.sha }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG || secrets.SENTRY_ORG || '' }}
+            SENTRY_PROJECT=${{ vars.SENTRY_OFFICE_UI_PROJECT || 'selva-office-ui' }}
+            SENTRY_RELEASE=${{ github.sha }}
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN || '' }}
           tags: |
             ${{ env.REGISTRY }}/${{ matrix.image }}:${{ steps.meta.outputs.sha }}
             ${{ env.REGISTRY }}/${{ matrix.image }}:latest

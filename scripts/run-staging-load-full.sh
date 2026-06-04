@@ -48,12 +48,6 @@ if ! command -v k6 >/dev/null 2>&1; then
   exit 1
 fi
 
-HDR_AUTH=(-H "Authorization: Bearer ${TOKEN}")
-HDR_TENANT=()
-if [[ -n "$TENANT_ORG" ]]; then
-  HDR_TENANT=(-H "X-Selva-Tenant-Org: ${TENANT_ORG}")
-fi
-
 echo "== Staging load calibration preflight (${BASE_URL}) =="
 
 if command -v kubectl >/dev/null 2>&1; then

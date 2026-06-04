@@ -1,7 +1,7 @@
 [project]
 name = "selva-memory"
 version = "0.1.0"
-description = "Per-agent semantic memory with FAISS vector search"
+description = "Per-agent semantic memory with pgvector search"
 requires-python = ">=3.12"
 dependencies = [
   "pydantic>=2.10.5",

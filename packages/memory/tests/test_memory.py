@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+import uuid
 
 import pytest
 
@@ -20,7 +21,11 @@ def embedder() -> EmbeddingProvider:
 
 @pytest.fixture
 def store(embedder: EmbeddingProvider) -> MemoryStore:
-    return MemoryStore(agent_id="test-agent", embedding_provider=embedder, dim=64)
+    return MemoryStore(
+        agent_id=f"test-agent-{uuid.uuid4()}",
+        embedding_provider=embedder,
+        dim=64,
+    )
 
 
 class TestMemoryStore:
@@ -40,7 +45,7 @@ class TestMemoryStore:
             "Important finding", metadata={"source": "research", "priority": "high"}
         )
         assert entry_id
-        entries = store.list_entries(filter_metadata={"source": "research"})
+        entries = await store.list_entries(filter_metadata={"source": "research"})
         assert len(entries) == 1
         assert entries[0].metadata["priority"] == "high"
 
@@ -48,11 +53,11 @@ class TestMemoryStore:
     async def test_delete_entries(self, store: MemoryStore) -> None:
         id1 = await store.store("entry 1")
         await store.store("entry 2")
-        assert store.count == 2
+        assert await store.get_count() == 2
 
-        deleted = store.delete([id1])
+        deleted = await store.delete([id1])
         assert deleted == 1
-        assert store.count == 1
+        assert await store.get_count() == 1
 
     @pytest.mark.asyncio
     async def test_empty_search(self, store: MemoryStore) -> None:
@@ -62,25 +67,26 @@ class TestMemoryStore:
     @pytest.mark.asyncio
     async def test_persistence(self, embedder: EmbeddingProvider) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
+            agent_id = f"persist-test-{uuid.uuid4()}"
             # Store some memories
             store1 = MemoryStore(
-                agent_id="persist-test",
+                agent_id=agent_id,
                 embedding_provider=embedder,
                 dim=64,
                 persist_dir=tmpdir,
             )
             await store1.store("persistent memory 1")
             await store1.store("persistent memory 2")
-            assert store1.count == 2
+            assert await store1.get_count() == 2
 
             # Load from disk
             store2 = MemoryStore(
-                agent_id="persist-test",
+                agent_id=agent_id,
                 embedding_provider=embedder,
                 dim=64,
                 persist_dir=tmpdir,
             )
-            assert store2.count == 2
+            assert await store2.get_count() == 2
 
 
 class TestMemoryManager:
@@ -93,24 +99,25 @@ class TestMemoryManager:
     @pytest.mark.asyncio
     async def test_store_and_retrieve_context(self, embedder: EmbeddingProvider) -> None:
         manager = MemoryManager(embedding_provider=embedder)
-        await manager.store_memory("agent-1", "The deployment failed due to OOM")
-        await manager.store_memory("agent-1", "Fixed by increasing memory limit to 4GB")
+        agent_id = f"agent-{uuid.uuid4()}"
+        await manager.store_memory(agent_id, "The deployment failed due to OOM")
+        await manager.store_memory(agent_id, "Fixed by increasing memory limit to 4GB")
 
-        context = await manager.get_relevant_context("agent-1", "deployment memory issue")
+        context = await manager.get_relevant_context(agent_id, "deployment memory issue")
         assert "Relevant Memories" in context
         assert len(context) > 0
 
     @pytest.mark.asyncio
     async def test_empty_context(self, embedder: EmbeddingProvider) -> None:
         manager = MemoryManager(embedding_provider=embedder)
-        context = await manager.get_relevant_context("new-agent", "anything")
+        context = await manager.get_relevant_context(f"new-agent-{uuid.uuid4()}", "anything")
         assert context == ""
 
 
 class TestExperienceStore:
     @pytest.mark.asyncio
     async def test_record_and_search(self, embedder: EmbeddingProvider) -> None:
-        store = ExperienceStore(role="coder", embedding_provider=embedder)
+        store = ExperienceStore(role=f"coder-{uuid.uuid4()}", embedding_provider=embedder)
         await store.record(
             ExperienceRecord(
                 task_pattern="Fix a null pointer exception in the auth module",
@@ -124,7 +131,7 @@ class TestExperienceStore:
 
     @pytest.mark.asyncio
     async def test_shortcuts(self, embedder: EmbeddingProvider) -> None:
-        store = ExperienceStore(role="reviewer", embedding_provider=embedder)
+        store = ExperienceStore(role=f"reviewer-{uuid.uuid4()}", embedding_provider=embedder)
         await store.record(
             ExperienceRecord(
                 task_pattern="Review PR for security vulnerabilities",
@@ -138,7 +145,7 @@ class TestExperienceStore:
 
     @pytest.mark.asyncio
     async def test_low_score_filtered(self, embedder: EmbeddingProvider) -> None:
-        store = ExperienceStore(role="coder", embedding_provider=embedder)
+        store = ExperienceStore(role=f"coder-{uuid.uuid4()}", embedding_provider=embedder)
         await store.record(
             ExperienceRecord(
                 task_pattern="Attempt to fix database migration",

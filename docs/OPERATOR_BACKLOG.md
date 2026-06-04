@@ -8,6 +8,9 @@
 > **Read this first** when picking the work back up. For the **full sprint schedule**
 > (4 weeks, engineering backlog, exit checklist), see
 > [docs/PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md).
+> For the **platform-wide commercial GA contract**, see
+> [docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)
+> before declaring any tenant lane generally available.
 > Then read [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)
 > for the full north-star plan (Phases 0–6), then
 > [ROADMAP.md](../ROADMAP.md) for product phase context and
@@ -53,21 +56,37 @@ Current ROI priority order to close this gap is aligned with this backlog:
 3. **Load calibration + DR evidence (Tier 3, items 5–6)** → safe scaling and recovery claims.
 4. **Cross-workstream hardening (Tiers 5+)** → multi-tenant evidence, residency, failover readiness.
 
+Commercial-GA correctness hardening (GA-001..GA-008) is now closed at repo
+level and tracked as Phase 0.8 evidence rather than an operator tier.
+
 Keep this as the default triage order when multiple items are unblocked.
 
 For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-06-04.md](./REMEDIATION_EXECUTION_PLAN_2026-06-04.md).
 
---- 
+### Engineering no-go items surfaced on 2026-06-04
+
+These are not operator-blocked and are now closed at repo level. Evidence lives
+in [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)
+and [CI_TEST_SCOPE.md](CI_TEST_SCOPE.md):
+
+- Gateway auto-dispatch includes `X-Selva-Tenant-Org` on worker-token calls.
+- Gateway auto-dispatch graph rules match API-supported `graph_type` values.
+- Colyseus department/agent sync carries room tenant context.
+- Live campaign scheduling no longer uses placeholder recipients.
+- Streaming inference, approval agent names, memory-store compatibility, and
+  CI test-scope clarity have explicit fixes or documentation.
+
+---
 
 ## Tier 1 — Blocks production observability (do first)
 
 ### 1. Wire OTel exporter (`OTEL_EXPORTER_OTLP_ENDPOINT`)
 
-- **Status (2026-05-30)**: K8s optional secret refs shipped on all 6
+- **Status (2026-06-04)**: K8s optional secret refs shipped on all 6
   Deployments (`infra/k8s/production/patches/observability-*.yaml`).
-  **Staging check:** `./scripts/verify-staging-observability.sh` (SKIP until
-  `selva-observability-secrets` exists in `selva-staging`).
-  Operator action remains: create secret + verify trace.
+  `./scripts/verify-observability-trace.sh` now dispatches with a generated
+  W3C trace ID and can poll a read-only Tempo/Grafana query endpoint for that
+  exact trace. Operator action remains: create secret + run trace proof.
 - **What**: Pick a backend, provision the endpoint URL + auth header,
   set the env var on every service in production K8s. Verify a trace
   flows end-to-end for one request path (e.g.,
@@ -78,8 +97,8 @@ For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-
   load-test runbook all become useful only once traces flow. PR #137
   wired the propagation; PR #129 + #139 wired the SLO definitions +
   rules; this is the missing link.
-- **Owner**: Operator decides vendor; engineer executes wiring (~1 day
-  after decision).
+- **Owner**: Operator decides/provisions vendor; engineering verifies the
+  trace proof with `./scripts/verify-observability-trace.sh --require-trace`.
 - **Unblocks**: Cross-service trace correlation, SLO dashboards going
   live, burn-rate alerts firing on real data.
 - **Cross-refs**:
@@ -90,19 +109,20 @@ For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-
 
 ### 2. Provision Sentry per-service DSNs
 
-- **Status (2026-05-30)**: Per-service optional `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
-  secret refs wired in the same observability patches. Operator creates DSN keys
-  in `selva-observability-secrets` per
+- **Status (2026-06-04)**: Per-service optional `SENTRY_DSN` /
+  `NEXT_PUBLIC_SENTRY_DSN` secret refs are wired, and office-ui source-map
+  upload is repo-complete behind `SENTRY_AUTH_TOKEN` + `SENTRY_ORG`.
+  Operator creates DSN keys in `selva-observability-secrets` per
   `infra/k8s/production/observability-secrets-template.yaml`.
-- **What**: Create 5 separate Sentry projects (nexus-api, workers,
-  gateway, colyseus, office-ui), grab the DSN for each, set the
-  per-service env var (`SENTRY_DSN`). Add source-map upload to the
-  office-ui CI build step. Trigger a synthetic `RuntimeError` in
+- **What**: Create separate Sentry projects (nexus-api, workers, gateway,
+  colyseus, office-ui, and admin if enabled), grab the DSN for each, set the
+  per-service env var (`SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`), set GitHub
+  source-map upload credentials, then trigger a synthetic `RuntimeError` in
   staging to verify capture.
 - **Why blocking**: Today `init_sentry()` runs in every service but
   the DSNs are unset, so errors don't flow. Production incident
   visibility is ~0 outside of K8s pod logs.
-- **Owner**: Operator decides plan; engineer wires up to ~1 day.
+- **Owner**: Operator decides/provisions plan; engineering verifies capture.
 - **Unblocks**: Production error capture; Sentry alerts; release
   health tracking.
 - **Cross-refs**:
@@ -116,11 +136,12 @@ For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-
 
 ### 3. Configure Dhanam price→tier map + Selva webhook
 
-- **Status (2026-05-30)**: **Selva + Dhanam staging fan-out wired** (reconcile is
-  idempotent — re-run if `PRODUCT_WEBHOOK_URLS` drifts empty). **Run 3 load test**
-  recorded in `docs/LOAD_TEST_2026-Q2.md` — thresholds failed; API single-replica
-  saturates at 100 VU before workers. **Remaining:** map Stripe price IDs → tiers
-  in Dhanam catalog (prod + staging checkout paths).
+- **Status (2026-06-04)**: **Selva + Dhanam staging fan-out wired** (reconcile is
+  idempotent — re-run if `PRODUCT_WEBHOOK_URLS` drifts empty). The verifier now
+  checks canonical tier coverage from `infra/pricing/selva-tiers.json` and can
+  fail hard with `--require-all`. **Remaining:** map Stripe price IDs → tiers
+  in Dhanam catalog (prod + staging checkout paths), then run
+  `./scripts/verify-dhanam-price-tier-map.sh --staging --require-all`.
 - **What**: In **Dhanam** (canonical Stripe/POS router), map production
   Stripe price IDs to `starter`, `professional`, `enterprise`. Point Dhanam
   billing webhooks at Selva
@@ -184,12 +205,17 @@ For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-
 
 ### 5c. k6 Run 4 — calibration graph + threshold pass (engineering)
 
-- **Status (2026-05-30 session)**: **Partial — Run 4 executed; Run 4b pending.**
+- **Status (2026-06-04)**: **Partial — repo guardrails shipped; live Run 4b pending.**
   - **Shipped:** `graph_type=calibration`, worker/API pipeline fixes (`NEXUS_API_URL`, events RLS),
-    queue-stats gauges, `./scripts/run-staging-load-calibration.sh`.
+    queue-stats gauges, `./scripts/run-staging-load-calibration.sh`,
+    `infra/k8s/overlays/staging-load`, and
+    `./scripts/verify-staging-load-run4b-preflight.sh`.
   - **Run 4:** 80.9% dispatch 2xx (vs 44% Run 3); **hard thresholds still fail** (p99 10s,
     queue_depth max 1209) — single `nexus-api` replica during run; Argo drift vs kustomize `replicas: 2`.
-  - **Next:** Run 4b after drain + enforced `nexus-api` replicas=2. Session log:
+  - **Next:** apply `kubectl apply -k infra/k8s/overlays/staging-load`,
+    pass `./scripts/verify-staging-load-run4b-preflight.sh --require-live`,
+    drain, run `./scripts/run-staging-load-calibration.sh`, then revert
+    `kubectl apply -k infra/k8s/overlays/staging`. Session log:
     [SESSION_2026-05-30_PHASE0_RUN4.md](SESSION_2026-05-30_PHASE0_RUN4.md).
 - **What**: Re-run `./scripts/run-staging-load-calibration.sh` until hard thresholds pass;
   optional `worker_in_flight` gauge accuracy follow-up.
@@ -213,7 +239,7 @@ For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-
   - [TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md](TULANA_SKU_CAMPAIGN_ORCHESTRATION_2026-05-29.md)
   - `./scripts/drain-staging-task-queue.sh` — break-glass Redis stream trim + consumer group reset (pre–load-test)
   - `./scripts/reconcile-dhanam-selva-webhook.sh` — wire Dhanam `PRODUCT_WEBHOOK_URLS` → Selva staging
-  - `./scripts/verify-dhanam-price-tier-map.sh` — check Dhanam Stripe price→tier keys (SKIP until catalog wired)
+  - `./scripts/verify-dhanam-price-tier-map.sh --staging --require-all` — strict GA gate for Dhanam price→tier + webhook fan-out coverage
   - `./scripts/bootstrap-staging-observability.sh` — create `selva-observability-secrets` (Tier 1)
 
 ### 3b. Deploy Tulana buyer-signal ingest route — **DONE (2026-05-30)**
@@ -227,10 +253,16 @@ For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-
 
 ### 6. Run backup/restore drill in staging
 
-- **What**: Take a fresh prod backup with `make db-backup`. Restore
-  it into a clean staging instance with `make db-restore`. Measure
-  RTO. Verify off-site/cross-region storage destination. Document RPO.
-  Schedule recurring monthly drill.
+- **Status (2026-06-04)**: **Repo guardrails shipped; live drill pending.**
+  `scripts/run-db-restore-drill.sh` preflights and executes the drill only
+  with `DR_DRILL_EXECUTE=yes`, a named non-production restore target, and
+  explicit source/target database URLs or an existing backup file. Evidence
+  lands in `docs/dr-drills/` and is checked by
+  `scripts/verify-dr-drill-evidence.sh`.
+- **What**: Take a fresh prod backup or a declared backup file, restore it
+  into a clean staging instance through the guarded wrapper, measure RTO, verify
+  off-site/cross-region storage destination, document RPO, and schedule
+  recurring monthly drill.
 - **Why blocking**: Today `Makefile` has the targets but no evidence
   of regular testing. The "what's our RTO if we lose the DB tomorrow"
   question is unanswered.
@@ -239,6 +271,10 @@ For a day-by-day execution checklist, see [docs/REMEDIATION_EXECUTION_PLAN_2026-
   evidence.
 - **Cross-refs**:
   - `Makefile` `db-backup` / `db-restore` / `db-verify-backup` targets
+  - `Makefile` `db-drill-preflight` / `db-drill` targets
+  - `scripts/run-db-restore-drill.sh`
+  - `scripts/verify-dr-drill-evidence.sh`
+  - `docs/dr-drills/`
   - `infra/k8s/production/backup-cronjob.yaml`
   - RFC 0021 §10 — failover RFC depends on backup evidence
 
@@ -261,10 +297,14 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
 
 ### 7. Schedule first quarterly secret rotation
 
-- **What**: Pick the first Tuesday of the next quarter (Q3 2026 →
-  2026-07-07 14:00 MX). Add to ops calendar with the runbook link.
-  Run `./scripts/rotate-secret.sh --all --namespace=selva` from
-  a workstation with `kubectl` access + bash 4+. Now safely includes
+- **Status (2026-06-04)**: **Repo schedule shipped; external calendar
+  confirmation pending.** The Q3 window is recorded in
+  `docs/secret-rotations/2026Q3-schedule.md` and verified by
+  `./scripts/verify-secret-rotation-schedule.sh`.
+- **What**: Confirm the external ops calendar event for Q3 2026 →
+  2026-07-07 14:00 America/Mexico_City with the runbook link. Run
+  `./scripts/rotate-secret.sh --all --namespace=selva` from a workstation
+  with `kubectl` access + bash 4+. Now safely includes
   `consent-ledger-signing` (PR #145 closed the §6 limitation).
 - **Why blocking**: Three production secrets (`WORKER_API_TOKEN`,
   `CONSENT_LEDGER_SIGNING_SECRET`, `COLYSEUS_SERVICE_TOKEN`) have
@@ -275,6 +315,8 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
   radius from any single-key compromise.
 - **Cross-refs**:
   - [docs/SECRET_ROTATION_POLICY.md](SECRET_ROTATION_POLICY.md)
+  - [docs/secret-rotations/2026Q3-schedule.md](secret-rotations/2026Q3-schedule.md)
+  - `scripts/verify-secret-rotation-schedule.sh`
   - `scripts/rotate-secret.sh` — atomic rotation tool
   - PR #138 (script + policy), PR #145 (per-period key tracking
     that made consent-ledger-signing safe to rotate)
@@ -360,6 +402,7 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
 | File | Purpose |
 |---|---|
 | [AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md) | **North star** — Phases 0–6 toward full autonomous digital ops |
+| [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md) | Commercial GA no-go gates, immediate hardening, evidence checklist |
 | [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) | **Sprint plan** — 4-week remediation + engineering backlog |
 | [ROADMAP.md](../ROADMAP.md) | Honest scorecard + product phases (F/E). Read after this doc. |
 | [CHANGELOG.md](../CHANGELOG.md) | What shipped. v2.3.0 entry covers today's work. |

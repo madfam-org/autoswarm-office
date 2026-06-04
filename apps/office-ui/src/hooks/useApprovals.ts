@@ -24,11 +24,6 @@ import { MAX_RECONNECT_DELAY_MS } from '@/lib/constants';
 // silently produced an object whose camelCase getters were all undefined,
 // which the components rendered as blank cells.
 //
-// `agent_name` is not in the wire shape — the domain interface kept it as
-// a UI-only field. We synthesize a short agent label from `agent_id` as a
-// best-effort fallback; the long-term fix is to either join Agent.name
-// server-side in the response model or look it up client-side.
-
 const URGENCY_VALUES = ['low', 'medium', 'high', 'critical'] as const;
 type Urgency = (typeof URGENCY_VALUES)[number];
 
@@ -39,12 +34,11 @@ function normalizeUrgency(raw: string): Urgency {
 }
 
 function approvalRequestFromWire(wire: WireApprovalRequest): ApprovalRequest {
+  const agentName = wire.agent_name?.trim() || wire.agent_id.slice(0, 8);
   return {
     id: wire.id,
     agentId: wire.agent_id,
-    // TODO(types): server doesn't return agent.name; render fallback. Either
-    // join in the response model or look up via /api/v1/agents on the client.
-    agentName: wire.agent_id.slice(0, 8),
+    agentName,
     actionCategory: wire.action_category as ActionCategory,
     actionType: wire.action_type,
     payload: wire.payload,

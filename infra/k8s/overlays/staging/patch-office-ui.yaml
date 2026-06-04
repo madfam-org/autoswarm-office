@@ -28,3 +28,7 @@ spec:
               value: "true"
             - name: NEXT_PUBLIC_APP_URL
               value: https://staging.selva.town
+            - name: SENTRY_ENVIRONMENT
+              value: staging
+            - name: NEXT_PUBLIC_SENTRY_ENVIRONMENT
+              value: staging

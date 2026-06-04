@@ -18,6 +18,25 @@ interface EnemyWaveEvent {
   compiledAt: string;
 }
 
+const SUPPORTED_DISPATCH_GRAPH_TYPES = new Set([
+  "sequential",
+  "parallel",
+  "coding",
+  "research",
+  "crm",
+  "custom",
+  "deployment",
+  "puppeteer",
+  "meeting",
+  "billing",
+  "accounting",
+  "sales",
+  "intelligence",
+  "operations",
+  "campaign",
+  "calibration",
+]);
+
 export class HeartbeatService {
   private readonly nexusApiUrl: string;
   private readonly cronExpression: string;
@@ -295,16 +314,41 @@ export class HeartbeatService {
     string,
     { graphType: string; skills: string[]; hitl: boolean }
   > = {
-    "github:pr_opened": { graphType: "review", skills: ["code-review"], hitl: false },
+    "github:pr_opened": { graphType: "coding", skills: ["code-review"], hitl: false },
+    "github:pr_review_requested": { graphType: "coding", skills: ["code-review"], hitl: false },
     "github:ci_failed": { graphType: "coding", skills: ["coding", "webapp-testing"], hitl: true },
+    "github:ci_failure": { graphType: "coding", skills: ["coding", "webapp-testing"], hitl: true },
     "github:issue_opened": { graphType: "research", skills: ["research"], hitl: false },
+    "github:escalation": { graphType: "operations", skills: ["ops"], hitl: true },
     "crm:hot_lead": { graphType: "crm", skills: ["crm-outreach"], hitl: false },
     "crm:high_intent_lead": { graphType: "crm", skills: ["crm-outreach"], hitl: false },
     "crm:lead_followup": { graphType: "crm", skills: ["crm-outreach"], hitl: false },
-    "crm:activity_overdue": { graphType: "support", skills: ["customer-support"], hitl: false },
-    "crm:support_ticket": { graphType: "support", skills: ["customer-support"], hitl: false },
+    "crm:activity_overdue": { graphType: "crm", skills: ["customer-support"], hitl: false },
+    "crm:support_ticket": { graphType: "crm", skills: ["customer-support"], hitl: false },
     "crm:campaign_due": { graphType: "research", skills: ["research", "doc-coauthoring"], hitl: false },
   };
+
+  private static resolveTenantOrg(event: ExternalEvent): string | null {
+    const payloadOrg =
+      event.payload.org_id ??
+      event.payload.orgId ??
+      event.payload.tenant_org_id ??
+      event.payload.tenantOrgId;
+    if (typeof payloadOrg === "string" && payloadOrg.trim()) {
+      return payloadOrg.trim();
+    }
+
+    const envOrg =
+      process.env.GATEWAY_TENANT_ORG_ID ??
+      process.env.TENANT_ORG ??
+      process.env.STAGING_TENANT_ORG ??
+      process.env.PLATFORM_ORG_ID;
+    if (envOrg?.trim()) {
+      return envOrg.trim();
+    }
+
+    return null;
+  }
 
   private async dispatch(waves: EnemyWaveEvent[]): Promise<void> {
     // 1. Send waves to WebSocket (existing behavior for UI)
@@ -355,6 +399,22 @@ export class HeartbeatService {
         const eventKey = `${event.source}:${event.type}`;
         const rule = HeartbeatService.AUTO_DISPATCH_RULES[eventKey];
         if (!rule) continue;
+        if (!SUPPORTED_DISPATCH_GRAPH_TYPES.has(rule.graphType)) {
+          this.logger.error(
+            { eventKey, graphType: rule.graphType },
+            "Auto-dispatch rule uses unsupported graph_type"
+          );
+          continue;
+        }
+
+        const tenantOrg = HeartbeatService.resolveTenantOrg(event);
+        if (!tenantOrg) {
+          this.logger.error(
+            { eventKey },
+            "Auto-dispatch skipped because no tenant org could be resolved"
+          );
+          continue;
+        }
 
         // Dedup: skip if this lead/activity was already dispatched in the last 24h
         const dedupId = String(event.payload?.lead_id || event.payload?.activity_id || "");
@@ -374,6 +434,7 @@ export class HeartbeatService {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
+              "X-Selva-Tenant-Org": tenantOrg,
             },
             body: JSON.stringify({
               description,

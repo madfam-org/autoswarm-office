@@ -163,6 +163,7 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
   private redisSubscriber: RedisClientType | null = null;
   private throttler = new MessageThrottler();
   private demoSimulator: DemoSimulator | null = null;
+  private roomOrgId: string | null = null;
 
   /**
    * Return the service-to-service auth token for nexus-api calls.
@@ -200,6 +201,27 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
       }
     }
     return { serviceToken: token, orgId };
+  }
+
+  private getServiceTenantOrg(): string | null {
+    return (
+      this.roomOrgId ??
+      process.env.COLYSEUS_TENANT_ORG_ID ??
+      process.env.PLATFORM_ORG_ID ??
+      null
+    );
+  }
+
+  private getServiceAuthHeaders(): Record<string, string> | null {
+    const token = this.getServiceToken();
+    const orgId = this.getServiceTenantOrg();
+    if (!token || !orgId) {
+      return null;
+    }
+    return {
+      Authorization: `Bearer ${token}`,
+      "X-Selva-Tenant-Org": orgId,
+    };
   }
 
   /**
@@ -250,6 +272,10 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
       options.nexusApiUrl ??
       process.env.NEXUS_API_URL ??
       this.nexusApiUrl;
+    this.roomOrgId =
+      process.env.COLYSEUS_TENANT_ORG_ID ??
+      process.env.PLATFORM_ORG_ID ??
+      this.roomOrgId;
 
     for (const dept of DEFAULT_DEPARTMENTS) {
       const department = new DepartmentSchema();
@@ -428,6 +454,12 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
     const isGuest = auth?.isGuest ?? false;
     const isDemoClient = auth?.isDemo ?? false;
     const playerName = auth?.name ?? options?.name ?? "Player";
+    if (!this.roomOrgId && auth?.orgId) {
+      this.roomOrgId = auth.orgId;
+      this.fetchAgentsWithRetry().catch((err) =>
+        logger.error({ err }, "Failed to fetch tenant agents after first join")
+      );
+    }
 
     logger.info(
       { sessionId: client.sessionId, isGuest, isDemo: isDemoClient, orgId: auth?.orgId },
@@ -523,6 +555,10 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
    */
   private async fetchAgentsWithRetry(): Promise<void> {
     if (this.demoSimulator) return; // Demo agents are populated by the simulator
+    if (!this.getServiceTenantOrg()) {
+      logger.warn("No tenant org available for agent sync; skipping fetch");
+      return;
+    }
     const maxAttempts = 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -549,7 +585,11 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
   }
 
   private async fetchAgentsFromApi(): Promise<void> {
-    const token = this.getServiceToken();
+    const headers = this.getServiceAuthHeaders();
+    if (!headers) {
+      logger.warn("Missing service auth headers for tenant-scoped agent sync");
+      return;
+    }
     // Build a slug->colyseus-dept map for matching API departments to state.
     const slugToDept = new Map<string, { stateKey: string; dept: DepartmentSchema }>();
     this.state.departments.forEach((dept: DepartmentSchema, key: string) => {
@@ -561,7 +601,7 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
     try {
       const listResp = await fetch(
         `${this.nexusApiUrl}/api/v1/departments/`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers }
       );
       if (!listResp.ok) {
         logger.error(
@@ -585,7 +625,7 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
       try {
         const resp = await fetch(
           `${this.nexusApiUrl}/api/v1/departments/${apiDept.id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers }
         );
         if (!resp.ok) continue;
         const detail = (await resp.json()) as Record<string, unknown>;

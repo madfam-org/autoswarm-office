@@ -261,7 +261,10 @@ def _build_social_schedule_body(
                 "status": variant[:500],
             }
         else:
-            recipient = str(payload_root.get("email_recipient") or "campaign@example.com")
+            recipient_raw = payload_root.get("email_recipient")
+            recipient = str(recipient_raw).strip() if recipient_raw else ""
+            if not recipient:
+                raise ValueError("email_recipient is required for campaign email scheduling")
             post_payload = {
                 "recipient": recipient,
                 "subject": title,
@@ -307,7 +310,15 @@ def schedule_social(state: CampaignState) -> CampaignState:
             "status": "schedule_skipped_no_org",
         }
 
-    body = _build_social_schedule_body(pack=pack, variants=variants, payload_root=payload_root)
+    try:
+        body = _build_social_schedule_body(pack=pack, variants=variants, payload_root=payload_root)
+    except ValueError as exc:
+        msg = AIMessage(content=f"Social schedule skipped: {exc}")
+        return {
+            **state,
+            "messages": [*messages, msg],
+            "status": "schedule_skipped_invalid_payload",
+        }
 
     scheduled_count = 0
     error_detail: str | None = None

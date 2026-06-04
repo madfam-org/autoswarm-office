@@ -267,7 +267,7 @@ Phased rollout that keeps existing tenants untouched.
    instead of the module-level `engine` constant. This is a
    ~50-callsite refactor; can land as a single PR because the
    behavior is identical.
-3. Worker side: `selva_workers` gets the same helper. The
+3. Worker side: the worker package gets the same helper. The
    `X-Selva-Tenant-Org` header (CLAUDE.md §"Worker → API auth") is
    already propagated on every worker → API call; the API just needs
    to use it to pick the engine.

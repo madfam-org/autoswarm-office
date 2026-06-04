@@ -10,6 +10,7 @@ These tests verify three behaviours:
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock
 
 import fakeredis.aioredis
@@ -39,6 +40,18 @@ def _make_provider(name: str = "anthropic") -> MagicMock:
             usage={"input_tokens": 50, "output_tokens": 100},
         )
     )
+    return provider
+
+
+def _make_stream_provider(called: dict[str, bool], name: str = "anthropic") -> MagicMock:
+    provider = MagicMock()
+    provider.supports_vision = False
+
+    async def _stream(request: InferenceRequest) -> AsyncIterator[str]:
+        called["stream"] = True
+        yield "hello"
+
+    provider.stream = _stream
     return provider
 
 
@@ -127,3 +140,22 @@ async def test_complete_with_gate_propagates_to_org_scope(
     assert org_status["daily"]["used_tokens"] == 150
     # Global also sees the spend (record() walks the chain).
     assert global_status["daily"]["used_tokens"] == 150
+
+
+@pytest.mark.asyncio
+async def test_stream_with_gate_raises_when_budget_exhausted(
+    gate: BudgetGate, monkeypatch
+) -> None:
+    """Streaming performs the same pre-call budget check as complete()."""
+    monkeypatch.setenv("BUDGET_GATE_ENABLED", "true")
+    await gate.set_cap(BudgetScope(), daily_tokens=100)
+    await gate.record(BudgetScope(), actual_tokens=99, actual_cost_usd=0.0)
+
+    called = {"stream": False}
+    provider = _make_stream_provider(called)
+    router = ModelRouter(providers={"anthropic": provider}, budget_gate=gate)
+
+    with pytest.raises(BudgetExhausted):
+        async for _chunk in router.stream(_make_request()):
+            pass
+    assert called["stream"] is False

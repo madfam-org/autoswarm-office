@@ -63,6 +63,7 @@ class ApprovalAction(BaseModel):
 class ApprovalRequestResponse(BaseModel):
     id: str
     agent_id: str
+    agent_name: str | None = None
     action_category: str
     action_type: str
     payload: dict[str, Any]
@@ -92,6 +93,7 @@ def _approval_to_response(req: ApprovalRequest) -> ApprovalRequestResponse:
     return ApprovalRequestResponse(
         id=str(req.id),
         agent_id=str(req.agent_id),
+        agent_name=req.agent.name if req.agent is not None else None,
         action_category=req.action_category,
         action_type=req.action_type,
         payload=req.payload,

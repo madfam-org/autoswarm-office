@@ -203,6 +203,24 @@ describe('useApprovals', () => {
     expect(result.current.pendingApprovals[0].id).toBe('req-1');
   });
 
+  it('uses agent_name from wire payload when present', () => {
+    const { result } = renderHook(() => useApprovals());
+    const ws = MockWebSocket.last;
+
+    act(() => {
+      ws.simulateOpen();
+    });
+
+    act(() => {
+      ws.simulateMessage({
+        type: 'approval_request',
+        payload: { ...makeApprovalRequest('req-named'), agent_name: 'Ada' },
+      });
+    });
+
+    expect(result.current.pendingApprovals[0].agentName).toBe('Ada');
+  });
+
   it('removes from pendingApprovals on approval_resolved message', () => {
     const { result } = renderHook(() => useApprovals());
     const ws = MockWebSocket.last;

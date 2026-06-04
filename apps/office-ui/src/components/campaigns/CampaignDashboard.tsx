@@ -186,6 +186,10 @@ export const CampaignDashboard: FC<CampaignDashboardProps> = ({ open, onClose })
       addToast('Select a Tulana pack first', 'warning');
       return;
     }
+    if (socialPlatform === 'email') {
+      addToast('Email campaign scheduling requires a verified recipient list', 'warning');
+      return;
+    }
     const bodyText =
       draftVariants.split('\n---\n').map((v) => v.trim()).filter(Boolean)[0] ??
       selectedPack.value_prop ??
@@ -202,11 +206,7 @@ export const CampaignDashboard: FC<CampaignDashboardProps> = ({ open, onClose })
           ? { text: bodyText.slice(0, 300) }
           : socialPlatform === 'mastodon'
             ? { instance: 'mastodon.social', status: bodyText.slice(0, 500) }
-            : {
-                recipient: 'campaign@example.com',
-                subject: `${selectedPack.sku_key} campaign`,
-                body: bodyText.slice(0, 4000),
-              };
+            : {};
 
     const result = await submitSchedule(
       {
@@ -552,7 +552,6 @@ export const CampaignDashboard: FC<CampaignDashboardProps> = ({ open, onClose })
                       <option value="reddit">Reddit</option>
                       <option value="bluesky">Bluesky</option>
                       <option value="mastodon">Mastodon</option>
-                      <option value="email">Email</option>
                     </select>
                     {socialPlatform === 'reddit' && (
                       <input

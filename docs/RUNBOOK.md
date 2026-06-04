@@ -889,9 +889,9 @@ MAX_CONCURRENT_TASKS=5  # Allow 5 concurrent tasks per worker
 # K8s: scale the deployment
 kubectl scale deployment/workers --replicas=3 -n selva
 
-# Local: run multiple processes
-MAX_CONCURRENT_TASKS=3 uv run python -m selva_workers &
-MAX_CONCURRENT_TASKS=3 uv run python -m selva_workers &
+# Local: run multiple worker processes
+LOCAL_WORKER=yes MAX_CONCURRENT_TASKS=3 make worker &
+LOCAL_WORKER=yes MAX_CONCURRENT_TASKS=3 make worker &
 ```
 
 ### Verifying Consumer Group Membership
@@ -987,6 +987,6 @@ Key environment variables referenced in this runbook. Secrets are stored in the
 | `scripts/restore-postgres.sh` | Manual restore script |
 | `scripts/verify-backup.sh` | Backup integrity verification |
 | `apps/nexus-api/nexus_api/routers/health.py` | Health and readiness endpoints |
-| `apps/workers/selva_workers/health.py` | Worker health server |
+| Worker package `health.py` | Worker health server |
 | `apps/gateway/src/index.ts` | Gateway health server |
 | `apps/colyseus/src/index.ts` | Colyseus health endpoint |

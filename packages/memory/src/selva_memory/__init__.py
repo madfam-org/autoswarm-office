@@ -1,4 +1,4 @@
-"""Selva agent memory — per-agent semantic storage with FAISS vector search."""
+"""Selva agent memory -- per-agent semantic storage with pgvector search."""
 
 from .embeddings import EmbeddingProvider, get_embedding_provider
 from .experience import ExperienceRecord, ExperienceStore

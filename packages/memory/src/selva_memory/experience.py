@@ -116,3 +116,6 @@ class ExperienceStore:
     @property
     def count(self) -> int:
         return self._store.count
+
+    async def get_count(self) -> int:
+        return await self._store.get_count()

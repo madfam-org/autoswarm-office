@@ -14,6 +14,7 @@
 | Doc | Role |
 |-----|------|
 | **This doc** | North-star definition, phased program, exit gates, scorecard targets |
+| [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md) | **Commercial GA contract** — no-go gates, immediate hardening, evidence checklist |
 | [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) | **Sprint plan** — 4-week remediation schedule + engineering backlog |
 | [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) | Human-gated items within Phase 0–1 (OTel, Sentry, Stripe map, k6, DR) |
 | [ROADMAP.md](../ROADMAP.md) | Product phases (F1–F5, E1–E6), honest scorecard, historical milestones |
@@ -51,14 +52,37 @@ For the **MADFAM tenant slice in prod (`admin@madfam.io`)**, the platform is clo
 
 - **Current estimate:** ~**85–90%** operationally usable for tenant-slice work.
 - **Commercial GA estimate (all tenants):** ~**58–65%**.
-- **Primary blockers to full commercial GA:** OTel/Sentry proof, Dhanam pricing/webhook attribution closure, `k6` Run 4b validation, and DR evidence.
-- **Decision rule:** do not treat campaign features as “GA” until Phase 0 gates plus one attributable paid conversion are proven end-to-end.
+- **Primary blockers to full commercial GA:** cross-service tenant propagation,
+  gateway dispatch contract correctness, OTel/Sentry proof, Dhanam
+  pricing/webhook attribution closure, `k6` Run 4b validation, and DR evidence.
+- **Decision rule:** do not treat campaign features as “GA” until the
+  commercial-GA no-go gates, Phase 0 gates, and one attributable paid
+  conversion are proven end-to-end.
 
 This same sequence is tracked in:
 
 - [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) (execution checklist and sprints)
 - [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) (operator gating)
 - [ROADMAP.md](../ROADMAP.md) (overall scorecard)
+- [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md) (commercial GA acceptance checklist)
+
+---
+
+## Commercial GA no-go gates (2026-06-04)
+
+The north-star program now has a platform-wide commercial GA contract:
+[COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md).
+The short form is:
+
+| Gate | Must be true before broad tenant GA |
+|------|-------------------------------------|
+| Tenant propagation | Gateway, workers, Colyseus, and other service-token paths carry explicit tenant context |
+| Dispatch contracts | Automated dispatch rules use only API-accepted graph types with real worker support |
+| Observability | OTel traces, Sentry errors, SLO dashboards, and alert owners are live |
+| Money path | Dhanam price-tier mapping, webhooks, attribution, and invoice/CFDI evidence are proven |
+| Resilience | Load thresholds pass and restore drills have measured RTO/RPO |
+| Product live paths | No placeholders, fake recipients, or demo fallbacks remain on live tenant paths |
+| Governance | Consent, HITL, audit, A2A tenancy, and residency answers are available per target buyer class |
 
 ---
 
@@ -82,13 +106,14 @@ Observability         → OTel, Sentry, SLO burn alerts, on-call runbooks
 
 | ID | Work | Primary repo | Exit criteria |
 |----|------|--------------|---------------|
-| 0.1 | Wire `OTEL_EXPORTER_OTLP_ENDPOINT` on all 6 services | selva-office + Enclii | K8s optional secret refs shipped; operator provisions Grafana token → end-to-end trace |
-| 0.2 | Sentry DSNs + office-ui source maps in CI | selva-office | Synthetic staging error captured |
-| 0.3 | Dhanam price→tier map + Selva webhook verification | Dhanam + selva-office | **Partial** — Selva handler green; fan-out drifts; catalog keys missing |
-| 0.4 | k6 100-concurrent-tasks in staging | selva-office | **Partial** — Runs 1–3 failed; Run 4 = calibration graph + optional API scale ([plan](./PHASE_0_REMEDIATION_PLAN.md)) |
-| 0.5 | Backup/restore drill | selva-office + ops | **Open** — runbook exists; no executed drill |
+| 0.1 | Wire `OTEL_EXPORTER_OTLP_ENDPOINT` on all 6 services | selva-office + Enclii | **Partial** — K8s secret refs + deterministic trace verifier shipped; operator provisions Grafana token → end-to-end trace |
+| 0.2 | Sentry DSNs + office-ui source maps in CI | selva-office | **Partial** — source-map upload wiring shipped; synthetic staging error captured after DSNs/auth token are provisioned |
+| 0.3 | Dhanam price→tier map + Selva webhook verification | Dhanam + selva-office | **Partial** — Selva handler + strict verifier green at repo level; Dhanam catalog keys and durable fan-out evidence still needed |
+| 0.4 | k6 100-concurrent-tasks in staging | selva-office | **Partial** — Runs 1–4 failed thresholds; Run 4b `staging-load` overlay + live preflight shipped; threshold pass pending ([plan](./PHASE_0_REMEDIATION_PLAN.md)) |
+| 0.5 | Backup/restore drill | selva-office + ops | **Partial** — guarded drill wrapper + evidence verifier shipped; no executed drill evidence yet |
 | 0.6 | Staging completion | selva-office + Janua | **Partial** — namespace live; Janua staging OAuth pending |
-| 0.7 | First quarterly secret rotation | ops | Evidence per [SECRET_ROTATION_POLICY.md](./SECRET_ROTATION_POLICY.md) |
+| 0.7 | First quarterly secret rotation | ops | **Partial** — Q3 schedule record/verifier shipped; external calendar confirmation + execution evidence pending |
+| 0.8 | Commercial-GA correctness hardening | selva-office | ✅ Repo-level closure — GA-001..GA-008 implemented/tested or documented; operational rollout evidence remains in Phase 0 |
 
 **Maps to:** [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) Tier 1–3 (items 1–6).
 
@@ -98,6 +123,10 @@ Observability         → OTel, Sentry, SLO burn alerts, on-call runbooks
 - `./scripts/staging-smoke.sh` green
 - OTel + Sentry receiving data
 - Stripe tier map verified in staging **via Dhanam webhooks**
+- Commercial-GA correctness gate 0.8 complete:
+  - no service-token path falls back to `platform` unintentionally
+  - gateway auto-dispatch rules match API `graph_type` contract
+  - live outbound/campaign paths have no placeholder recipients
 
 ---
 
@@ -250,14 +279,17 @@ Phase 0 (ops) ──► Phase 1 (revenue live)
 Phase 4 (compliance) parallel from week 2; gates Phase 5 enterprise sales.
 ```
 
-### First 30 days (highest ROI) — updated 2026-05-30
+### First 30 days (highest ROI) — updated 2026-06-04
 
-**Done:** Phase 2 API + UI (#179); staging campaign loop; Tulana buyer-signal; load-test harness (Runs 1–3).
+**Done:** Phase 2 API + UI (#179); staging campaign loop; Tulana buyer-signal;
+load-test harness and calibration graph (Runs 1–4); Wave 0 commercial-GA
+correctness GA-001..GA-008 at repo level.
 
-**Remaining (see [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md)):**
+**Remaining (see [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)
+and [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md)):**
 
 1. **Sprint 0:** OTel + Sentry secrets; Dhanam price map + durable webhook fan-out
-2. **Sprint 1:** k6 Run 4 (calibration graph + drain script); backup/restore drill
+2. **Sprint 1:** k6 Run 4b; backup/restore drill
 3. **Sprint 2:** Phase 1 revenue proof on staging → `promote-to-prod.yml`
 4. **Sprint 3:** Campaign UI soak; Phase 3 phygital scaffold
 
@@ -267,6 +299,7 @@ Phase 4 (compliance) parallel from week 2; gates Phase 5 enterprise sales.
 
 | Dimension | Baseline → Target | Primary phase |
 |-----------|-------------------|---------------|
+| Cross-service tenant propagation | 75% → **100%** | 0.8 |
 | Observability traces | 70% → **95%** | 0 |
 | Cross-service audit | 20% → **90%** | 4 |
 | Concurrency under load | 50% → **85%** | 0 |
@@ -286,6 +319,7 @@ Phase 4 (compliance) parallel from week 2; gates Phase 5 enterprise sales.
 
 | Risk | Mitigation |
 |------|------------|
+| Service-token tenant ambiguity | Commercial GA gate 0.8; every service-token call carries explicit org context |
 | Autonomy before observability | Phase 0 is a hard gate |
 | Campaign hallucination | Tulana contract + `do_not_claim` CI |
 | Cross-repo drift | Idempotency + CDC audit (RFC 0019) |
@@ -306,6 +340,7 @@ Use these as PR/epic titles when executing:
 
 | Epic | Phase | Acceptance source |
 |------|-------|-------------------|
+| `epic/commercial-ga-correctness` | 0.8 | COMMERCIAL_GA_REMEDIATION_PLAN GA-001..GA-008 |
 | `epic/ops-foundation` | 0 | OPERATOR_BACKLOG + verify-doc-truth + staging-smoke |
 | `epic/revenue-loop-live` | 1 | ROADMAP F1 gate + attribution tests |
 | `epic/tulana-campaign-orchestration` | 2 | TULANA_SKU doc § Tests and acceptance |
@@ -320,6 +355,7 @@ Use these as PR/epic titles when executing:
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | Added commercial GA contract, no-go gates, Phase 0.8 correctness hardening, and updated first-30-days plan |
 | 2026-05-30 | [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) — 4-sprint remediation schedule; Run 4 plan; Enclii gap registry |
 | 2026-05-30 | Phase 2.7 Campaign Dashboard + schedule materializer + campaign graph auto-schedule merged (#179); staging API loop green |
 | 2026-05-30 | Initial program plan documented; staging bootstrap + DNS fix landed on main |

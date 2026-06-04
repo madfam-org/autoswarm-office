@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Commercial GA Wave 0 correctness** — gateway auto-dispatch now carries
+  tenant headers and uses API-supported graph types; Colyseus service-token
+  agent sync carries tenant context; streaming inference applies budget
+  preflight and safe pre-token fallback; campaign email scheduling no longer
+  uses `campaign@example.com`; approvals return/consume `agent_name`; memory
+  store async count/vector compatibility is fixed.
+- **CI Wave 0 scope** — CI now uses `pgvector/pgvector:pg16`, enables the
+  `vector` extension, runs Wave 0 Python regressions, and documents non-PR
+  suites with owners in `docs/CI_TEST_SCOPE.md`.
 - **Staging Argo reconcile** — `scripts/reconcile-staging-argocd.sh` prunes backup
   stack excluded from overlay and syncs via Enclii; `DHANAM_WEBHOOK_SECRET` is
   optional in staging nexus-api patch so rollouts do not block before Dhanam wiring.
@@ -15,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   until Phase 2.5 routes appear.
 
 ### Added
+- **[Commercial GA Remediation Plan](docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)** —
+  platform-wide no-go gates, Wave 0 correctness hardening, evidence checklist,
+  and implementation waves toward full commercial GA.
 - **`scripts/verify-campaign-loop.sh`** — authenticated Phase 2 API loop soak
   (fixture at `scripts/fixtures/staging-smoke-pack.json`); skips when
   `AUTH_TOKEN` / `STAGING_CAMPAIGN_TEST_TOKEN` unset.
@@ -54,6 +66,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   env refs on all 6 Deployments + `observability-secrets-template.yaml` +
   `./scripts/verify-phase0-gates.sh`.
 - **OTel gRPC exporter deps** on nexus-api and workers (activates when endpoint set).
+- **Office UI Sentry release/source-map wiring** — `@sentry/nextjs`
+  instrumentation, Docker BuildKit secret upload path, and staging/prod
+  workflow build args for `selva-office-ui` releases.
+- **Deterministic OTel trace verifier** — `scripts/verify-observability-trace.sh`
+  now dispatches with a generated W3C trace ID and can poll direct
+  Tempo/Grafana datasource proxy endpoints for that exact trace.
+- **Strict Dhanam price-tier verifier** — `scripts/verify-dhanam-price-tier-map.sh`
+  now validates canonical `starter` / `professional` / `enterprise` coverage
+  from `infra/pricing/selva-tiers.json`, checks `PRODUCT_WEBHOOK_URLS`, and
+  supports `--require-map`, `--require-webhook`, and `--require-all`.
+- **Run 4b staging-load guardrail** — `infra/k8s/overlays/staging-load` pins
+  `nexus-api` replicas/HPA to 2 for the load-test window, and
+  `scripts/verify-staging-load-run4b-preflight.sh` blocks calibration until
+  rendered and live staging prerequisites are satisfied.
+- **Guarded DB restore drill** — `scripts/run-db-restore-drill.sh` wraps the
+  Phase 0.5 backup/restore drill with non-production target guards and writes
+  dated evidence under `docs/dr-drills/`; `scripts/verify-dr-drill-evidence.sh`
+  makes the evidence check enforceable in strict Phase 0 gates.
+- **Secret rotation schedule verifier** —
+  `docs/secret-rotations/2026Q3-schedule.md` records the Q3 rotation window
+  and `scripts/verify-secret-rotation-schedule.sh` makes Phase 0.7 schedule
+  evidence enforceable.
 - **`POST /api/v1/campaigns/import-tulana-pack`** — Tulana SKU pack validation,
   ranking, optional `dispatch_tasks` for `sku_campaign_planning` on the
   `intelligence` graph (Phase 2.1–2.2).
@@ -66,6 +100,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   ECOSYSTEM, llms.txt, RFC index, and Tulana campaign contract.
 
 ### Changed
+- **Roadmap / Autonomous Program / Phase 0 docs** — commercial GA readiness now
+  explicitly includes cross-service tenant propagation, gateway dispatch
+  contract correctness, live placeholder cleanup, and Run 4b threshold evidence.
 - **Staging/prod Dhanam wiring** — nexus-api gets `DHANAM_WEBHOOK_SECRET` + staging
   `DHANAM_API_URL=https://staging-api.dhan.am`; secrets template documents bootstrap key.
   scorecard links north-star gap to AUTONOMOUS_OPERATIONS_PROGRAM.

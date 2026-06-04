@@ -61,21 +61,26 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 ### Pre-run
 
 1. Ensure `staging.selva.town` is on a clean post-merge state (check `git log -1` matches the desired SHA)
-2. Verify staging has the same `MAX_CONCURRENT_TASKS` / `dispatch_rate_limit` / pool sizes as production OR use staging-specific overrides documented per-run
-3. Drain the queue: `curl -XPOST $STAGING_URL/api/v1/swarms/tasks/reap-stale` (uses the role-gated reap-stale endpoint per PR #114)
-4. Snapshot pre-run metrics: queue depth, DLQ depth, Postgres pool stats
+2. Render-check the temporary load overlay: `./scripts/verify-staging-load-run4b-preflight.sh`
+3. Apply the temporary Run 4b overlay: `kubectl apply -k infra/k8s/overlays/staging-load`
+4. Verify the live cluster converged: `./scripts/verify-staging-load-run4b-preflight.sh --require-live`
+5. Verify staging has the same `MAX_CONCURRENT_TASKS` / `dispatch_rate_limit` / pool sizes as production OR use staging-specific overrides documented per-run
+6. Drain the queue: `./scripts/drain-staging-task-queue.sh`
+7. Snapshot pre-run metrics: queue depth, DLQ depth, Postgres pool stats
 
 ### During run
 
-5. Watch `kubectl logs -f selva-worker -n selva-staging` for warnings
-6. Tail `kubectl get pods -n selva-staging -w` for worker pod restarts (would indicate the PostgresSaver fix is needed under load — see PR #123)
-7. Watch the Grafana dashboard (Phase 2 SLO work, item 16) once available
+8. Run calibration: `./scripts/run-staging-load-calibration.sh`
+9. Watch `kubectl logs -f selva-worker -n selva-staging` for warnings
+10. Tail `kubectl get pods -n selva-staging -w` for worker pod restarts (would indicate the PostgresSaver fix is needed under load — see PR #123)
+11. Watch the Grafana dashboard (Phase 2 SLO work, item 16) once available
 
 ### Post-run
 
-8. Capture k6 summary output to `docs/load-test-runs/<date>.k6.json`
-9. Fill in the Results table below
-10. Open a PR adjusting the production config based on observed values + a short justification per change
+12. Capture k6 summary output to `docs/load-test-runs/<date>.k6.json`
+13. Fill in the Results table below
+14. Revert normal staging guardrails: `kubectl apply -k infra/k8s/overlays/staging`
+15. Open a PR adjusting the production config based on observed values + a short justification per change
 
 ## Results
 
@@ -166,9 +171,9 @@ Once OTel tracing lands (Phase 2 item 11), wire k6 to also export to the OTel ba
 | Field | Value |
 |---|---|
 | Date | TBD |
-| nexus-api replicas | 2 (required) |
+| nexus-api replicas | 2 (required via `infra/k8s/overlays/staging-load`) |
 | **Hard thresholds passed?** | TBD |
-| Notes | Same script; drain queue first. |
+| Notes | Required sequence: render preflight → apply `staging-load` overlay → live preflight → drain queue → `./scripts/run-staging-load-calibration.sh` → revert normal staging overlay. |
 
 ### Run 5 — TBD (post-recommendation, validate prod config)
 

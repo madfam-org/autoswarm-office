@@ -1,6 +1,7 @@
 # Selva Office Full LLM Context
 
 Generated: 2026-05-13
+Last manual navigation update: 2026-06-04
 
 ## Purpose
 
@@ -12,9 +13,10 @@ repository without depending on vendor-specific instruction files.
 1. `AGENTS.md`
 2. `README.md` if present
 3. `ECOSYSTEM.md` if present
-4. `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6)
-5. `docs/OPERATOR_BACKLOG.md` — operator-gated items
-6. Relevant files under `docs/`, `infra/`, `.github/workflows/`, and source
+4. `docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md` — commercial GA no-go gates and evidence checklist
+5. `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6)
+6. `docs/OPERATOR_BACKLOG.md` — operator-gated items
+7. Relevant files under `docs/`, `infra/`, `.github/workflows/`, and source
    directories for the specific task
 
 ## Agent compatibility

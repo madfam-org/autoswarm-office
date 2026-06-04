@@ -39,7 +39,7 @@ for cmd in psql pg_restore; do
 done
 
 # Extract base URL without database name
-BASE_URL=$(echo "${DATABASE_URL}" | sed 's|/[^/]*$||')
+BASE_URL="${DATABASE_URL%/*}"
 
 # Cleanup function to ensure temp DB is dropped on exit
 cleanup() {

@@ -8,6 +8,12 @@ spec:
       containers:
         - name: office-ui
           env:
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: selva-observability-secrets
+                  key: SENTRY_DSN_OFFICE_UI
+                  optional: true
             - name: NEXT_PUBLIC_SENTRY_DSN
               valueFrom:
                 secretKeyRef:

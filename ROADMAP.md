@@ -9,6 +9,11 @@
 > [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) — priority-
 > ordered items, each with what / why / owner / unblocks / cross-refs.
 >
+> **Commercial GA implementation contract?** See
+> [docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)
+> — no-go gates, immediate engineering hardening, evidence checklist, and
+> 30/60/90-day remediation waves toward full commercial GA.
+>
 > **Full remediation sprint plan (Phase 0 → prod promote)?** See
 > [docs/PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md)
 > — 4-sprint schedule, engineering backlog, exit checklist.
@@ -26,13 +31,16 @@ Canonical plan: [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIO
 
 | Phase | Focus | Horizon | Gate |
 |-------|-------|---------|------|
-| **0** | Ops foundation (OTel, Sentry, Dhanam map, k6 Run 4, DR, staging) | 2–3 wk | [PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md) exit checklist |
+| **0** | Ops foundation (OTel, Sentry, Dhanam map, k6 Run 4b, DR, staging) | 2–3 wk | [PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md) exit checklist |
 | **1** | Closed revenue loop live (CRM → email → Stripe → CFDI) | 3–4 wk | One attributed paid conversion |
 | **2** | Tulana campaign orchestration | **API ✅** / UI soak optional | `./scripts/verify-campaign-loop.sh --staging` green |
 | **3** | Phygital E2E graph | 6–8 wk | Recorded design → invoice demo |
 | **4** | Compliance-grade (SAT, LFPDPPP, CDC, residency) | 6–10 wk | Audit trail + consent + region answerable |
 | **5** | Multi-tenant GTM at scale | 8–12 wk | SSO, white-label, paying Karafiel wedge |
 | **6** | Autonomy graduation (ASK → ALLOW) | Ongoing | Per-lane 30d clean-run policy |
+
+Program summary: Phase 0 establishes commercial-GA operating proof; Phase 6
+graduates specific autonomy lanes from ASK to ALLOW after clean-run evidence.
 
 **Baseline → north star:** MADFAM platform slice ~85–90%; production-truthful Selva ~88–92%; full autonomous digital ops **~58–65%** (readback update 2026-06-04). Target ~95%+ engineering completion in 6–9 months; 100% includes GTM traction (Phase 5).
 
@@ -44,15 +52,25 @@ Canonical plan: [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIO
 | Production-truthful Selva across current tenants | **~88–92%** | Attribution closure, DR proof, and cross-service audit completion |
 | Full commercial GA for all users/tenants | **~58–65%** | Stable evidence chain for money, reliability, recovery, and governance |
 
-The practical delta is mainly operational: security and tenant scoping are mostly proven; most remaining risk is unverified production behavior in finance/reliability/compliance recovery loops.
+The practical delta is mainly operational, but the 2026-06-04 ingestion also
+surfaced a small set of commercial-GA no-go implementation gaps. Before broad
+tenant GA, gateway and realtime service-token calls must consistently carry
+tenant context, gateway auto-dispatch rules must match API-accepted graph
+types, and live UI paths must not rely on demo placeholders.
+
+2026-06-04 implementation update: GA-001 through GA-008 from the commercial
+GA remediation contract are implemented, tested, or explicitly documented at
+the repo level. The operational evidence gates below remain open.
 
 Phase 0 and Phase 1 gates are now the highest-leverage path to close this gap:
 
-1. **Observability foundation (OTel + Sentry + actioning alerts)**  
-2. **Dhanam price-tier mapping + webhook correctness (proven attribution)**  
-3. **Load/run calibration (Run 4b + queue/deadline tuning)**  
-4. **Backup/restore RTO+RPO evidence**  
-5. **CDC + A2A hardening in later phases**
+1. **Immediate GA correctness hardening** — tenant header propagation,
+   gateway graph-type contract, placeholder-free live paths
+2. **Observability foundation (OTel + Sentry + actioning alerts)**
+3. **Dhanam price-tier mapping + webhook correctness (proven attribution)**
+4. **Load/run calibration (Run 4b `staging-load` overlay + queue/deadline tuning)**
+5. **Backup/restore RTO+RPO evidence**
+6. **CDC + A2A hardening in later phases**
 
 ### Coupler consumer track (P3, Oct 2026)
 
@@ -75,7 +93,7 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 > Phase 2 campaign orchestration **shipped** (#179): API, worker graph,
 > materializer, office-ui Campaign Dashboard. Staging API loop proven.
 > **Next:** [PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md)
-> (OTel/Sentry, Dhanam catalog, k6 Run 4, DR drill, prod promote).
+> (OTel/Sentry, Dhanam catalog, k6 Run 4b, DR drill, prod promote).
 
 | Metric | Value | Source |
 |--------|-------|--------|
@@ -167,22 +185,28 @@ foundationally one-line dangerous if left undone.
   `billing.payment_failed` task events. 22 regression tests pin the
   contract. Operator follow-up: configure Stripe price→tier mapping in
   **Dhanam** and point webhooks at Selva `/api/v1/billing/webhooks/dhanam`
-  before enabling live billing (`BILLING_VIA_DHANAM=true`, default).
+  before enabling live billing (`BILLING_VIA_DHANAM=true`, default). The
+  verifier now has strict `--require-all` mode for canonical tier coverage
+  plus `PRODUCT_WEBHOOK_URLS` evidence.
 - **Production secrets provisioned** — `WORKER_API_TOKEN`,
   `CONSENT_LEDGER_SIGNING_SECRET`, `COLYSEUS_SERVICE_TOKEN` all need
   strong values in staging + prod. Settings validators now refuse
   weak / dev defaults in production environment.
 - **OTel exporter actually wired** — `OTEL_EXPORTER_OTLP_ENDPOINT` is
   read but no-op when unset. Pick a backend (Honeycomb / Tempo /
-  Datadog), wire the env var, get traces flowing for at least one
-  request path end-to-end. **Vendor decision pending operator review** —
-  see [docs/OBSERVABILITY_VENDOR_SELECTION.md](docs/OBSERVABILITY_VENDOR_SELECTION.md)
+  Datadog), wire the env var, then run
+  `./scripts/verify-observability-trace.sh --require-trace` with read-only
+  Tempo/Grafana query credentials to prove a generated dispatch trace landed.
+  **Vendor decision pending operator review** — see
+  [docs/OBSERVABILITY_VENDOR_SELECTION.md](docs/OBSERVABILITY_VENDOR_SELECTION.md)
   (recommendation: Grafana Cloud Free → Pro for traces+logs+metrics).
-- **Sentry DSN per service** — `init_sentry()` exists but DSNs are
-  missing from `.env.example`; verify it's actually catching errors.
-  Add source-map upload for office-ui in CI. **Vendor decision pending
-  operator review** — same doc as above (recommendation: stay with
-  Sentry Team plan EU region, $26/mo).
+- **Sentry DSN per service** — `init_sentry()` exists and Office UI
+  source-map upload is wired through Docker/GitHub when `SENTRY_AUTH_TOKEN`
+  + `SENTRY_ORG` are set. Remaining operator work: create real Sentry
+  projects/DSNs, configure `SENTRY_DSN_*` + CI upload credentials, and
+  capture synthetic staging/prod errors. **Vendor decision pending operator
+  review** — same doc as above (recommendation: stay with Sentry Team plan
+  EU region, $26/mo).
 
 ### Phase 1.5 — RLS tightening (after 1-2 weeks of production observation)
 
@@ -352,6 +376,7 @@ These cannot be assessed from inside selva-office:
 | Dimension | Today | Target |
 |---|---|---|
 | App-layer tenant scoping | 95% (was 90%) | 95% |
+| Cross-service tenant propagation | 90% — gateway/Colyseus service-token headers fixed in repo; rollout evidence pending | 100% |
 | Postgres-layer isolation (RLS) | 95% (was 5%) | 95% |
 | Outbound governance | 90% | 95% |
 | Webhook signature verification | 100% (was 30%) — 15/15 fail-closed | 100% |
@@ -360,18 +385,18 @@ These cannot be assessed from inside selva-office:
 | Cross-service audit correlation | 20% — RFC 0019 shipped, awaits Kafka | 90% |
 | Type safety (Python) | 100% — all 3 trees mypy=0, CI ratchet locked | 100% |
 | Type safety (TS) | 80% | 95% |
-| Concurrency under load | 55% — Runs 1–3 recorded; thresholds failed; Run 4 planned | 85% |
+| Concurrency under load | 65% — Runs 1–4 recorded; Run 4 improved dispatch but thresholds failed; Run 4b overlay/preflight shipped, threshold evidence pending | 85% |
 | State persistence across restarts | 95% (was 5%) — PostgresSaver real | 95% |
 | Observability — logs | 85% | 95% |
 | Observability — traces | 70% — propagation wired; **exporter secret missing** | 90% |
 | Observability — alerts | 75% — rules + dashboard ready; **awaits OTel data** | 90% |
 | SLO/SLI definitions | 80% (was 0%) | 80% |
 | Idempotency | 90% (was 10%) — helper + 10 endpoints adopted | 90% |
-| Load test scenarios | 85% — harness + 3 runs; **Run 4 calibration graph pending** | 90% |
-| Backups + DR | unknown — runbook exists; **drill not executed** | 90% |
+| Load test scenarios | 90% — harness + calibration graph + Run 4b preflight; **threshold pass pending** | 90% |
+| Backups + DR | 60% — guarded drill wrapper/evidence verifier shipped; **live drill not executed** | 90% |
 | Deployment pipeline | 85% — PP.4 staging live; **PP.5 prod cutover pending Phase 0** | 90% |
 | Pricing source-of-truth | 75% (was 30%) — JSON canonical + drift gate | 85% |
-| Secret rotation | 100% (was 0%) — script + policy + per-period keys | 100% |
+| Secret rotation | 100% (was 0%) — script + policy + per-period keys + Q3 schedule verifier | 100% |
 | Architecture RFCs landed | 5 of 5 (#0017, #0018, #0019, #0020, #0021) | 5 |
 | Schema coherence cross-language | 40% | 85% |
 | Frontend code health | 60% | 85% |
@@ -384,10 +409,14 @@ see [CHANGELOG.md](CHANGELOG.md) and [docs/PP_4_STAGING_AUDIT.md](docs/PP_4_STAG
 
 **North star gap (~58–65% → 100%):** See
 [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](docs/AUTONOMOUS_OPERATIONS_PROGRAM.md)
-and sprint plan [docs/PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md).
+and the commercial GA contract
+[docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md).
+The sprint execution vehicle remains
+[docs/PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md).
 Phase 2 API + UI shipped (#179); Phase 2 **operator gate** met on API path;
-remaining gap is Phase 0 (observability, billing catalog, k6 Run 4, DR) then
-Phase 1 revenue proof and Phases 3–5.
+remaining gap is immediate GA correctness hardening, Phase 0
+(observability, billing catalog, k6 Run 4b, DR), then Phase 1 revenue proof
+and Phases 3–5.
 
 Major movements 2026-05-04 session:
 - Workers + packages mypy: 14 → 0 + 129 → 0 (2 of 2 trees pinned at 0)

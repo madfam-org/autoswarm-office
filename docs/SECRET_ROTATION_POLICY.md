@@ -63,6 +63,22 @@ been weaponized yet). Quarterly gives 4 forced touches per year, matches
 SOC 2 audit common practice (90-day key rotation), and aligns with the
 quarterly SLO review (`docs/SLOS.md` §7).
 
+### 2026-Q3 scheduled window
+
+The first Phase 0 quarterly rotation window is recorded in
+[secret-rotations/2026Q3-schedule.md](./secret-rotations/2026Q3-schedule.md):
+
+| Field | Value |
+|---|---|
+| Window | 2026-07-07 14:00 America/Mexico_City |
+| Targets | `worker-api-token`, `consent-ledger-signing`, `colyseus-service` |
+| Namespace | `selva` |
+| Verification | `./scripts/verify-secret-rotation-schedule.sh` |
+
+The repo record does not replace the external ops calendar entry. The operator
+must still create/confirm the calendar event and attach execution evidence
+after the window completes.
+
 ---
 
 ## 3. Procedure (per-secret)

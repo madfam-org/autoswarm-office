@@ -2,7 +2,7 @@
 
 > Status: **decision document — vendor choice pending operator review**
 > Owner: ops / platform
-> Last Updated: 2026-05-03
+> Last Updated: 2026-06-04
 > Related: ROADMAP.md Phase 1 ("OTel exporter actually wired" + "Sentry DSN per
 > service"), [docs/AUDIENCE_FILTER_ROLLOUT.md](AUDIENCE_FILTER_ROLLOUT.md)
 > (depends on the log backend chosen here)
@@ -201,13 +201,15 @@ change needed. Lose the integrated logs+metrics story.
 ### 3.1 Recommendation: Sentry Team
 
 - **Already wired**: `packages/observability/src/selva_observability/sentry.py`
-  + `packages/config/sentry.ts` are both in place; only DSNs are missing from
-  `.env.example` (per ROADMAP.md Phase 1). Zero code change to enable.
+  + `packages/config/sentry.ts` are both in place, and `apps/office-ui` now
+  has Next.js Sentry instrumentation plus CI/Docker source-map upload wiring.
+  Real DSNs and upload credentials remain operator-provisioned.
 - **EU region**: pick `https://o<orgid>.ingest.de.sentry.io/<projectid>` so
   data lands in Frankfurt. LFPDPPP DPA available on Sentry's legal page.
-- **Source maps**: office-ui (Next.js) needs `@sentry/webpack-plugin` in CI
-  for symbolicated stack traces. Adding the plugin is ~10 lines in
-  `next.config.js` + 1 secret (`SENTRY_AUTH_TOKEN`).
+- **Source maps**: office-ui (Next.js) uploads release source maps when
+  `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` are present in CI; the Docker build
+  consumes the token via BuildKit secret so it is not baked into the runtime
+  image.
 - **Cost**: pre-launch we'll stay under 5k errors/mo (free). Post-launch the
   Team plan at $26/mo covers 50k errors with 90-day retention.
 
@@ -295,6 +297,8 @@ SENTRY_DSN_ADMIN="..."
 # Sentry — release tagging + source maps
 GIT_SHA="<deploy commit sha>"   # already wired in deploy.yml
 SENTRY_AUTH_TOKEN="..."          # CI-only; needed for source-map upload
+SENTRY_ORG="madfam-selva"        # CI-only; may be a GitHub variable
+SENTRY_OFFICE_UI_PROJECT="selva-office-ui"
 
 # Loki — log shipping (set on Promtail or Grafana Agent in the cluster)
 LOKI_PUSH_URL="https://logs-prod-012.grafana.net/loki/api/v1/push"
@@ -346,17 +350,13 @@ no-ops when unset. So the rollout is:
    ```
    Then install with `uv sync --extra tracing`. The `init_tracing()` function
    already lazy-imports — no further code change needed.
-4. **Source-map upload for office-ui** (Next.js) — add to
-   `apps/office-ui/next.config.js`:
-   ```js
-   const { withSentryConfig } = require('@sentry/nextjs');
-   module.exports = withSentryConfig(
-     existingConfig,
-     { org: 'madfam-selva', project: 'selva-office-ui', silent: true },
-     { hideSourceMaps: true, transpileClientSDK: true },
-   );
-   ```
-   Then add `SENTRY_AUTH_TOKEN` to the GitHub Actions deploy secret store.
+4. **Source-map upload for office-ui** (Next.js) — repo wiring is complete:
+   `apps/office-ui/next.config.js` wraps the build with `@sentry/nextjs` only
+   when `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` are present, and
+   `infra/docker/Dockerfile.office-ui` reads the token as the BuildKit secret
+   `sentry_auth_token`. Add `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`,
+   `SENTRY_OFFICE_UI_PROJECT`, and `SENTRY_DSN_OFFICE_UI` to the GitHub
+   Actions secret/variable stores before the first staging release capture.
 5. **Promtail / Grafana Agent for log shipping** — install in the k8s cluster
    to scrape stdout from all 6 Deployments and push to Loki. Standard helm
    chart: `grafana/grafana-agent` with the `LOKI_*` secrets above.
@@ -368,16 +368,28 @@ no-ops when unset. So the rollout is:
 
 Single-trace smoke test (do this on staging first):
 
-1. After step 4.3 deploy, hit a known traced endpoint:
+1. After step 4.3 deploy, run the deterministic trace probe. Either point it
+   directly at a read-only Tempo query base URL before `/api`:
    ```bash
-   curl -H "Authorization: Bearer <staging-token>" \
-        https://staging-api.selva.town/api/v1/health
+   TEMPO_QUERY_URL=https://tempo-<region>.grafana.net/tempo \
+   TEMPO_USERNAME=<tempo-instance-id> \
+   TEMPO_API_KEY=<read-only-query-token> \
+   ./scripts/verify-observability-trace.sh --require-trace
    ```
-2. Open Grafana Cloud → stack `selva-staging` → Explore → Tempo data source.
-3. Search by service name `nexus-api`, time range "Last 5 minutes".
-4. You should see at least one trace. Click it; you should see spans for
-   FastAPI request → DB query → response.
-5. **Sentry smoke test**: in nexus-api logs trigger a known error path:
+   Or use Grafana's Tempo datasource proxy:
+   ```bash
+   GRAFANA_URL=https://<stack>.grafana.net \
+   GRAFANA_TEMPO_DATASOURCE_UID=<tempo-datasource-uid> \
+   GRAFANA_API_TOKEN=<read-only-service-account-token> \
+   ./scripts/verify-observability-trace.sh --require-trace
+   ```
+2. The script sends `traceparent: 00-<generated-trace-id>-...`, dispatches a
+   calibration swarm task, and polls `/api/traces/<trace_id>` for the generated
+   trace. Success means Tempo received the exact trace created by the probe.
+3. Open Grafana Cloud → stack `selva-staging` → Explore → Tempo data source,
+   search the emitted `TRACE_ID`, and confirm spans for FastAPI dispatch,
+   worker pickup, and persistence/event work.
+4. **Sentry smoke test**: in nexus-api logs trigger a known error path:
    ```bash
    curl -H "Authorization: Bearer invalid-token" \
         https://staging-api.selva.town/api/v1/swarms/dispatch

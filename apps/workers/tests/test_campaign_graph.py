@@ -140,3 +140,23 @@ class TestCampaignNodes:
         assert body["platform"] == "reddit"
         assert len(body["posts"]) == 3
 
+    def test_schedule_social_email_requires_recipient(self) -> None:
+        state = {
+            "messages": [],
+            "status": "draft_ready",
+            "org_id": "org-test",
+            "task_id": "task-1",
+            "payload": {"auto_schedule_platform": "email"},
+            "tulana_pack": {
+                "sku_key": "avala__issuer",
+                "audience": "issuers",
+                "ga_readiness": "near_ready",
+                "value_prop": "Proof-backed",
+            },
+            "draft_variants": ["Variant A body"],
+        }
+
+        result = schedule_social(state)
+
+        assert result["status"] == "schedule_skipped_invalid_payload"
+        assert "email_recipient is required" in result["messages"][-1].content

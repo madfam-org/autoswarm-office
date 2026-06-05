@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **Commercial GA CI restoration** — regenerated shared wire types, restored
+  Ruff compliance, fixed workflow Python runner/safe-eval regressions, and
+  pinned patched `fast-uri` / `picomatch` transitive versions for the Trivy
+  filesystem scan. Evidence:
+  `docs/SESSION_2026-06-05_COMMERCIAL_GA_CI_RESTORATION.md`.
 - **Commercial GA Wave 0 correctness** — gateway auto-dispatch now carries
   tenant headers and uses API-supported graph types; Colyseus service-token
   agent sync carries tenant context; streaming inference applies budget

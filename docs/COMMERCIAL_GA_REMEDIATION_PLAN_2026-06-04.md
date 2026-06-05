@@ -203,3 +203,4 @@ Pause GA promotion if any of these are true:
 | 2026-06-04 | Added Run 4b `staging-load` overlay/preflight as required evidence before k6 threshold results are accepted. |
 | 2026-06-04 | Added guarded DB restore drill wrapper and strict evidence verifier for the backup/restore GA gate. |
 | 2026-06-04 | Added Q3 secret rotation schedule verifier to the GA acceptance checklist. |
+| 2026-06-05 | Documented Commercial GA CI restoration evidence in [SESSION_2026-06-05_COMMERCIAL_GA_CI_RESTORATION.md](./SESSION_2026-06-05_COMMERCIAL_GA_CI_RESTORATION.md). |

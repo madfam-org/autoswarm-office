@@ -37,3 +37,10 @@ contract.
 Any new tenant-safety, money-path, outbound-action, or dispatch-contract
 regression test must be included in either the always-on CI scope above or this
 document's non-PR gate table with an owner and trigger.
+
+## Session Evidence
+
+- [SESSION_2026-06-05_COMMERCIAL_GA_CI_RESTORATION.md](./SESSION_2026-06-05_COMMERCIAL_GA_CI_RESTORATION.md)
+  records the 2026-06-04 `CI` / `Schema Drift` restoration pass, including the
+  Ruff, generated wire type, Trivy lockfile, workflow safe-eval, and local
+  pgvector verification notes.

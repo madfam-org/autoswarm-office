@@ -7,8 +7,8 @@ import io
 import json
 from typing import Any
 
-from ..safe_eval import safe_eval_expression
 from ..base import BaseTool, ToolResult
+from ..safe_eval import safe_eval_expression
 
 
 class JsonParseTool(BaseTool):

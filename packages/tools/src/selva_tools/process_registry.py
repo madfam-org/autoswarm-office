@@ -6,9 +6,9 @@ Mirrors Hermes' tools/process_registry.py.
 from __future__ import annotations
 
 import logging
+import shlex
 import signal
 import subprocess
-import shlex
 import time
 from typing import Any
 

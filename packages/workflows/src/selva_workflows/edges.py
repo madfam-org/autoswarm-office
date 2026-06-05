@@ -7,8 +7,8 @@ import re
 from collections import defaultdict
 from typing import Any
 
-from .schema import EdgeDefinition, TriggerCondition
 from .safe_eval import UnsafeExpressionError, safe_eval_bool_expression
+from .schema import EdgeDefinition, TriggerCondition
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,17 @@ def _eval_expression(expression: str, state: dict) -> bool:
         return safe_eval_bool_expression(
             expression,
             context,
-            allowed_call_targets={"len", "int", "float", "str", "bool", "sorted", "sum", "min", "max"},
+            allowed_call_targets={
+                "len",
+                "int",
+                "float",
+                "str",
+                "bool",
+                "sorted",
+                "sum",
+                "min",
+                "max",
+            },
             allowed_get_attrs_for={"state", "variables", "messages", "result", "status"},
         )
     except UnsafeExpressionError as exc:

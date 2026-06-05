@@ -7,7 +7,8 @@ retaining a narrow subset of expression features used by Selva tooling.
 from __future__ import annotations
 
 import ast
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 class UnsafeExpressionError(ValueError):
@@ -49,7 +50,12 @@ def _validate_expr_node(
     allowed_get_attrs_for: set[str],
 ) -> None:
     if isinstance(node, ast.Expression):
-        _validate_expr_node(node.body, allowed_names=allowed_names, allowed_call_targets=allowed_call_targets, allowed_get_attrs_for=allowed_get_attrs_for)
+        _validate_expr_node(
+            node.body,
+            allowed_names=allowed_names,
+            allowed_call_targets=allowed_call_targets,
+            allowed_get_attrs_for=allowed_get_attrs_for,
+        )
         return
 
     if isinstance(node, ast.Name):
@@ -239,7 +245,7 @@ def _validate_expr_node(
             ast.Lambda,
         ),
     ):
-        raise UnsafeExpressionError("comprehension expressions are not allowed")
+        raise UnsafeExpressionError("comprehensions and f-strings are not allowed")
 
     # Default deny: only explicitly handled constructs are allowed.
     raise UnsafeExpressionError(f"node type {node.__class__.__name__} is not allowed")

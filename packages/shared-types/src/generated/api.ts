@@ -2890,14 +2890,17 @@ export interface paths {
         put?: never;
         /**
          * Validate Tenant Consistency
-         * @description Stub drift check.
+         * @description Run consistency checks between tenant-identity and tenant-config rows.
          *
-         *     Real implementation needs per-service probes (Janua GET /orgs/{id},
-         *     Dhanam GET /spaces/{id}, PhyndCRM tenants.config, Karafiel GET
-         *     /orgs/{id}, Resend GET /domains/{id}). Tracked as follow-up — this
-         *     endpoint is a placeholder that confirms the row exists and returns
-         *     services_checked based on how many per-service IDs are populated on
-         *     the record.
+         *     Current implementation validates:
+         *
+         *     - The tenant row exists in both tenant_identities and tenant_configs.
+         *     - Per-service canonical IDs remain in sync with tenant_configs.
+         *     - PII and metadata fields are never echoed (only service-id drift
+         *       summaries are returned).
+         *
+         *     Additional external service probes (Janua/Dhanam/PhyndCRM/Karafiel/Resend)
+         *     are tracked separately in the operator backlog.
          */
         post: operations["validate_tenant_consistency_api_v1_tenant_identities__canonical_id__validate_post"];
         delete?: never;

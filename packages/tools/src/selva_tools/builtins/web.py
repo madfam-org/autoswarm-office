@@ -8,7 +8,6 @@ from ..audience import Audience
 from ..base import BaseTool, ToolResult
 from .http_tools import _build_safe_request_kwargs
 
-
 DEFAULT_TIMEOUT_SECONDS = 15.0
 MAX_FETCH_LENGTH = 50_000
 

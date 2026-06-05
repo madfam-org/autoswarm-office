@@ -148,7 +148,11 @@ class TestResolve:
 
 @pytest.mark.asyncio
 class TestValidate:
-    async def test_validates_existing_tenant(self, client: httpx.AsyncClient, db_session: AsyncSession) -> None:
+    async def test_validates_existing_tenant(
+        self,
+        client: httpx.AsyncClient,
+        db_session: AsyncSession,
+    ) -> None:
         await client.post(
             "/api/v1/tenant-identities",
             json=_payload("validate-me"),
@@ -174,7 +178,11 @@ class TestValidate:
         assert body["services_checked"] == 4  # janua+dhanam+phyndcrm+karafiel
         assert body["drifts"] == []
 
-    async def test_validates_tenant_mismatches(self, client: httpx.AsyncClient, db_session: AsyncSession) -> None:
+    async def test_validates_tenant_mismatches(
+        self,
+        client: httpx.AsyncClient,
+        db_session: AsyncSession,
+    ) -> None:
         await client.post(
             "/api/v1/tenant-identities",
             json=_payload("validate-drift"),
@@ -204,7 +212,10 @@ class TestValidate:
         assert body["drifts"][0]["expected"] == "different-id"
         assert body["drifts"][0]["actual"] == "madfam-test-001"
 
-    async def test_validates_missing_tenant_config_is_critical(self, client: httpx.AsyncClient) -> None:
+    async def test_validates_missing_tenant_config_is_critical(
+        self,
+        client: httpx.AsyncClient,
+    ) -> None:
         await client.post(
             "/api/v1/tenant-identities",
             json=_payload("validate-missing-config"),

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import ast
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 class UnsafeExpressionError(ValueError):
@@ -62,45 +63,100 @@ def _validate_expression(
 
     if isinstance(node, ast.List | ast.Tuple | ast.Set):
         for child in node.elts:
-            _validate_expression(child, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+            _validate_expression(
+                child,
+                allowed_names,
+                allowed_call_targets,
+                allowed_get_attrs_for,
+            )
         return
 
     if isinstance(node, ast.Dict):
         for key in node.keys:
             if key is not None:
-                _validate_expression(key, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+                _validate_expression(
+                    key,
+                    allowed_names,
+                    allowed_call_targets,
+                    allowed_get_attrs_for,
+                )
         for value in node.values:
-            _validate_expression(value, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+            _validate_expression(
+                value,
+                allowed_names,
+                allowed_call_targets,
+                allowed_get_attrs_for,
+            )
         return
 
     if isinstance(node, ast.BoolOp):
         if not isinstance(node.op, _ALLOWED_BOOLOPS):
             raise UnsafeExpressionError("unsupported bool operator")
         for value in node.values:
-            _validate_expression(value, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+            _validate_expression(
+                value,
+                allowed_names,
+                allowed_call_targets,
+                allowed_get_attrs_for,
+            )
         return
 
     if isinstance(node, ast.BinOp):
         if not isinstance(node.op, _ALLOWED_BINOPS):
             raise UnsafeExpressionError("unsupported arithmetic operator")
-        _validate_expression(node.left, allowed_names, allowed_call_targets, allowed_get_attrs_for)
-        _validate_expression(node.right, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+        _validate_expression(
+            node.left,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
+        _validate_expression(
+            node.right,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
         return
 
     if isinstance(node, ast.UnaryOp):
         if not isinstance(node.op, _ALLOWED_UNARYOPS):
             raise UnsafeExpressionError("unsupported unary operator")
-        _validate_expression(node.operand, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+        _validate_expression(
+            node.operand,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
         return
 
     if isinstance(node, ast.IfExp):
-        _validate_expression(node.test, allowed_names, allowed_call_targets, allowed_get_attrs_for)
-        _validate_expression(node.body, allowed_names, allowed_call_targets, allowed_get_attrs_for)
-        _validate_expression(node.orelse, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+        _validate_expression(
+            node.test,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
+        _validate_expression(
+            node.body,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
+        _validate_expression(
+            node.orelse,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
         return
 
     if isinstance(node, ast.Compare):
-        _validate_expression(node.left, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+        _validate_expression(
+            node.left,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
         for op, comparator in zip(node.ops, node.comparators, strict=False):
             if not isinstance(op, _ALLOWED_CMP_OPS):
                 raise UnsafeExpressionError("unsupported comparison operator")
@@ -113,8 +169,18 @@ def _validate_expression(
         return
 
     if isinstance(node, ast.Subscript):
-        _validate_expression(node.value, allowed_names, allowed_call_targets, allowed_get_attrs_for)
-        _validate_expression(node.slice, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+        _validate_expression(
+            node.value,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
+        _validate_expression(
+            node.slice,
+            allowed_names,
+            allowed_call_targets,
+            allowed_get_attrs_for,
+        )
         return
 
     if isinstance(node, ast.Call):
@@ -122,16 +188,29 @@ def _validate_expression(
             if node.func.id not in allowed_call_targets:
                 raise UnsafeExpressionError(f"call to '{node.func.id}' is not allowed")
         elif isinstance(node.func, ast.Attribute):
+            _validate_expression(
+                node.func.value,
+                allowed_names,
+                allowed_call_targets,
+                allowed_get_attrs_for,
+            )
             if node.func.attr != "get":
                 raise UnsafeExpressionError("only .get() is allowed for attribute calls")
-            if not isinstance(node.func.value, ast.Name) or node.func.value.id not in allowed_get_attrs_for:
+            if (
+                not isinstance(node.func.value, ast.Name)
+                or node.func.value.id not in allowed_get_attrs_for
+            ):
                 raise UnsafeExpressionError(".get() is allowed only on approved dict-like inputs")
-            _validate_expression(node.func.value, allowed_names, allowed_call_targets, allowed_get_attrs_for)
         else:
             raise UnsafeExpressionError("unsupported call syntax")
 
         for arg in node.args:
-            _validate_expression(arg, allowed_names, allowed_call_targets, allowed_get_attrs_for)
+            _validate_expression(
+                arg,
+                allowed_names,
+                allowed_call_targets,
+                allowed_get_attrs_for,
+            )
         for keyword in node.keywords:
             if keyword.value is not None:
                 _validate_expression(
@@ -194,4 +273,3 @@ def safe_eval_bool_expression(
 
     code = compile(tree, "<safe-expression>", mode="eval")
     return bool(eval(code, {"__builtins__": {}}, dict(context)))
-

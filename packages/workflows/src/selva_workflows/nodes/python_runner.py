@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import builtins as py_builtins
 import ast
+import builtins as py_builtins
 import logging
 from typing import Any
 
-from ..schema import NodeDefinition
 from ..safe_eval import UnsafeExpressionError, _validate_expression
+from ..schema import NodeDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +50,14 @@ _RESERVED_ASSIGNMENT_NAMES = {"state", "workflow_variables"}
 
 
 def _safe_builtins() -> dict[str, Any]:
-    return {name: getattr(py_builtins, name) for name in _SAFE_BUILTINS if hasattr(py_builtins, name)}
+    return {
+        name: getattr(py_builtins, name)
+        for name in _SAFE_BUILTINS
+        if hasattr(py_builtins, name)
+    }
 
 
-def _collect_declared_names(node: ast.AST) -> set[str]:
+def _collect_declared_names(node: ast.Module) -> set[str]:
     """Collect names assigned by supported statement forms."""
     names: set[str] = set()
 
@@ -127,13 +131,13 @@ def _validate_python_script(tree: ast.AST, *, allowed_names: set[str]) -> None:
 
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                if target.id in _RESERVED_ASSIGNMENT_NAMES:
-                    raise UnsafeExpressionError(
-                        f"reserved variable '{target.id}' may not be reassigned"
-                    )
                 if not isinstance(target, ast.Name):
                     raise UnsafeExpressionError(
                         "assignment target must be plain variable names"
+                    )
+                if target.id in _RESERVED_ASSIGNMENT_NAMES:
+                    raise UnsafeExpressionError(
+                        f"reserved variable '{target.id}' may not be reassigned"
                     )
             _validate_expr(node.value)
             return
@@ -198,7 +202,7 @@ class PythonRunnerNodeHandler:
             tree = ast.parse(code, mode="exec")
             safe_builtins = _safe_builtins()
             workflow_variables = state.get("workflow_variables", {})
-            declared_names = _collect_declared_names(tree=tree)
+            declared_names = _collect_declared_names(tree)
             allowed_names = {
                 "state",
                 "result",

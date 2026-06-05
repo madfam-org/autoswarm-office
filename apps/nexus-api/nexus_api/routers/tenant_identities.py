@@ -306,7 +306,8 @@ async def validate_tenant_consistency(canonical_id: str) -> ValidateConsistencyR
                             "actual": identity_value,
                             "details": (
                                 f"tenant identity field mismatch: {identity_field} "
-                                f"(tenant_configs[{config_field}]={config_value!r}, tenant_identity={identity_value!r})"
+                                f"(tenant_configs[{config_field}]={config_value!r}, "
+                                f"tenant_identity={identity_value!r})"
                             ),
                         }
                     )

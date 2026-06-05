@@ -95,7 +95,9 @@ class TestWorkflowCompiler:
         compiled = graph.compile()
         result = compiled.invoke({"messages": [], "status": "running", "workflow_variables": {}})
         assert result["status"] == "error"
-        assert result["result"] == {"error": "Python execution blocked: call to '__import__' is not allowed"}
+        assert result["result"] == {
+            "error": "Python execution blocked: call to '__import__' is not allowed"
+        }
 
     def test_compile_loop_counter(self) -> None:
         wf = _make_workflow(

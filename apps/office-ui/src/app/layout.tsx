@@ -4,6 +4,7 @@ import { Inter, Press_Start_2P } from 'next/font/google';
 import { JanuaProvider } from '@janua/nextjs-sdk';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
+import { EcosystemBannerClient } from '@/components/EcosystemBannerClient';
 import './globals.css';
 
 const inter = Inter({
@@ -43,7 +44,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
       </head>
-      <body className="min-h-screen font-sans">
+      <body className="min-h-screen font-sans pb-8">
         <ServiceWorkerRegistrar />
         <Suspense>
           <PostHogProvider>
@@ -51,6 +52,7 @@ export default function RootLayout({
               config={{ baseURL: process.env.NEXT_PUBLIC_JANUA_ISSUER_URL ?? '' }}
             >
               {children}
+              <EcosystemBannerClient />
             </JanuaProvider>
           </PostHogProvider>
         </Suspense>

@@ -2,12 +2,6 @@ import { getSiteConfig } from '@/lib/site-config';
 
 const YEAR = new Date().getFullYear();
 
-const ECOSYSTEM_LINKS = [
-  { label: 'PhyndCRM', href: 'https://crm.madfam.io' },
-  { label: 'Dhanam', href: 'https://dhan.am' },
-  { label: 'Karafiel', href: 'https://karafiel.mx' },
-];
-
 export function Footer() {
   const { appUrl } = getSiteConfig();
   const links = [
@@ -90,22 +84,6 @@ export function Footer() {
             </a>
           </div>
         </div>
-      </div>
-
-      {/* Ecosystem links */}
-      <div className="mx-auto mt-6 flex max-w-5xl items-center justify-center gap-4 border-t border-slate-800/40 pt-6">
-        <span className="text-xs text-slate-600">Ecosystem:</span>
-        {ECOSYSTEM_LINKS.map((link) => (
-          <a
-            key={link.label}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-slate-500 transition-colors hover:text-indigo-400"
-          >
-            {link.label}
-          </a>
-        ))}
       </div>
     </footer>
   );

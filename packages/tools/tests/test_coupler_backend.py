@@ -64,7 +64,11 @@ async def test_proxy_tool_requires_jwt_for_live_execute():
     backend = CouplerToolBackend(base_url="http://coupler.test")
     tool = CouplerProxyTool(
         backend,
-        {"name": "coupler.github.list_repos", "description": "list", "parameters": {"type": "object"}},
+        {
+            "name": "coupler.github.list_repos",
+            "description": "list",
+            "parameters": {"type": "object"},
+        },
     )
     result = await tool.execute()
     assert result.success is False

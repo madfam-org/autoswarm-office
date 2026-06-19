@@ -217,7 +217,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MADFAM_BOT_PAT || secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN only — stale MADFAM_BOT_PAT breaks checkout (F8 token governance).
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Patch prod overlay digests
         env:

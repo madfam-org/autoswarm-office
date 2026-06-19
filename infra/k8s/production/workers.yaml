@@ -139,6 +139,10 @@ spec:
               value: "https://api.cotiza.studio"
             - name: PRAVARA_MES_API_URL
               value: "https://mes-api.madfam.io"
+            - name: SELVA_COUPLER_TOOLS_ENABLED
+              value: "true"
+            - name: COUPLER_BASE_URL
+              value: "https://coupler-api.madfam.io"
             - name: ORG_CONFIG_PATH
               value: "/etc/selva/org-config.yaml"
           volumeMounts:

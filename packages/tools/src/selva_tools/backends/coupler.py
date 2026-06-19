@@ -42,7 +42,9 @@ class CouplerToolBackend:
     """HTTP client for Coupler gateway tool catalog and execute."""
 
     def __init__(self, base_url: str | None = None, audience: str | None = None) -> None:
-        self.base_url = (base_url or os.environ.get("COUPLER_BASE_URL", "http://localhost:8787")).rstrip("/")
+        self.base_url = (
+            base_url or os.environ.get("COUPLER_BASE_URL", "http://localhost:8787")
+        ).rstrip("/")
         self.audience = audience or os.environ.get("COUPLER_AUDIENCE", "coupler-api")
 
     async def list_tools(self, *, user_jwt: str | None = None) -> list[dict[str, Any]]:
@@ -84,7 +86,11 @@ class CouplerToolBackend:
             payload["connection_id"] = connection_id
 
         async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(f"{self.base_url}/v1/tools/execute", json=payload, headers=headers)
+            resp = await client.post(
+                f"{self.base_url}/v1/tools/execute",
+                json=payload,
+                headers=headers,
+            )
             if resp.status_code >= 400:
                 return {"error": resp.text, "status": resp.status_code, "tool": tool_id}
             return resp.json()

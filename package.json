@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
-    "@commitlint/config-conventional": "^19.6.0",
+    "@commitlint/config-conventional": "^21.0.2",
     "@napi-rs/canvas": "^0.1.100",
     "@playwright/test": "^1.60.0",
     "@selva/config": "workspace:*",

@@ -90,7 +90,7 @@ Workers/graphs must call `set_coupler_user_jwt(token)` before Coupler proxy exec
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SELVA_COUPLER_TOOLS_ENABLED` | `false` | Register Coupler proxy tools |
-| `COUPLER_BASE_URL` | — | Gateway URL |
+| `COUPLER_BASE_URL` | `https://coupler-api.madfam.io` | Gateway URL |
 | `COUPLER_AUDIENCE` | `coupler-api` | JWT audience hint |
 
 ---

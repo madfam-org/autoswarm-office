@@ -60,7 +60,7 @@ Selva ships **~268 built-in tools** and **6 ecosystem adapters**. Built-ins cove
 | **P3a** | Registry `discover_coupler_tools()` | ✅ behind `SELVA_COUPLER_TOOLS_ENABLED` |
 | **P3a** | Unit tests | ✅ `packages/tools/tests/test_coupler_backend.py` |
 | **P3b** | Unified `resolve_tools_for_task()` in workers | Planned |
-| **P3b** | Pass `user_jwt` via `set_coupler_user_jwt()` in worker | Planned |
+| **P3b** | Pass `user_jwt` via `set_coupler_user_jwt()` in worker | ✅ Done |
 | **P3c** | Coupler MCP in labspace `.cursor/mcp.json` | ✅ |
 | **P4** | Deprecate direct SaaS HTTP paths | Planned |
 

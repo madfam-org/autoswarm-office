@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
 
@@ -24,6 +26,16 @@ def set_coupler_user_jwt(token: str | None) -> None:
 
 def get_coupler_user_jwt() -> str | None:
     return coupler_user_jwt.get()
+
+
+@contextmanager
+def with_coupler_user_jwt(token: str | None) -> Iterator[None]:
+    """Bind end-user Janua JWT for Coupler proxy execute during a task."""
+    ctx = coupler_user_jwt.set(token)
+    try:
+        yield
+    finally:
+        coupler_user_jwt.reset(ctx)
 
 
 class CouplerToolBackend:

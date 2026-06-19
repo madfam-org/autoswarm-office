@@ -1106,12 +1106,23 @@ class TestEndpointsDirect:
         ):
             request = MagicMock()
             request.state.request_id = "test-req-1"
+            request.headers = {"Authorization": "Bearer user-jwt-token"}
             tenant = TenantContext(org_id="dev-org")
+            user = {"sub": "user-123", "roles": ["admin"], "org_id": "dev-org"}
             body = DispatchRequest(
                 description="direct dispatch",
                 graph_type="research",
             )
-            out = await dispatch_task(body=body, request=request, db=db_session, tenant=tenant)
+            out = await dispatch_task(
+                body=body,
+                request=request,
+                db=db_session,
+                tenant=tenant,
+                user=user,
+            )
         assert out.status in ("queued", "pending")
         # The Redis xadd was attempted.
         mock_pool.execute_with_retry.assert_awaited_once()
+        _, _, fields = mock_pool.execute_with_retry.await_args.args
+        envelope = json.loads(fields["data"])
+        assert envelope["user_jwt"] == "user-jwt-token"

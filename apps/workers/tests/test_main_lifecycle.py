@@ -152,6 +152,28 @@ class TestProcessTaskStatusMapping:
         assert mock_status.await_args_list[-1][0][2] == "completed"
 
     @pytest.mark.asyncio
+    async def test_binds_coupler_user_jwt_from_task_envelope(self) -> None:
+        from selva_workers.__main__ import process_task
+
+        cms = _patch_io(graph_result={"status": "completed", "result": {}})
+        (mock_status, _, _, _, _, mock_handler_cls) = _enter_all(cms)
+        try:
+            mock_handler_cls.return_value = AsyncMock()
+            with patch(
+                "selva_workers.__main__.with_coupler_user_jwt",
+            ) as mock_coupler_ctx:
+                mock_cm = MagicMock()
+                mock_coupler_ctx.return_value = mock_cm
+                mock_cm.__enter__ = MagicMock(return_value=None)
+                mock_cm.__exit__ = MagicMock(return_value=False)
+                await process_task(_task(graph_type="research", user_jwt="janua-user-jwt"))
+        finally:
+            _exit_all(cms)
+
+        mock_coupler_ctx.assert_called_once_with("janua-user-jwt")
+        mock_cm.__enter__.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_blocked_path_marks_failed(self) -> None:
         """graph_status=blocked → api_status=failed."""
         from selva_workers.__main__ import process_task

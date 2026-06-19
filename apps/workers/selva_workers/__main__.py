@@ -33,6 +33,7 @@ from selva_redis_pool.task_stream import (
 from selva_redis_pool.timeout import get_task_timeout
 from selva_tools import Audience as ToolAudience
 from selva_tools import with_audience
+from selva_tools.backends.coupler import with_coupler_user_jwt
 
 from .checkpointer import close_checkpointer, create_checkpointer
 from .config import get_settings
@@ -555,12 +556,12 @@ async def process_task(task_data: dict) -> None:
         # Apply per-graph-type timeout
         timeout = get_task_timeout(graph_type)
 
-        # Bind the swarm's audience so any tool that calls
-        # enforce_audience() sees the current task's audience. The
-        # context is reset at the end of the ``with`` block so workers
-        # that process multiple tasks concurrently don't leak audience
-        # across tasks.
-        with with_audience(task_audience):
+        # Bind end-user JWT for Coupler delegated execute (P3b) and the
+        # swarm audience for enforce_audience(). Both ContextVars reset
+        # at block exit so concurrent tasks don't leak context.
+        raw_user_jwt = task_data.get("user_jwt")
+        task_user_jwt = raw_user_jwt.strip() if isinstance(raw_user_jwt, str) and raw_user_jwt.strip() else None
+        with with_coupler_user_jwt(task_user_jwt), with_audience(task_audience):
             if graph_type == "custom":
                 # Stream node progress for custom workflows
                 result = await asyncio.wait_for(

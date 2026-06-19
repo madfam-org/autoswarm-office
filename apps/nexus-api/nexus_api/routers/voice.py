@@ -124,6 +124,7 @@ async def voice_dispatch(
         request=request,
         db=db,
         tenant=tenant,
+        user=user,
     )
     return VoiceDispatchResponse(
         text=body.text,

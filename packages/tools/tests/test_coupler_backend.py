@@ -10,6 +10,8 @@ from selva_tools.backends.coupler import (
     CouplerProxyTool,
     CouplerToolBackend,
     coupler_enabled,
+    get_coupler_user_jwt,
+    with_coupler_user_jwt,
 )
 
 
@@ -77,3 +79,10 @@ def test_coupler_enabled_false_by_default(monkeypatch):
 def test_coupler_enabled_true(monkeypatch):
     monkeypatch.setenv("SELVA_COUPLER_TOOLS_ENABLED", "true")
     assert coupler_enabled() is True
+
+
+def test_with_coupler_user_jwt_binds_and_resets():
+    assert get_coupler_user_jwt() is None
+    with with_coupler_user_jwt("task-jwt"):
+        assert get_coupler_user_jwt() == "task-jwt"
+    assert get_coupler_user_jwt() is None

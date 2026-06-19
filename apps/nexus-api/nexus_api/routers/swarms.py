@@ -23,7 +23,7 @@ from selva_permissions import is_audience_enforcement_enabled, resolve_audience
 from selva_redis_pool import get_redis_pool
 from selva_skills import SkillAudience, get_skill_registry
 
-from ..auth import get_current_user, require_non_demo, require_non_guest
+from ..auth import delegatable_user_jwt, get_current_user, require_non_demo, require_non_guest
 from ..config import get_settings
 from ..database import get_db
 from ..idempotency import IdempotencyContext, get_idempotency_context
@@ -959,6 +959,7 @@ async def dispatch_task(
     request: Request,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> SwarmTaskResponse:
     """Dispatch a new swarm task.
@@ -1296,6 +1297,9 @@ async def dispatch_task(
         "payload": task.payload,
         "request_id": request_id,
     }
+    user_jwt = delegatable_user_jwt(request, user, settings)
+    if user_jwt:
+        task_msg_data["user_jwt"] = user_jwt
     if workflow_yaml is not None:
         task_msg_data["workflow_yaml"] = workflow_yaml
 
@@ -1412,6 +1416,7 @@ async def dispatch_ecosystem_app_manifest(
     body: Any = Body(None),
     db: AsyncSession = Depends(get_db),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
 ) -> SwarmTaskResponse:
     """Dispatch an EcosystemApp manifest as a canonical deployment task."""
@@ -1436,7 +1441,7 @@ async def dispatch_ecosystem_app_manifest(
         source=manifest_body.source,
         idempotency_key=manifest_body.idempotency_key or request.headers.get("Idempotency-Key"),
     )
-    return await dispatch_task(dispatch_body, request, db=db, tenant=tenant, idem=idem)
+    return await dispatch_task(dispatch_body, request, db=db, tenant=tenant, user=user, idem=idem)
 
 
 @router.post(

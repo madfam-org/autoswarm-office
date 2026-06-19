@@ -339,3 +339,20 @@ class TestRoleCheckers:
     async def test_require_non_demo_passes_for_real_user(self) -> None:
         out = await _auth_mod.require_non_demo(user={"sub": "u", "roles": ["tactician"]})
         assert out["sub"] == "u"
+
+
+class TestDelegatableUserJwt:
+    def test_returns_bearer_for_end_user(self) -> None:
+        request = _make_request({"Authorization": "Bearer user-jwt"})
+        user = {"sub": "user-123", "roles": ["tactician"]}
+        assert _auth_mod.delegatable_user_jwt(request, user, _settings()) == "user-jwt"
+
+    def test_skips_worker_shared_secret(self) -> None:
+        request = _make_request({"Authorization": "Bearer wt-secret"})
+        user = {"sub": "user-123", "roles": ["tactician"]}
+        assert _auth_mod.delegatable_user_jwt(request, user, _settings()) is None
+
+    def test_skips_service_principal(self) -> None:
+        request = _make_request({"Authorization": "Bearer service-jwt"})
+        user = {"sub": "service:worker", "roles": ["service"]}
+        assert _auth_mod.delegatable_user_jwt(request, user, _settings()) is None

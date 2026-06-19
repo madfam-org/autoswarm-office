@@ -227,6 +227,39 @@ async def require_non_demo(
     return user
 
 
+def bearer_token_from_request(request: Request) -> str | None:
+    """Extract the raw Bearer token from an Authorization header, if present."""
+    authorization = request.headers.get("Authorization", "")
+    if not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    return token or None
+
+
+def delegatable_user_jwt(
+    request: Request,
+    user: dict[str, Any],
+    settings: Settings | None = None,
+) -> str | None:
+    """Return a user JWT safe to forward to workers for Coupler delegation.
+
+    Skips service tokens, dev bypass, and worker shared-secret auth so
+    workers never treat infrastructure credentials as end-user identity.
+    """
+    token = bearer_token_from_request(request)
+    if not token:
+        return None
+    settings = settings or get_settings()
+    if token == "dev-bypass":
+        return None
+    if settings.worker_api_token and token == settings.worker_api_token:
+        return None
+    sub = str(user.get("sub") or "")
+    if sub.startswith("service:"):
+        return None
+    return token
+
+
 # ---------------------------------------------------------------------------
 # Type alias & multi-role factory used by Wave 4 routers
 # ---------------------------------------------------------------------------

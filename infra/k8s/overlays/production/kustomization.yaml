@@ -50,7 +50,7 @@ images:
   - name: ghcr.io/madfam-org/selva-gateway
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
   - name: ghcr.io/madfam-org/selva-workers
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    digest: sha256:3f00061e6132085910ebd21a969c2594f2c0aaa52e72891e21f48c0aeecb957a
 
 commonLabels:
   selva.town/environment: production

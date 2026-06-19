@@ -1,4 +1,10 @@
-"""Slack messaging tool for agent-to-human communication."""
+"""Slack messaging tool for agent-to-human communication.
+
+.. deprecated::
+   User-delegated Slack actions should use Coupler ``coupler.slack.post_message``
+   when ``SELVA_COUPLER_TOOLS_ENABLED=true``. This builtin remains for
+   platform bot-token alerts until P4 parity gate.
+"""
 
 from __future__ import annotations
 

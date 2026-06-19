@@ -1,20 +1,26 @@
 # Selva — Coupler Integration Plan
 
-**Status:** planned (P3 consumer PoC)  
-**Depends on:** Janua P1 (ConnectedAccount), Coupler P2 (gateway + executor)  
+**Status:** P3a implemented (CouplerToolBackend + registry discovery)  
+**Depends on:** Janua P1 (`ConnectedAccount`), Coupler P2 (live execute)  
 **Canonical architecture:** [enclii/docs/strategy/AGENT_TOOL_PLANE.md](https://github.com/madfam-org/enclii/blob/main/docs/strategy/AGENT_TOOL_PLANE.md)
+
+**Cross-repo docs (authoritative audit):**
+
+- [coupler/docs/SELVA_TOOLING_AUDIT.md](https://github.com/madfam-org/coupler/blob/main/docs/SELVA_TOOLING_AUDIT.md)
+- [coupler/docs/SEPARATION_OF_CONCERNS.md](https://github.com/madfam-org/coupler/blob/main/docs/SEPARATION_OF_CONCERNS.md)
+- [coupler/docs/IMPLEMENTATION_ROADMAP.md](https://github.com/madfam-org/coupler/blob/main/docs/IMPLEMENTATION_ROADMAP.md)
 
 ---
 
 ## 1. Why Selva consumes Coupler
 
-Selva today ships **268 built-in tools** and **6 ecosystem adapters** (Karafiel, Dhanam, PhyndCRM, Tezca, Crawler, A2A). Built-ins cover platform-specific workflows; they do **not** replace Composio-class delegated SaaS execution (Slack, Gmail, GitHub as end-user, Notion, etc.).
+Selva ships **~268 built-in tools** and **6 ecosystem adapters**. Built-ins cover MADFAM workflows; they do **not** replace Composio-class delegated SaaS execution.
 
 | Layer | Owner | Examples |
 |-------|-------|----------|
-| LLM routing + agent orchestration | Selva (Nexus, workers, graphs) | Campaign graph, calibration, HITL |
-| Built-in + ecosystem adapters | Selva `packages/tools` | CRM handoff, Dhanam, email gateways |
-| **Delegated SaaS tools** | **Coupler** | `github.list_repos`, `slack.post_message` |
+| LLM routing + agent orchestration | Selva | Campaign graph, calibration, HITL |
+| Built-in + ecosystem adapters | Selva `packages/tools` | CRM, Dhanam, Karafiel |
+| **Delegated SaaS tools** | **Coupler** | `coupler.github.list_repos`, `coupler.slack.post_message` |
 | **Operator infra tools** | Enclii Provider Hub | `providers.cloudflare.*`, `ops.*` |
 | Identity + OAuth vault | Janua | ConnectedAccount, token delegation |
 
@@ -22,83 +28,92 @@ Selva today ships **268 built-in tools** and **6 ecosystem adapters** (Karafiel,
 
 ---
 
-## 2. Integration phases (aligned with Coupler program)
+## 2. What stays in Selva (no migration)
 
-| Phase | Selva work | Gate |
-|-------|------------|------|
-| **P3a** | `CouplerToolBackend` in `packages/tools` — search + execute via Coupler REST | Staging smoke: one tool call |
-| **P3b** | Wire backend into agent graph tool resolver (feature flag) | Worker e2e with mocked Coupler |
-| **P3c** | MCP client path for Cursor/dev agents (optional parallel) | MCP smoke doc |
-| **P4** | Replace any direct SaaS HTTP in adapters with Coupler | Parity checklist |
-| **P5** | Synthetics: agent invokes Slack via Coupler on staging | Green in Enclii-style gate |
-
-Target: **2026-10-03** for P3 PoC (Coupler program calendar).
+| Category | Modules | Reason |
+|----------|---------|--------|
+| MADFAM ecosystem | `karafiel.py`, `crm_tools.py`, `billing_tools.py`, `legal.py`, `intelligence.py` | Platform API adapters |
+| Platform infra | `cloudflare*`, `k8s_*`, `enclii_infra`, `github_admin.py` | Operator / MADFAM org ops |
+| Outbound gateway | `email_tools.py` (Resend) | Selva messaging product surface |
+| Ingress | `nexus_api/routers/gateway.py` | Channel webhooks, not execute |
+| Meta / HITL | `tool_catalog`, `hitl_introspection`, `factory_manifest` | Selva orchestration |
+| Worker local | `BashTool`, `GitTool` in workers | Workspace execution |
 
 ---
 
-## 3. Proposed `CouplerToolBackend` interface
+## 3. Migrate to Coupler (P4 refactor targets)
 
-Location (planned): `packages/tools/src/selva_tools/backends/coupler.py`
+| Selva module | Coupler tool | Notes |
+|--------------|--------------|-------|
+| `builtins/slack.py` | `coupler.slack.post_message` | Deprecated docstring added; bot token fallback until P4 |
+| `mcp_config.json` → `github` | `coupler.github.*` | Use Coupler MCP in dev |
+| `packages/calendar/` | future `coupler.google.*` | Per-user OAuth |
+| `reddit_tools`, `mastodon_tools`, `bluesky_tools` | future connectors | Persona keys → delegated |
+
+---
+
+## 4. Implementation status
+
+| Phase | Work | Status |
+|-------|------|--------|
+| **P3a** | `CouplerToolBackend` + `CouplerProxyTool` | ✅ `packages/tools/src/selva_tools/backends/coupler.py` |
+| **P3a** | Registry `discover_coupler_tools()` | ✅ behind `SELVA_COUPLER_TOOLS_ENABLED` |
+| **P3a** | Unit tests | ✅ `packages/tools/tests/test_coupler_backend.py` |
+| **P3b** | Unified `resolve_tools_for_task()` in workers | Planned |
+| **P3b** | Pass `user_jwt` via `set_coupler_user_jwt()` in worker | Planned |
+| **P3c** | Coupler MCP in labspace `.cursor/mcp.json` | ✅ |
+| **P4** | Deprecate direct SaaS HTTP paths | Planned |
+
+---
+
+## 5. `CouplerToolBackend` (implemented)
+
+Location: `packages/tools/src/selva_tools/backends/coupler.py`
 
 ```python
 class CouplerToolBackend:
-    """Resolve tool definitions and execute via Coupler gateway."""
-
-    async def search_tools(self, query: str, *, user_jwt: str) -> list[ToolDefinition]: ...
-    async def execute_tool(
-        self,
-        tool_id: str,
-        arguments: dict,
-        *,
-        user_jwt: str,
-        connection_id: str | None = None,
-    ) -> ToolResult: ...
+    async def list_tools(self, *, user_jwt: str | None = None) -> list[dict]: ...
+    async def search_tools(self, query: str, *, user_jwt: str | None = None) -> list[dict]: ...
+    async def execute_tool(self, tool_id: str, arguments: dict, *, user_jwt: str | None, ...) -> dict: ...
 ```
 
-Environment:
+`CouplerProxyTool` registers each Coupler catalog entry into `ToolRegistry` when the feature flag is on.
 
-| Variable | Description |
-|----------|-------------|
-| `COUPLER_BASE_URL` | Gateway URL (staging/prod) |
-| `COUPLER_AUDIENCE` | `coupler-api` |
-| `JANUA_ISSUER_URL` | Passthrough user JWT validation context |
+### Execution context
 
-User JWT is forwarded to Coupler; Coupler calls Janua for delegation. Selva never sees refresh tokens.
+Workers/graphs must call `set_coupler_user_jwt(token)` before Coupler proxy execute. Selva never stores refresh tokens.
 
 ---
 
-## 4. Trust zones in Selva agents
+## 6. Environment
 
-| Zone | Tool prefix | Auth | Use case |
-|------|-------------|------|----------|
-| **User delegated** | `coupler.*` / connector ids | End-user Janua JWT | Slack, Gmail, GitHub-as-user |
-| **Platform ops** | `madfam.ops.*` | Admin JWT (Enclii audience) | DNS, deploy, provider hub |
-| **Built-in** | existing registry | Tenant/platform audience | Campaign, CRM, internal |
-
-Operator tools stay on Enclii; Coupler proxies `madfam.ops.*` only for admin-scoped agents (Coupler P4).
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SELVA_COUPLER_TOOLS_ENABLED` | `false` | Register Coupler proxy tools |
+| `COUPLER_BASE_URL` | — | Gateway URL |
+| `COUPLER_AUDIENCE` | `coupler-api` | JWT audience hint |
 
 ---
 
-## 5. What stays in Selva (no migration)
+## 7. Selva internal cleanup (parallel)
 
-- All 268 built-in tools unless they duplicate a Coupler connector
-- Messaging gateways (18 channels) — different surface than Coupler execute
-- Ecosystem adapters (Karafiel, Dhanam, PhyndCRM, Tezca, Crawler, A2A)
-- LLM inference routing (Selva Nexus `/v1`)
-
----
-
-## 6. Testing strategy
-
-1. **Unit:** mock Coupler OpenAPI responses in `packages/tools/tests/`
-2. **Integration:** staging Coupler + Janua test user with GitHub connection
-3. **Load:** defer to Coupler gate; Selva adds k6 scenario only after P3 PoC
-4. **Feature flag:** `SELVA_COUPLER_TOOLS_ENABLED` default `false` until P3 gate
+1. Wire or remove unused `McpToolAdapter` / ACP MCP bootstrap
+2. Unify tool resolution for YAML `tools:` lists and worker graphs
+3. Deduplicate Tavily (`web_search` builtin vs `mcp_config.json`)
 
 ---
 
-## 7. References
+## 8. Trust zones
 
-- [COUPLER_REMEDIATION_PLAN.md](https://github.com/madfam-org/enclii/blob/main/docs/strategy/COUPLER_REMEDIATION_PLAN.md) — task IDs S3-*
-- [janua/docs/COUPLER_PROGRAM.md](https://github.com/madfam-org/janua/blob/main/docs/COUPLER_PROGRAM.md) — token delegation contract
-- [AUTONOMOUS_OPERATIONS_PROGRAM.md](./AUTONOMOUS_OPERATIONS_PROGRAM.md) — Phases 0–6 (Coupler enables Phase 5+ external tool breadth)
+| Zone | Prefix | Auth |
+|------|--------|------|
+| User delegated | `coupler.*` | End-user Janua JWT |
+| Platform ops | `madfam.ops.*` | Admin JWT → Enclii |
+| Built-in | registry names | Tenant/platform audience |
+
+---
+
+## 9. References
+
+- [COUPLER_PROGRAM.md](https://github.com/madfam-org/janua/blob/main/docs/COUPLER_PROGRAM.md)
+- [COUPLER_REMEDIATION_PLAN.md](https://github.com/madfam-org/enclii/blob/main/docs/strategy/COUPLER_REMEDIATION_PLAN.md)

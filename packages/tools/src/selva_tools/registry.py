@@ -88,7 +88,32 @@ class ToolRegistry:
         for tool in get_builtin_tools():
             self.register(tool)
 
+        self._discover_coupler_tools()
+
         logger.info("Registered %d built-in tools", len(self._tools))
+
+    def _discover_coupler_tools(self) -> None:
+        """Register Coupler proxy tools when feature flag is enabled."""
+        try:
+            from .backends.coupler import CouplerProxyTool, CouplerToolBackend, coupler_enabled
+
+            if not coupler_enabled():
+                return
+            backend = CouplerToolBackend()
+            import asyncio
+
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            catalog = loop.run_until_complete(backend.list_tools())
+            for meta in catalog:
+                self.register(CouplerProxyTool(backend, meta))
+            logger.info("Registered %d Coupler proxy tools", len(catalog))
+        except Exception as exc:
+            logger.warning("Coupler tool discovery skipped: %s", exc)
 
 
 def get_tool_registry() -> ToolRegistry:

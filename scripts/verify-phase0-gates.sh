@@ -90,7 +90,15 @@ if [[ "$RUN_STAGING" == true ]]; then
   echo "== Campaign loop (staging) =="
   ./scripts/verify-campaign-loop.sh --staging
   echo "== Observability wiring (staging) =="
-  ./scripts/verify-staging-observability.sh || true
+  if [[ "$REQUIRE_OPERATOR_GATES" == "true" ]]; then
+    ./scripts/verify-staging-observability.sh --require-secret --check-all
+    ./scripts/verify-observability-trace.sh --require-trace
+    ./scripts/verify-sentry-capture.sh --staging --require-capture
+  else
+    ./scripts/verify-staging-observability.sh --check-all || true
+    ./scripts/verify-observability-trace.sh || true
+    ./scripts/verify-sentry-capture.sh --staging || true
+  fi
 fi
 
-echo "Phase 0 gates passed (operator still must provision OTel/Sentry secrets)."
+echo "Phase 0 gates passed (operator: run ./scripts/run-wave1-gates.sh --staging --require-all for Wave 1 bundle)."

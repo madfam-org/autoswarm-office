@@ -5,6 +5,10 @@
 > _The legacy "Selva Office" name is retained only inside historical migration
 > identifiers and a few infra namespaces. The product, repo, and brand are Selva._
 >
+> **Full remediation index (2026-06-22)?** See
+> [docs/FULL_REMEDIATION_PLAN_2026-06-22.md](docs/FULL_REMEDIATION_PLAN_2026-06-22.md)
+> — master wave plan with live prod snapshot and 4-week calendar.
+>
 > **Need to know what's blocked on a human decision right now?** See
 > [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) — priority-
 > ordered items, each with what / why / owner / unblocks / cross-refs.

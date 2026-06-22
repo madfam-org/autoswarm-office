@@ -83,6 +83,8 @@ spec:
                   optional: true
             - name: BILLING_VIA_DHANAM
               value: "true"
+            - name: COLYSEUS_URL
+              value: "http://colyseus"
             # Load-test calibration: worker JWT sub is shared (service:worker); default 10/min blocks 100-VU k6.
             - name: DISPATCH_RATE_LIMIT
               value: "500"

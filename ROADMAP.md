@@ -18,6 +18,11 @@
 > — no-go gates, immediate engineering hardening, evidence checklist, and
 > 30/60/90-day remediation waves toward full commercial GA.
 >
+> **Commercial GA strategy (GTM, wedges, competitive moat)?** See
+> [docs/COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md](docs/COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md)
+> — positioning thesis, unfair advantages, six monetization wedges, CGA gate
+> tracker, and implementation plan through full GA.
+>
 > **Full remediation sprint plan (Phase 0 → prod promote)?** See
 > [docs/PHASE_0_REMEDIATION_PLAN.md](docs/PHASE_0_REMEDIATION_PLAN.md)
 > — 4-sprint schedule, engineering backlog, exit checklist.

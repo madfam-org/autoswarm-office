@@ -560,7 +560,11 @@ async def process_task(task_data: dict) -> None:
         # swarm audience for enforce_audience(). Both ContextVars reset
         # at block exit so concurrent tasks don't leak context.
         raw_user_jwt = task_data.get("user_jwt")
-        task_user_jwt = raw_user_jwt.strip() if isinstance(raw_user_jwt, str) and raw_user_jwt.strip() else None
+        task_user_jwt = (
+            raw_user_jwt.strip()
+            if isinstance(raw_user_jwt, str) and raw_user_jwt.strip()
+            else None
+        )
         with with_coupler_user_jwt(task_user_jwt), with_audience(task_audience):
             if graph_type == "custom":
                 # Stream node progress for custom workflows

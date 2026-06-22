@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   sequencing Waves 0–3, live prod snapshot, Phase 0 exit checklist, and
   4-week calendar. Cross-linked from ROADMAP, OPERATOR_BACKLOG, PHASE_0,
   and `llms.txt`.
+- **`docs/COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md`** — commercial
+  GA strategy: competitive positioning, unfair advantages, six monetization
+  wedges (A–F), CGA gate tracker, wave-mapped implementation plan, GTM
+  sequencing, and leadership scorecard.
 
 ### Fixed
 - **Wave 0 CI security** — bump `pyjwt` (≥2.13.0), `python-multipart`

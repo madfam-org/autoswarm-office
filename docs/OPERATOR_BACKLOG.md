@@ -17,6 +17,8 @@
 > For the **platform-wide commercial GA contract**, see
 > [docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)
 > before declaring any tenant lane generally available.
+> For **GTM strategy, wedges, and the path to full GA**, see
+> [docs/COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md](COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md).
 > Then read [docs/AUTONOMOUS_OPERATIONS_PROGRAM.md](AUTONOMOUS_OPERATIONS_PROGRAM.md)
 > for the full north-star plan (Phases 0–6), then
 > [ROADMAP.md](../ROADMAP.md) for product phase context and

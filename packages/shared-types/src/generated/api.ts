@@ -28,6 +28,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/health/sentry-probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sentry Probe
+         * @description Emit a tagged synthetic error to Sentry for Phase 0 wiring proof.
+         *
+         *     Requires ``Authorization: Bearer <WORKER_API_TOKEN>``. Returns 503 when
+         *     ``SENTRY_DSN`` is unset so operators know capture is not yet live.
+         */
+        post: operations["sentry_probe_api_v1_health_sentry_probe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/health": {
         parameters: {
             query?: never;
@@ -7335,6 +7358,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    sentry_probe_api_v1_health_sentry_probe_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

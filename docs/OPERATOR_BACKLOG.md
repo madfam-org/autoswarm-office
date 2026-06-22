@@ -5,6 +5,12 @@
 > item below is unblocked from the engineering side; what's missing is
 > a vendor pick, a budget approval, a config flip, or a manual operation.
 >
+> **Wave 1 operator runbook (2026-06-22):** [docs/WAVE1_OPERATOR_RUNBOOK.md](WAVE1_OPERATOR_RUNBOOK.md)
+> — OTel bootstrap, trace proof, Sentry probe, Run 4b, DR drill, gate bundle.
+>
+> **Full remediation index (2026-06-22):** [docs/FULL_REMEDIATION_PLAN_2026-06-22.md](FULL_REMEDIATION_PLAN_2026-06-22.md)
+> — master wave plan sequencing Phase 0, commercial GA, and live prod findings.
+>
 > **Read this first** when picking the work back up. For the **full sprint schedule**
 > (4 weeks, engineering backlog, exit checklist), see
 > [docs/PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md).

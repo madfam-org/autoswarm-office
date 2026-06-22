@@ -389,15 +389,21 @@ Single-trace smoke test (do this on staging first):
 3. Open Grafana Cloud → stack `selva-staging` → Explore → Tempo data source,
    search the emitted `TRACE_ID`, and confirm spans for FastAPI dispatch,
    worker pickup, and persistence/event work.
-4. **Sentry smoke test**: in nexus-api logs trigger a known error path:
+4. **Sentry smoke test** (preferred — after Wave 1 deploy):
+   ```bash
+   export STAGING_WORKER_API_TOKEN='...'
+   ./scripts/verify-sentry-capture.sh --staging --require-capture
+   ```
+   Or manually: `POST /api/v1/health/sentry-probe` with worker Bearer token.
+   Confirm **Issues → selva-nexus-api → `selva sentry-probe`** within 60s.
+
+   Legacy manual break (not recommended):
    ```bash
    curl -H "Authorization: Bearer invalid-token" \
         https://staging-api.selva.town/api/v1/swarms/dispatch
    ```
-   Check Sentry → `selva-nexus-api` → Issues. The 401 should NOT be there
-   (it's expected behavior, not an error). Now intentionally break a known
-   path (e.g. point `DATABASE_URL` to an invalid host in a one-off pod) and
-   confirm the connection error lands in Sentry within 60s.
+   The 401 should NOT appear in Sentry (expected behavior). Do not break
+   `DATABASE_URL` in prod — use the sentry-probe endpoint instead.
 
 ### 4.5 Update CLAUDE.md
 

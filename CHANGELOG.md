@@ -6,7 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **`docs/WAVE1_OPERATOR_RUNBOOK.md`** — step-by-step Wave 1 operator guide (OTel,
+  Sentry, Run 4b, DR drill, gate bundle).
+- **`POST /api/v1/health/sentry-probe`** — worker-token-gated synthetic Sentry
+  capture for Phase 0 wiring proof.
+- **Wave 1 scripts** — `run-wave1-gates.sh`, `verify-sentry-capture.sh`,
+  `verify-prod-observability.sh`, `bootstrap-prod-observability.sh`; enhanced
+  `verify-staging-observability.sh` (`--check-all`, `--namespace`).
+- **`docs/dr-drills/TEMPLATE.md`** — placeholder-free DR evidence template.
+- **`docs/FULL_REMEDIATION_PLAN_2026-06-22.md`** — master remediation index
+  sequencing Waves 0–3, live prod snapshot, Phase 0 exit checklist, and
+  4-week calendar. Cross-linked from ROADMAP, OPERATOR_BACKLOG, PHASE_0,
+  and `llms.txt`.
+
 ### Fixed
+- **Wave 0 CI security** — bump `pyjwt` (≥2.13.0), `python-multipart`
+  (≥0.0.30), and `starlette` (≥1.3.1) to clear Trivy CVE gates on `main`.
+- **Prod health probes** — consent-ledger grant probe uses `current_user`
+  by default (fixes 503 when legacy `selva` role absent); set
+  `COLYSEUS_URL` in prod configmap and staging nexus-api patch for internal
+  Colyseus health; extend `./scripts/verify-doc-truth.sh` with both checks.
 - **Commercial GA CI restoration** — regenerated shared wire types, restored
   Ruff compliance, fixed workflow Python runner/safe-eval regressions, and
   pinned patched `fast-uri` / `picomatch` transitive versions for the Trivy

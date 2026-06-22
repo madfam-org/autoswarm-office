@@ -3,6 +3,8 @@
 > **Status:** Accepted (2026-05-30)
 > **Owner:** Selva engineering + MADFAM platform operator
 > **Canonical for:** What to build next in `selva-office`, what requires operator/vendor action, and how it gates the [Autonomous Operations Program](./AUTONOMOUS_OPERATIONS_PROGRAM.md).
+> **Master remediation index:** [FULL_REMEDIATION_PLAN_2026-06-22.md](./FULL_REMEDIATION_PLAN_2026-06-22.md)
+> adds the 2026-06-22 live prod snapshot and Wave 0–3 calendar on top of this sprint plan.
 > **Commercial GA overlay:** [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md)
 > adds the no-go gates and immediate correctness lane toward full commercial GA.
 

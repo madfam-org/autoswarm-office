@@ -7,7 +7,7 @@ import os
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,11 +22,67 @@ router = APIRouter(tags=["health"])
 
 _settings = get_settings()
 
-# Application role name whose privileges on `consent_ledger` we expect to
-# enforce the append-only invariant. Migration 0018 REVOKEs UPDATE/DELETE
-# from this role. Configurable via env in case a deployment uses a
-# different app role name.
-_CONSENT_LEDGER_APP_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE", "selva")
+# Optional override for grant probe (e.g. ops superuser checking selva_app).
+# When unset, probes current_user — the runtime DB role nexus-api connects as.
+_CONSENT_LEDGER_PROBE_ROLE = os.environ.get("CONSENT_LEDGER_APP_ROLE")
+
+
+def _require_worker_token(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> None:
+    """Bearer check for internal health probes (worker/gateway token)."""
+    expected = _settings.worker_api_token
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="worker_api_token not configured",
+        )
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="missing bearer token",
+        )
+    token = authorization.split(" ", 1)[1].strip()
+    if token != expected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid bearer token",
+        )
+
+
+@router.post("/sentry-probe")
+async def sentry_probe(
+    _: None = Depends(_require_worker_token),
+) -> dict[str, object]:
+    """Emit a tagged synthetic error to Sentry for Phase 0 wiring proof.
+
+    Requires ``Authorization: Bearer <WORKER_API_TOKEN>``. Returns 503 when
+    ``SENTRY_DSN`` is unset so operators know capture is not yet live.
+    """
+    dsn = os.environ.get("SENTRY_DSN")
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="sentry_not_configured",
+        )
+
+    try:
+        import sentry_sdk
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="sentry_sdk_unavailable",
+        ) from exc
+
+    event_id = sentry_sdk.capture_exception(
+        RuntimeError("selva sentry-probe"),
+        tags={"probe": "phase0", "service": "nexus-api"},
+    )
+    return {
+        "captured": bool(event_id),
+        "event_id": event_id,
+        "service": "nexus-api",
+    }
 
 
 @router.get("/health")
@@ -273,7 +329,7 @@ async def consent_ledger_grants(
 
     Returns 503 when the invariant does not hold.
     """
-    role = _CONSENT_LEDGER_APP_ROLE
+    role = _CONSENT_LEDGER_PROBE_ROLE
     body: dict[str, Any] = {
         "invariant_holds": False,
         "can_insert": None,
@@ -320,23 +376,39 @@ async def consent_ledger_grants(
     body["signing_keys"] = await _probe_signing_keys()
 
     try:
-        result = await db.execute(
-            text(
+        if role:
+            grant_sql = text(
                 """
                 SELECT
                     has_table_privilege(:role, 'consent_ledger', 'INSERT') AS can_insert,
                     has_table_privilege(:role, 'consent_ledger', 'UPDATE') AS can_update,
                     has_table_privilege(:role, 'consent_ledger', 'DELETE') AS can_delete
                 """
-            ),
-            {"role": role},
-        )
+            )
+            grant_params: dict[str, str] = {"role": role}
+        else:
+            grant_sql = text(
+                """
+                SELECT
+                    has_table_privilege(current_user, 'consent_ledger', 'INSERT')
+                        AS can_insert,
+                    has_table_privilege(current_user, 'consent_ledger', 'UPDATE')
+                        AS can_update,
+                    has_table_privilege(current_user, 'consent_ledger', 'DELETE')
+                        AS can_delete
+                """
+            )
+            grant_params = {}
+
+        result = await db.execute(grant_sql, grant_params)
         row = result.one()
     except Exception as exc:
         # Most common case: SQLite test DB or PostgreSQL role doesn't
         # exist (dev setups). Surface as degraded rather than crashing.
         logger.warning(
-            "Consent ledger grant probe failed (role=%s): %s", role, exc
+            "Consent ledger grant probe failed (role=%s): %s",
+            role or "current_user",
+            exc,
         )
         body["error"] = "grant_probe_unavailable"
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
@@ -358,7 +430,7 @@ async def consent_ledger_grants(
         logger.error(
             "Consent ledger append-only invariant VIOLATED -- "
             "role=%s INSERT=%s UPDATE=%s DELETE=%s",
-            role,
+            role or "current_user",
             can_insert,
             can_update,
             can_delete,

@@ -27,6 +27,27 @@ check "nexus-api liveness" "https://api.selva.town/api/v1/health/health"
 check "colyseus health" "https://ws.selva.town/health"
 check "gateway health" "https://gw.selva.town/health"
 
+detail_body="$(curl -sS "https://api.selva.town/api/v1/health/detail")"
+if echo "$detail_body" | grep -q '"colyseus":"ok"'; then
+  echo "OK   nexus-api colyseus internal check"
+else
+  echo "FAIL nexus-api health/detail colyseus not ok:"
+  echo "$detail_body" | head -c 400
+  exit 1
+fi
+
+consent_body="$(curl -sS "https://api.selva.town/api/v1/health/consent-ledger-grants")"
+if echo "$consent_body" | grep -q '"invariant_holds":true'; then
+  echo "OK   consent ledger append-only invariant"
+elif echo "$consent_body" | grep -q '"error":"grant_probe_unavailable"'; then
+  echo "WARN consent ledger grant probe unavailable (check DATABASE role / migration 0018)"
+  exit 1
+else
+  echo "FAIL consent ledger invariant:"
+  echo "$consent_body" | head -c 400
+  exit 1
+fi
+
 rls_body="$(curl -sS "https://api.selva.town/api/v1/health/rls-status")"
 if echo "$rls_body" | grep -q '"strict_mode_enabled":true'; then
   echo "OK   RLS strict mode enabled"

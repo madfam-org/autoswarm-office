@@ -62,13 +62,13 @@ images:
 - digest: sha256:cae86d5c0a59971cef94f04bd508b151dcae8a6099726c34fb380e17bf5d18e9
   name: ghcr.io/madfam-org/selva-gateway
   newName: ghcr.io/madfam-org/selva-gateway
-- digest: sha256:7123f0ea55b1e5102c450bf7fff76f985f452b30b7c8b2985f8a62bb4c361fe1
+- digest: sha256:9ffb099b8b7e3483c777e8f592ca63edf5597228c1d927b3b8c4a5ca87d3b834
   name: ghcr.io/madfam-org/selva-nexus-api
   newName: ghcr.io/madfam-org/selva-nexus-api
 - digest: sha256:3470ee0c057c32d467d28d1539cb0e51b5abaf1035f0ec551cb27115ef8c400a
   name: ghcr.io/madfam-org/selva-office-ui
   newName: ghcr.io/madfam-org/selva-office-ui
-- digest: sha256:a32cc2fc6aed0f97d5e5ac3e0bc00b947f19e350e1b58d4a9ea604e9bafe69ca
+- digest: sha256:df8bf72e4070cf7ad28c58a3a70d74980ac9a59037af685411f0f81744a9e5f3
   name: ghcr.io/madfam-org/selva-workers
   newName: ghcr.io/madfam-org/selva-workers
 

@@ -474,9 +474,21 @@ class TestLintAndTypeCheckTypescript:
             (
                 c
                 for c in calls
-                if isinstance(c["command"], list) and c["command"][0] == "ruff"
+                if (
+                    isinstance(c["command"], list)
+                    and c["command"]
+                    and c["command"][0] == "ruff"
+                )
+                or (
+                    isinstance(c["command"], str)
+                    and c["command"].startswith("ruff check")
+                )
             ),
             None,
         )
         assert ruff_cmd is not None
-        assert "--fix" in ruff_cmd["command"]
+        cmd = ruff_cmd["command"]
+        if isinstance(cmd, str):
+            assert "--fix" in cmd
+        else:
+            assert "--fix" in cmd

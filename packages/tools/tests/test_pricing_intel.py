@@ -10,6 +10,8 @@ we never depend on a live dhanam/catalog.yaml snapshot.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -28,6 +30,21 @@ from selva_tools.builtins.pricing_intel import (
     audit_promo_stacks,
     audit_tier_gaps,
 )
+
+
+def _bypass_safe_request_kwargs(method: str, url: str, **kwargs: Any) -> tuple[dict[str, Any], str]:
+    """Test helper: skip DNS pinning so MockTransport can intercept httpx."""
+    extra = kwargs.get("extra") or {}
+    request_kwargs: dict[str, Any] = {
+        "method": method,
+        "url": url,
+        "headers": kwargs.get("headers") or {},
+    }
+    if "timeout" in extra:
+        request_kwargs["timeout"] = extra["timeout"]
+    if extra.get("follow_redirects"):
+        request_kwargs["follow_redirects"] = True
+    return request_kwargs, url
 
 # ============================================================================
 # apply_coupon — percent vs amount-off, currency guards
@@ -266,7 +283,11 @@ class TestCompetitorPriceLookupTool:
 
         _httpx.AsyncClient = PatchedClient  # type: ignore[assignment]
         try:
-            res = await CompetitorPriceLookupTool().execute(url="https://comp.test/pricing")
+            with patch(
+                "selva_tools.builtins.pricing_intel._build_safe_request_kwargs",
+                side_effect=_bypass_safe_request_kwargs,
+            ):
+                res = await CompetitorPriceLookupTool().execute(url="https://comp.test/pricing")
             assert res.success
             assert res.data["status_code"] == 200
             assert "$99" in res.data["body"]
@@ -294,7 +315,11 @@ class TestCompetitorPriceLookupTool:
 
         _httpx.AsyncClient = PatchedClient  # type: ignore[assignment]
         try:
-            res = await CompetitorPriceLookupTool().execute(url="https://comp.test/pricing")
+            with patch(
+                "selva_tools.builtins.pricing_intel._build_safe_request_kwargs",
+                side_effect=_bypass_safe_request_kwargs,
+            ):
+                res = await CompetitorPriceLookupTool().execute(url="https://comp.test/pricing")
             assert res.success is False
             assert res.data.get("status_code") == 503
         finally:

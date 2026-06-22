@@ -17,6 +17,9 @@ Autonomous Operations Program. It sits above them as the GA gate map:
   remains the north-star program plan.
 - [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) remains the human-gated action
   list.
+- GTM strategy, competitive positioning, monetization wedges, and wedge-to-wave
+  mapping remain in
+  [COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md](./COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md).
 - Campaign-specific GA proof remains in
   [COMMERCIAL_GA_CAMPAIGN_ORCHESTRATION_GATES_2026-06-01.md](./COMMERCIAL_GA_CAMPAIGN_ORCHESTRATION_GATES_2026-06-01.md),
   [TULANA_COMMERCIAL_GA_GAP_QUEUE_CONSUMPTION_2026-06-01.md](./TULANA_COMMERCIAL_GA_GAP_QUEUE_CONSUMPTION_2026-06-01.md),
@@ -204,3 +207,4 @@ Pause GA promotion if any of these are true:
 | 2026-06-04 | Added guarded DB restore drill wrapper and strict evidence verifier for the backup/restore GA gate. |
 | 2026-06-04 | Added Q3 secret rotation schedule verifier to the GA acceptance checklist. |
 | 2026-06-05 | Documented Commercial GA CI restoration evidence in [SESSION_2026-06-05_COMMERCIAL_GA_CI_RESTORATION.md](./SESSION_2026-06-05_COMMERCIAL_GA_CI_RESTORATION.md). |
+| 2026-06-22 | Cross-linked [COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md](./COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md) for GTM and wedge sequencing. |

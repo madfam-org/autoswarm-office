@@ -55,7 +55,9 @@ class CouplerToolBackend:
             data = resp.json()
             return list(data.get("tools", []))
 
-    async def search_tools(self, query: str, *, user_jwt: str | None = None) -> list[dict[str, Any]]:
+    async def search_tools(
+        self, query: str, *, user_jwt: str | None = None
+    ) -> list[dict[str, Any]]:
         headers = _auth_headers(user_jwt)
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(

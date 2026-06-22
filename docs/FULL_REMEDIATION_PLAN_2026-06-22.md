@@ -12,6 +12,7 @@
 | If you need… | Read… |
 |--------------|-------|
 | **This plan** — waves, calendar, exit gates, live prod snapshot | This doc |
+| **GTM strategy, wedges, competitive positioning** | [COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md](./COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md) |
 | Sprint schedule + engineering backlog | [PHASE_0_REMEDIATION_PLAN.md](./PHASE_0_REMEDIATION_PLAN.md) |
 | Commercial GA no-go gates (CGA-0..9) | [COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md](./COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md) |
 | Human-gated operator actions | [OPERATOR_BACKLOG.md](./OPERATOR_BACKLOG.md) |

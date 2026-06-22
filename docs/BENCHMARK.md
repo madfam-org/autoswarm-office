@@ -2,6 +2,11 @@
 
 > Last updated: April 2026
 > Reference: [ro.am/virtual-office-platform](https://ro.am/virtual-office-platform)
+>
+> **Strategic layer (GTM, wedges, GA path):** see
+> [COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md](./COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md).
+> **Pricing SSOT:** [infra/pricing/selva-tiers.json](../infra/pricing/selva-tiers.json)
+> (Tulana metered packs) — the seat-based figures in §Pricing below are legacy.
 
 ## Executive Summary
 

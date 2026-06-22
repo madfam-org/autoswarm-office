@@ -8,6 +8,7 @@ Compact LLM context index for this repository.
 - `docs/FULL_REMEDIATION_PLAN_2026-06-22.md` — **master remediation index** (waves 0–3, live prod snapshot, 4-week calendar).
 - `docs/WAVE1_OPERATOR_RUNBOOK.md` — Wave 1 operator steps (OTel, Sentry, Run 4b, DR).
 - `docs/COMMERCIAL_GA_REMEDIATION_PLAN_2026-06-04.md` — platform-wide commercial GA no-go gates and evidence checklist.
+- `docs/COMMERCIAL_GA_STRATEGY_AND_IMPLEMENTATION_2026-06-22.md` — GTM strategy, competitive moat, monetization wedges, GA implementation plan.
 - `docs/PHASE_0_REMEDIATION_PLAN.md` — **4-sprint remediation plan** (Phase 0 → prod promote).
 - `docs/AUTONOMOUS_OPERATIONS_PROGRAM.md` — north-star plan (Phases 0–6).
 - `docs/OPERATOR_BACKLOG.md` — human-gated operator items.

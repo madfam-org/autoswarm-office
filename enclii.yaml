@@ -174,7 +174,7 @@ spec:
     context: .
     args:
       NEXT_PUBLIC_API_URL: https://api.selva.town
-      NEXT_PUBLIC_JANUA_URL: https://auth.madfam.io
+      NEXT_PUBLIC_JANUA_ISSUER_URL: https://auth.madfam.io
       NEXT_PUBLIC_COLYSEUS_URL: wss://ws.selva.town
     source:
       git:

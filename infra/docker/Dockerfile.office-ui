@@ -31,7 +31,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Next.js bakes NEXT_PUBLIC_* at build time — these must be ARGs
 ARG NEXT_PUBLIC_API_URL=https://api.selva.town
 ARG NEXT_PUBLIC_COLYSEUS_URL=wss://ws.selva.town
-ARG NEXT_PUBLIC_JANUA_ISSUER_URL=https://auth.selva.town
+ARG NEXT_PUBLIC_JANUA_ISSUER_URL=https://auth.madfam.io
 ARG NEXT_PUBLIC_JANUA_CLIENT_ID=selva-office
 ARG NEXT_PUBLIC_DEMO_ENABLED=true
 ARG NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true

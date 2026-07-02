@@ -169,7 +169,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.selva.town
             NEXT_PUBLIC_COLYSEUS_URL=wss://ws.selva.town
-            NEXT_PUBLIC_JANUA_ISSUER_URL=${{ secrets.JANUA_ISSUER_URL || 'https://auth.selva.town' }}
+            NEXT_PUBLIC_JANUA_ISSUER_URL=${{ secrets.JANUA_ISSUER_URL || 'https://auth.madfam.io' }}
             NEXT_PUBLIC_JANUA_CLIENT_ID=${{ secrets.JANUA_CLIENT_ID || 'selva-office' }}
             NEXT_PUBLIC_DEMO_ENABLED=true
             NEXT_PUBLIC_GUEST_ACCESS_ENABLED=true

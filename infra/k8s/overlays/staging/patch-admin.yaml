@@ -32,6 +32,6 @@ spec:
             - name: NEXT_PUBLIC_API_URL
               value: https://staging-api.selva.town
             - name: NEXT_PUBLIC_JANUA_ISSUER_URL
-              value: https://auth.selva.town
+              value: https://auth.madfam.io
             - name: NEXT_PUBLIC_JANUA_CLIENT_ID
               value: selva-office-staging

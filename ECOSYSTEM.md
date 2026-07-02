@@ -92,12 +92,16 @@ below is embedded here so this document stands alone.
 
 - **Auth**: every authenticated service verifies Janua JWTs via JWKS at
   `https://auth.madfam.io/.well-known/jwks.json`. RS256 only — HS256 is
-  fail-closed after the 2026-04-23 audit (H3/H4). Selva production runtime
-  sets `JANUA_ISSUER_URL=https://auth.madfam.io` in
-  `infra/k8s/production/configmap.yaml`. The Enclii service template in
-  `enclii.yaml` and staging patches may use the product-domain alias
-  `https://auth.selva.town` — verify both resolve to the same JWKS before
-  changing production.
+  fail-closed after the 2026-04-23 audit (H3/H4). `https://auth.madfam.io`
+  is the single canonical Janua URL and OIDC issuer for **all** Selva
+  surfaces (office-ui, admin, nexus-api) across prod and staging. Janua is
+  single-issuer per deployment (`JANUA_CUSTOM_DOMAIN=auth.madfam.io`; its
+  `/.well-known/openid-configuration` returns `issuer: https://auth.madfam.io`
+  and is not Host-aware), so every `JANUA_ISSUER_URL` / `NEXT_PUBLIC_JANUA_URL`
+  / `NEXT_PUBLIC_JANUA_ISSUER_URL` value MUST be `https://auth.madfam.io` for
+  discovery + token `iss` validation to pass. Do NOT introduce a
+  `auth.selva.town` alias — it has no DNS/tunnel and would break OIDC issuer
+  matching even if it did.
 - **Billing**: credit metering + entitlements flow through Dhanam. See
   `madfam-org/dhanam` for the meter/entitlement/invoice APIs.
 - **Inference**: every LLM call should route through Selva

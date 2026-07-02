@@ -97,8 +97,8 @@ below is embedded here so this document stands alone.
   surfaces (office-ui, admin, nexus-api) across prod and staging. Janua is
   single-issuer per deployment (`JANUA_CUSTOM_DOMAIN=auth.madfam.io`; its
   `/.well-known/openid-configuration` returns `issuer: https://auth.madfam.io`
-  and is not Host-aware), so every `JANUA_ISSUER_URL` / `NEXT_PUBLIC_JANUA_URL`
-  / `NEXT_PUBLIC_JANUA_ISSUER_URL` value MUST be `https://auth.madfam.io` for
+  and is not Host-aware), so every `JANUA_ISSUER_URL` /
+  `NEXT_PUBLIC_JANUA_ISSUER_URL` value MUST be `https://auth.madfam.io` for
   discovery + token `iss` validation to pass. Do NOT introduce a
   `auth.selva.town` alias — it has no DNS/tunnel and would break OIDC issuer
   matching even if it did.

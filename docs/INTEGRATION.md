@@ -31,7 +31,7 @@ Register an OIDC client in Janua for Selva Office:
 JANUA_ISSUER_URL=https://auth.example.com
 JANUA_CLIENT_ID=selva-office
 JANUA_CLIENT_SECRET=<from Janua admin console>
-NEXT_PUBLIC_JANUA_URL=https://auth.example.com
+NEXT_PUBLIC_JANUA_ISSUER_URL=https://auth.example.com
 ```
 
 ### Next.js Middleware (Office UI)

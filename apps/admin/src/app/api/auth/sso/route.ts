@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const JANUA_BASE_URL =
   process.env.NEXT_PUBLIC_JANUA_BASE_URL ||
   process.env.NEXT_PUBLIC_JANUA_ISSUER_URL ||
-  'https://auth.selva.town';
+  'https://auth.madfam.io';
 
 const CLIENT_ID =
   process.env.JANUA_CLIENT_ID ||

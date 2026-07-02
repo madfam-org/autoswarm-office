@@ -93,7 +93,7 @@ spec:
           name: selva-secrets
           key: redis-url
     - name: JANUA_ISSUER_URL
-      value: https://auth.selva.town
+      value: https://auth.madfam.io
     - name: JANUA_CLIENT_ID
       value: selva-office
     - name: JANUA_CLIENT_SECRET
@@ -174,7 +174,7 @@ spec:
     context: .
     args:
       NEXT_PUBLIC_API_URL: https://api.selva.town
-      NEXT_PUBLIC_JANUA_URL: https://auth.selva.town
+      NEXT_PUBLIC_JANUA_URL: https://auth.madfam.io
       NEXT_PUBLIC_COLYSEUS_URL: wss://ws.selva.town
     source:
       git:
@@ -266,7 +266,7 @@ spec:
     context: .
     args:
       NEXT_PUBLIC_API_URL: https://api.selva.town
-      NEXT_PUBLIC_JANUA_URL: https://auth.selva.town
+      NEXT_PUBLIC_JANUA_URL: https://auth.madfam.io
     source:
       git:
         repository: https://github.com/madfam-org/selva-office

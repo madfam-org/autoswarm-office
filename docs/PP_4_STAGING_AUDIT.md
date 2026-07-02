@@ -191,7 +191,7 @@ operator actions, in order:
      --from-literal=WORKER_API_TOKEN='<rand-64>'
    kubectl create secret generic selva-staging-admin-auth -n selva-staging \
      --from-literal=NEXT_PUBLIC_JANUA_PUBLISHABLE_KEY='<staging-janua-client-id>' \
-     --from-literal=NEXT_PUBLIC_JANUA_ISSUER_URL='https://auth.selva.town' \
+     --from-literal=NEXT_PUBLIC_JANUA_ISSUER_URL='https://auth.madfam.io' \
      --from-literal=JANUA_SECRET_KEY='<staging-janua-client-secret>'
    ```
    Template at `infra/k8s/overlays/staging/staging-secrets-template.yaml`.

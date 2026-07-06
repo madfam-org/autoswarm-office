@@ -46,7 +46,7 @@ polyglot monorepo with TypeScript frontend services and Python backend services.
 
 | Service | Technology | Purpose |
 |---------|-----------|---------|
-| **Office UI** | Next.js 14, Phaser 3, React | Spatial 2D office environment, agent dashboards, approval modals |
+| **Office UI** | Next.js 14, Phaser 3, React | Spatial 2D office environment, agent dashboards, approval modals, flag-gated artifact viewer (`NEXT_PUBLIC_ARTIFACTS_ENABLED`, penny consolidation) |
 | **Nexus API** | FastAPI, SQLAlchemy, Pydantic | Central REST API, WebSocket hub, auth middleware, task dispatch |
 | **Colyseus** | Colyseus (Node.js) | Real-time game state synchronization for the spatial office |
 | **Workers** | LangGraph, Python | Execute agent tasks in isolated environments with HITL interrupts |
@@ -140,11 +140,12 @@ selva-office/
     nexus-api/        Python -- FastAPI central API
     office-ui/        TypeScript -- Next.js + Phaser spatial UI
       public/assets/  Generated pixel-art PNGs (sprites, tilesets, icons)
+      src/components/artifacts/  Flag-gated artifact renderers (penny port, Phases A+B)
     colyseus/         TypeScript -- Colyseus game state server
     gateway/          TypeScript -- OpenClaw heartbeat daemon
     workers/          Python -- LangGraph task execution workers
   packages/
-    shared-types/     TypeScript -- shared type definitions
+    shared-types/     TypeScript -- shared type definitions (incl. artifact.ts, penny port Phase A)
     ui/               TypeScript -- shared React components (Button, AgentCard, ApprovalModal)
     config/           TypeScript -- ESLint and TSConfig presets
     orchestrator/     Python -- swarm orchestration, synergy, compute tokens
@@ -167,3 +168,4 @@ selva-office/
 | [INTEGRATION.md](./INTEGRATION.md) | Janua, Dhanam, Enclii wiring |
 | [HITL_FLOW.md](./HITL_FLOW.md) | Approval gates + autonomy graduation |
 | [PORTS.md](./PORTS.md) | Canonical ports and health paths |
+| [penny-migration-plan.md](./penny-migration-plan.md) | Penny→selva-office artifact-layer consolidation (Phases A+B landed; C–F pending) |

@@ -1,4 +1,5 @@
 export * from './agent';
+export * from './artifact';
 export * from './office';
 export * from './approval';
 export * from './billing';

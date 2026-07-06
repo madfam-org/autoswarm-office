@@ -24,6 +24,27 @@ class TulanaProofPoint(BaseModel):
     url: str | None = Field(default=None, max_length=2048)
 
 
+class TulanaCampaignClaim(BaseModel):
+    """Row from Tulana's campaign claims register (feature-matrix export).
+
+    Mirrors the wire shape emitted by Tulana's
+    ``tulana_campaign_claims_register --json`` command
+    (``madfam_catalog.feature_matrix.build_campaign_claims_register``).
+    ``extra="ignore"`` lets Tulana pass full register rows straight through;
+    ``campaign_safe`` defaults to ``False`` so unmarked claims fail closed.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    feature_key: str = Field(..., min_length=1, max_length=200)
+    feature_label: str = Field(default="", max_length=500)
+    claim_class: str = Field(default="feature", max_length=100)
+    campaign_safe: bool = False
+    blocking_reasons: list[str] = Field(default_factory=list)
+    claim_evidence_url: str | None = Field(default=None, max_length=2048)
+    notes: str = Field(default="", max_length=4000)
+
+
 class TulanaSkuCampaignPack(BaseModel):
     """Minimum Tulana export shape consumed by Selva campaign orchestration."""
 
@@ -38,6 +59,14 @@ class TulanaSkuCampaignPack(BaseModel):
     readiness_reasons: list[str] = Field(default_factory=list)
     value_prop: str = Field(default="", max_length=4000)
     proof_points: list[TulanaProofPoint] = Field(default_factory=list)
+    claims: list[TulanaCampaignClaim] = Field(
+        default_factory=list,
+        max_length=200,
+        description=(
+            "Campaign claims register rows for this SKU. Only rows with "
+            "campaign_safe=true may ground generated campaign copy."
+        ),
+    )
     do_not_claim: list[str] = Field(default_factory=list)
     policy_state: PolicyState | str = Field(default="pending_review")
     last_verified_at: datetime

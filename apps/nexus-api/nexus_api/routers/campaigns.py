@@ -18,6 +18,7 @@ from ..config import get_settings
 from ..database import get_db
 from ..idempotency import IdempotencyContext, get_idempotency_context
 from ..models import SwarmTask, SwarmTaskOutbox
+from ..schemas.campaign_copy import CampaignCopyRequest, CampaignCopyResponse
 from ..schemas.scheduled_actions import (
     CampaignSocialScheduleRequest,
     ScheduledActionBatchResponse,
@@ -30,6 +31,7 @@ from ..schemas.tulana_campaign import (
     TulanaImportRequest,
     TulanaImportResponse,
 )
+from ..services.campaign_copy import generate_campaign_copy
 from ..services.scheduled_actions import enqueue_campaign_social_schedule
 from ..services.tulana_campaign import import_tulana_packs, validate_pack
 from ..services.tulana_feedback import push_tulana_buyer_signal
@@ -308,6 +310,46 @@ async def crm_campaign_handoff(
         message="Campaign handoff queued for Phynd CRM staging (HITL required)",
     )
     await idem.save(response.model_dump(mode="json"))
+    return response
+
+
+@router.post(
+    "/generate-copy",
+    response_model=CampaignCopyResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_non_guest)],
+)
+async def campaign_generate_copy(
+    body: CampaignCopyRequest,
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    idem: IdempotencyContext = Depends(get_idempotency_context),  # noqa: B008
+) -> CampaignCopyResponse:
+    """Generate governed campaign copy variants from a Tulana SKU pack.
+
+    Campaign-copy skill (Phase 2.7): copy is grounded ONLY in claims marked
+    ``campaign_safe`` in the pack's claims register; packs without any
+    campaign-permitted claims are refused with a structured 422
+    (``no_campaign_safe_claims``). Each variant reports the claim keys it
+    used for auditability. Output defaults to es-MX; English is opt-in.
+    """
+    cached = getattr(idem, "cached", None)
+    if getattr(idem, "is_replay", False) and cached is not None:
+        return CampaignCopyResponse.model_validate(cached)
+
+    response = await generate_campaign_copy(body, org_id=tenant.org_id)
+
+    await idem.save(response.model_dump(mode="json"))
+    logger.info(
+        "Campaign copy org=%s user=%s sku=%s channel=%s lang=%s variants=%d dropped=%d",
+        tenant.org_id,
+        user.get("sub"),
+        response.sku_key,
+        response.channel,
+        response.language,
+        len(response.variants),
+        len(response.dropped_variants),
+    )
     return response
 
 

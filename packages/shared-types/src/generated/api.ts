@@ -3770,6 +3770,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns/generate-copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Campaign Generate Copy
+         * @description Generate governed campaign copy variants from a Tulana SKU pack.
+         *
+         *     Campaign-copy skill (Phase 2.7): copy is grounded ONLY in claims marked
+         *     ``campaign_safe`` in the pack's claims register; packs without any
+         *     campaign-permitted claims are refused with a structured 422
+         *     (``no_campaign_safe_claims``). Each variant reports the claim keys it
+         *     used for auditability. Output defaults to es-MX; English is opt-in.
+         */
+        post: operations["campaign_generate_copy_api_v1_campaigns_generate_copy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/campaigns/schedule-social": {
         parameters: {
             query?: never;
@@ -4608,6 +4634,110 @@ export interface components {
             provider?: string | null;
             /** Connected At */
             connected_at?: string | null;
+        };
+        /** CampaignCopyRequest */
+        CampaignCopyRequest: {
+            tulana_pack: components["schemas"]["TulanaSkuCampaignPack"];
+            /**
+             * Audience
+             * @description Audience descriptor (segment, persona, or list description).
+             */
+            audience: string;
+            /**
+             * Channel
+             * @description Delivery channel. Email first; SMS/WhatsApp are follow-ups.
+             * @default email
+             * @constant
+             */
+            channel: "email";
+            /**
+             * Language
+             * @description Output language. es-MX is the MADFAM primary; en is optional.
+             * @default es-MX
+             * @enum {string}
+             */
+            language: "es-MX" | "en";
+            /**
+             * Variant Count
+             * @default 3
+             */
+            variant_count: number;
+            /**
+             * Tone
+             * @description Optional tone hint (e.g. 'directo y profesional').
+             */
+            tone?: string | null;
+        };
+        /** CampaignCopyResponse */
+        CampaignCopyResponse: {
+            /** Sku Key */
+            sku_key: string;
+            /**
+             * Channel
+             * @constant
+             */
+            channel: "email";
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "es-MX" | "en";
+            /** Audience */
+            audience: string;
+            /** Variants */
+            variants: components["schemas"]["CampaignCopyVariant"][];
+            /**
+             * Campaign Safe Claim Keys
+             * @description Claim keys the generator was permitted to use.
+             */
+            campaign_safe_claim_keys?: string[];
+            /**
+             * Excluded Claim Keys
+             * @description Claim keys present in the pack but NOT campaign-safe (never used).
+             */
+            excluded_claim_keys?: string[];
+            /**
+             * Dropped Variants
+             * @description Reasons for generated variants rejected by claims enforcement.
+             */
+            dropped_variants?: string[];
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+        };
+        /** CampaignCopyVariant */
+        CampaignCopyVariant: {
+            /** Variant Id */
+            variant_id: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "es-MX" | "en";
+            /** Subject */
+            subject: string;
+            /** Preheader */
+            preheader?: string | null;
+            /** Body */
+            body: string;
+            /** Cta */
+            cta: string;
+            /**
+             * Claim Keys Used
+             * @description Campaign-safe claim feature_keys grounding this variant (audit trail).
+             */
+            claim_keys_used?: string[];
+            /**
+             * Guardrail Violations
+             * @description do_not_claim phrases that were scrubbed from this variant.
+             */
+            guardrail_violations?: string[];
         };
         /** CampaignSocialPostItem */
         CampaignSocialPostItem: {
@@ -6796,6 +6926,44 @@ export interface components {
              */
             source: string;
         };
+        /**
+         * TulanaCampaignClaim
+         * @description Row from Tulana's campaign claims register (feature-matrix export).
+         *
+         *     Mirrors the wire shape emitted by Tulana's
+         *     ``tulana_campaign_claims_register --json`` command
+         *     (``madfam_catalog.feature_matrix.build_campaign_claims_register``).
+         *     ``extra="ignore"`` lets Tulana pass full register rows straight through;
+         *     ``campaign_safe`` defaults to ``False`` so unmarked claims fail closed.
+         */
+        TulanaCampaignClaim: {
+            /** Feature Key */
+            feature_key: string;
+            /**
+             * Feature Label
+             * @default
+             */
+            feature_label: string;
+            /**
+             * Claim Class
+             * @default feature
+             */
+            claim_class: string;
+            /**
+             * Campaign Safe
+             * @default false
+             */
+            campaign_safe: boolean;
+            /** Blocking Reasons */
+            blocking_reasons?: string[];
+            /** Claim Evidence Url */
+            claim_evidence_url?: string | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+        };
         /** TulanaFeedbackRequest */
         TulanaFeedbackRequest: {
             /** Sku Key */
@@ -6902,6 +7070,11 @@ export interface components {
             value_prop: string;
             /** Proof Points */
             proof_points?: components["schemas"]["TulanaProofPoint"][];
+            /**
+             * Claims
+             * @description Campaign claims register rows for this SKU. Only rows with campaign_safe=true may ground generated campaign copy.
+             */
+            claims?: components["schemas"]["TulanaCampaignClaim"][];
             /** Do Not Claim */
             do_not_claim?: string[];
             /**
@@ -13018,6 +13191,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CrmCampaignHandoffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    campaign_generate_copy_api_v1_campaigns_generate_copy_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignCopyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignCopyResponse"];
                 };
             };
             /** @description Validation Error */

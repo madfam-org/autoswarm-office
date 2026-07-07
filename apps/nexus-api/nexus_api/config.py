@@ -129,6 +129,11 @@ class Settings(BaseSettings):
 
     # -- Phynd-CRM ------------------------------------------------------------
     phynd_crm_url: str | None = None
+    # HMAC secret for the campaign-import bridge (Selva crm-handoff → PhyndCRM
+    # POST /api/v1/campaigns/import). Must match PhyndCRM's
+    # PHYND_CAMPAIGN_IMPORT_SECRET. Empty → bridge stays inert (handoff still
+    # enqueues the Redis task; nothing is POSTed).
+    phynd_campaign_import_secret: str = ""
 
     # -- Worker-to-API auth ---------------------------------------------------
     worker_api_token: str = "dev-bypass"  # Shared secret for worker/gateway → API calls

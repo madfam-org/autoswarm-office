@@ -29,6 +29,9 @@ records:
     name: admin.selva.town
     proxied: true
   - type: CNAME
+    name: inference.selva.town
+    proxied: true
+  - type: CNAME
     name: gw.selva.town
     proxied: true
 

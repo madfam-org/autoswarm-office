@@ -83,6 +83,14 @@ patches:
     target:
       kind: ExternalSecret
       name: postgres-backup-credentials
+  - path: patch-delete-inference-gateway.yaml
+    target:
+      kind: Deployment
+      name: inference-gateway
+  - path: patch-delete-inference-gateway-svc.yaml
+    target:
+      kind: Service
+      name: inference-gateway
   - path: patch-nexus-api.yaml
     target:
       kind: Deployment

@@ -13,6 +13,7 @@ resources:
 - org-config.yaml
 - service-account.yaml
 - nexus-api.yaml
+- inference-gateway.yaml
 - office-ui.yaml
 - colyseus.yaml
 - admin.yaml

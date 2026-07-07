@@ -1,0 +1,149 @@
+# RFC 0034 P2 — the OpenAI-compatible /v1 inference proxy extracted from
+# nexus-api into its own deployable. Same code (inference_proxy router), same
+# auth, same USD usage ledger; separate process so the LLM chokepoint's uptime
+# is independent of monolith deploys.
+#
+# Env mirrors nexus-api: the gateway imports the same Settings, whose
+# production validators refuse startup unless SECRET_KEY, WORKER_API_TOKEN,
+# CONSENT_LEDGER_SIGNING_SECRET, and COLYSEUS_SECRET are real (even though the
+# gateway itself never uses Colyseus). No Redis env is fine — but the settings
+# come from selva-config like nexus-api so provider config stays identical.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-gateway
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: inference-gateway
+    app.kubernetes.io/part-of: selva-office
+    app.kubernetes.io/component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inference-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inference-gateway
+        app.kubernetes.io/part-of: selva-office
+        app.kubernetes.io/component: api
+    spec:
+      serviceAccountName: selva-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: inference-gateway
+          image: ghcr.io/madfam-org/selva-inference-gateway:latest
+          ports:
+            - containerPort: 4306
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 50m
+              memory: 384Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4306
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4306
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          envFrom:
+            - configMapRef:
+                name: selva-config
+          env:
+            - name: ENVIRONMENT
+              value: production
+            - name: PORT
+              value: "4306"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: database-url
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: secret-key
+            - name: WORKER_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: WORKER_API_TOKEN
+            - name: CONSENT_LEDGER_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: CONSENT_LEDGER_SIGNING_SECRET
+            - name: COLYSEUS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: colyseus-secret
+            - name: DEEPINFRA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: selva-llm-secrets
+                  key: DEEPINFRA_API_KEY
+                  optional: true
+            - name: ORG_CONFIG_PATH
+              value: "/etc/selva/org-config.yaml"
+          workingDir: /data
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /data
+            - name: org-config
+              mountPath: /etc/selva
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
+        - name: org-config
+          configMap:
+            name: selva-org-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-gateway
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: inference-gateway
+    app.kubernetes.io/part-of: selva-office
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: inference-gateway
+  ports:
+    - port: 80
+      targetPort: 4306
+      protocol: TCP

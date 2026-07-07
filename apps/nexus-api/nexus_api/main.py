@@ -48,7 +48,6 @@ from .routers import (
     gateway,
     health,
     hitl_confidence,
-    inference_proxy,
     intelligence,
     invoices,
     maps,
@@ -257,7 +256,10 @@ def create_app() -> FastAPI:
     app.include_router(hitl_confidence.router, prefix="/api/v1")
 
     # -- OpenAI-compatible inference proxy (ecosystem LLM gateway) -------------
-    app.include_router(inference_proxy.router, prefix="/v1")
+    # The OpenAI-compatible /v1 inference proxy moved to its own deployable,
+    # apps/inference-gateway (inference.selva.town) — RFC 0034 P2, cutover
+    # completed 2026-07-07. The router lives on in .routers.inference_proxy,
+    # mounted ONLY by the gateway.
 
     # -- A2A Protocol (agent-to-agent discovery and task exchange) -------------
     try:

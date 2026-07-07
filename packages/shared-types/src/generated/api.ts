@@ -4073,46 +4073,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/chat/completions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Chat Completions
-         * @description OpenAI-compatible chat completion endpoint.
-         */
-        post: operations["chat_completions_v1_chat_completions_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/embeddings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Embeddings
-         * @description OpenAI-compatible embeddings endpoint.
-         */
-        post: operations["embeddings_v1_embeddings_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/a2a/.well-known/agent.json": {
         parameters: {
             query?: never;
@@ -4794,43 +4754,6 @@ export interface components {
              */
             require_hitl: boolean;
         };
-        /** ChatCompletionRequest */
-        ChatCompletionRequest: {
-            /**
-             * Model
-             * @default auto
-             */
-            model: string;
-            /** Messages */
-            messages: {
-                [key: string]: unknown;
-            }[];
-            /** Temperature */
-            temperature?: number | null;
-            /** Max Tokens */
-            max_tokens?: number | null;
-            /**
-             * Stream
-             * @default false
-             */
-            stream: boolean;
-            /** Tools */
-            tools?: {
-                [key: string]: unknown;
-            }[] | null;
-            /** Response Format */
-            response_format?: {
-                [key: string]: unknown;
-            } | null;
-            /** Top P */
-            top_p?: number | null;
-            /** Frequency Penalty */
-            frequency_penalty?: number | null;
-            /** Presence Penalty */
-            presence_penalty?: number | null;
-            /** Stop */
-            stop?: string[] | string | null;
-        };
         /** ChatHistoryResponse */
         ChatHistoryResponse: {
             /** Items */
@@ -5429,21 +5352,6 @@ export interface components {
             list_unsubscribe_header_present: boolean;
             /** Sanitized Html */
             sanitized_html: string;
-        };
-        /** EmbeddingRequest */
-        EmbeddingRequest: {
-            /** Input */
-            input: string | string[];
-            /**
-             * Model
-             * @default text-embedding-3-small
-             */
-            model: string;
-            /**
-             * Encoding Format
-             * @default float
-             */
-            encoding_format: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -13682,75 +13590,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConfidenceDashboard"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    chat_completions_v1_chat_completions_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Task-Type"?: string | null;
-                "X-Sensitivity"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChatCompletionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    embeddings_v1_embeddings_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EmbeddingRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

@@ -24,6 +24,7 @@ dependencies = [
 [tool.uv.workspace]
 members = [
   "apps/nexus-api",
+  "apps/inference-gateway",
   "apps/workers",
   "packages/inference",
   "packages/orchestrator",
@@ -45,6 +46,7 @@ selva-orchestrator = { workspace = true }
 madfam-inference = { workspace = true }
 selva-permissions = { workspace = true }
 selva-nexus-api = { workspace = true }
+selva-inference-gateway = { workspace = true }
 selva-workers = { workspace = true }
 selva-skills = { workspace = true }
 selva-observability = { workspace = true }

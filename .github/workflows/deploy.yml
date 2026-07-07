@@ -97,7 +97,8 @@ jobs:
       needs.detect-changes.outputs.colyseus == 'true' ||
       needs.detect-changes.outputs.admin == 'true' ||
       needs.detect-changes.outputs.gateway == 'true' ||
-      needs.detect-changes.outputs.workers == 'true'
+      needs.detect-changes.outputs.workers == 'true' ||
+      needs.detect-changes.outputs.inference-gateway == 'true'
     strategy:
       fail-fast: false
       matrix:

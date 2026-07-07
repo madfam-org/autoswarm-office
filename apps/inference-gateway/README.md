@@ -20,5 +20,6 @@ uv run --project apps/inference-gateway uvicorn inference_gateway.main:app --por
 
 Deploy: built by `.github/workflows/deploy.yml` (cosign-signed, digest-pinned
 into `infra/k8s/production/kustomization.yaml`), synced by ArgoCD into the
-`selva` namespace. Cutover procedure: `internal-devops`
+`selva` namespace. A change under `apps/inference-gateway/` or
+`apps/nexus-api/` triggers a rebuild. Cutover procedure: `internal-devops`
 `runbooks/2026-07-07-selva-inference-gateway-cutover.md`.

@@ -1032,7 +1032,7 @@ export interface paths {
         put?: never;
         /**
          * Record Usage
-         * @description Record a compute token debit from a worker.
+         * @description Record a compute token debit from a worker (authenticated, RFC 0034 P0).
          */
         post: operations["record_usage_api_v1_billing_record_post"];
         delete?: never;
@@ -1052,7 +1052,7 @@ export interface paths {
         put?: never;
         /**
          * Check Budget
-         * @description Check whether an org has remaining compute token budget for today.
+         * @description Check an org's remaining compute token budget for today (authenticated, RFC 0034 P0).
          */
         post: operations["check_budget_api_v1_billing_check_budget_post"];
         delete?: never;

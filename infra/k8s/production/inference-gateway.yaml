@@ -18,7 +18,10 @@ metadata:
     app.kubernetes.io/part-of: selva-office
     app.kubernetes.io/component: api
 spec:
-  replicas: 2
+  # 1 replica while both nodes sit at 99% CPU *requests* (not usage) — the
+  # dual-run means nexus-api still serves /v1. Scale to 2 after the cluster
+  # request right-sizing lands.
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: inference-gateway
@@ -44,7 +47,10 @@ spec:
               protocol: TCP
           resources:
             requests:
-              cpu: 50m
+              # 10m: the proxy is I/O-bound (upstream LLM calls); it idles at
+              # single-digit millicores. Both nodes are ~99% CPU-requested, so
+              # a 50m ask cannot schedule; limits (500m) are what matter.
+              cpu: 10m
               memory: 384Mi
             limits:
               cpu: 500m

@@ -14,7 +14,11 @@ COPY apps/nexus-api/ apps/nexus-api/
 COPY apps/workers/pyproject.toml apps/workers/
 COPY packages/ packages/
 
-RUN uv sync --frozen --no-dev
+# --package: sync the GATEWAY's dependency tree, not the workspace root's.
+# A plain root sync installs only the root project's dependencies, which do
+# not include selva-inference-gateway (nothing depends on it) — the venv then
+# lacks the inference_gateway module and uvicorn dies on import.
+RUN uv sync --frozen --no-dev --package selva-inference-gateway
 
 FROM python:3.12-slim AS runtime
 

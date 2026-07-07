@@ -26,6 +26,8 @@ ingress:
     service: http://admin.selva.svc.cluster.local:80
   - hostname: gw.selva.town
     service: http://gateway.selva.svc.cluster.local:80
+  - hostname: inference.selva.town
+    service: http://inference-gateway.selva.svc.cluster.local:80
 
   # --- Staging (selva-staging namespace) ---
   - hostname: staging-api.selva.town

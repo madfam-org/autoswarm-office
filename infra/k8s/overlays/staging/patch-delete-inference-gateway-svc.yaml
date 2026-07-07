@@ -1,0 +1,6 @@
+# Companion to patch-delete-inference-gateway.yaml — drop the Service too.
+$patch: delete
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-gateway

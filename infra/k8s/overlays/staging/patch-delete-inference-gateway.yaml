@@ -1,0 +1,10 @@
+# RFC 0034 P2 — the inference gateway is production-only for now. Staging's
+# nexus-api still serves /v1 (its mount is removed only at the end of the
+# prod cutover), so staging LLM traffic keeps working without a second
+# deployable + staging-secrets wiring. Add a real staging variant when the
+# nexus-api /v1 mount is removed.
+$patch: delete
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-gateway

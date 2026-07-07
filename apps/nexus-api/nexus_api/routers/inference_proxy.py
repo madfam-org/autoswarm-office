@@ -21,8 +21,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
+from ..database import get_db
+from ..services.inference_usage_ledger import record_inference_usage
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +185,9 @@ def _emit_proxy_event(
     usage: dict[str, int],
     duration_ms: int,
 ) -> None:
-    """Fire-and-forget consumption event."""
+    """Fire-and-forget consumption event (the activity-stream / observability
+    record). The DURABLE, USD-priced billing record is written separately by
+    `_record_usage` (RFC 0034 P1) — this stays best-effort by design."""
     try:
         from ..service_tracking import emit_proxy_usage
 
@@ -197,6 +202,38 @@ def _emit_proxy_event(
         logger.debug("Proxy event emission failed", exc_info=True)
 
 
+async def _record_usage(
+    db: AsyncSession,
+    user: dict,
+    provider: str,
+    model: str,
+    usage: dict[str, int],
+) -> None:
+    """Write the durable, USD-priced, org-attributed inference-usage ledger
+    entry (RFC 0034 P1). Fail-SAFE not fail-open: a write error is logged at
+    WARNING and the call degrades to 'spend not recorded for this call' — it is
+    never silently dropped like the old event emit, and it never fails the
+    user's inference response."""
+    try:
+        await record_inference_usage(
+            db,
+            org_id=user.get("org_id", "platform"),
+            caller=user.get("sub", "unknown"),
+            provider=provider,
+            model=model,
+            prompt_tokens=usage.get("prompt_tokens", 0),
+            completion_tokens=usage.get("completion_tokens", 0),
+        )
+        await db.commit()
+    except Exception:
+        logger.warning(
+            "Inference usage ledger write failed (spend for this call not recorded)",
+            exc_info=True,
+        )
+        with contextlib.suppress(Exception):
+            await db.rollback()
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────
 
 
@@ -205,6 +242,7 @@ async def chat_completions(
     body: ChatCompletionRequest,
     request: Request,
     user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
     x_task_type: str | None = Header(None, alias="X-Task-Type"),
     x_sensitivity: str | None = Header(None, alias="X-Sensitivity"),
 ):
@@ -279,6 +317,7 @@ async def chat_completions(
     duration_ms = int((time.monotonic() - start) * 1000)
 
     _emit_proxy_event(user, response.provider, response.model, response.usage, duration_ms)
+    await _record_usage(db, user, response.provider, response.model, response.usage)
 
     return _openai_response(
         completion_id=completion_id,

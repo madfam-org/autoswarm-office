@@ -1,8 +1,11 @@
 """Internal billing endpoints for worker-to-API metering.
 
-These endpoints are not protected by user authentication -- they are intended
-for internal service-to-service calls (workers -> nexus-api). In production,
-network policy should restrict access to these endpoints.
+Service-to-service (workers -> nexus-api). These write and read the compute
+token ledger, so they are authenticated (RFC 0034 P0 / D6): every call must
+present a valid Janua JWT or the worker service token via `get_current_user`.
+Network policy remains defence-in-depth, but auth is no longer *only* the
+network — the previous "unauthenticated, rely on network policy" posture let
+anyone in-namespace forge or read cross-tenant billing entries.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth import get_current_user
 from ..database import get_db
 from ..models import ComputeTokenLedger
 
@@ -47,8 +51,9 @@ class BudgetResponse(BaseModel):
 async def record_usage(
     body: RecordRequest,
     db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
 ) -> dict[str, str]:
-    """Record a compute token debit from a worker."""
+    """Record a compute token debit from a worker (authenticated, RFC 0034 P0)."""
     entry = ComputeTokenLedger(
         action=body.action,
         amount=body.amount,
@@ -72,8 +77,9 @@ async def record_usage(
 async def check_budget(
     body: dict[str, Any],
     db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
 ) -> BudgetResponse:
-    """Check whether an org has remaining compute token budget for today."""
+    """Check an org's remaining compute token budget for today (authenticated, RFC 0034 P0)."""
     org_id = body.get("org_id", "default")
     from ..services.tier_limits import resolve_org_daily_limit
 

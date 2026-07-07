@@ -18,6 +18,7 @@ dependencies = [
   "selva-orchestrator",
   "selva-permissions",
   "madfam-inference",
+  "madfam-budget-gate",
   "selva-skills",
   "selva-workflows",
   "selva-observability",

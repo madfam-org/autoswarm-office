@@ -5,6 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -313,6 +315,12 @@ class ComputeTokenLedger(Base):
     provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     org_id: Mapped[str] = mapped_column(String(255), nullable=False, default="default", index=True)
+    # RFC 0034 P1: real provider-priced USD cost of the call (estimate_cost).
+    # Nullable — historical token-only agent debits predate it.
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
+    # The calling service/product identity (JWT sub of the caller) so per-product
+    # AI spend/margin is computable. Nullable for legacy rows.
+    caller: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 

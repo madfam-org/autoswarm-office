@@ -32,6 +32,10 @@ from ..schemas.tulana_campaign import (
     TulanaImportResponse,
 )
 from ..services.campaign_copy import generate_campaign_copy
+from ..services.phynd_campaign_import import (
+    build_campaign_import_payload,
+    push_campaign_import,
+)
 from ..services.scheduled_actions import enqueue_campaign_social_schedule
 from ..services.tulana_campaign import import_tulana_packs, validate_pack
 from ..services.tulana_feedback import push_tulana_buyer_signal
@@ -302,6 +306,31 @@ async def crm_campaign_handoff(
             task.id,
             exc_info=True,
         )
+
+    # Bridge the handoff into PhyndCRM's import endpoint (RFC 0031 loop). Inert
+    # until PHYND_CRM_URL + PHYND_CAMPAIGN_IMPORT_SECRET are set — until then the
+    # Redis task above is still the operative handoff. Never fails the handoff:
+    # push_campaign_import catches its own errors and returns a status dict.
+    pack = body.tulana_pack
+    import_result = await push_campaign_import(
+        build_campaign_import_payload(
+            handoff_id=handoff_id,
+            sku_key=body.sku_key,
+            platform=pack.platform or body.sku_key.split("__", 1)[0],
+            audience=body.audience,
+            campaign_name=body.campaign_name or f"{body.sku_key} → {body.audience}",
+            value_prop=pack.value_prop or body.audience,
+            ga_readiness=str(pack.ga_readiness),
+            # Legacy string variants from the handoff become minimal structured
+            # variants (body-only); rich variants come from generate-copy and are
+            # sent when the caller supplies them via the copy endpoint first.
+            draft_variants=[{"format": "legacy_string", "body": v} for v in body.draft_variants],
+            proof_points=[p.model_dump(mode="json") for p in pack.proof_points],
+        )
+    )
+    logger.info(
+        "CRM handoff %s → PhyndCRM import: %s", handoff_id, import_result.get("status")
+    )
 
     response = CrmCampaignHandoffResponse(
         handoff_id=handoff_id,

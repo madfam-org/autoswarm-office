@@ -15,6 +15,7 @@ deployments. README.md, ECOSYSTEM.md, AGENTS.md, and other docs must
 | 4303 | colyseus | Game state |
 | 4304 | gateway | Heartbeat daemon (HTTP health + metrics) |
 | 4305 | workers | Worker health + metrics |
+| 4306 | inference-gateway | OpenAI-compatible /v1 proxy (RFC 0034 P2 extraction) |
 | 5432 | PostgreSQL | Local dev (`make docker-dev`) |
 | 6379 | Redis | Local dev (`make docker-dev`) |
 

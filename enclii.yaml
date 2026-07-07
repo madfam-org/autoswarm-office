@@ -378,3 +378,95 @@ spec:
         secretKeyRef:
           name: selva-secrets
           key: redis-url
+---
+# RFC 0034 P2 — the OpenAI-compatible /v1 inference proxy extracted from
+# nexus-api into its own deployable. Same code (inference_proxy router), same
+# auth, same USD usage ledger — but its uptime is now independent of
+# campaign/agent/audit deploys of the monolith, which sits on 12 products' hot
+# path. DUAL-RUN: nexus-api keeps serving /v1 on api.selva.town until every
+# caller has migrated its SELVA_API_URL to inference.selva.town; only then is
+# the nexus-api /v1 mount removed. See the cutover runbook (internal-devops).
+apiVersion: enclii.dev/v1
+kind: Service
+metadata:
+  name: selva-inference-gateway
+  project: selva-office
+  description: Selva Office — OpenAI-compatible LLM inference gateway (/v1)
+spec:
+  status:
+    enabled: true
+    entries:
+      - name: Selva Inference Gateway
+        url: https://inference.selva.town/health
+        href: https://inference.selva.town
+        group: Selva Office
+        family: Selva Swarm
+        description: OpenAI-compatible LLM inference proxy (the ecosystem chokepoint)
+  build:
+    type: dockerfile
+    dockerfile: infra/docker/Dockerfile.inference-gateway
+    context: .
+    source:
+      git:
+        repository: https://github.com/madfam-org/selva-office
+        branch: main
+        autoDeploy: true
+  runtime:
+    port: 4306
+    # Hot path for 12 products — start at 2 replicas for availability during
+    # the extraction; scale on the SLO once migrated.
+    replicas: 2
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "384Mi"
+      limits:
+        cpu: "500m"
+        memory: "768Mi"
+    healthCheck: /health
+    readinessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 5
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+  env:
+    - name: PORT
+      value: "4306"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: selva-secrets
+          key: database-url
+    - name: JANUA_ISSUER_URL
+      value: https://auth.madfam.io
+    - name: JANUA_CLIENT_ID
+      value: selva-office
+    - name: JANUA_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: selva-secrets
+          key: janua-client-secret
+    - name: WORKER_API_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: selva-secrets
+          key: WORKER_API_TOKEN
+  domains:
+    - domain: inference.selva.town
+      tls: true
+      tlsIssuer: cloudflare
+      primary: true
+  slo:
+    availability: 99.95
+    latencyP99Ms: 800
+  network:
+    services:
+      - name: inference-gateway
+        port: 4306
+        ingress: [cloudflare-tunnel]
+        # No redis: the gateway deliberately does not depend on real-time
+        # state — a Redis outage must never take the inference chokepoint down.
+        egress: [dns, https, postgres]

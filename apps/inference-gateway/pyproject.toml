@@ -1,0 +1,30 @@
+[project]
+name = "selva-inference-gateway"
+version = "0.1.0"
+description = "Selva inference gateway — the OpenAI-compatible /v1 proxy, extracted from nexus-api (RFC 0034 P2)"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.6",
+  "uvicorn[standard]>=0.34.0",
+  "sqlalchemy[asyncio]>=2.0.36",
+  "asyncpg>=0.30.0",
+  "pydantic>=2.10.5",
+  "pydantic-settings>=2.7.1",
+  "python-jose[cryptography]>=3.3.0",
+  "httpx>=0.28.1",
+  # Reused shared cores — no re-implementation, single source of truth.
+  "madfam-inference",
+  "madfam-budget-gate",
+  # The gateway imports the DECOUPLED slice of nexus-api (auth, database,
+  # models, the usage ledger) so auth + ledger logic stays single-sourced
+  # across the two deployables. Only these modules are imported — not the
+  # routers/orchestration/campaign surface that makes nexus-api a monolith.
+  "selva-nexus-api",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["inference_gateway"]

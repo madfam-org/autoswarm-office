@@ -13,6 +13,7 @@ members = [
     "madfam-inference",
     "selva-a2a",
     "selva-calendar",
+    "selva-inference-gateway",
     "selva-memory",
     "selva-nexus-api",
     "selva-observability",
@@ -2887,6 +2888,39 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "pydantic", specifier = ">=2.10" },
+]
+
+[[package]]
+name = "selva-inference-gateway"
+version = "0.1.0"
+source = { editable = "apps/inference-gateway" }
+dependencies = [
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "madfam-budget-gate" },
+    { name = "madfam-inference" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-jose", extra = ["cryptography"] },
+    { name = "selva-nexus-api" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "fastapi", specifier = ">=0.115.6" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "madfam-budget-gate", editable = "packages/budget-gate" },
+    { name = "madfam-inference", editable = "packages/inference" },
+    { name = "pydantic", specifier = ">=2.10.5" },
+    { name = "pydantic-settings", specifier = ">=2.7.1" },
+    { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0" },
+    { name = "selva-nexus-api", editable = "apps/nexus-api" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.0" },
 ]
 
 [[package]]

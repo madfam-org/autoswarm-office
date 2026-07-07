@@ -43,6 +43,7 @@ jobs:
       admin: ${{ steps.changes.outputs.admin }}
       gateway: ${{ steps.changes.outputs.gateway }}
       workers: ${{ steps.changes.outputs.workers }}
+      inference-gateway: ${{ steps.changes.outputs.inference-gateway }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,6 +59,7 @@ jobs:
             echo "admin=true" >> "$GITHUB_OUTPUT"
             echo "gateway=true" >> "$GITHUB_OUTPUT"
             echo "workers=true" >> "$GITHUB_OUTPUT"
+            echo "inference-gateway=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -81,6 +83,9 @@ jobs:
           check_service "admin"      "apps/admin/" "packages/(shared-types|ui|config|permissions)/" "infra/docker/Dockerfile.admin"
           check_service "gateway"    "apps/gateway/" "packages/(shared-types|config)/" "infra/docker/Dockerfile.gateway"
           check_service "workers"    "apps/workers/" "packages/(orchestrator|skills|config|inference)/" "pyproject.toml" "uv.lock" "infra/docker/Dockerfile.workers"
+          # The inference gateway ships the decoupled nexus_api slice (auth,
+          # database, models, USD ledger), so nexus-api changes rebuild it too.
+          check_service "inference-gateway" "apps/inference-gateway/" "apps/nexus-api/" "packages/(orchestrator|skills|config|permissions|inference)/" "pyproject.toml" "uv.lock" "infra/docker/Dockerfile.inference-gateway"
 
   build:
     name: Build ${{ matrix.service }}
@@ -121,6 +126,10 @@ jobs:
             image: selva-workers
             dockerfile: infra/docker/Dockerfile.workers
             changed: workers
+          - service: inference-gateway
+            image: selva-inference-gateway
+            dockerfile: infra/docker/Dockerfile.inference-gateway
+            changed: inference-gateway
     steps:
       - name: Skip if unchanged
         if: needs.detect-changes.outputs[matrix.changed] != 'true'
@@ -231,7 +240,7 @@ jobs:
           git config user.name "selva-bot"
           git config user.email "bot@selva.town"
 
-          SERVICES=("nexus-api:selva-nexus-api" "office-ui:selva-office-ui" "colyseus:selva-colyseus" "admin:selva-admin" "gateway:selva-gateway" "workers:selva-workers")
+          SERVICES=("nexus-api:selva-nexus-api" "office-ui:selva-office-ui" "colyseus:selva-colyseus" "admin:selva-admin" "gateway:selva-gateway" "workers:selva-workers" "inference-gateway:selva-inference-gateway")
 
           for ATTEMPT in 1 2 3; do
             git fetch origin main
@@ -301,7 +310,7 @@ jobs:
               \"source\": \"ci_callback\",
               \"message\": \"selva-office ${STATUS}\",
               \"metadata\": {
-                \"services\": [\"nexus-api\", \"office-ui\", \"colyseus\", \"admin\", \"gateway\", \"workers\"],
+                \"services\": [\"nexus-api\", \"office-ui\", \"colyseus\", \"admin\", \"gateway\", \"workers\", \"inference-gateway\"],
                 \"workflow\": \"deploy\",
                 \"actor\": \"${{ github.actor }}\"
               }

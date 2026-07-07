@@ -40,6 +40,7 @@ from .routers import (
     chat,
     checkpoints,
     command_approvals,
+    convergence,
     crm_webhooks,
     departments,
     dragon_eggs,
@@ -205,6 +206,8 @@ def create_app() -> FastAPI:
     app.include_router(chat.router, prefix="/api/v1/chat")
     app.include_router(events.router, prefix="/api/v1/events")
     app.include_router(metrics.router, prefix="/api/v1/metrics")
+    # Convergence read surface for converge-dash (RFC 0034 P1b / D7).
+    app.include_router(convergence.router, prefix="/api/v1/convergence")
     app.include_router(admin.router, prefix="/api/v1/admin")
     # Per-period HMAC key tracking for the consent ledger (migration 0030).
     # Endpoint at /api/v1/admin/consent-ledger/promote-key — requires

@@ -3,7 +3,8 @@
 The LLM layer is fully mocked (``nexus_api.services.campaign_copy._get_router``)
 so every test is deterministic. Coverage: claims filtering, the refusal path
 (no campaign-permitted claims), claims enforcement on generated variants,
-do_not_claim scrubbing, and the response contract.
+do_not_claim scrubbing, the response contract, and the ``social_post``
+channel (body+cta shape + ``max_chars`` length policy, Lane 4.4).
 """
 
 from __future__ import annotations
@@ -17,7 +18,11 @@ import pytest
 
 from madfam_inference.types import InferenceResponse
 from nexus_api.schemas.tulana_campaign import TulanaSkuCampaignPack
-from nexus_api.services.campaign_copy import filter_campaign_claims, parse_copy_variants
+from nexus_api.services.campaign_copy import (
+    _over_length_indexes,
+    filter_campaign_claims,
+    parse_copy_variants,
+)
 
 SAFE_CLAIM = {
     "feature_key": "cfdi_auto_issue",
@@ -114,6 +119,26 @@ def _copy_payload(pack: TulanaSkuCampaignPack, **overrides: object) -> dict[str,
         "language": "es-MX",
         "variant_count": 2,
     }
+    base.update(overrides)
+    return base
+
+
+def _llm_social_variant(**overrides: object) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "body": (
+            "Karafiel emite el CFDI automáticamente al momento del checkout. "
+            "Cumplimiento sin fricción para tu equipo."
+        ),
+        "cta": "Agenda una demo → karafiel.mx/demo",
+        "claim_keys_used": ["cfdi_auto_issue"],
+    }
+    base.update(overrides)
+    return base
+
+
+def _social_payload(pack: TulanaSkuCampaignPack, **overrides: object) -> dict[str, Any]:
+    base = _copy_payload(pack)
+    base["channel"] = "social_post"
     base.update(overrides)
     return base
 
@@ -409,3 +434,203 @@ async def test_generate_copy_requires_auth(client) -> None:
         json=_copy_payload(_pack()),
     )
     assert response.status_code in (401, 403)
+
+
+# ---------------------------------------------------------------------------
+# social_post channel (Lane 4.4): same claims discipline, body+cta shape,
+# max_chars length policy for the schedule-social posting targets
+# (Mastodon 500 / Bluesky 300 → request default 300).
+# ---------------------------------------------------------------------------
+
+
+class TestSocialLengthPolicy:
+    def test_over_length_indexes(self) -> None:
+        variants = [
+            {"body": "x" * 300},
+            {"body": "x" * 301},
+            {"body": None},
+            {"cta": "no body at all"},
+        ]
+        assert _over_length_indexes(variants, 300) == [1]
+
+    def test_strips_before_measuring(self) -> None:
+        assert _over_length_indexes([{"body": " " + "x" * 300 + " "}], 300) == []
+
+
+@pytest.mark.asyncio
+async def test_social_post_happy_path(client, auth_headers) -> None:
+    llm_json = json.dumps(
+        {
+            "variants": [
+                _llm_social_variant(),
+                _llm_social_variant(claim_keys_used=["lfpdppp_consent_ledger"]),
+            ]
+        }
+    )
+    router = _mock_router(llm_json)
+    with patch("nexus_api.services.campaign_copy._get_router", return_value=router):
+        response = await client.post(
+            "/api/v1/campaigns/generate-copy",
+            json=_social_payload(_pack()),
+            headers=auth_headers,
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["channel"] == "social_post"
+    assert body["campaign_safe_claim_keys"] == ["cfdi_auto_issue", "lfpdppp_consent_ledger"]
+    assert body["excluded_claim_keys"] == ["soc2_certification"]
+    assert body["dropped_variants"] == []
+    assert len(body["variants"]) == 2
+    for variant in body["variants"]:
+        assert variant["subject"] is None
+        assert variant["preheader"] is None
+        assert variant["body"]
+        assert len(variant["body"]) <= 300  # default max_chars (Bluesky)
+        assert variant["cta"]
+        assert variant["claim_keys_used"]
+        assert set(variant["claim_keys_used"]) <= set(body["campaign_safe_claim_keys"])
+    router.complete.assert_awaited_once()
+    request = router.complete.await_args.args[0]
+    prompt_text = request.system_prompt + json.dumps(request.messages)
+    # Social prompt asks for the post shape (no email fields) + length rule,
+    # under the same claims discipline: blocked labels never enter the prompt.
+    assert "at most 300 characters" in request.system_prompt
+    assert '"subject"' not in request.system_prompt
+    assert '"preheader"' not in request.system_prompt
+    assert "SOC 2 Type II certified" not in prompt_text
+    assert "cfdi_auto_issue" in prompt_text
+
+
+@pytest.mark.asyncio
+async def test_social_post_over_length_body_retried_then_dropped(client, auth_headers) -> None:
+    over = _llm_social_variant(body="K" * 350)
+    llm_json = json.dumps({"variants": [_llm_social_variant(), over]})
+    # Same over-length output on both attempts → the offender is dropped.
+    router = _mock_router(llm_json, llm_json)
+    with patch("nexus_api.services.campaign_copy._get_router", return_value=router):
+        response = await client.post(
+            "/api/v1/campaigns/generate-copy",
+            json=_social_payload(_pack()),
+            headers=auth_headers,
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["variants"]) == 1
+    assert len(body["dropped_variants"]) == 1
+    assert "max_chars" in body["dropped_variants"][0]
+    assert "350 > 300" in body["dropped_variants"][0]
+    # Exactly one length re-prompt happened before the drop.
+    assert router.complete.await_count == 2
+    retry_request = router.complete.await_args.args[0]
+    assert "character body limit" in retry_request.messages[0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_social_post_over_length_recovers_on_retry(client, auth_headers) -> None:
+    over = json.dumps({"variants": [_llm_social_variant(body="K" * 350)]})
+    good = json.dumps({"variants": [_llm_social_variant()]})
+    router = _mock_router(over, good)
+    with patch("nexus_api.services.campaign_copy._get_router", return_value=router):
+        response = await client.post(
+            "/api/v1/campaigns/generate-copy",
+            json=_social_payload(_pack(), variant_count=1),
+            headers=auth_headers,
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["variants"]) == 1
+    assert body["dropped_variants"] == []
+    assert router.complete.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_social_post_max_chars_mastodon_500(client, auth_headers) -> None:
+    body_400 = ("Karafiel emite el CFDI automáticamente. " * 10).strip()
+    assert 300 < len(body_400) <= 500
+    router = _mock_router(json.dumps({"variants": [_llm_social_variant(body=body_400)]}))
+    with patch("nexus_api.services.campaign_copy._get_router", return_value=router):
+        response = await client.post(
+            "/api/v1/campaigns/generate-copy",
+            json=_social_payload(_pack(), variant_count=1, max_chars=500),
+            headers=auth_headers,
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["dropped_variants"] == []
+    assert len(body["variants"][0]["body"]) == len(body_400)
+    # 400 chars fits the Mastodon-sized budget → no length re-prompt.
+    router.complete.assert_awaited_once()
+    request = router.complete.await_args.args[0]
+    assert "at most 500 characters" in request.system_prompt
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad_max_chars", [60, 900])
+async def test_social_post_max_chars_bounds_rejected(client, auth_headers, bad_max_chars) -> None:
+    response = await client.post(
+        "/api/v1/campaigns/generate-copy",
+        json=_social_payload(_pack(), max_chars=bad_max_chars),
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_social_post_refuses_pack_without_safe_claims(client, auth_headers) -> None:
+    router = _mock_router()
+    with patch("nexus_api.services.campaign_copy._get_router", return_value=router):
+        response = await client.post(
+            "/api/v1/campaigns/generate-copy",
+            json=_social_payload(_pack(claims=[BLOCKED_CLAIM, INCONSISTENT_CLAIM])),
+            headers=auth_headers,
+        )
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["error_code"] == "no_campaign_safe_claims"
+    assert detail["excluded_claim_keys"] == ["soc2_certification", "uptime_sla"]
+    router.complete.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_social_variant_claims_enforcement(client, auth_headers) -> None:
+    llm_json = json.dumps(
+        {
+            "variants": [
+                _llm_social_variant(),
+                _llm_social_variant(claim_keys_used=["soc2_certification"]),
+                {"body": "Post sin CTA", "claim_keys_used": ["cfdi_auto_issue"]},
+            ]
+        }
+    )
+    router = _mock_router(llm_json)
+    with patch("nexus_api.services.campaign_copy._get_router", return_value=router):
+        response = await client.post(
+            "/api/v1/campaigns/generate-copy",
+            json=_social_payload(_pack(), variant_count=3),
+            headers=auth_headers,
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["variants"]) == 1
+    assert body["variants"][0]["claim_keys_used"] == ["cfdi_auto_issue"]
+    assert len(body["dropped_variants"]) == 2
+    assert any("soc2_certification" in reason for reason in body["dropped_variants"])
+    assert any("missing body/cta" in reason for reason in body["dropped_variants"])
+
+
+@pytest.mark.asyncio
+async def test_social_do_not_claim_phrases_are_scrubbed(client, auth_headers) -> None:
+    dirty = _llm_social_variant(
+        body="Karafiel emite el CFDI automáticamente. Somos SOC 2 certified.",
+    )
+    router = _mock_router(json.dumps({"variants": [dirty]}))
+    with patch("nexus_api.services.campaign_copy._get_router", return_value=router):
+        response = await client.post(
+            "/api/v1/campaigns/generate-copy",
+            json=_social_payload(_pack(), variant_count=1),
+            headers=auth_headers,
+        )
+    assert response.status_code == 200
+    variant = response.json()["variants"][0]
+    assert "soc 2 certified" not in variant["body"].lower()
+    assert variant["guardrail_violations"] == ["SOC 2 certified"]

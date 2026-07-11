@@ -4,6 +4,14 @@ Takes a Tulana SKU campaign pack (with its campaign claims register rows),
 an audience descriptor, and a channel, and returns governed copy variants
 grounded ONLY in campaign-safe claims. See ``services/campaign_copy.py``
 for the claims-discipline enforcement.
+
+Channels:
+
+- ``email`` — variants carry subject + preheader + body + cta.
+- ``social_post`` — short posts for the schedule-social pipeline
+  (Mastodon / Bluesky / Reddit via ``social_post_executor``). Variants
+  carry body + cta only (``subject``/``preheader`` are ``None``) and the
+  body must fit ``max_chars`` (default 300 = Bluesky; Mastodon allows 500).
 """
 
 from __future__ import annotations
@@ -15,8 +23,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .tulana_campaign import TulanaSkuCampaignPack
 
-CopyChannel = Literal["email"]
+CopyChannel = Literal["email", "social_post"]
 CopyLanguage = Literal["es-MX", "en"]
+
+# Per-target post-body ceilings the ``max_chars`` policy is derived from.
+# One social variant may be scheduled to either platform, so the request
+# default (300) is the strictest common target; callers doing
+# Mastodon-only batches may raise it to 500.
+SOCIAL_MAX_CHARS_BLUESKY = 300
+SOCIAL_MAX_CHARS_MASTODON = 500
+SOCIAL_MAX_CHARS_FLOOR = 120
 
 
 class CampaignCopyRequest(BaseModel):
@@ -31,7 +47,11 @@ class CampaignCopyRequest(BaseModel):
     )
     channel: CopyChannel = Field(
         default="email",
-        description="Delivery channel. Email first; SMS/WhatsApp are follow-ups.",
+        description=(
+            "Delivery channel. ``email`` for campaign emails; ``social_post`` "
+            "for short posts destined for schedule-social (Mastodon, Bluesky, "
+            "Reddit). SMS/WhatsApp are follow-ups."
+        ),
     )
     language: CopyLanguage = Field(
         default="es-MX",
@@ -43,13 +63,31 @@ class CampaignCopyRequest(BaseModel):
         max_length=200,
         description="Optional tone hint (e.g. 'directo y profesional').",
     )
+    max_chars: int = Field(
+        default=SOCIAL_MAX_CHARS_BLUESKY,
+        ge=SOCIAL_MAX_CHARS_FLOOR,
+        le=SOCIAL_MAX_CHARS_MASTODON,
+        description=(
+            "social_post only: hard ceiling for each post body. Default 300 "
+            "(Bluesky, the strictest supported target); Mastodon-only batches "
+            "may raise to 500. Ignored for the email channel."
+        ),
+    )
 
 
 class CampaignCopyVariant(BaseModel):
     variant_id: str
     language: CopyLanguage
-    subject: str = Field(..., max_length=500)
-    preheader: str | None = Field(default=None, max_length=500)
+    subject: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Email subject line. Always set for email; None for social_post.",
+    )
+    preheader: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Email preheader. Email-only; None for social_post.",
+    )
     body: str = Field(..., max_length=8000)
     cta: str = Field(..., max_length=500)
     claim_keys_used: list[str] = Field(
@@ -78,7 +116,11 @@ class CampaignCopyResponse(BaseModel):
     )
     dropped_variants: list[str] = Field(
         default_factory=list,
-        description="Reasons for generated variants rejected by claims enforcement.",
+        description=(
+            "Reasons for generated variants rejected by claims enforcement "
+            "(non-permitted claim keys, scrub-emptied copy, or over-length "
+            "social bodies)."
+        ),
     )
     provider: str
     model: str

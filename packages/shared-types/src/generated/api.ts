@@ -3808,6 +3808,13 @@ export interface paths {
          *     campaign-permitted claims are refused with a structured 422
          *     (``no_campaign_safe_claims``). Each variant reports the claim keys it
          *     used for auditability. Output defaults to es-MX; English is opt-in.
+         *
+         *     Channels: ``email`` (subject + preheader + body + cta) and
+         *     ``social_post`` (body + cta only, for schedule-social → Mastodon /
+         *     Bluesky / Reddit). Social bodies must fit ``max_chars`` (default 300 =
+         *     Bluesky; Mastodon allows 500); an over-length body is re-prompted once
+         *     and then dropped with a reason in ``dropped_variants`` — same claims
+         *     discipline on every channel.
          */
         post: operations["campaign_generate_copy_api_v1_campaigns_generate_copy_post"];
         delete?: never;
@@ -4625,11 +4632,11 @@ export interface components {
             audience: string;
             /**
              * Channel
-             * @description Delivery channel. Email first; SMS/WhatsApp are follow-ups.
+             * @description Delivery channel. ``email`` for campaign emails; ``social_post`` for short posts destined for schedule-social (Mastodon, Bluesky, Reddit). SMS/WhatsApp are follow-ups.
              * @default email
-             * @constant
+             * @enum {string}
              */
-            channel: "email";
+            channel: "email" | "social_post";
             /**
              * Language
              * @description Output language. es-MX is the MADFAM primary; en is optional.
@@ -4647,6 +4654,12 @@ export interface components {
              * @description Optional tone hint (e.g. 'directo y profesional').
              */
             tone?: string | null;
+            /**
+             * Max Chars
+             * @description social_post only: hard ceiling for each post body. Default 300 (Bluesky, the strictest supported target); Mastodon-only batches may raise to 500. Ignored for the email channel.
+             * @default 300
+             */
+            max_chars: number;
         };
         /** CampaignCopyResponse */
         CampaignCopyResponse: {
@@ -4654,9 +4667,9 @@ export interface components {
             sku_key: string;
             /**
              * Channel
-             * @constant
+             * @enum {string}
              */
-            channel: "email";
+            channel: "email" | "social_post";
             /**
              * Language
              * @enum {string}
@@ -4678,7 +4691,7 @@ export interface components {
             excluded_claim_keys?: string[];
             /**
              * Dropped Variants
-             * @description Reasons for generated variants rejected by claims enforcement.
+             * @description Reasons for generated variants rejected by claims enforcement (non-permitted claim keys, scrub-emptied copy, or over-length social bodies).
              */
             dropped_variants?: string[];
             /** Provider */
@@ -4700,9 +4713,15 @@ export interface components {
              * @enum {string}
              */
             language: "es-MX" | "en";
-            /** Subject */
-            subject: string;
-            /** Preheader */
+            /**
+             * Subject
+             * @description Email subject line. Always set for email; None for social_post.
+             */
+            subject?: string | null;
+            /**
+             * Preheader
+             * @description Email preheader. Email-only; None for social_post.
+             */
             preheader?: string | null;
             /** Body */
             body: string;

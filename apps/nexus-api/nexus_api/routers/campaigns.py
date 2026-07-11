@@ -361,6 +361,13 @@ async def campaign_generate_copy(
     campaign-permitted claims are refused with a structured 422
     (``no_campaign_safe_claims``). Each variant reports the claim keys it
     used for auditability. Output defaults to es-MX; English is opt-in.
+
+    Channels: ``email`` (subject + preheader + body + cta) and
+    ``social_post`` (body + cta only, for schedule-social → Mastodon /
+    Bluesky / Reddit). Social bodies must fit ``max_chars`` (default 300 =
+    Bluesky; Mastodon allows 500); an over-length body is re-prompted once
+    and then dropped with a reason in ``dropped_variants`` — same claims
+    discipline on every channel.
     """
     cached = getattr(idem, "cached", None)
     if getattr(idem, "is_replay", False) and cached is not None:

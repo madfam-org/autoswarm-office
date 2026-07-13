@@ -113,6 +113,7 @@ from .legal import (
 )
 from .linkedin_draft_list import LinkedInDraftListTool
 from .linkedin_drafts import LinkedInDraftCreateTool
+from .linkedin_post_tool import LinkedInPostTool
 from .loki import get_loki_tools
 from .marketing_tools import SendMarketingEmailTool
 from .mastodon_tools import MastodonPostTool
@@ -161,6 +162,7 @@ from .webhooks import (
     StripeWebhookListTool,
 )
 from .whatsapp import WhatsAppTemplateTool
+from .x_tools import XPostTool
 
 
 def get_builtin_tools() -> list[BaseTool]:
@@ -327,13 +329,23 @@ def get_builtin_tools() -> list[BaseTool]:
         # bluesky_promo_v1 playbook. Tech-leaning audience fits Selva +
         # Yantra4D promo. Quote-posts deferred to v2.
         BlueskyPostTool(),
-        # LinkedIn — DRAFT-ONLY by design. No posting tool ever ships in
-        # this package; LinkedIn has no automation-friendly promo API and
-        # the operator must paste manually. Drafts land in
+        # LinkedIn — DRAFT-ONLY is the DEFAULT path. Drafts land in
         # ``linkedin_drafts/<date>/<id>.md`` artifact storage with
-        # frontmatter + a 140-char hook for in-feed preview verification.
+        # frontmatter + a 140-char hook for in-feed preview verification;
+        # the operator pastes manually (their content, no AI disclosure).
         LinkedInDraftCreateTool(),
         LinkedInDraftListTool(),
+        # Public-social outbound — X (Twitter) + LinkedIn DIRECT posting.
+        # Both SHIP DARK: disabled unless the operator sets
+        # SELVA_X_POST_ENABLED / SELVA_LINKEDIN_POST_ENABLED and provisions
+        # the platform app credentials. When disabled/unconfigured they
+        # return a failed ToolResult (never a fake success). Once armed:
+        # per-persona creds, mandatory AI-disclosure footer, 30-min Redis
+        # rate-limit, HITL gate via x_promo_v1 / linkedin_promo_v1.
+        # linkedin_post is the automated counterpart to the manual draft
+        # tool above (see linkedin_post_tool.py for the disclosure rationale).
+        XPostTool(),
+        LinkedInPostTool(),
         # Phygital tools (Yantra4D Engine Node)
         GenerateParametricModelTool(),
         RunDFMAnalysisTool(),

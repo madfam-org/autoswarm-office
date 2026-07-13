@@ -141,6 +141,14 @@ _PLATFORM_TOOL_NAMES: dict[str, str] = {
     "mastodon": "mastodon_post",
     "bluesky": "bluesky_post",
     "reddit": "reddit_post",
+    # X (Twitter) + LinkedIn direct posting. Both tools SHIP DARK (disabled
+    # unless the operator sets SELVA_X_POST_ENABLED / SELVA_LINKEDIN_POST_ENABLED
+    # and provisions credentials); routing them here means the wiring is a
+    # config-flip away, not a code change. ``twitter`` is accepted as an alias
+    # for ``x`` so either payload spelling routes correctly.
+    "x": "x_post",
+    "twitter": "x_post",
+    "linkedin": "linkedin_post",
     # ``email`` here means "marketing email" (drip campaigns are the use
     # case the executor was asked to power). Transactional ``send_email``
     # is a separate tool with stricter HITL — it should NOT be schedulable.
@@ -524,6 +532,22 @@ def _build_tool_kwargs(
 
     if platform == "bluesky":
         text = payload.get("text") or payload.get("status")
+        if not text:
+            return None
+        return {"text": text, "persona_id": persona}
+
+    if platform in ("x", "twitter"):
+        # X/Twitter post — only ``text`` is required. ``status`` is tolerated
+        # as an alias so the same row shape works on X, Bluesky, and Mastodon.
+        text = payload.get("text") or payload.get("status")
+        if not text:
+            return None
+        return {"text": text, "persona_id": persona}
+
+    if platform == "linkedin":
+        # LinkedIn direct post — only ``text`` is required (``status``/``body``
+        # tolerated as aliases).
+        text = payload.get("text") or payload.get("status") or payload.get("body")
         if not text:
             return None
         return {"text": text, "persona_id": persona}

@@ -3204,6 +3204,9 @@ mcp = [
 reddit = [
     { name = "praw" },
 ]
+x = [
+    { name = "tweepy" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -3215,9 +3218,10 @@ requires-dist = [
     { name = "mastodon-py", marker = "extra == 'mastodon'", specifier = ">=1.8,<3" },
     { name = "praw", marker = "extra == 'reddit'", specifier = ">=7.7,<8" },
     { name = "pydantic", specifier = ">=2.10.5" },
+    { name = "tweepy", marker = "extra == 'x'", specifier = ">=4.14" },
     { name = "urllib3", specifier = ">=2.7.0" },
 ]
-provides-extras = ["mcp", "reddit", "mastodon", "bluesky"]
+provides-extras = ["mcp", "reddit", "mastodon", "bluesky", "x"]
 
 [[package]]
 name = "selva-workers"
@@ -3474,6 +3478,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/09/a9/6ba95a270c6f1fbcd8dac228323f2777d886cb206987444e4bce66338dd4/tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb", size = 169598, upload-time = "2026-02-03T17:35:53.048Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl", hash = "sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf", size = 78374, upload-time = "2026-02-03T17:35:50.982Z" },
+]
+
+[[package]]
+name = "tweepy"
+version = "4.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "oauthlib" },
+    { name = "requests" },
+    { name = "requests-oauthlib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/44/54/0599e6d84e1abbe716cb6756f4662f800954b2eaa81fc290378610d8d9af/tweepy-4.17.0.tar.gz", hash = "sha256:c232e9fffa0b15b81d5ff8ec59d46af85e330285ffc3e64614d2418fb9af71b5", size = 87772, upload-time = "2026-07-02T19:11:31.333Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2e/01/c23575054cf6ca9590562ea6f32e75af1ea812d9670ac3f334bbcd50b571/tweepy-4.17.0-py3-none-any.whl", hash = "sha256:1244d7f2959091542f8e4a2c0c4256294e3beb69c0aa26eaf634b126d81eee49", size = 98989, upload-time = "2026-07-02T19:11:29.949Z" },
 ]
 
 [[package]]

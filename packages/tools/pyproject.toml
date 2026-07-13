@@ -51,6 +51,14 @@ mastodon = ["Mastodon.py>=1.8,<3"]
 # Install via ``pip install selva-tools[bluesky]`` in worker images
 # that need outbound public-social via Bluesky.
 bluesky = ["atproto>=0.0.46"]
+# X (Twitter) posting capability lives in builtins/x_tools.py. Optional for
+# the same reasons as the others; the tool SHIPS DARK (disabled unless
+# SELVA_X_POST_ENABLED is set) and degrades gracefully when ``tweepy`` is
+# missing (raises ``ToolNotConfiguredError``). Install via
+# ``pip install selva-tools[x]`` in worker images that need X outbound.
+# (LinkedIn's builtins/linkedin_post_tool.py needs no extra — it uses the
+# core ``httpx`` dependency for the Posts API call.)
+x = ["tweepy>=4.14"]
 
 [build-system]
 requires = ["hatchling"]

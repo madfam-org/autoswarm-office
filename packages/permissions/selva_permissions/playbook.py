@@ -231,10 +231,49 @@ BLUESKY_PROMO_V1 = PlaybookDefinition(
 )
 
 
+# X (Twitter) promo playbook. Same shape as the Reddit/Mastodon/Bluesky MVPs.
+# The ``x_post`` tool SHIPS DARK (disabled unless SELVA_X_POST_ENABLED is set
+# + credentials provisioned), but the HITL playbook is registered up front so
+# that the moment the channel is armed, "build → review → approve → post"
+# is the default path — not "build → post". X posts are effectively permanent
+# (indexed + archived across the network), so HITL stays on by default.
+# Defence in depth alongside the mandatory ~36-char disclosure footer (within
+# X's 280-char hard limit) + per-persona Redis 30-min rate-limit.
+X_PROMO_V1 = PlaybookDefinition(
+    id="x_promo_v1",
+    name="X (Twitter) Promo (MVP)",
+    trigger_event="manual_dispatch",
+    allowed_actions={ActionCategory.SOCIAL_POST.value},
+    token_budget=20_000,
+    financial_cap_cents=0,  # Posting itself costs nothing; ad-spend is a separate playbook.
+    require_approval=True,  # HITL gate — one approval per post.
+)
+
+
+# LinkedIn promo playbook (automated ``linkedin_post`` path). Same shape as
+# the others. The tool SHIPS DARK (disabled unless SELVA_LINKEDIN_POST_ENABLED
+# is set + credentials provisioned); drafts via ``linkedin_draft_create``
+# remain the zero-config default. HITL stays on by default — LinkedIn posts
+# reach a professional audience and are hard to unsend cleanly. Defence in
+# depth alongside the mandatory disclosure footer (automated posts must
+# disclose) + per-persona Redis 30-min rate-limit.
+LINKEDIN_PROMO_V1 = PlaybookDefinition(
+    id="linkedin_promo_v1",
+    name="LinkedIn Promo (MVP)",
+    trigger_event="manual_dispatch",
+    allowed_actions={ActionCategory.SOCIAL_POST.value},
+    token_budget=20_000,
+    financial_cap_cents=0,  # Posting itself costs nothing; ad-spend is a separate playbook.
+    require_approval=True,  # HITL gate — one approval per post.
+)
+
+
 BUILTIN_PLAYBOOKS: dict[str, PlaybookDefinition] = {
     REDDIT_PROMO_V1.id: REDDIT_PROMO_V1,
     MASTODON_PROMO_V1.id: MASTODON_PROMO_V1,
     BLUESKY_PROMO_V1.id: BLUESKY_PROMO_V1,
+    X_PROMO_V1.id: X_PROMO_V1,
+    LINKEDIN_PROMO_V1.id: LINKEDIN_PROMO_V1,
 }
 
 

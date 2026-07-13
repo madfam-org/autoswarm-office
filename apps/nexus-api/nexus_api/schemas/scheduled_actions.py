@@ -7,7 +7,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SocialPlatform = Literal["mastodon", "bluesky", "reddit", "email"]
+# ``x`` (Twitter) and ``linkedin`` are registered channels but their post
+# executors SHIP DARK — disabled unless the operator arms
+# SELVA_X_POST_ENABLED / SELVA_LINKEDIN_POST_ENABLED and provisions
+# credentials. Scheduling a row for them is allowed; the executor fails the
+# row closed (clear error, no fake success) until the channel is enabled.
+SocialPlatform = Literal["mastodon", "bluesky", "reddit", "x", "linkedin", "email"]
 HitlDecision = Literal["approved", "denied", "pending"]
 
 

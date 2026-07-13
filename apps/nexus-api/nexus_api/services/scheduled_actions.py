@@ -20,11 +20,19 @@ from ..schemas.scheduled_actions import (
 
 logger = logging.getLogger(__name__)
 
-_SUPPORTED_PLATFORMS = frozenset({"mastodon", "bluesky", "reddit", "email"})
+# ``x`` (Twitter) and ``linkedin`` are accepted channels whose post executors
+# SHIP DARK (disabled by default via SELVA_X_POST_ENABLED /
+# SELVA_LINKEDIN_POST_ENABLED). Enqueue is allowed; the worker fails the row
+# closed with a clear error until the operator arms + provisions the channel.
+_SUPPORTED_PLATFORMS = frozenset(
+    {"mastodon", "bluesky", "reddit", "x", "linkedin", "email"}
+)
 _DEFAULT_PLAYBOOK_BY_PLATFORM: dict[str, str] = {
     "reddit": "reddit_promo_v1",
     "mastodon": "mastodon_promo_v1",
     "bluesky": "bluesky_promo_v1",
+    "x": "x_promo_v1",
+    "linkedin": "linkedin_promo_v1",
 }
 
 
@@ -44,6 +52,20 @@ def _validate_social_payload(platform: str, payload: dict[str, Any]) -> None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="bluesky posts require payload.text or payload.status",
+        )
+    if platform in ("x", "twitter") and not (
+        payload.get("text") or payload.get("status")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="x posts require payload.text or payload.status",
+        )
+    if platform == "linkedin" and not (
+        payload.get("text") or payload.get("status") or payload.get("body")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="linkedin posts require payload.text, status, or body",
         )
     if platform == "reddit" and not all(
         payload.get(k) for k in ("subreddit", "title", "body")

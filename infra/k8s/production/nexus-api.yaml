@@ -107,6 +107,11 @@ spec:
                 secretKeyRef:
                   name: selva-secrets
                   key: DHANAM_WEBHOOK_SECRET
+            - name: DHANAM_CATALOG_APPLY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: DHANAM_CATALOG_APPLY_SECRET
             - name: COLYSEUS_SECRET
               valueFrom:
                 secretKeyRef:
@@ -120,6 +125,13 @@ spec:
                   name: selva-llm-secrets
                   key: DEEPINFRA_API_KEY
                   optional: true
+            - name: TULANA_API_URL
+              value: "https://tulana-api.madfam.io"
+            - name: TULANA_SELVA_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: TULANA_SELVA_WEBHOOK_SECRET
             - name: ORG_CONFIG_PATH
               value: "/etc/selva/org-config.yaml"
           workingDir: /data

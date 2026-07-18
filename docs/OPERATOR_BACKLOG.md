@@ -86,6 +86,43 @@ and [CI_TEST_SCOPE.md](CI_TEST_SCOPE.md):
 
 ---
 
+## 2026-07-18 update (RFC 0034 metering + realtime-office stabilization)
+
+Seven PRs (#222–#229) merged to `main` on 2026-07-18. What changed for the
+operator:
+
+- **`inference-gateway` is now a real production Deployment** (RFC 0034 P2) —
+  the extracted, sole home of the `/v1` inference proxy, 2 replicas in the
+  `selva` namespace. Selva now runs **7 Deployments** (admin, colyseus,
+  gateway, inference-gateway, nexus-api, office-ui, workers) — anywhere this
+  doc or a runbook says "6 Deployments," add `inference-gateway`.
+- **USD usage ledger now accrues** (#222) — was recording zeros
+  (key-style mismatch + unauthenticated worker metering + body-`org_id`
+  trust). Metering, auth, and org-from-caller are fixed. See new item 13.
+- **Streaming inference now metered** (#229) — the proxy previously returned
+  before recording; now writes the ledger on stream end.
+- **Virtual office joinable + verified in prod** (#223) — colyseus matchmake
+  routes now mount, package trio aligned, client forwards its auth token.
+  Verified end-to-end on `selva.town/demo` 2026-07-18.
+- **`main` un-blocked** (#224) — was 5 days red (PR #219 merged past failing
+  checks; no branch protection). X/LinkedIn direct-post tools now ship dark
+  (absent from the registry unless `SELVA_X_POST_ENABLED` /
+  `SELVA_LINKEDIN_POST_ENABLED` are armed). `mcp` bumped 1.27.0 → 1.28.1
+  (CVE-2026-52869 / 52870 / 59950, all HIGH).
+- **Staging nexus-api recovered** (#225) — 28h `CreateContainerConfigError`
+  from a prod-only `selva-secrets` ref in the staging overlay; remapped
+  `DHANAM_CATALOG_APPLY_SECRET` to `selva-staging-secrets`. Now 1/1 Running.
+- **New tropical solarpunk day/night UI + pre-join A/V screen** (#227) — live
+  in prod; theme resolves day/night from the local clock.
+
+**Still open after this update** (see new Tier 7 below): arm the inference
+budget gate, wire the manual prod deploy gate, wire OTel/Sentry on
+`inference-gateway`, enable branch protection on `main`, fix per-product AI
+attribution, resolve the PUBLIC-repo state, and create the missing RFC 0031 /
+0034 files.
+
+---
+
 ## Tier 1 — Blocks production observability (do first)
 
 ### 1. Wire OTel exporter (`OTEL_EXPORTER_OTLP_ENDPOINT`)
@@ -181,6 +218,24 @@ and [CI_TEST_SCOPE.md](CI_TEST_SCOPE.md):
 - **Cross-refs**:
   - [docs/AUDIENCE_FILTER_ROLLOUT.md](AUDIENCE_FILTER_ROLLOUT.md) § Production status
   - Shadow procedure still applies when standing up **new** environments.
+
+### 13. Per-product AI attribution collapses to `platform` / `service:worker`
+
+- **Status (2026-07-18)**: The RFC 0034 USD usage ledger now records
+  non-zero usage (PR #222 fixed key-style mismatch + auth + org-from-caller;
+  PR #229 metered streaming). **But** all shared-token callers still collapse
+  to `org_id='platform'`, `caller='service:worker'`, so usage cannot be
+  attributed per product/tenant for those calls.
+- **What**: Give shared-token callers (workers, ecosystem services) a
+  per-product / per-tenant identity so ledger rows attribute to the real
+  consumer instead of the `platform` / `service:worker` sentinel.
+- **Why blocking**: Revenue attribution and any per-product AI cost
+  reporting is impossible while every shared-token call books to `platform`.
+- **Owner**: Engineer (implementation) — no operator decision required.
+- **Unblocks**: Per-product AI cost attribution; accurate usage-based
+  billing for shared-token consumers.
+- **Cross-refs**: PR #222 (`_normalize_usage`, org-from-caller), PR #229
+  (streaming meter). Missing RFC file `docs/rfcs/0034-*` (see Tier 7).
 
 ---
 
@@ -402,6 +457,99 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
 ### 12. Merge PR #125 (mypy wave 7) — **DONE**
 
 - **Status**: Merged to `main` (2026-05-04). Packages mypy ratchet is 0.
+
+---
+
+## Tier 7 — Infra + governance gates (surfaced 2026-07-18)
+
+### 14. Arm the inference budget gate (`BUDGET_GATE_ENABLED`)
+
+- **Status (2026-07-18)**: **Unset in all manifests.** No inference spend
+  cap is enforced today. Now that the USD usage ledger accrues correctly
+  (PR #222 / #229), the gate is meaningful.
+- **What**: Set `BUDGET_GATE_ENABLED=true` on the services that enforce the
+  cap after a staging smoke confirms the ledger and cap behave as expected.
+- **Why blocking**: Without it, inference spend is uncapped — a runaway
+  workflow or provider price change has no automatic backstop.
+- **Owner**: Operator (config flip after staging smoke).
+- **Unblocks**: Enforced inference spend ceiling per the RFC 0034 ledger.
+- **Cross-refs**: PR #222, #229 (usage ledger correctness prerequisites).
+
+### 15. Wire the manual prod deploy gate (Pattern B)
+
+- **Status (2026-07-18)**: **Inert.** The declared Pattern B manual gate is
+  not wired. The live path is the legacy direct-to-prod pipeline
+  (`deploy.yml` on every `main` push → `infra/k8s/production` → ArgoCD
+  auto-sync). `rollback-prod.yml` writes to `infra/k8s/overlays/production`,
+  which ArgoCD does **not** watch — so the documented rollback path does not
+  reach prod.
+- **What**: Wire the Pattern B manual approval gate into the prod deploy
+  path, and point `rollback-prod.yml` at the overlay ArgoCD actually watches
+  (`infra/k8s/production`) — or repoint ArgoCD at the overlay the rollback
+  writes.
+- **Why blocking**: Every `main` push auto-ships to prod with no manual gate,
+  and the advertised rollback is a no-op against the live cluster.
+- **Owner**: Operator + engineer (pipeline wiring).
+- **Unblocks**: Gated prod releases; a rollback path that actually reaches prod.
+- **Cross-refs**: `.github/workflows/deploy.yml`,
+  `.github/workflows/rollback-prod.yml`, `infra/k8s/production`,
+  `infra/k8s/overlays/production`.
+
+### 16. Wire OTel/Sentry on `inference-gateway` (RFC 0034 P2)
+
+- **Status (2026-07-18)**: The extracted `inference-gateway` Deployment
+  (2 replicas, `selva` namespace) has **no OTel/Sentry wiring**. Tier 1
+  items 1–2 wired observability on the other services; the new gateway was
+  not covered.
+- **What**: Add the same OTel exporter + Sentry DSN env refs to the
+  `inference-gateway` Deployment as the other services carry, and verify a
+  trace + a synthetic error flow.
+- **Why blocking**: The `/v1` inference proxy is now the gateway's sole home;
+  inference-path incidents have zero trace/error visibility until this lands.
+- **Owner**: Engineer (manifest wiring) + operator (same DSNs/endpoint as
+  Tier 1).
+- **Unblocks**: Inference-path trace correlation and error capture.
+- **Cross-refs**: Tier 1 items 1–2; RFC file `docs/rfcs/0034-*` (missing — see item 19).
+
+### 17. Enable branch protection on `main`
+
+- **Status (2026-07-18)**: **No branch protection.** PR #219 merged past
+  failing checks and left `main` red for 5 days (fixed by PR #224).
+- **What**: Enable required status checks + review on `main` so a red PR
+  cannot merge.
+- **Why blocking**: Nothing prevents merging past failing CI; `main` can go
+  red silently and stay red.
+- **Owner**: Operator (GitHub repo settings).
+- **Unblocks**: A `main` that stays green; safer merge discipline.
+- **Cross-refs**: PR #219 (the merge-past-red incident), PR #224 (the fix).
+
+### 18. Resolve PUBLIC-repo state vs sanitization decision
+
+- **Status (2026-07-18)**: The repo is **PUBLIC**, while
+  `docs/PUBLIC_REPO_SANITIZATION_OWNER_DECISION_2026-06-01.md` says
+  "blocked, not sanitized." Doc and reality disagree.
+- **What**: Either sanitize per the decision doc and confirm public is
+  intended, or flip the repo private and update the doc — reconcile the two.
+- **Why blocking**: The repo is public without the sanitization the owner
+  decision required.
+- **Owner**: Operator (visibility decision + repo settings).
+- **Unblocks**: A repo state that matches the recorded owner decision.
+- **Cross-refs**: `docs/PUBLIC_REPO_SANITIZATION_OWNER_DECISION_2026-06-01.md`.
+
+### 19. Create missing RFC files 0031 and 0034
+
+- **Status (2026-07-18)**: **Documentation debt.** Merged PRs cite RFC 0031
+  and RFC 0034, but neither file exists under `docs/rfcs/`.
+- **What**: Author `docs/rfcs/0031-*.md` and `docs/rfcs/0034-*.md` capturing
+  the decisions the merged PRs already implemented. Do not fabricate content —
+  write them from the actual implemented behavior (RFC 0034 = inference
+  gateway extraction + USD usage ledger; 0031 subject per the citing PRs).
+- **Why blocking**: The architecture record is incomplete; readers can't
+  trace the gateway extraction or usage-ledger design to an RFC.
+- **Owner**: Engineer (author from implemented behavior).
+- **Unblocks**: A complete RFC index; traceable design rationale for RFC
+  0034 work shipped in PRs #222 / #229 and the gateway extraction (P2).
+- **Cross-refs**: `docs/rfcs/`, PR #222, #229 (RFC 0034 implementation).
 
 ---
 

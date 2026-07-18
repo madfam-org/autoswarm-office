@@ -97,7 +97,25 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 
 ---
 
-## Current Status: v2.3.0 + Phase 2 campaigns + Phase 0 remediation (2026-05-30) ✅
+## Current Status: v2.4.0 — RFC 0034 metering + realtime-office stabilization (2026-07-18) ✅
+
+> Seven PRs (#222–#229) merged to `main` on 2026-07-18. The USD usage ledger
+> now accrues (was recording zeros), streaming inference is metered, and the
+> **virtual office is joinable — verified end-to-end in prod** on
+> `selva.town/demo` (Room + API green, DemoSimulator agents narrating). The
+> `/v1` inference proxy was extracted into its own **`inference-gateway`**
+> production Deployment (RFC 0034 P2), so Selva now runs **7 Deployments**
+> (admin, colyseus, gateway, inference-gateway, nexus-api, office-ui,
+> workers). New tropical solarpunk day/night UI foundation is live. See
+> [CHANGELOG.md](CHANGELOG.md) `[2.4.0]`.
+> **Still operator-gated:** arm the inference budget gate
+> (`BUDGET_GATE_ENABLED`), wire the manual prod deploy gate, wire OTel/Sentry
+> on `inference-gateway`, enable branch protection on `main`, fix per-product
+> AI attribution, resolve the PUBLIC-repo state, and create the missing
+> RFC 0031 / 0034 files — see
+> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) Tier 7.
+
+### Prior status: v2.3.0 + Phase 2 campaigns + Phase 0 remediation (2026-05-30) ✅
 
 > Phase 2 campaign orchestration **shipped** (#179): API, worker graph,
 > materializer, office-ui Campaign Dashboard. Staging API loop proven.
@@ -874,7 +892,7 @@ The Selva quote tool returns success for Tablaco only when the final response co
 - `[x]` Ecosystem inference centralized (Fortuna, Yantra4D, PhyndCRM → Selva proxy)
 - `[x]` Service resource registry (8 external accounts tracked)
 - `[x]` Email delivery verified (Resend Pro, madfam.io domain)
-- `[x]` 6 selva pods healthy (nexus-api, workers, gateway, colyseus, office-ui, admin)
+- `[x]` 7 selva Deployments (nexus-api, workers, gateway, inference-gateway, colyseus, office-ui, admin) — `inference-gateway` added 2026-07-18 (RFC 0034 P2); see CHANGELOG `[2.4.0]`
 - `[x]` ArgoCD synced to latest commit
 - `[x]` Dev-bypass rejected in production auth
 - `[ ]` Anthropic API credit balance > $0

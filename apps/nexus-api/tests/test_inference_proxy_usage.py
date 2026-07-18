@@ -38,9 +38,12 @@ class _FakeRouter:
             on_usage(_FakeStreamUsage(7, 3, "claude-x", "anthropic"))
 
 
+class _FakePolicy:
+    model_override = None
+
+
 class _FakeReq:
-    class policy:
-        model_override = None
+    policy = _FakePolicy()
 
 
 @pytest.mark.asyncio

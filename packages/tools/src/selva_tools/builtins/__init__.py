@@ -165,6 +165,25 @@ from .whatsapp import WhatsAppTemplateTool
 from .x_tools import XPostTool
 
 
+def _get_armed_social_post_tools() -> list[BaseTool]:
+    """Return the direct social-posting tools ONLY when operator-armed.
+
+    Ships-dark contract: an un-armed posting tool must not exist in the
+    registry at all (draft-only governance guard) — not merely fail at
+    call time. Each tool re-checks its own flag at execution, so arming
+    is still fail-closed on missing credentials.
+    """
+    from .linkedin_post_tool import _is_enabled as _linkedin_armed
+    from .x_tools import _is_enabled as _x_armed
+
+    tools: list[BaseTool] = []
+    if _x_armed():
+        tools.append(XPostTool())
+    if _linkedin_armed():
+        tools.append(LinkedInPostTool())
+    return tools
+
+
 def get_builtin_tools() -> list[BaseTool]:
     """Return all built-in tool instances."""
     return [
@@ -336,16 +355,17 @@ def get_builtin_tools() -> list[BaseTool]:
         LinkedInDraftCreateTool(),
         LinkedInDraftListTool(),
         # Public-social outbound — X (Twitter) + LinkedIn DIRECT posting.
-        # Both SHIP DARK: disabled unless the operator sets
-        # SELVA_X_POST_ENABLED / SELVA_LINKEDIN_POST_ENABLED and provisions
-        # the platform app credentials. When disabled/unconfigured they
-        # return a failed ToolResult (never a fake success). Once armed:
+        # Both SHIP DARK: absent from the registry entirely unless the
+        # operator sets SELVA_X_POST_ENABLED / SELVA_LINKEDIN_POST_ENABLED
+        # and provisions the platform app credentials. Dark means agents
+        # cannot even see the tool — registering a disabled posting tool
+        # violated the draft-only governance guard
+        # (test_builtin_registry_has_no_linkedin_post_tool). Once armed:
         # per-persona creds, mandatory AI-disclosure footer, 30-min Redis
         # rate-limit, HITL gate via x_promo_v1 / linkedin_promo_v1.
         # linkedin_post is the automated counterpart to the manual draft
         # tool above (see linkedin_post_tool.py for the disclosure rationale).
-        XPostTool(),
-        LinkedInPostTool(),
+        *_get_armed_social_post_tools(),
         # Phygital tools (Yantra4D Engine Node)
         GenerateParametricModelTool(),
         RunDFMAnalysisTool(),

@@ -206,9 +206,22 @@ class TestAudienceAndRegistration:
     def test_linkedin_post_tool_is_tenant_audience(self) -> None:
         assert LinkedInPostTool().audience == Audience.TENANT
 
-    def test_both_post_and_draft_tools_registered(self) -> None:
+    def test_post_tool_absent_from_registry_while_dark(self) -> None:
+        """Ships-dark contract: un-armed means NOT registered at all (the
+        draft-only governance guard forbids a visible linkedin_post tool)."""
         from selva_tools.builtins import get_builtin_tools
 
+        names = {t.name for t in get_builtin_tools()}
+        assert "linkedin_post" not in names
+        # The manual draft path is always present.
+        assert "linkedin_draft_create" in names
+
+    def test_post_tool_registered_when_operator_armed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from selva_tools.builtins import get_builtin_tools
+
+        monkeypatch.setenv("SELVA_LINKEDIN_POST_ENABLED", "true")
         names = {t.name for t in get_builtin_tools()}
         assert "linkedin_post" in names
         # The manual draft path is preserved, not replaced.

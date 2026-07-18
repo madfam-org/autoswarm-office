@@ -46,6 +46,45 @@ class TestMeterInferenceCall:
             assert payload["org_id"] == "test-org"
 
     @pytest.mark.asyncio
+    async def test_sends_worker_auth_headers(self) -> None:
+        """The billing endpoint is authenticated (RFC 0034 P0): an unauthenticated
+        POST is silently 401-dropped, so metering must send worker auth headers
+        with the tenant org declared."""
+        mock_response = MagicMock(status_code=201)
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch(
+                "selva_workers.metering.get_settings",
+                return_value=MagicMock(nexus_api_url="http://test:4300"),
+            ),
+            patch("selva_workers.metering.httpx.AsyncClient", return_value=mock_client),
+            patch(
+                "selva_workers.metering.get_worker_auth_headers",
+                return_value={
+                    "Authorization": "Bearer worker-token",
+                    "X-Selva-Tenant-Org": "test-org",
+                },
+            ) as mock_headers,
+        ):
+            from selva_workers.metering import meter_inference_call
+
+            await meter_inference_call(
+                usage={"input_tokens": 1, "output_tokens": 1},
+                provider="anthropic",
+                model="claude-sonnet-4-6",
+                org_id="test-org",
+            )
+
+            mock_headers.assert_called_once_with(org_id="test-org")
+            headers = mock_client.post.call_args[1]["headers"]
+            assert headers["Authorization"] == "Bearer worker-token"
+            assert headers["X-Selva-Tenant-Org"] == "test-org"
+
+    @pytest.mark.asyncio
     async def test_skips_when_zero_tokens(self) -> None:
         with patch("selva_workers.metering.httpx.AsyncClient") as mock_cls:
             from selva_workers.metering import meter_inference_call

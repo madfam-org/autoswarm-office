@@ -16,7 +16,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +37,10 @@ class RecordRequest(BaseModel):
     model: str | None = None
     agent_id: str | None = None
     task_id: str | None = None
-    org_id: str = "default"
+    # Deprecated: org scope is derived from the authenticated caller. A
+    # body-supplied value is only accepted when it matches that scope
+    # (transition-safety for older workers) and is rejected otherwise.
+    org_id: str | None = None
 
 
 class BudgetResponse(BaseModel):
@@ -47,19 +50,41 @@ class BudgetResponse(BaseModel):
     over_budget: bool
 
 
+def _resolve_caller_org(user: dict, body_org_id: str | None) -> str:
+    """Derive the org scope from the authenticated caller.
+
+    Mirrors the events-router invariant (AGENTS.md tenant scoping): the body
+    may not name an org. A matching body value is tolerated so older workers
+    that still send ``org_id`` keep working; a mismatch is a 403.
+    """
+    caller_org = user.get("org_id") or "default"
+    if body_org_id is not None and body_org_id != caller_org:
+        raise HTTPException(
+            status_code=403,
+            detail="org_id in request body does not match authenticated org scope",
+        )
+    return caller_org
+
+
 @router.post("/record", status_code=201)
 async def record_usage(
     body: RecordRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ) -> dict[str, str]:
-    """Record a compute token debit from a worker (authenticated, RFC 0034 P0)."""
+    """Record a compute token debit from a worker (authenticated, RFC 0034 P0).
+
+    Org scope comes from the authenticated caller (worker tokens declare it
+    via ``X-Selva-Tenant-Org``), never from the request body — a caller must
+    not be able to debit another tenant's bucket.
+    """
+    org_id = _resolve_caller_org(user, body.org_id)
     entry = ComputeTokenLedger(
         action=body.action,
         amount=body.amount,
         provider=body.provider,
         model=body.model,
-        org_id=body.org_id,
+        org_id=org_id,
     )
     if body.agent_id:
         with contextlib.suppress(ValueError):
@@ -77,10 +102,14 @@ async def record_usage(
 async def check_budget(
     body: dict[str, Any],
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ) -> BudgetResponse:
-    """Check an org's remaining compute token budget for today (authenticated, RFC 0034 P0)."""
-    org_id = body.get("org_id", "default")
+    """Check the caller's remaining compute token budget for today (authenticated, RFC 0034 P0).
+
+    Scope is the authenticated org — one tenant must not be able to read
+    another tenant's spend position.
+    """
+    org_id = _resolve_caller_org(user, body.get("org_id"))
     from ..services.tier_limits import resolve_org_daily_limit
 
     daily_limit = await resolve_org_daily_limit(db, org_id)

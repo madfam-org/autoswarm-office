@@ -1033,6 +1033,10 @@ export interface paths {
         /**
          * Record Usage
          * @description Record a compute token debit from a worker (authenticated, RFC 0034 P0).
+         *
+         *     Org scope comes from the authenticated caller (worker tokens declare it
+         *     via ``X-Selva-Tenant-Org``), never from the request body — a caller must
+         *     not be able to debit another tenant's bucket.
          */
         post: operations["record_usage_api_v1_billing_record_post"];
         delete?: never;
@@ -1052,7 +1056,10 @@ export interface paths {
         put?: never;
         /**
          * Check Budget
-         * @description Check an org's remaining compute token budget for today (authenticated, RFC 0034 P0).
+         * @description Check the caller's remaining compute token budget for today (authenticated, RFC 0034 P0).
+         *
+         *     Scope is the authenticated org — one tenant must not be able to read
+         *     another tenant's spend position.
          */
         post: operations["check_budget_api_v1_billing_check_budget_post"];
         delete?: never;
@@ -6181,11 +6188,8 @@ export interface components {
             agent_id?: string | null;
             /** Task Id */
             task_id?: string | null;
-            /**
-             * Org Id
-             * @default default
-             */
-            org_id: string;
+            /** Org Id */
+            org_id?: string | null;
         };
         /** RoomConfigUpdate */
         RoomConfigUpdate: {

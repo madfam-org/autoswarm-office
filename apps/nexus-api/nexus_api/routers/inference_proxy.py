@@ -106,6 +106,26 @@ def _make_completion_id() -> str:
     return f"chatcmpl-{uuid.uuid4().hex[:24]}"
 
 
+def _normalize_usage(usage: dict[str, int] | None) -> dict[str, int]:
+    """Map provider usage onto OpenAI wire keys.
+
+    madfam_inference providers normalize usage to ``input_tokens`` /
+    ``output_tokens`` (Anthropic-style), while this proxy's ledger writer,
+    event emitter, and OpenAI-compatible response body all speak
+    ``prompt_tokens`` / ``completion_tokens``. Accept either style so a
+    provider that already speaks OpenAI keys stays correct.
+    """
+    usage = usage or {}
+    prompt = int(usage.get("input_tokens", usage.get("prompt_tokens", 0)))
+    completion = int(usage.get("output_tokens", usage.get("completion_tokens", 0)))
+    total = int(usage.get("total_tokens", 0)) or prompt + completion
+    return {
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "total_tokens": total,
+    }
+
+
 def _openai_response(
     completion_id: str,
     content: str,
@@ -316,14 +336,15 @@ async def chat_completions(
 
     duration_ms = int((time.monotonic() - start) * 1000)
 
-    _emit_proxy_event(user, response.provider, response.model, response.usage, duration_ms)
-    await _record_usage(db, user, response.provider, response.model, response.usage)
+    usage = _normalize_usage(response.usage)
+    _emit_proxy_event(user, response.provider, response.model, usage, duration_ms)
+    await _record_usage(db, user, response.provider, response.model, usage)
 
     return _openai_response(
         completion_id=completion_id,
         content=response.content,
         model=response.model,
-        usage=response.usage,
+        usage=usage,
         tool_calls=response.tool_calls,
     )
 

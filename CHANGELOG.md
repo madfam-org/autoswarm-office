@@ -138,6 +138,100 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **OPERATOR_BACKLOG.md** — Tier 1–3 mapped to Program Phase 0; reading order updated.
 - **docs/rfcs/README.md** — index for RFCs 0018–0021 and phygital quote-truth contract.
 
+## [2.4.0] - 2026-07-18
+
+> RFC 0034 metering + realtime-office stabilization. Seven PRs (#222–#229)
+> closed three silent revenue/liveness bugs (USD usage ledger accruing
+> zeros, streaming inference unmetered, virtual office never joinable in
+> prod), unblocked 5-day-red `main`, fixed a 28h staging crashloop, and
+> shipped the new tropical solarpunk day/night UI foundation. The office
+> demo is now **verified end-to-end in prod** on `selva.town/demo`
+> (Room + API green, DemoSimulator agents narrating in chat). Remaining
+> gap stays concentrated in operator-gated items (budget gate, prod deploy
+> gate, observability on the new gateway) tracked in
+> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md).
+
+### Added
+
+- **`inference-gateway` production Deployment** (RFC 0034 P2) — the
+  extracted, sole home of the `/v1` inference proxy, running 2 replicas
+  in the `selva` namespace. Selva now runs **7 Deployments** (admin,
+  colyseus, gateway, inference-gateway, nexus-api, office-ui, workers) —
+  earlier docs that say "all 6 Deployments" undercount. Note: the new
+  `inference-gateway` currently lacks OTel/Sentry observability wiring —
+  tracked as an open item in OPERATOR_BACKLOG.
+- **Tropical solarpunk day/night UI foundation** (#227) — new theme
+  foundation plus a Gather-style pre-join A/V screen; live in prod. The
+  theme resolves day/night from the local clock.
+
+### Fixed
+
+- **USD usage ledger accrued zeros** (#222) — the RFC 0034 usage ledger
+  had recorded zeros since it shipped: providers emit
+  `input_tokens`/`output_tokens` but the proxy read
+  `prompt_tokens`/`completion_tokens`; worker metering POSTs were
+  unauthenticated (401-dropped); billing routes trusted body `org_id`
+  (cross-tenant read/write). Fixed: `_normalize_usage()` accepts both
+  key styles, worker metering sends auth headers, and billing endpoints
+  derive org from the caller (mismatch → 403).
+- **Streaming inference unmetered** (#229) — the proxy returned the
+  `StreamingResponse` before recording usage, so all streamed inference
+  was billed at zero. Fixed: providers report stream-end usage via an
+  `on_usage` callback (anthropic `message_start`/`message_delta`, openai
+  `stream_options.include_usage`, ollama done-object counts); the proxy
+  writes the ledger in a `finally` block via a fresh `tenant_session`.
+- **Virtual office never joinable in prod** (#223) — colyseus pre-listened
+  Express so `/matchmake/*` routes were never mounted (`server.listen()`
+  binds them), the package trio was impossible (core 0.17 + schema v2 +
+  client 0.16), and the client never sent its auth token on join. Fixed:
+  `createServer(app)` + `server.listen()`, aligned to `@colyseus/core`
+  0.16 + `@colyseus/schema` v3 matching the 0.16 client, and `useColyseus`
+  now forwards the janua-session token. **Verified end-to-end in prod** on
+  `selva.town/demo` 2026-07-18 (Room + API green, DemoSimulator agents
+  narrating in chat).
+- **`main` red 5 days + HIGH CVE bump** (#224) — PR #219 merged past
+  failing checks (`main` has no branch protection). Fixed the draft-only
+  governance conflict: X/LinkedIn direct-post tools now ship **dark**
+  (absent from the tool registry until `SELVA_X_POST_ENABLED` /
+  `SELVA_LINKEDIN_POST_ENABLED` are armed, not merely disabled at call
+  time). Ratcheted mypy back to 0, regenerated wire types, and bumped
+  `mcp` 1.27.0 → 1.28.1 (CVE-2026-52869 / 52870 / 59950, all HIGH).
+- **Staging nexus-api 28h crashloop** (#225) — PR #220 added a
+  `secretKeyRef` named `selva-secrets` (a prod-only secret name) with no
+  staging remap, leaving staging nexus-api in `CreateContainerConfigError`
+  for 28h. Fixed by remapping `DHANAM_CATALOG_APPLY_SECRET` to
+  `selva-staging-secrets` in the staging overlay. Staging nexus-api now
+  1/1 Running.
+- **Dhanam billing webhook had no replay protection** — unlike the Stripe
+  handler (signed-timestamp tolerance), the Dhanam webhook verified HMAC
+  but not freshness, so a re-delivered `subscription.deleted` could
+  downgrade a paying tenant and a re-delivered `invoice.paid` could clear
+  a real overage counter. Added a first-write-wins idempotency guard keyed
+  on the event id (Redis `SET NX EX`, 24h TTL); duplicates return
+  `{"status": "duplicate"}` without re-running billing state. Fails open if
+  Redis is unreachable.
+
+### Operator todo list (gating items not in this release)
+
+- Arm the inference budget gate (`BUDGET_GATE_ENABLED`) — unset in all
+  manifests, so there is no inference spend cap yet. Arm after a staging smoke.
+- Wire the declared Pattern B manual prod deploy gate. Today the legacy
+  direct-to-prod pipeline (`deploy.yml` on every `main` push →
+  `infra/k8s/production` → ArgoCD auto-sync) is the live path;
+  `rollback-prod.yml` writes to `infra/k8s/overlays/production`, which
+  ArgoCD does not watch.
+- Wire OTel/Sentry on `inference-gateway` (RFC 0034 P2) — the extracted
+  gateway has no observability yet.
+- Enable branch protection on `main`.
+- Fix per-product AI attribution — shared-token callers collapse to
+  `org_id='platform'`, `caller='service:worker'`.
+- Resolve the PUBLIC-repo state vs
+  `docs/PUBLIC_REPO_SANITIZATION_OWNER_DECISION_2026-06-01.md`
+  ("blocked, not sanitized").
+- Create the missing RFC files `docs/rfcs/0031` and `docs/rfcs/0034` —
+  both are cited by merged PRs but do not exist under `docs/rfcs/`
+  (documentation debt).
+
 ## [2.3.0] - 2026-05-04
 
 > Production-truthfulness sprint. 24 PRs in 24h closed every in-repo

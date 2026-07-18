@@ -258,7 +258,7 @@ def _build_linkedin_client(creds: dict[str, str]) -> Any:
     ``httpx`` is missing we raise :class:`ToolNotConfiguredError` (same shape
     as the Bluesky/Mastodon client builders)."""
     try:
-        import httpx  # type: ignore[import-not-found]
+        import httpx
     except ImportError as exc:
         raise ToolNotConfiguredError(
             "httpx not installed — required for the LinkedIn Posts API call; "

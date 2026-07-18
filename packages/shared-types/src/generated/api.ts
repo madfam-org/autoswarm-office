@@ -4758,7 +4758,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "mastodon" | "bluesky" | "reddit" | "email";
+            platform: "mastodon" | "bluesky" | "reddit" | "x" | "linkedin" | "email";
             /** Posts */
             posts: components["schemas"]["CampaignSocialPostItem"][];
             /** Playbook Id */

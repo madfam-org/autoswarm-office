@@ -249,9 +249,19 @@ class TestAudienceAndRegistration:
     def test_x_tool_is_tenant_audience(self) -> None:
         assert XPostTool().audience == Audience.TENANT
 
-    def test_x_tool_registered_in_get_builtin_tools(self) -> None:
+    def test_x_tool_absent_from_registry_while_dark(self) -> None:
+        """Ships-dark contract: un-armed means NOT registered at all."""
         from selva_tools.builtins import get_builtin_tools
 
+        names = {t.name for t in get_builtin_tools()}
+        assert "x_post" not in names
+
+    def test_x_tool_registered_when_operator_armed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from selva_tools.builtins import get_builtin_tools
+
+        monkeypatch.setenv("SELVA_X_POST_ENABLED", "true")
         names = {t.name for t in get_builtin_tools()}
         assert "x_post" in names
 

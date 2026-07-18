@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import hmac as hmac_mod
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from selva_observability import init_sentry, init_tracing
@@ -139,7 +140,28 @@ def create_app() -> FastAPI:
         pass  # prometheus-fastapi-instrumentator not installed
 
     @app.get("/metrics", include_in_schema=False)
-    async def prometheus_metrics() -> Response:
+    async def prometheus_metrics(request: Request) -> Response:
+        # /metrics enumerates the entire internal API surface (every route
+        # path, method, and error rate) — useful reconnaissance for an
+        # attacker. Prometheus scrapes over the in-cluster ClusterIP, which
+        # does NOT traverse the Cloudflare tunnel, so a request bearing the
+        # tunnel's edge headers is by definition public and is refused unless
+        # it presents the service token. In-cluster scrapes (no CF headers)
+        # pass unchanged, so the existing ServiceMonitors keep working.
+        settings = get_settings()
+        via_cloudflare = bool(
+            request.headers.get("cf-connecting-ip") or request.headers.get("cf-ray")
+        )
+        if via_cloudflare:
+            auth = request.headers.get("authorization", "")
+            token = auth[7:] if auth.lower().startswith("bearer ") else ""
+            token_ok = (
+                settings.worker_api_token
+                and settings.worker_api_token != "dev-bypass"
+                and hmac_mod.compare_digest(token, settings.worker_api_token)
+            )
+            if not token_ok:
+                return Response(status_code=404)
         body, content_type = await render_prometheus_metrics()
         return Response(content=body, media_type=content_type)
 

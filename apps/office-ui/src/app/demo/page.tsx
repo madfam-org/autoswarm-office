@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { OfficeExperience } from '@/components/OfficeExperience';
+import { PreJoinScreen, shouldSkipPreJoin } from '@/components/PreJoinScreen';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 function generateDemoJWT(name: string): string {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
@@ -20,6 +22,7 @@ function generateDemoJWT(name: string): string {
 
 export default function DemoPage() {
   const [entered, setEntered] = useState(false);
+  const [preJoinDone, setPreJoinDone] = useState(false);
   const [name, setName] = useState('');
 
   const enterDemo = useCallback(() => {
@@ -27,6 +30,7 @@ export default function DemoPage() {
     document.cookie = 'janua-session=; path=/; max-age=0';
     const jwt = generateDemoJWT(name);
     document.cookie = `janua-session=${jwt}; path=/; max-age=3600; SameSite=Lax`;
+    setPreJoinDone(shouldSkipPreJoin());
     setEntered(true);
   }, [name]);
 
@@ -44,12 +48,25 @@ export default function DemoPage() {
     }
   }, []);
 
+  if (entered && !preJoinDone) {
+    return (
+      <PreJoinScreen
+        spaceName="the Selva demo"
+        defaultName={name || 'Visitor'}
+        onJoin={() => setPreJoinDone(true)}
+      />
+    );
+  }
+
   if (entered) {
     return <OfficeExperience mode="demo" />;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 scanline-overlay">
+    <div className="flex min-h-screen items-center justify-center bg-surface scanline-overlay">
+      <div className="fixed left-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="retro-panel w-full max-w-sm animate-pop-in rounded p-8">
         <h1 className="pixel-text mb-2 text-center text-lg text-indigo-400">
           Try the Demo

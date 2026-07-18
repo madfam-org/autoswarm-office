@@ -4,10 +4,93 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tropical solarpunk day/night theme ───────────────────────────────
+ *
+ * The whole chrome is themed by re-pointing the PRIMITIVE palettes
+ * (tailwind `slate`, `white`, `indigo`) at these variables, so every
+ * existing `slate-*` / `indigo-*` / `text-white` class is theme-aware
+ * without a class-by-class migration:
+ *
+ *   night — jungle after dark: green-black tones, bioluminescent accent.
+ *   day   — morning mist: the tone ramp INVERTS (slate-900 surfaces
+ *           become light, text-white becomes deep-leaf ink), accent is
+ *           deep canopy green.
+ *
+ * Values are RGB triplets so Tailwind slash-opacity (`bg-white/10`)
+ * keeps working. New components should prefer the semantic aliases at
+ * the bottom over raw tones.
+ */
+:root,
+:root[data-theme='night'] {
+  --tone-950: 8 18 16;
+  --tone-900: 13 27 22;
+  --tone-800: 20 38 31;
+  --tone-700: 29 53 41;
+  --tone-600: 42 74 57;
+  --tone-500: 62 99 80;
+  --tone-400: 107 138 120;
+  --tone-300: 155 179 164;
+  --tone-200: 196 212 201;
+  --tone-100: 225 234 227;
+  --tone-50: 240 245 241;
+  --base-white: 236 245 238; /* moonlit leaf-white */
+  --accent-700: 26 148 81;
+  --accent-600: 34 182 99;
+  --accent-500: 47 212 120;
+  --accent-400: 74 222 128; /* bioluminescent glow */
+  --accent-300: 134 239 172;
+  --accent-200: 187 247 208;
+  --accent-100: 220 252 231;
+  --solar: 246 213 92;
+  --scanline-opacity: 0.05;
+
+  /* Semantic aliases (new components use these) */
+  --surface: var(--tone-900);
+  --surface-raised: var(--tone-800);
+  --surface-overlay: var(--tone-700);
+  --ink: var(--base-white);
+  --ink-muted: var(--tone-400);
+  --edge: var(--tone-600);
+  --accent: var(--accent-500);
+  --accent-fg: 8 18 16;
+}
+
+:root[data-theme='day'] {
+  --tone-950: 251 253 250;
+  --tone-900: 244 249 243;
+  --tone-800: 233 241 231;
+  --tone-700: 220 232 218;
+  --tone-600: 198 214 196;
+  --tone-500: 159 179 160;
+  --tone-400: 94 122 106;
+  --tone-300: 71 97 79;
+  --tone-200: 53 80 63;
+  --tone-100: 36 56 44;
+  --tone-50: 22 36 28;
+  --base-white: 20 37 28; /* deep-leaf ink — `text-white` reads on light surfaces */
+  --accent-700: 30 84 52;
+  --accent-600: 45 122 74; /* deep canopy */
+  --accent-500: 53 147 90;
+  --accent-400: 71 169 104;
+  --accent-300: 123 196 147;
+  --accent-200: 178 224 194;
+  --accent-100: 224 242 230;
+  --solar: 212 164 58;
+  --scanline-opacity: 0;
+
+  --surface: var(--tone-950);
+  --surface-raised: 255 255 255;
+  --surface-overlay: var(--tone-800);
+  --ink: var(--base-white);
+  --ink-muted: var(--tone-400);
+  --edge: var(--tone-600);
+  --accent: var(--accent-600);
+  --accent-fg: 251 253 250;
+}
 
 @layer base {
   *:focus-visible {
-    outline: 2px solid #818cf8;
+    outline: 2px solid rgb(var(--accent-400));
     outline-offset: 2px;
   }
 
@@ -406,10 +489,12 @@
   inset: 0;
   pointer-events: none;
   z-index: 9999;
+  /* Night-only CRT flavor — day mode zeroes --scanline-opacity. */
+  opacity: var(--scanline-opacity, 0.05);
   background: repeating-linear-gradient(
     0deg,
-    rgba(0, 0, 0, 0.03) 0px,
-    rgba(0, 0, 0, 0.03) 1px,
+    rgba(0, 0, 0, 0.6) 0px,
+    rgba(0, 0, 0, 0.6) 1px,
     transparent 1px,
     transparent 3px
   );

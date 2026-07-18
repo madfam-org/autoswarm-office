@@ -107,9 +107,15 @@ describe('OutboundIdentityForm', () => {
     fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
     fireEvent.blur(emailInput);
 
-    const err = await screen.findByRole('alert');
-    expect(err.textContent).toMatch(/valid email address/i);
-    expect(emailInput.getAttribute('aria-invalid')).toBe('true');
+    // Retry the whole assertion until the blur-triggered re-render settles.
+    // A bare findByRole('alert') can race the render on a loaded CI runner
+    // (the alert and aria-invalid land in the same synchronous setState, but
+    // the query fires before React flushes) — waitFor makes it deterministic.
+    await waitFor(() => {
+      const err = screen.getByRole('alert');
+      expect(err.textContent).toMatch(/valid email address/i);
+      expect(emailInput.getAttribute('aria-invalid')).toBe('true');
+    });
   });
 
   it('submits PUT with the right payload and shows a success toast', async () => {

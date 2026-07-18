@@ -6,6 +6,7 @@ import logging
 
 import httpx
 
+from .auth import get_worker_auth_headers
 from .config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ async def meter_inference_call(
             resp = await client.post(
                 f"{settings.nexus_api_url}/api/v1/billing/record",
                 json=payload,
+                headers=get_worker_auth_headers(org_id=org_id),
             )
             if resp.status_code != 201:
                 logger.warning(

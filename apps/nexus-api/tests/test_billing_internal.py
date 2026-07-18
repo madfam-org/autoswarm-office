@@ -17,11 +17,35 @@ class TestRecordUsage:
     ) -> None:
         resp = await client.post(
             "/api/v1/billing/record",
-            json={"action": "inference", "amount": 100, "org_id": "default"},
+            json={"action": "inference", "amount": 100},
             headers=auth_headers,
         )
         assert resp.status_code == 201
         assert resp.json()["status"] == "recorded"
+
+    async def test_record_matching_body_org_tolerated(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """Older workers still send org_id; a value matching the authenticated
+        scope keeps working during the transition."""
+        resp = await client.post(
+            "/api/v1/billing/record",
+            json={"action": "inference", "amount": 100, "org_id": "dev-org"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+
+    async def test_record_cross_org_body_is_rejected(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """A caller must not be able to debit another tenant's bucket by
+        naming it in the body (tenant-scoping invariant, AGENTS.md)."""
+        resp = await client.post(
+            "/api/v1/billing/record",
+            json={"action": "inference", "amount": 100, "org_id": "victim-org"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 403
 
     async def test_missing_required_fields(
         self, client: httpx.AsyncClient, auth_headers: dict[str, str]
@@ -60,7 +84,7 @@ class TestCheckBudget:
     ) -> None:
         resp = await client.post(
             "/api/v1/billing/check-budget",
-            json={"org_id": "default"},
+            json={},
             headers=auth_headers,
         )
         assert resp.status_code == 200
@@ -76,17 +100,28 @@ class TestCheckBudget:
     ) -> None:
         await client.post(
             "/api/v1/billing/record",
-            json={"action": "inference", "amount": 50, "org_id": "budget-org"},
+            json={"action": "inference", "amount": 50},
             headers=auth_headers,
         )
         resp = await client.post(
             "/api/v1/billing/check-budget",
-            json={"org_id": "budget-org"},
+            json={},
             headers=auth_headers,
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["used"] == 50
+
+    async def test_check_budget_cross_org_body_is_rejected(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """One tenant must not be able to read another tenant's spend position."""
+        resp = await client.post(
+            "/api/v1/billing/check-budget",
+            json={"org_id": "victim-org"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 403
 
     async def test_unauthenticated_check_is_rejected(self, client: httpx.AsyncClient) -> None:
         resp = await client.post(

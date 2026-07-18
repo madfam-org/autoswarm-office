@@ -6,9 +6,9 @@ import os
 from collections.abc import AsyncIterator
 from typing import Any
 
-from .base import InferenceProvider
+from .base import InferenceProvider, UsageCallback
 from .caching import PromptCacheManager
-from .types import InferenceRequest, InferenceResponse, Sensitivity
+from .types import InferenceRequest, InferenceResponse, Sensitivity, StreamUsage
 
 logger = logging.getLogger(__name__)
 _cache_manager = PromptCacheManager()
@@ -467,26 +467,66 @@ class ModelRouter:
         scope = BudgetScope(org_id=org_id)
         return self._budget_gate, scope
 
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        request: InferenceRequest,
+        on_usage: UsageCallback | None = None,
+    ) -> AsyncIterator[str]:
         """Route the request and stream the response.
 
         Streaming applies the same budget preflight, prompt-cache preparation,
         and provider fallback classification as ``complete()``. It only falls
         back before any chunk is emitted; once a provider has started streaming,
         switching vendors would splice two model responses into one output.
-        Usage is not recorded here because provider stream chunks do not carry
-        normalized token accounting.
+
+        Providers report final token accounting through ``on_usage`` (at most
+        once, at stream end). The router stamps the winning provider's name,
+        records the spend against the budget gate — mirroring ``complete()``'s
+        post-call recording — and forwards the usage to the caller so streamed
+        inference is billed like non-streamed inference.
         """
-        await self._check_budget_preflight(request)
+        gate, scope = await self._check_budget_preflight(request)
         provider = self._select_provider(request)
         self._apply_prompt_cache_breakpoints(request, provider)
+
+        captured: list[StreamUsage] = []
+
+        def _make_capture(provider_name: str) -> UsageCallback:
+            def _capture(usage: StreamUsage) -> None:
+                usage.provider = provider_name
+                captured.append(usage)
+                if on_usage is not None:
+                    on_usage(usage)
+
+            return _capture
+
+        async def _record_captured() -> None:
+            # Same fire-and-forget posture as complete(): a record() failure
+            # must never break the inference path.
+            if gate is None or scope is None or not captured:
+                return
+            usage = captured[-1]
+            try:
+                await gate.record(
+                    scope,
+                    actual_tokens=usage.input_tokens + usage.output_tokens,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    provider=usage.provider,
+                    model=usage.model,
+                )
+            except Exception as exc:
+                logger.warning("budget-gate: record() raised for stream: %s", exc)
 
         emitted_any = False
         last_exc: Exception | None = None
         try:
-            async for chunk in provider.stream(request):
+            async for chunk in provider.stream(
+                request, on_usage=_make_capture(provider.name)
+            ):
                 emitted_any = True
                 yield chunk
+            await _record_captured()
             return
         except Exception as exc:
             last_exc = exc
@@ -506,9 +546,12 @@ class ModelRouter:
             emitted_any = False
             try:
                 logger.info("Falling back streaming inference to provider: %s", name)
-                async for chunk in fallback.stream(request):
+                async for chunk in fallback.stream(
+                    request, on_usage=_make_capture(fallback.name)
+                ):
                     emitted_any = True
                     yield chunk
+                await _record_captured()
                 return
             except Exception as exc:
                 last_exc = exc

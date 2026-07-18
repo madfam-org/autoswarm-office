@@ -6,8 +6,8 @@ from typing import Any
 
 import httpx
 
-from ..base import InferenceProvider
-from ..types import InferenceRequest, InferenceResponse
+from ..base import InferenceProvider, UsageCallback
+from ..types import InferenceRequest, InferenceResponse, StreamUsage
 
 OLLAMA_DEFAULT_URL = "http://localhost:11434"
 DEFAULT_MODEL = "llama3.2"
@@ -132,9 +132,15 @@ class OllamaProvider(InferenceProvider):
             tool_calls=tool_calls,
         )
 
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        request: InferenceRequest,
+        on_usage: UsageCallback | None = None,
+    ) -> AsyncIterator[str]:
         body = self._build_body(request, stream=True)
 
+        usage = StreamUsage()
+        saw_usage = False
         async with (
             httpx.AsyncClient(timeout=self._timeout) as client,
             client.stream(
@@ -159,9 +165,17 @@ class OllamaProvider(InferenceProvider):
                 if content:
                     yield content
 
-                # The final object has "done": true
+                # The final object (done: true) carries the eval counts.
                 if data.get("done", False):
+                    usage.model = data.get("model") or usage.model
+                    if "prompt_eval_count" in data or "eval_count" in data:
+                        usage.input_tokens = int(data.get("prompt_eval_count", 0))
+                        usage.output_tokens = int(data.get("eval_count", 0))
+                        saw_usage = True
                     break
+
+        if on_usage is not None and saw_usage:
+            on_usage(usage)
 
     async def list_models(self) -> list[str]:
         async with httpx.AsyncClient(timeout=self._timeout) as client:

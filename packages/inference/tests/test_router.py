@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from madfam_inference.base import InferenceProvider
+from madfam_inference.base import InferenceProvider, UsageCallback
 from madfam_inference.org_config import ModelAssignment, OrgConfig, TaskType
 from madfam_inference.router import CHEAPEST_PRIORITY, CLOUD_PRIORITY, ModelRouter
 from madfam_inference.types import (
@@ -15,6 +15,7 @@ from madfam_inference.types import (
     InferenceResponse,
     RoutingPolicy,
     Sensitivity,
+    StreamUsage,
 )
 
 # ---------------------------------------------------------------------------
@@ -39,8 +40,12 @@ class MockProvider(InferenceProvider):
     async def complete(self, request: InferenceRequest) -> InferenceResponse:
         return await self._complete_mock(request)
 
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+    async def stream(
+        self, request: InferenceRequest, on_usage: UsageCallback | None = None
+    ) -> AsyncIterator[str]:
         yield "mock chunk"
+        if on_usage is not None:
+            on_usage(StreamUsage(input_tokens=10, output_tokens=20, model="mock-model"))
 
     async def list_models(self) -> list[str]:
         return ["mock-model"]
@@ -49,7 +54,9 @@ class MockProvider(InferenceProvider):
 class PreYieldFailingStreamProvider(MockProvider):
     """Streaming provider that fails before emitting a chunk."""
 
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+    async def stream(
+        self, request: InferenceRequest, on_usage: UsageCallback | None = None
+    ) -> AsyncIterator[str]:
         raise RuntimeError(f"{self.name} stream failed before first chunk")
         yield ""
 
@@ -57,7 +64,9 @@ class PreYieldFailingStreamProvider(MockProvider):
 class MidStreamFailingProvider(MockProvider):
     """Streaming provider that emits one chunk and then fails."""
 
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+    async def stream(
+        self, request: InferenceRequest, on_usage: UsageCallback | None = None
+    ) -> AsyncIterator[str]:
         yield "partial chunk"
         raise RuntimeError(f"{self.name} stream failed after first chunk")
 

@@ -6,8 +6,8 @@ from typing import Any
 
 import httpx
 
-from ..base import InferenceProvider
-from ..types import InferenceRequest, InferenceResponse
+from ..base import InferenceProvider, UsageCallback
+from ..types import InferenceRequest, InferenceResponse, StreamUsage
 
 OPENAI_API_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-4o"
@@ -157,9 +157,20 @@ class OpenAIProvider(InferenceProvider):
             tool_calls=tool_calls,
         )
 
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        request: InferenceRequest,
+        on_usage: UsageCallback | None = None,
+    ) -> AsyncIterator[str]:
         body = self._build_body(request, stream=True)
+        # Ask for the final usage chunk (an extra terminal event with empty
+        # choices and a populated "usage"). Part of the OpenAI streaming spec
+        # and supported by the OpenAI-compatible gateways we route to
+        # (DeepInfra, OpenRouter); servers that don't know it ignore it.
+        body["stream_options"] = {"include_usage": True}
 
+        usage = StreamUsage()
+        saw_usage = False
         async with (
             httpx.AsyncClient(timeout=self._timeout) as client,
             client.stream(
@@ -181,12 +192,23 @@ class OpenAIProvider(InferenceProvider):
                 except json.JSONDecodeError:
                     continue
 
+                usage.model = event.get("model") or usage.model
+                event_usage = event.get("usage")
+                if event_usage:
+                    # OpenAI wire keys — normalize to the provider contract.
+                    usage.input_tokens = int(event_usage.get("prompt_tokens", 0))
+                    usage.output_tokens = int(event_usage.get("completion_tokens", 0))
+                    saw_usage = True
+
                 choices = event.get("choices", [])
                 if choices:
                     delta = choices[0].get("delta", {})
                     content = delta.get("content")
                     if content:
                         yield content
+
+        if on_usage is not None and saw_usage:
+            on_usage(usage)
 
     async def list_models(self) -> list[str]:
         async with httpx.AsyncClient(timeout=self._timeout) as client:

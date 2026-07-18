@@ -81,6 +81,15 @@ spec:
                   name: selva-staging-secrets
                   key: DHANAM_WEBHOOK_SECRET
                   optional: true
+            # PR #220 added this ref against selva-secrets (prod-only name);
+            # without the staging remap the rollout sat 28h+ in
+            # CreateContainerConfigError while smoke reported green.
+            - name: DHANAM_CATALOG_APPLY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-staging-secrets
+                  key: DHANAM_CATALOG_APPLY_SECRET
+                  optional: true
             - name: BILLING_VIA_DHANAM
               value: "true"
             - name: COLYSEUS_URL

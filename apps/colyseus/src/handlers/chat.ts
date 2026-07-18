@@ -150,7 +150,7 @@ export function handleChat(
 
   // Trim to last MAX_MESSAGES
   while (state.chatMessages.length > MAX_MESSAGES) {
-    state.chatMessages.deleteAt(0);
+    state.chatMessages.shift();
   }
 
   // Fire-and-forget persistence (authenticated + tenant-scoped)
@@ -174,7 +174,7 @@ export function addSystemMessage(
   state.chatMessages.push(msg);
 
   while (state.chatMessages.length > MAX_MESSAGES) {
-    state.chatMessages.deleteAt(0);
+    state.chatMessages.shift();
   }
 
   // Fire-and-forget persistence (authenticated + tenant-scoped)

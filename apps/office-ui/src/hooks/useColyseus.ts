@@ -10,6 +10,7 @@ import type {
   Agent,
 } from '@selva/shared-types';
 import { MAX_RECONNECT_DELAY_MS } from '@/lib/constants';
+import { getSessionToken } from '@/lib/api';
 
 const COLYSEUS_URL = process.env.NEXT_PUBLIC_COLYSEUS_URL ?? 'ws://localhost:4303';
 const ROOM_NAME = 'office';
@@ -195,8 +196,13 @@ export function useColyseus(options?: string | ColyseusOptions): ColyseusState {
     try {
       const { Client } = await import('colyseus.js');
       const client = new Client(COLYSEUS_URL);
+      // The room's onAuth requires the session JWT (janua-session cookie —
+      // signed for live sessions, unsigned org_id=demo-public for the demo).
+      // Joining without it fails closed, and filterBy(orgId) can't segregate
+      // tenants into per-org rooms.
       const room = await client.joinOrCreate(ROOM_NAME, {
         name: playerNameRef.current ?? 'Player',
+        token: getSessionToken() ?? undefined,
       });
 
       roomRef.current = room as unknown as RoomLike;

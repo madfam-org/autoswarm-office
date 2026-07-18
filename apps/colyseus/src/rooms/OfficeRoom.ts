@@ -151,11 +151,13 @@ const DEFAULT_DEPARTMENTS: Array<{
   },
 ];
 
-// @colyseus/core 0.17.x: the Room generic is a metadata object declaring
-// the room's state/client/metadata types (see RoomOptions in @colyseus/core).
+// @colyseus/core 0.16.x: the Room generic is the state class itself. The
+// server runs 0.16 to match colyseus.js 0.16 in office-ui and the
+// @colyseus/schema v2 state classes — core 0.17 refuses to seat schema-v2
+// states ("schema v2 compatibility currently missing").
 // State is also assigned explicitly via `setState(new OfficeStateSchema())`
 // in onCreate (kept below for explicit ordering with the seed-departments path).
-export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
+export class OfficeRoom extends Room<OfficeStateSchema> {
 
   private nexusApiUrl: string = process.env.NEXUS_API_URL ?? "http://localhost:4300";
   private stopProximityLoop: (() => void) | null = null;
@@ -505,14 +507,12 @@ export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
     }
   }
 
-  // @colyseus/core 0.17.x changed second arg from `consented: boolean` to
-  // `code?: number` (the WebSocket close code). Code 1000 = normal close;
-  // codes outside 1000-1999 indicate abnormal closure. The cleanup logic
-  // below runs unconditionally — disconnect always means clean up — which
-  // matches the prior consented=true path.
-  override onLeave(client: Client, code?: number): void {
+  // @colyseus/core 0.16.x: second arg is `consented` (client left on
+  // purpose vs dropped). The cleanup logic below runs unconditionally —
+  // disconnect always means clean up — so both paths behave the same.
+  override onLeave(client: Client, consented?: boolean): void {
     logger.info(
-      { sessionId: client.sessionId, closeCode: code },
+      { sessionId: client.sessionId, consented },
       "Client left"
     );
 

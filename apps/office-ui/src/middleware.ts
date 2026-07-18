@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const APP_HOST = 'app.selva.town';
 const LANDING_HOST = 'selva.town';
+const WWW_HOST = 'www.selva.town';
 
 const PUBLIC_PATHS = ['/', '/login', '/guest', '/demo', '/api/health', '/api/auth'];
 
@@ -24,6 +25,17 @@ function isAppHost(host: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get('host') || '';
+
+  // --- Canonical host (www.selva.town → selva.town) ---
+  // Declared in infra as a 301, but the tunnel routes www at office-ui with
+  // no redirect, so www served a duplicate of the apex (SEO split, cookie
+  // scoping surprises). Redirect permanently, preserving path + query.
+  if (host === WWW_HOST) {
+    const url = request.nextUrl.clone();
+    url.host = LANDING_HOST;
+    url.port = '';
+    return NextResponse.redirect(url, 301);
+  }
 
   // --- App host (app.selva.town) ---
   // Redirect root to /office, allow /demo and /login as entry points

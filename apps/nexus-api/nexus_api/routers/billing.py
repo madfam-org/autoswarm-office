@@ -24,6 +24,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["billing"], dependencies=[Depends(get_current_user)])
 webhook_router = APIRouter(tags=["billing-webhooks"])
 
+# Replayed billing events are dangerous on a money surface: a re-delivered
+# subscription.deleted can downgrade a paying customer, a re-delivered
+# invoice.paid can clear a real overage counter. The Stripe handler already
+# rejects replays via signed-timestamp tolerance; Dhanam's HMAC alone does
+# not, so we add a first-write-wins idempotency guard keyed on the event id.
+_WEBHOOK_DEDUP_TTL_SECONDS = 24 * 60 * 60
+
+
+async def _claim_webhook_event(event_id: str) -> bool:
+    """Atomically claim a webhook event id. Returns True on first sight,
+    False if already processed (a replay). Fails OPEN — if Redis is
+    unreachable we process the event rather than silently drop billing
+    state, matching the fire-and-forget posture elsewhere in this path."""
+    try:
+        from selva_redis_pool import get_redis_pool
+
+        settings = get_settings()
+        pool = get_redis_pool(url=settings.redis_url)
+        # SET key value NX EX ttl → truthy only when the key did not exist.
+        claimed = await pool.execute_with_retry(
+            "set",
+            f"selva:webhook:dhanam:{event_id}",
+            "1",
+            nx=True,
+            ex=_WEBHOOK_DEDUP_TTL_SECONDS,
+        )
+        return bool(claimed)
+    except Exception:
+        logger.warning(
+            "Webhook dedup unavailable (Redis) for event=%s; processing anyway",
+            event_id,
+            exc_info=True,
+        )
+        return True
+
 
 @router.get("/status")
 async def billing_status() -> dict[str, object]:
@@ -169,7 +204,22 @@ async def dhanam_webhook(request: Request) -> dict[str, str]:
 
     payload = json.loads(body)
     event_type = payload.get("type", "unknown")
-    logger.info("Received Dhanam billing webhook: %s", event_type)
+
+    # Idempotency: skip an event we've already processed (replay / redelivery).
+    # Dhanam events carry an id at the top level or under data; fall back to a
+    # content hash so an id-less event is still deduplicated by exact payload.
+    event_id = str(
+        payload.get("id")
+        or (payload.get("data") or {}).get("event_id")
+        or hashlib.sha256(body).hexdigest()
+    )
+    if not await _claim_webhook_event(event_id):
+        logger.info(
+            "Duplicate Dhanam webhook ignored: type=%s event=%s", event_type, event_id
+        )
+        return {"status": "duplicate", "event_type": str(event_type)}
+
+    logger.info("Received Dhanam billing webhook: %s (event=%s)", event_type, event_id)
 
     from ..services.billing_sync import handle_dhanam_billing_event
 

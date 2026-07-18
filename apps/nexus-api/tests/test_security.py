@@ -303,6 +303,67 @@ class TestBillingHeaderFix:
             )
             assert resp.status_code == 200
 
+    @pytest.mark.asyncio
+    async def test_dhanam_webhook_ignores_replayed_event(
+        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
+        """A re-delivered event id is dropped (first-write-wins idempotency),
+        so a replayed subscription.deleted can't downgrade a paying tenant."""
+        body = json.dumps(
+            {"id": "evt_replay_1", "type": "subscription.deleted", "data": {"org_id": "acme"}}
+        ).encode()
+        sig = hmac_mod.new(b"test-secret", body, hashlib.sha256).hexdigest()
+        patched = Settings(
+            database_url="sqlite+aiosqlite://",
+            environment="development",
+            dev_auth_bypass=True,
+            dhanam_webhook_secret="test-secret",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        csrf = "test-csrf"
+        client.cookies.set("csrf-token", csrf)
+
+        # First delivery claims the id (SET NX → truthy), replay does not.
+        claims = iter([True, None])
+
+        async def fake_claim(op: str, *a: object, **k: object) -> object:
+            if op == "set":
+                return next(claims, None)
+            return None
+
+        mock_pool = MagicMock()
+        mock_pool.execute_with_retry = AsyncMock(side_effect=fake_claim)
+        handler = AsyncMock()
+
+        req_headers = {
+            **auth_headers,
+            "x-dhanam-signature": sig,
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrf,
+        }
+
+        with (
+            patch("nexus_api.routers.billing.get_settings", return_value=patched),
+            patch("selva_redis_pool.get_redis_pool", return_value=mock_pool),
+            patch(
+                "nexus_api.services.billing_sync.handle_dhanam_billing_event",
+                handler,
+            ),
+        ):
+            first = await client.post(
+                "/api/v1/billing/webhooks/dhanam", content=body, headers=req_headers
+            )
+            second = await client.post(
+                "/api/v1/billing/webhooks/dhanam", content=body, headers=req_headers
+            )
+
+        assert first.status_code == 200
+        assert first.json()["status"] == "ok"
+        assert second.status_code == 200
+        assert second.json()["status"] == "duplicate"
+        # The billing state handler ran exactly once, not for the replay.
+        assert handler.await_count == 1
+
 
 # ---------------------------------------------------------------------------
 # Rate Limiting

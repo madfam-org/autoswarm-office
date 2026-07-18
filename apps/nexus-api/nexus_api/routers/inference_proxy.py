@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
-from ..database import get_db
+from ..database import get_db, tenant_session
 from ..services.inference_usage_ledger import record_inference_usage
 
 logger = logging.getLogger(__name__)
@@ -157,10 +157,67 @@ def _openai_response(
     }
 
 
-async def _stream_chunks(model_router, request, completion_id: str):
-    """Yield SSE chunks in OpenAI streaming format."""
+async def _record_stream_usage(user: dict, captured: dict) -> None:
+    """Write the durable USD-priced ledger row for a completed stream.
+
+    A StreamingResponse outlives the request scope, so the request's
+    ``get_db`` session is closed by the time the stream ends — we open a
+    fresh ``tenant_session`` scoped to the caller's org. Fail-SAFE: a write
+    error degrades to 'spend not recorded', never breaks the response
+    (which has already flushed to the client by now anyway).
+    """
+    usage = _normalize_usage(captured.get("usage"))
+    if usage["total_tokens"] <= 0:
+        return
+    org_id = user.get("org_id", "platform")
     try:
-        async for text_chunk in model_router.stream(request):
+        async with tenant_session(org_id=org_id) as db:
+            await record_inference_usage(
+                db,
+                org_id=org_id,
+                caller=user.get("sub", "unknown"),
+                provider=captured.get("provider") or "unknown",
+                model=captured.get("model"),
+                prompt_tokens=usage["prompt_tokens"],
+                completion_tokens=usage["completion_tokens"],
+            )
+            await db.commit()
+        _emit_proxy_event(
+            user,
+            captured.get("provider") or "unknown",
+            captured.get("model") or "auto",
+            usage,
+            captured.get("duration_ms", 0),
+        )
+    except Exception:
+        logger.warning(
+            "Streaming usage ledger write failed (spend for this call not recorded)",
+            exc_info=True,
+        )
+
+
+async def _stream_chunks(model_router, request, completion_id: str, user: dict):
+    """Yield SSE chunks in OpenAI streaming format, then meter the stream.
+
+    The provider reports final token accounting once, at stream end, via the
+    ``on_usage`` callback. We stash it and write the ledger in the ``finally``
+    block so a streamed call is billed exactly like a non-streamed one — the
+    metering used to be skipped entirely here, which made every streamed call
+    free (RFC 0034 gap)."""
+    captured: dict[str, Any] = {}
+    started = time.monotonic()
+
+    def _on_usage(su) -> None:
+        # su is madfam_inference.types.StreamUsage
+        captured["usage"] = {
+            "input_tokens": su.input_tokens,
+            "output_tokens": su.output_tokens,
+        }
+        captured["provider"] = su.provider
+        captured["model"] = su.model
+
+    try:
+        async for text_chunk in model_router.stream(request, on_usage=_on_usage):
             chunk = {
                 "id": completion_id,
                 "object": "chat.completion.chunk",
@@ -196,6 +253,12 @@ async def _stream_chunks(model_router, request, completion_id: str):
         }
         yield f"data: {json.dumps(error_chunk)}\n\n"
         yield "data: [DONE]\n\n"
+    finally:
+        # Meter whatever the stream produced — including a partial stream that
+        # errored after some tokens, as long as the provider reported usage.
+        if captured.get("usage"):
+            captured["duration_ms"] = int((time.monotonic() - started) * 1000)
+            await _record_stream_usage(user, captured)
 
 
 def _emit_proxy_event(
@@ -308,7 +371,7 @@ async def chat_completions(
     # Streaming
     if body.stream:
         return StreamingResponse(
-            _stream_chunks(model_router, inference_request, completion_id),
+            _stream_chunks(model_router, inference_request, completion_id, user),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",

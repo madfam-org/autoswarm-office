@@ -22,7 +22,6 @@ class TestBillingRecord:
                 "amount": 150,
                 "provider": "anthropic",
                 "model": "claude-sonnet-4-6",
-                "org_id": "test-org",
             },
             headers=auth_headers,
         )
@@ -35,7 +34,7 @@ class TestBillingRecord:
     ) -> None:
         resp = await client.post(
             "/api/v1/billing/record",
-            json={"action": "inference", "amount": 0, "org_id": "test-org"},
+            json={"action": "inference", "amount": 0},
             headers=auth_headers,
         )
         assert resp.status_code == 422
@@ -55,7 +54,6 @@ class TestBillingRecord:
                 "amount": 50,
                 "agent_id": agent_id,
                 "task_id": task_id,
-                "org_id": "dev",
             },
             headers=auth_headers,
         )
@@ -72,7 +70,6 @@ class TestBillingRecord:
                 "amount": 100,
                 "provider": "openai",
                 "model": "gpt-4o",
-                "org_id": "dev",
             },
             headers=auth_headers,
         )
@@ -88,7 +85,7 @@ class TestCheckBudget:
     ) -> None:
         resp = await client.post(
             "/api/v1/billing/check-budget",
-            json={"org_id": "dev"},
+            json={},
             headers=auth_headers,
         )
         assert resp.status_code == 200
@@ -105,13 +102,13 @@ class TestCheckBudget:
         for _ in range(11):
             await client.post(
                 "/api/v1/billing/record",
-                json={"action": "inference", "amount": 100, "org_id": "budget-test"},
+                json={"action": "inference", "amount": 100},
                 headers=auth_headers,
             )
 
         resp = await client.post(
             "/api/v1/billing/check-budget",
-            json={"org_id": "budget-test"},
+            json={},
             headers=auth_headers,
         )
         assert resp.status_code == 200

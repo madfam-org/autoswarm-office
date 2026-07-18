@@ -5,8 +5,8 @@ from typing import Any
 
 import httpx
 
-from ..base import InferenceProvider
-from ..types import InferenceRequest, InferenceResponse
+from ..base import InferenceProvider, UsageCallback
+from ..types import InferenceRequest, InferenceResponse, StreamUsage
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1"
 DEFAULT_MODEL = "claude-sonnet-4-6"
@@ -153,9 +153,15 @@ class AnthropicProvider(InferenceProvider):
             tool_calls=tool_calls if tool_calls else None,
         )
 
-    async def stream(self, request: InferenceRequest) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        request: InferenceRequest,
+        on_usage: UsageCallback | None = None,
+    ) -> AsyncIterator[str]:
         body = self._build_body(request, stream=True)
 
+        usage = StreamUsage()
+        saw_usage = False
         async with (
             httpx.AsyncClient(timeout=self._timeout) as client,
             client.stream(
@@ -180,10 +186,28 @@ class AnthropicProvider(InferenceProvider):
                 except json.JSONDecodeError:
                     continue
 
-                if event.get("type") == "content_block_delta":
+                event_type = event.get("type")
+                if event_type == "content_block_delta":
                     delta = event.get("delta", {})
                     if delta.get("type") == "text_delta":
                         yield delta.get("text", "")
+                elif event_type == "message_start":
+                    # Carries the resolved model + input token count.
+                    message = event.get("message", {})
+                    usage.model = message.get("model") or usage.model
+                    start_usage = message.get("usage", {})
+                    if "input_tokens" in start_usage:
+                        usage.input_tokens = int(start_usage["input_tokens"])
+                        saw_usage = True
+                elif event_type == "message_delta":
+                    # usage.output_tokens here is cumulative — last one wins.
+                    delta_usage = event.get("usage", {})
+                    if "output_tokens" in delta_usage:
+                        usage.output_tokens = int(delta_usage["output_tokens"])
+                        saw_usage = True
+
+        if on_usage is not None and saw_usage:
+            on_usage(usage)
 
     async def list_models(self) -> list[str]:
         async with httpx.AsyncClient(timeout=self._timeout) as client:

@@ -79,3 +79,18 @@ class InferenceResponse(BaseModel):
     provider: str
     usage: dict[str, int] = Field(default_factory=dict)
     tool_calls: list[dict] | None = None
+
+
+class StreamUsage(BaseModel):
+    """Final token accounting for a streamed completion.
+
+    Providers report this once, at stream end, via the optional
+    ``on_usage`` callback of ``stream()`` — the streamed chunks themselves
+    stay plain text. ``provider`` is stamped by the router (the caller
+    doesn't know which provider won selection/fallback).
+    """
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    model: str | None = None
+    provider: str | None = None

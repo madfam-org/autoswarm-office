@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { OfficeExperience } from '@/components/OfficeExperience';
+import { PreJoinScreen, shouldSkipPreJoin } from '@/components/PreJoinScreen';
 import { VoiceModeChangeModal } from '@/components/VoiceModeChangeModal';
 import { useVoiceMode } from '@/hooks/useVoiceMode';
 
@@ -11,6 +12,12 @@ export default function OfficePage() {
   const router = useRouter();
   const { status, loading } = useVoiceMode();
   const [modalOpen, setModalOpen] = useState(false);
+  const [preJoinDone, setPreJoinDone] = useState(false);
+
+  useEffect(() => {
+    // Read the skip preference client-side only (SSR-safe).
+    setPreJoinDone(shouldSkipPreJoin());
+  }, []);
 
   useEffect(() => {
     if (!loading && status && !status.onboarding_complete) {
@@ -23,6 +30,15 @@ export default function OfficePage() {
       <main className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
         {loading ? 'Loading office…' : 'Redirecting to onboarding…'}
       </main>
+    );
+  }
+
+  if (!preJoinDone) {
+    return (
+      <PreJoinScreen
+        spaceName="the office"
+        onJoin={() => setPreJoinDone(true)}
+      />
     );
   }
 

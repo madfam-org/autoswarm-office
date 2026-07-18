@@ -26,6 +26,50 @@ const config: Config = {
         'retro-lg': ['12px', { lineHeight: '18px' }],
       },
       colors: {
+        // ── Tropical solarpunk day/night ──────────────────────────────
+        // The primitive palettes are re-pointed at theme variables
+        // (globals.css) so every existing slate-* / indigo-* /
+        // text-white class follows the active data-theme. Night keeps
+        // the historical dark reading; day inverts the tone ramp.
+        slate: {
+          50: 'rgb(var(--tone-50) / <alpha-value>)',
+          100: 'rgb(var(--tone-100) / <alpha-value>)',
+          200: 'rgb(var(--tone-200) / <alpha-value>)',
+          300: 'rgb(var(--tone-300) / <alpha-value>)',
+          400: 'rgb(var(--tone-400) / <alpha-value>)',
+          500: 'rgb(var(--tone-500) / <alpha-value>)',
+          600: 'rgb(var(--tone-600) / <alpha-value>)',
+          700: 'rgb(var(--tone-700) / <alpha-value>)',
+          800: 'rgb(var(--tone-800) / <alpha-value>)',
+          900: 'rgb(var(--tone-900) / <alpha-value>)',
+          950: 'rgb(var(--tone-950) / <alpha-value>)',
+        },
+        white: 'rgb(var(--base-white) / <alpha-value>)',
+        indigo: {
+          100: 'rgb(var(--accent-100) / <alpha-value>)',
+          200: 'rgb(var(--accent-200) / <alpha-value>)',
+          300: 'rgb(var(--accent-300) / <alpha-value>)',
+          400: 'rgb(var(--accent-400) / <alpha-value>)',
+          500: 'rgb(var(--accent-500) / <alpha-value>)',
+          600: 'rgb(var(--accent-600) / <alpha-value>)',
+          700: 'rgb(var(--accent-700) / <alpha-value>)',
+        },
+        // Semantic aliases for NEW components (preferred over raw tones).
+        surface: {
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          raised: 'rgb(var(--surface-raised) / <alpha-value>)',
+          overlay: 'rgb(var(--surface-overlay) / <alpha-value>)',
+        },
+        ink: {
+          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
+          muted: 'rgb(var(--ink-muted) / <alpha-value>)',
+        },
+        edge: 'rgb(var(--edge) / <alpha-value>)',
+        accent: {
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          fg: 'rgb(var(--accent-fg) / <alpha-value>)',
+        },
+        solar: 'rgb(var(--solar) / <alpha-value>)',
         semantic: {
           success: '#10b981',
           'success-light': '#34d399',

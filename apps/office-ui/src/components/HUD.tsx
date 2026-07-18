@@ -2,6 +2,7 @@
 
 import { memo, useRef, useEffect, type FC } from 'react';
 import type { Department } from '@selva/shared-types';
+import { ThemeToggle } from './ThemeToggle';
 
 /**
  * Player position changes faster than 4px (one minimap pixel at default scale)
@@ -240,6 +241,11 @@ export const HUD: FC<HUDProps> = ({
           >
             {viewMode === 'game' ? 'Simple View' : 'Game View'}
           </button>
+        )}
+        {onToggleViewMode && (
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
         )}
       </div>
 

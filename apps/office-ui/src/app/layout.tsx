@@ -5,6 +5,7 @@ import { JanuaProvider } from '@janua/nextjs-sdk';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import { EcosystemBannerClient } from '@/components/EcosystemBannerClient';
+import { ThemeProvider, THEME_INIT_SCRIPT } from '@/components/ThemeProvider';
 import './globals.css';
 
 const inter = Inter({
@@ -36,13 +37,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${pressStart2P.variable}`}>
+    <html
+      lang="en"
+      data-theme="night"
+      className={`${inter.variable} ${pressStart2P.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#2a2218" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+        {/* Stamp the resolved day/night theme before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen font-sans pb-8">
         <ServiceWorkerRegistrar />
@@ -51,8 +59,10 @@ export default function RootLayout({
             <JanuaProvider
               config={{ baseURL: process.env.NEXT_PUBLIC_JANUA_ISSUER_URL ?? '' }}
             >
-              {children}
-              <EcosystemBannerClient />
+              <ThemeProvider>
+                {children}
+                <EcosystemBannerClient />
+              </ThemeProvider>
             </JanuaProvider>
           </PostHogProvider>
         </Suspense>

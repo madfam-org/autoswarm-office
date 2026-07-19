@@ -176,6 +176,39 @@ async def create_billing_portal() -> dict[str, object]:
         ) from exc
 
 
+@router.get("/agent-hours")
+async def agent_hours_usage(
+    db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> dict[str, object]:
+    """Metered agent-hours consumed by the caller's org this calendar month.
+
+    This is the consumption surface for Selva's Tulana hourly packs
+    (Maker/Studio/Enterprise). Dhanam reads accrued hours at invoice time;
+    this endpoint surfaces the running total for the UI and reporting.
+    """
+    from ..models import AgentHoursLedger
+
+    month_start = datetime.now(UTC).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    result = await db.execute(
+        select(
+            func.coalesce(func.sum(AgentHoursLedger.agent_hours), 0),
+            func.count(AgentHoursLedger.id),
+        ).where(
+            AgentHoursLedger.created_at >= month_start,
+            AgentHoursLedger.org_id == tenant.org_id,
+        )
+    )
+    total_hours, task_count = result.one()
+    return {
+        "period_start": month_start.isoformat(),
+        "agent_hours": float(total_hours),
+        "task_count": int(task_count),
+    }
+
+
 @router.get("/tiers")
 async def list_subscription_tiers() -> dict[str, object]:
     """Return the purchasable subscription tiers for the pricing page.

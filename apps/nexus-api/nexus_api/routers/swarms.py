@@ -2290,6 +2290,12 @@ async def update_task_status(
 
     if body.status in ("completed", "failed"):
         task.completed_at = datetime.now(UTC)
+        # Accrue metered agent-hours (Selva's Tulana-priced SKU) now that we
+        # have both timestamps. Fail-safe + idempotent: never blocks the
+        # status update, one row per task.
+        from ..services.agent_hours import accrue_agent_hours
+
+        await accrue_agent_hours(db, task)
 
     deployment_evidence = body.deployment_evidence
     if deployment_evidence is None and body.result is not None:

@@ -3107,6 +3107,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onboarding/office-size": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Office Size
+         * @description Return the tenant's chosen office-size band (NULL until chosen).
+         */
+        get: operations["get_office_size_api_v1_onboarding_office_size_get"];
+        /**
+         * Set Office Size
+         * @description Persist the tenant's office-size band. Advisory — never gates access.
+         *
+         *     Upserts the ``tenant_configs`` row for the caller's org so onboarding
+         *     works before any other tenant config exists.
+         */
+        put: operations["set_office_size_api_v1_onboarding_office_size_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/onboarding/voice-mode/preview/{mode}": {
         parameters: {
             query?: never;
@@ -5937,6 +5964,25 @@ export interface components {
              * @default 0.7
              */
             temperature: number;
+        };
+        /**
+         * OfficeSizeResponse
+         * @description The tenant's chosen office-size band (advisory).
+         */
+        OfficeSizeResponse: {
+            /** Office Size */
+            office_size: string | null;
+        };
+        /**
+         * OfficeSizeSelection
+         * @description Payload for PUT /onboarding/office-size.
+         */
+        OfficeSizeSelection: {
+            /**
+             * Office Size
+             * @description One of the office-size bands.
+             */
+            office_size: string;
         };
         /**
          * OnboardingStatus
@@ -12124,6 +12170,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OnboardingStatus"];
+                };
+            };
+        };
+    };
+    get_office_size_api_v1_onboarding_office_size_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficeSizeResponse"];
+                };
+            };
+        };
+    };
+    set_office_size_api_v1_onboarding_office_size_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficeSizeSelection"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficeSizeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

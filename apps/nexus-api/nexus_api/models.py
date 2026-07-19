@@ -664,6 +664,12 @@ class TenantConfig(Base):
     # values to the 3 legal modes.
     voice_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
+    # Office size bucket chosen at onboarding (migration 0041). A size-band
+    # slug ('1-10' … '81-100'); informs the initial office layout /
+    # map-gen department count and the suggested subscription tier. NULL =
+    # not chosen yet. Purely advisory — never gates access.
+    office_size: Mapped[str | None] = mapped_column(String(16), nullable=True)
+
     # Stripe subscription state (migration 0027). Populated by the Stripe
     # webhook handlers in ``routers/stripe_webhooks.py`` -- never written
     # by application code directly. ``stripe_customer_id`` is the lookup

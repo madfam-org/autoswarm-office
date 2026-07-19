@@ -75,11 +75,15 @@ class TestCheckout:
         501 not_configured, not a 502."""
         request = httpx.Request("POST", "https://api.dhan.am/billing/checkout")
         response = httpx.Response(404, request=request)
+        http_404 = httpx.HTTPStatusError("404", request=request, response=response)
         with (
-            patch("nexus_api.routers.billing.get_settings", return_value=_settings_with_dhanam()),
+            patch(
+                "nexus_api.routers.billing.get_settings",
+                return_value=_settings_with_dhanam(),
+            ),
             patch(
                 "nexus_api.billing_client.DhanamClient.create_checkout",
-                new=AsyncMock(side_effect=httpx.HTTPStatusError("404", request=request, response=response)),
+                new=AsyncMock(side_effect=http_404),
             ),
         ):
             resp = await client.post(

@@ -86,6 +86,54 @@ and [CI_TEST_SCOPE.md](CI_TEST_SCOPE.md):
 
 ---
 
+## 2026-07-19 update (monetization spine + engagement UI)
+
+Thirteen PRs (#232–#246) merged to `main` on 2026-07-19. What changed for the
+operator:
+
+- **Selva can now collect, not just meter** — the revenue loop is wired
+  end-to-end: **M1** First-Peso checkout (#235) added `DhanamClient.create_checkout()`
+  + `POST /billing/checkout` (real call when Dhanam's endpoint exists, else a
+  clean `501 "not_configured"` — flip-on-ready), `GET /billing/tiers`, a
+  `useCheckout` hook, and a public `/pricing` page (old dead `mailto:` bundle
+  CTAs removed). **M2** (#236) turns the dispatch-budget 402 into a one-click
+  `UpgradeModal`. **M3** (#237) accrues metered agent-hours
+  (`AgentHoursLedger`, migration 0040) for the Tulana-priced SKU. See new
+  item 20.
+- **HUD compute-token meter is now truthful** (#235, M1.5) — it read a
+  hardcoded fake `{used: 0, limit: 10000}`; now reads real `/billing/tokens`
+  data.
+- **`/metrics` no longer leaks the internal API surface** (#233) — was
+  publicly scrapable (every route path + method + error rate). Now guarded:
+  Cloudflare-edge (public) requests get `404` unless they carry the service
+  token; in-cluster Prometheus scrapes pass unchanged — **ServiceMonitors
+  need no change.**
+- **`www.selva.town` now 301-redirects to the apex** (#234) — was serving a
+  duplicate apex, splitting SEO/cookies.
+- **Four E1 engagement surfaces shipped** (#240, #241, #243, #245) — space
+  roster (humans + agent-citizens), first-run welcome tour, ⌘K command
+  palette, and office-size onboarding with a live procedural preview (first
+  real consumer of `@selva/map-gen`). Office-size now server-persisted
+  (`TenantConfig.office_size`, migration 0041, #246).
+- **CI flake fixed** (#232 / #244) — `OutboundIdentityForm` blur test;
+  #244 fixed the real GET→reset race.
+
+**New operator blocker (see item 20 below): migrations 0040 AND 0041 need
+applying in prod.** The deploy pipeline still does not auto-run migrations.
+An ArgoCD PreSync migration hook (**PR #238**) is **open, not merged**
+(blocked on a live Kyverno dry-run pending an SSH-tunnel outage). Until #238
+merges, each new migration needs a manual `alembic upgrade head`.
+
+**Still open after this update:** apply migrations 0040/0041 in prod (item 20),
+arm the inference budget gate (item 14), wire real collection (Dhanam
+`/billing/checkout` endpoint + Tulana usage reporter — items 3 and 20),
+per-product AI attribution (item 13), plus the prior 2.4.0 Tier 7 items —
+manual prod deploy gate (item 15), OTel/Sentry on `inference-gateway`
+(item 16), branch protection on `main` (item 17), PUBLIC-repo state (item 18),
+and the missing RFC 0031 / 0034 files (item 19).
+
+---
+
 ## 2026-07-18 update (RFC 0034 metering + realtime-office stabilization)
 
 Seven PRs (#222–#229) merged to `main` on 2026-07-18. What changed for the
@@ -464,9 +512,11 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
 
 ### 14. Arm the inference budget gate (`BUDGET_GATE_ENABLED`)
 
-- **Status (2026-07-18)**: **Unset in all manifests.** No inference spend
-  cap is enforced today. Now that the USD usage ledger accrues correctly
-  (PR #222 / #229), the gate is meaningful.
+- **Status (2026-07-19)**: **Still unset in all manifests.** No inference
+  spend cap is enforced today. The USD usage ledger accrues correctly
+  (PR #222 / #229) and the M2 upgrade moment (PR #236) already surfaces the
+  dispatch-budget 402 to users, so arming the gate is meaningful and the
+  upgrade path is in place.
 - **What**: Set `BUDGET_GATE_ENABLED=true` on the services that enforce the
   cap after a staging smoke confirms the ledger and cap behave as expected.
 - **Why blocking**: Without it, inference spend is uncapped — a runaway
@@ -550,6 +600,46 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
 - **Unblocks**: A complete RFC index; traceable design rationale for RFC
   0034 work shipped in PRs #222 / #229 and the gateway extraction (P2).
 - **Cross-refs**: `docs/rfcs/`, PR #222, #229 (RFC 0034 implementation).
+
+### 20. Apply migrations 0040 and 0041 in prod (no auto-migration hook)
+
+- **Status (2026-07-19)**: **Two new migrations unapplied in prod.** The
+  monetization/onboarding work shipped **migration 0040** (`AgentHoursLedger`,
+  PR #237) and **migration 0041** (`TenantConfig.office_size`, PR #246), but
+  the deploy pipeline still does not auto-run migrations. The ArgoCD PreSync
+  migration hook (**PR #238**) is **open, not merged** — blocked on a live
+  Kyverno dry-run pending an SSH-tunnel outage.
+- **What**: Until #238 merges, run `alembic upgrade head` manually against
+  prod after each deploy that adds a migration (0040 + 0041 now). Then land
+  #238 to make this automatic.
+- **Why blocking**: The M3 agent-hours ledger and office-size persistence
+  read/write tables that do not exist in prod until the migrations apply;
+  those code paths fail against an un-migrated database.
+- **Owner**: Operator (manual `alembic upgrade head` now) + engineer/operator
+  (merge #238 to automate).
+- **Unblocks**: M3 accrual and office-size persistence working in prod;
+  hands-off migration on future deploys once #238 lands.
+- **Cross-refs**: PR #237 (0040), PR #246 (0041), PR #238 (PreSync hook —
+  open); migrations under `apps/nexus-api/alembic/versions/`.
+
+### 21. Wire real revenue collection (Dhanam checkout endpoint + Tulana reporter)
+
+- **Status (2026-07-19)**: **M1 is flip-on-ready; collection not yet live.**
+  `POST /billing/checkout` (PR #235) makes a real call when Dhanam's
+  `/billing/checkout` endpoint exists, else returns a clean
+  `501 "not_configured"`. M3 accrual (PR #237) records agent-hours locally
+  but does not yet report usage to Tulana.
+- **What**: Confirm/stand up Dhanam's `/billing/checkout` endpoint so the M1
+  501 flips to a real session, and stand up the Tulana usage reporter for M3
+  agent-hours.
+- **Why blocking**: Until Dhanam's checkout endpoint exists, `/pricing` and
+  the M2 upgrade modal return `not_configured`; until the Tulana reporter
+  exists, M3 hours accrue but are not billed/reported externally.
+- **Owner**: Operator (Dhanam endpoint) + engineer (Tulana reporter).
+- **Unblocks**: First-peso collection through Selva checkout; external
+  billing/reporting of metered agent-hours.
+- **Cross-refs**: PR #235 (M1 checkout, flip-on-ready), PR #237 (M3 accrual);
+  item 3 (Dhanam price→tier map).
 
 ---
 

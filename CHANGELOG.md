@@ -138,6 +138,98 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **OPERATOR_BACKLOG.md** — Tier 1–3 mapped to Program Phase 0; reading order updated.
 - **docs/rfcs/README.md** — index for RFCs 0018–0021 and phygital quote-truth contract.
 
+## [2.5.0] - 2026-07-19
+
+> Monetization spine + engagement UI. Thirteen PRs (#232–#246) closed the
+> "can meter but cannot collect" gap: Selva now has a complete, wired
+> revenue loop — a First-Peso checkout (`/pricing` + `POST /billing/checkout`,
+> flip-on-ready), a one-click upgrade moment on the dispatch 402, and
+> metered agent-hours accrual for the Tulana-priced SKU. The compute-token
+> HUD meter now reads real `/billing/tokens` data (was hardcoded to a fake
+> zero). Also hardened two public surfaces (the `/metrics` API-surface map
+> and the `www.` apex split) and shipped four E1 engagement surfaces
+> (space roster, welcome tour, ⌘K palette, office-size onboarding with a
+> live procedural preview). Remaining gap stays concentrated in
+> operator-gated items — migrations 0040/0041 still need applying in prod
+> (auto-migration hook PR #238 is **open, not merged**), the budget gate is
+> still unset, and real collection is gated on Dhanam's checkout endpoint
+> and a Tulana usage reporter — tracked in
+> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md).
+
+### Added
+
+- **M1 First-Peso checkout** (#235) — the missing cash register.
+  `DhanamClient.create_checkout()` + `POST /billing/checkout` (real call
+  when Dhanam's endpoint exists, else a clean `501 "not_configured"` —
+  flip-on-ready), `GET /billing/tiers`, a `useCheckout` hook, and a public
+  `/pricing` page. Replaced the old dead `mailto:` bundle CTAs. M1.5: wired
+  the HUD compute-token meter to real `/billing/tokens` data (it was
+  hardcoded to a fake `{used: 0, limit: 10000}` — a truthfulness bug on the
+  money surface).
+- **M2 upgrade moment** (#236) — the dispatch endpoint already hard-blocks
+  at the plan's compute budget with a 402, but the UI showed a raw error.
+  All three dispatch-budget 402s now carry a structured
+  `{code: "budget_exhausted", message}` detail; `useTaskDispatch` detects it
+  and opens a one-click `UpgradeModal` (reuses the M1 checkout). The
+  highest-intent conversion moment is now monetized.
+- **M3 metered agent-hours** (#237) — Selva's WTP-validated SKU (Tulana
+  packs 85/170/255 MXN/hr) had a rate lookup but zero accrual. Added the
+  `AgentHoursLedger` model + **migration 0040**, `accrue_agent_hours`
+  (fail-safe, idempotent, unique-per-task, tz-safe) wired into the
+  task-completion PATCH, and `GET /billing/agent-hours`. Tulana reporting
+  deferred (operator/endpoint dependency).
+- **Office-size persistence** (#246) — `TenantConfig.office_size` column +
+  **migration 0041** + `GET`/`PUT /onboarding/office-size` (advisory, never
+  gates access).
+- **E1 — persistent space roster** (#240) — a persistent left-rail roster of
+  humans AND AI agent-citizens with presence dots + status chips.
+- **E1 — first-run welcome tour** (#241) — a 4-step activation tour with a
+  progress bar, shown once.
+- **E1 — ⌘K command palette** (#243) — global search over people, agents,
+  and quick actions (native, no `cmdk` dependency).
+- **E1 — office-size onboarding** (#245) — an office-size onboarding step
+  with a live procedurally-generated office preview (the first real consumer
+  of the previously-orphaned `@selva/map-gen` WFC generator) plus a
+  size→tier upsell CTA.
+
+### Fixed
+
+- **`/metrics` leaked the internal API surface** (#233) — the endpoint was
+  publicly scrapable and exposed every route path + method + error rate.
+  Now guarded: requests bearing the Cloudflare tunnel's edge headers
+  (public) get `404` unless they present the service token; in-cluster
+  Prometheus scrapes (no CF headers) pass unchanged, so ServiceMonitors need
+  no change.
+- **`www.selva.town` served a duplicate apex** (#234) — now 301-redirects to
+  `selva.town` (preserving path + query), fixing the SEO/cookie split.
+- **`OutboundIdentityForm` blur-test CI flake** (#232 / #244) — a
+  long-standing CI-only flake in the blur validation test. #232 was an
+  incomplete first attempt; #244 fixed the real cause (an identity-GET reset
+  race) by retrying the whole type→blur→assert in one `waitFor`.
+
+### Changed
+
+- **Wire types regenerated** (#239) — regenerated shared wire types for the
+  M3 `GET /billing/agent-hours` endpoint.
+
+### Operator todo list (gating items not in this release)
+
+- **Apply migrations 0040 AND 0041 in prod.** The deploy pipeline still does
+  not auto-run migrations. An ArgoCD PreSync migration hook (PR #238) is
+  **open, not merged** (blocked on a live Kyverno dry-run pending an
+  SSH-tunnel outage). Until #238 merges, each new migration needs a manual
+  `alembic upgrade head`.
+- Arm the inference budget gate (`BUDGET_GATE_ENABLED`) — still unset in all
+  manifests; no inference spend cap yet. Arm after a staging smoke.
+- Actual revenue collection is gated on Dhanam's `/billing/checkout` endpoint
+  existing (M1 is flip-on-ready) and a Tulana usage reporter (M3).
+- Fix per-product AI attribution — shared-token callers still collapse to
+  `org_id='platform'`, `caller='service:worker'`.
+- Prior 2.4.0 operator items remain: wire the manual prod deploy gate, wire
+  OTel/Sentry on `inference-gateway`, enable branch protection on `main`,
+  resolve the PUBLIC-repo state, and create the missing RFC 0031 / 0034
+  files.
+
 ## [2.4.0] - 2026-07-18
 
 > RFC 0034 metering + realtime-office stabilization. Seven PRs (#222–#229)

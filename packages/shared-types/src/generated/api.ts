@@ -1021,6 +1021,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/agent-hours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agent Hours Usage
+         * @description Metered agent-hours consumed by the caller's org this calendar month.
+         *
+         *     This is the consumption surface for Selva's Tulana hourly packs
+         *     (Maker/Studio/Enterprise). Dhanam reads accrued hours at invoice time;
+         *     this endpoint surfaces the running total for the UI and reporting.
+         */
+        get: operations["agent_hours_usage_api_v1_billing_agent_hours_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/tiers": {
         parameters: {
             query?: never;
@@ -9018,6 +9042,28 @@ export interface operations {
         };
     };
     create_billing_portal_api_v1_billing_portal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    agent_hours_usage_api_v1_billing_agent_hours_get: {
         parameters: {
             query?: never;
             header?: never;

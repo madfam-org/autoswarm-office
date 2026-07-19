@@ -1162,9 +1162,13 @@ async def dispatch_task(
 
             billing = await get_billing_status(tenant_config.dhanam_space_id)
             if billing and billing.get("compute_tokens_remaining", float("inf")) <= 0:
+                from ..services.tier_limits import budget_exhausted_detail
+
                 raise HTTPException(
                     status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                    detail="Compute token budget exhausted. Upgrade your subscription at dhan.am",
+                    detail=budget_exhausted_detail(
+                        "Compute token budget exhausted. Upgrade your plan to keep dispatching."
+                    ),
                 )
         except HTTPException:
             raise
@@ -1196,9 +1200,13 @@ async def dispatch_task(
         db, tenant.org_id, tenant_config=tenant_config
     )
     if used + dispatch_cost > daily_limit:
+        from ..services.tier_limits import budget_exhausted_detail
+
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Compute token budget exceeded for today",
+            detail=budget_exhausted_detail(
+                "You've hit today's compute budget. Upgrade your plan for a higher daily limit."
+            ),
         )
 
     header_idempotency_key = request.headers.get("Idempotency-Key")

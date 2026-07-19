@@ -138,6 +138,8 @@ class TestDispatchBudgetCheck:
             headers=auth_headers,
         )
         assert resp.status_code == 402
+        # Structured detail drives the office-ui one-click upgrade modal.
+        assert resp.json()["detail"]["code"] == "budget_exhausted"
 
 
 class TestDhanamWebhookTier:

@@ -31,13 +31,26 @@ def subscription_blocks_dispatch(tenant_config: TenantConfig | None) -> str | No
     return None
 
 
+#: Stable machine-readable code carried in every dispatch-budget 402 so the
+#: frontend can render a one-click upgrade modal instead of string-matching a
+#: human message. See ``useTaskDispatch`` on the office-ui side.
+BUDGET_EXHAUSTED_CODE = "budget_exhausted"
+
+
+def budget_exhausted_detail(message: str) -> dict[str, str]:
+    """Structured 402 detail: a stable ``code`` plus a human ``message``."""
+    return {"code": BUDGET_EXHAUSTED_CODE, "message": message}
+
+
 def assert_subscription_allows_dispatch(tenant_config: TenantConfig | None) -> None:
     """Raise 402 when subscription status forbids new compute spend."""
     blocked = subscription_blocks_dispatch(tenant_config)
     if blocked is not None:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail=f"Subscription {blocked}; renew billing at dhan.am before dispatching tasks",
+            detail=budget_exhausted_detail(
+                f"Subscription {blocked}; renew billing before dispatching tasks."
+            ),
         )
 
 

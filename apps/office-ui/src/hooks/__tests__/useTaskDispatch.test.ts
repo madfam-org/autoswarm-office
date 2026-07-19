@@ -71,6 +71,50 @@ describe('useTaskDispatch', () => {
     expect(result.current.error).toBe('Validation error');
   });
 
+  it('dispatch() sets limitReached on a 402 budget_exhausted (the upgrade moment)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 402,
+      json: async () => ({
+        detail: { code: 'budget_exhausted', message: "You've hit today's compute budget." },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useTaskDispatch());
+
+    await act(async () => {
+      const response = await result.current.dispatch({
+        description: 'Over budget',
+        graph_type: 'coding',
+      });
+      expect(response).toBeNull();
+    });
+
+    expect(result.current.limitReached).toBe(true);
+    expect(result.current.limitMessage).toMatch(/compute budget/i);
+    // A budget 402 is the upgrade moment, not a generic error banner.
+    expect(result.current.error).toBeNull();
+  });
+
+  it('dispatch() treats a plain 402 (no code) as a generic error, not the modal', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 402,
+      json: async () => ({ detail: 'some other payment issue' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useTaskDispatch());
+
+    await act(async () => {
+      await result.current.dispatch({ description: 'x', graph_type: 'coding' });
+    });
+
+    expect(result.current.limitReached).toBe(false);
+    expect(result.current.error).toBe('some other payment issue');
+  });
+
   it('dispatch() handles network failure', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('Network down'));
     vi.stubGlobal('fetch', fetchMock);

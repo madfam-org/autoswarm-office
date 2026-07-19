@@ -104,22 +104,22 @@ describe('OutboundIdentityForm', () => {
       /Outbound mailbox/i,
     )) as HTMLInputElement;
 
-    // Flush the change's state update BEFORE blur. The blur handler
-    // (validateEmailOnBlur) closes over `emailInput` state via useCallback;
-    // if blur fires before React re-renders with the new value, the handler
-    // reads the stale empty string, hits its early-return, and never sets the
-    // error. That stale-closure race — not a render race — was the real
-    // source of the flake, so `waitFor` around the assertion couldn't fix it.
-    await act(async () => {
+    // Root cause of this test's long-running flake: the identity GET resolves
+    // on a microtask and its load effect calls
+    // setEmailInput(identity.user_email ?? '') — with the mock's
+    // user_email:null that RESETS the field to ''. If it lands after the test
+    // types, it wipes the value and blur then validates an empty string, so no
+    // error is set. (Earlier render-race / stale-closure fixes missed this
+    // GET→reset interference.) Retrying the whole type→blur→assert in one
+    // waitFor makes it deterministic: whichever order the microtask lands, the
+    // sequence re-runs until the error sticks.
+    await waitFor(() => {
       fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
-    });
-    await act(async () => {
       fireEvent.blur(emailInput);
+      const err = screen.getByRole('alert');
+      expect(err.textContent).toMatch(/valid email address/i);
+      expect(emailInput.getAttribute('aria-invalid')).toBe('true');
     });
-
-    const err = await screen.findByRole('alert');
-    expect(err.textContent).toMatch(/valid email address/i);
-    expect(emailInput.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('submits PUT with the right payload and shows a success toast', async () => {

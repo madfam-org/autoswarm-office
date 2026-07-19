@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
 import { HUD } from '@/components/HUD';
+import { SpaceRoster } from '@/components/SpaceRoster';
 import { DashboardPanel } from '@/components/DashboardPanel';
 import { TaskDispatchPanel } from '@/components/TaskDispatchPanel';
 import { UpgradeModal } from '@/components/UpgradeModal';
@@ -280,6 +281,9 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   });
   const { config: avatarConfig, saveConfig: saveAvatarConfig, isFirstVisit } = useAvatarConfig();
   const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
+  // Space roster (left rail) — open by default for "instant visibility into
+  // your office"; collapsible for users who want maximum map.
+  const [rosterOpen, setRosterOpen] = useState(true);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [dispatchPanelOpen, setDispatchPanelOpen] = useState(false);
   const [approvalPanelOpen, setApprovalPanelOpen] = useState(false);
@@ -583,9 +587,34 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
             onApprovalClick={handleApprovalPanelOpen}
             followingPlayer={followingPlayer}
             explorerMode={explorerMode}
+            rosterInset={rosterOpen}
             viewMode={viewMode}
             onToggleViewMode={handleToggleViewMode}
           />
+
+          {/* Space roster — persistent left rail (Gather brief #1). Fixed
+              overlay so it never disturbs the Phaser canvas sizing. */}
+          {rosterOpen && (
+            <div className="absolute left-0 top-0 z-hud hidden h-full md:block">
+              <SpaceRoster
+                spaceName={isDemo ? 'Selva Demo Office' : 'Your Office'}
+                players={officeState?.players ?? []}
+                departments={officeState?.departments ?? []}
+                localSessionId={sessionId ?? ''}
+              />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setRosterOpen((v) => !v)}
+            aria-label={rosterOpen ? 'Hide roster' : 'Show roster'}
+            aria-pressed={rosterOpen}
+            className={`absolute top-1/2 z-hud hidden -translate-y-1/2 rounded-r-lg border border-l-0 border-edge bg-surface-raised px-1 py-3 text-ink-muted transition-all hover:text-ink md:block ${
+              rosterOpen ? 'left-64' : 'left-0'
+            }`}
+          >
+            {rosterOpen ? '‹' : '›'}
+          </button>
 
           {/* Ops controls (left side, below HUD) — hidden in demo */}
           {!isDemo && (

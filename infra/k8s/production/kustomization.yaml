@@ -54,19 +54,19 @@ commonLabels:
 # observed in a ready production ReplicaSet after the newer audit-derived
 # digest failed to pull.
 images:
-- digest: sha256:d0d17bf2bc7038a7622b61ff18f4ad4560c0e1e476891b3269bac5c288651dff
+- digest: sha256:f231b71db704f11ae245dc4596facfb402b3ae4a937008e71a16a188c1ac4549
   name: ghcr.io/madfam-org/selva-admin
   newName: ghcr.io/madfam-org/selva-admin
-- digest: sha256:55808a5a9acbfc2c8acf599557f1e6d1c41909b56e135e4bce9c53888d3e9758
+- digest: sha256:0c153ab06544a4e6e81d83ac0875eb50383c0366c51a7d72687a06a83beb8c59
   name: ghcr.io/madfam-org/selva-colyseus
   newName: ghcr.io/madfam-org/selva-colyseus
-- digest: sha256:39a20d999dab38d6e603caf6a90af068d8da251bd0b4c0e4f2196f07a8abe221
+- digest: sha256:8c7e97b1073d768e8f3867c202013891d3a3f011e654504bc584d2639310eeac
   name: ghcr.io/madfam-org/selva-gateway
   newName: ghcr.io/madfam-org/selva-gateway
-- digest: sha256:8c3fae08de3ff59b36a8d7b8d907d4488efb5e8bc8c9eb20f6338edd53bab350
+- digest: sha256:6007ac9648b84fb7fca8cbedfd655f6b1fb3a4903bc1a015359a668eaac947b1
   name: ghcr.io/madfam-org/selva-inference-gateway
   newName: ghcr.io/madfam-org/selva-inference-gateway
-- digest: sha256:92cf6684cf7a78ecc982c023eb9759f272134984450efe2296f84b91af47cc38
+- digest: sha256:826ede46bb05c47b0146db58a3746cce9d5ab088d890e7d7ac09d16edae2067e
   name: ghcr.io/madfam-org/selva-nexus-api
   newName: ghcr.io/madfam-org/selva-nexus-api
 - digest: sha256:89668a5ef063bed1352c74044657ca5a28206c9c3ceeeb640918683147757016

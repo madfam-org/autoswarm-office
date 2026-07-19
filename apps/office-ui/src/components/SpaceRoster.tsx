@@ -21,6 +21,9 @@ interface SpaceRosterProps {
   localSessionId: string;
   /** Click a human row to locate/follow them on the map (optional). */
   onSelectPlayer?: (sessionId: string) => void;
+  /** Wave at a person or agent — walks the local avatar over to them and
+   * plays the wave emote on arrival (optional; omit to hide the affordance). */
+  onWave?: (target: { kind: 'player' | 'agent'; id: string }) => void;
 }
 
 type PresenceTone = 'online' | 'busy' | 'idle' | 'attention' | 'error';
@@ -58,25 +61,44 @@ function Dot({ tone }: { tone: PresenceTone }) {
   );
 }
 
+function WaveButton({ name, onWave }: { name: string; onWave: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onWave();
+      }}
+      className="flex-shrink-0 rounded p-1 text-sm leading-none opacity-70 transition-opacity hover:bg-surface-overlay hover:opacity-100"
+      title={`Wave at ${name}`}
+      aria-label={`Wave at ${name}`}
+    >
+      <span aria-hidden>{'\u{1F44B}'}</span>
+    </button>
+  );
+}
+
 function RosterRow({
   name,
   statusLabel,
   tone,
   badge,
   onClick,
+  onWave,
 }: {
   name: string;
   statusLabel: string;
   tone: PresenceTone;
   badge?: string;
   onClick?: () => void;
+  onWave?: () => void;
 }) {
   const Wrapper = onClick ? 'button' : 'div';
-  return (
+  const row = (
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left ${
+      className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left ${
         onClick ? 'transition-colors hover:bg-surface-overlay' : ''
       }`}
     >
@@ -90,6 +112,17 @@ function RosterRow({
       <span className="flex-shrink-0 text-[11px] text-ink-muted">{statusLabel}</span>
     </Wrapper>
   );
+
+  // The wave button is a sibling, never nested inside the row's own
+  // <button> wrapper (onSelectPlayer rows) — nesting interactive controls
+  // is invalid HTML and breaks click targeting/focus order.
+  if (!onWave) return row;
+  return (
+    <div className="flex w-full items-center gap-1">
+      {row}
+      <WaveButton name={name} onWave={onWave} />
+    </div>
+  );
 }
 
 export function SpaceRoster({
@@ -98,11 +131,19 @@ export function SpaceRoster({
   departments,
   localSessionId,
   onSelectPlayer,
+  onWave,
 }: SpaceRosterProps) {
   const { you, otherHumans, agents } = useMemo(() => {
     const you = players.find((p) => p.sessionId === localSessionId) ?? null;
     const otherHumans = players.filter((p) => p.sessionId !== localSessionId);
-    const agents = departments.flatMap((d) => d.agents ?? []);
+    // `d.agents` can be a Colyseus ArraySchema proxy rather than a real
+    // Array (depending on how state reached this component) — it supports
+    // .length/.forEach/[Symbol.iterator] but fails Array.isArray(), so
+    // Array.prototype.flatMap silently treats it as a single non-flattening
+    // element instead of spreading its items. Array.from() normalizes any
+    // array-like/iterable into a true array first, which flatMap then
+    // flattens correctly.
+    const agents = departments.flatMap((d) => (d.agents ? Array.from(d.agents) : []));
     return { you, otherHumans, agents };
   }, [players, departments, localSessionId]);
 
@@ -152,6 +193,7 @@ export function SpaceRoster({
                   tone={s.tone}
                   statusLabel={s.label}
                   onClick={onSelectPlayer ? () => onSelectPlayer(p.sessionId) : undefined}
+                  onWave={onWave ? () => onWave({ kind: 'player', id: p.sessionId }) : undefined}
                 />
               );
             })}
@@ -176,6 +218,7 @@ export function SpaceRoster({
                   tone={s.tone}
                   statusLabel={s.label}
                   badge={a.role}
+                  onWave={onWave ? () => onWave({ kind: 'agent', id: a.id }) : undefined}
                 />
               );
             })}

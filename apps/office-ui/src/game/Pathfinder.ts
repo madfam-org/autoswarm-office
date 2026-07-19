@@ -72,6 +72,63 @@ export class Pathfinder {
     return tile !== null;
   }
 
+  /**
+   * Find a path from start to a walkable tile ADJACENT to (targetX, targetY)
+   * in world coordinates — for "walk over and stand next to" interactions
+   * (e.g. waving at another avatar) where the target's own tile is occupied.
+   * Prefers the nearest-to-start walkable neighbour; falls back to a direct
+   * path to the target itself if every neighbour is blocked.
+   */
+  findPathAdjacentTo(
+    startX: number,
+    startY: number,
+    targetX: number,
+    targetY: number,
+  ): Array<{ x: number; y: number }> {
+    if (!this.collisionLayer) {
+      return [{ x: targetX, y: targetY }];
+    }
+
+    const targetTileX = Math.floor(targetX / TILE_SIZE);
+    const targetTileY = Math.floor(targetY / TILE_SIZE);
+    const startTileX = Math.floor(startX / TILE_SIZE);
+    const startTileY = Math.floor(startY / TILE_SIZE);
+
+    const NEIGHBOR_DIRS = [
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
+      { dx: -1, dy: -1 },
+      { dx: 1, dy: -1 },
+      { dx: -1, dy: 1 },
+      { dx: 1, dy: 1 },
+    ];
+
+    let bestTile: { x: number; y: number } | null = null;
+    let bestDist = Infinity;
+    for (const dir of NEIGHBOR_DIRS) {
+      const nx = targetTileX + dir.dx;
+      const ny = targetTileY + dir.dy;
+      if (this.isBlocked(nx, ny)) continue;
+      const dist = this.heuristic(startTileX, startTileY, nx, ny);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestTile = { x: nx, y: ny };
+      }
+    }
+
+    if (!bestTile) {
+      // Every neighbour is blocked — fall back to walking toward the target
+      // itself; collision will stop the avatar at the nearest reachable tile.
+      return [{ x: targetX, y: targetY }];
+    }
+
+    const destX = bestTile.x * TILE_SIZE + TILE_SIZE / 2;
+    const destY = bestTile.y * TILE_SIZE + TILE_SIZE / 2;
+    return this.findPath(startX, startY, destX, destY);
+  }
+
   private heuristic(ax: number, ay: number, bx: number, by: number): number {
     return Math.abs(ax - bx) + Math.abs(ay - by);
   }

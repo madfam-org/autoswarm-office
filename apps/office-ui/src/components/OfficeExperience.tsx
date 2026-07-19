@@ -554,7 +554,6 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
         run: () => setRosterOpen((v) => !v),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [handleDispatchOpen, handleApprovalPanelOpen, pendingApprovals.length, rosterOpen],
   );
 

@@ -10,7 +10,7 @@ const APP_HOST = 'app.selva.town';
 const LANDING_HOST = 'selva.town';
 const WWW_HOST = 'www.selva.town';
 
-const PUBLIC_PATHS = ['/', '/login', '/guest', '/demo', '/api/health', '/api/auth'];
+const PUBLIC_PATHS = ['/', '/login', '/guest', '/demo', '/pricing', '/api/health', '/api/auth'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

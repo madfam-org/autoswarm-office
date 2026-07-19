@@ -97,7 +97,32 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 
 ---
 
-## Current Status: v2.4.0 — RFC 0034 metering + realtime-office stabilization (2026-07-18) ✅
+## Current Status: v2.5.0 — monetization spine + engagement UI (2026-07-19) ✅
+
+> Thirteen PRs (#232–#246) merged to `main` on 2026-07-19. Selva went from
+> "can meter but cannot collect" to a complete, **wired revenue loop**: a
+> First-Peso checkout (`/pricing` + `POST /billing/checkout`, flip-on-ready),
+> a one-click **M2 upgrade moment** on the dispatch 402, and **M3 metered
+> agent-hours** accrual (`AgentHoursLedger`, migration 0040) for the
+> Tulana-priced SKU. The HUD compute-token meter now reads real
+> `/billing/tokens` data (was hardcoded to a fake zero). Two public surfaces
+> were hardened — the `/metrics` API-surface map is no longer publicly
+> scrapable (#233) and `www.selva.town` now 301-redirects to the apex
+> (#234). Four **E1 engagement surfaces** shipped: space roster, welcome
+> tour, ⌘K command palette, and office-size onboarding with a live
+> procedural preview (first real consumer of `@selva/map-gen`). Office-size
+> is now server-persisted (migration 0041). See
+> [CHANGELOG.md](CHANGELOG.md) `[2.5.0]`.
+> **Still operator-gated:** apply migrations 0040/0041 in prod (auto-migration
+> hook PR #238 is **open, not merged**), arm the inference budget gate
+> (`BUDGET_GATE_ENABLED`), and wire real collection (Dhanam `/billing/checkout`
+> endpoint + Tulana usage reporter). Prior 2.4.0 gates remain — manual prod
+> deploy gate, OTel/Sentry on `inference-gateway`, branch protection on
+> `main`, per-product AI attribution, PUBLIC-repo state, and the missing
+> RFC 0031 / 0034 files — see
+> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) Tier 7.
+
+### Prior status: v2.4.0 — RFC 0034 metering + realtime-office stabilization (2026-07-18) ✅
 
 > Seven PRs (#222–#229) merged to `main` on 2026-07-18. The USD usage ledger
 > now accrues (was recording zeros), streaming inference is metered, and the
@@ -108,12 +133,6 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 > (admin, colyseus, gateway, inference-gateway, nexus-api, office-ui,
 > workers). New tropical solarpunk day/night UI foundation is live. See
 > [CHANGELOG.md](CHANGELOG.md) `[2.4.0]`.
-> **Still operator-gated:** arm the inference budget gate
-> (`BUDGET_GATE_ENABLED`), wire the manual prod deploy gate, wire OTel/Sentry
-> on `inference-gateway`, enable branch protection on `main`, fix per-product
-> AI attribution, resolve the PUBLIC-repo state, and create the missing
-> RFC 0031 / 0034 files — see
-> [docs/OPERATOR_BACKLOG.md](docs/OPERATOR_BACKLOG.md) Tier 7.
 
 ### Prior status: v2.3.0 + Phase 2 campaigns + Phase 0 remediation (2026-05-30) ✅
 
@@ -128,7 +147,7 @@ Factory-as-a-Product (F1–F5) and Enterprise Autonomy (E1–E6) sections below 
 | Workflow graphs | 13 (includes `calibration` for k6 Run 4) | `apps/workers/selva_workers/graphs/*.py` |
 | Ecosystem adapters | 6 (Karafiel, Dhanam, PhyndCRM, Tezca, Crawler, A2A) | `packages/tools/src/selva_tools/adapters/` |
 | Skills (en + es-MX) | 17 (15 tenant + meta) | `packages/skills/skill-definitions/` |
-| Alembic migrations | 38 (latest 0038 — grant core schema to app roles) | `apps/nexus-api/alembic/versions/*.py` |
+| Alembic migrations | 41 (latest 0041 — office_size on tenant_configs; 0040 agent-hours ledger) | `apps/nexus-api/alembic/versions/*.py` |
 | Test files | 828 (pytest + vitest + playwright) | `find apps packages tests -name "test_*.py" -o -name "*.test.ts" -o -name "*.spec.ts"` |
 | Open architecture RFCs | 5 (#0017 image digests, #0018 A2A external tenant, #0019 CDC audit topic, #0020 data residency, #0021 multi-region failover) | `docs/rfcs/*.md` |
 | Python type safety | mypy=0 across all 3 trees (nexus-api, workers, packages) — CI ratchet at 0 | `.github/workflows/ci.yml` |

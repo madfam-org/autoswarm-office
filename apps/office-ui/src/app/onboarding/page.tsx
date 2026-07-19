@@ -1,14 +1,31 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { VoiceModeStep } from '@/components/VoiceModeStep';
+import { OfficeSizePicker } from '@/components/OfficeSizePicker';
+import { ToastProvider } from '@/components/Toast';
+import { useCheckout } from '@/hooks/useCheckout';
 import { useVoiceMode } from '@/hooks/useVoiceMode';
 
+const OFFICE_SIZE_KEY = 'selva:office-size';
+
 export default function OnboardingPage() {
+  // ToastProvider so the size step's upgrade-checkout can surface feedback.
+  return (
+    <ToastProvider>
+      <OnboardingContent />
+    </ToastProvider>
+  );
+}
+
+function OnboardingContent() {
   const router = useRouter();
   const { status, loading } = useVoiceMode();
+  const { startCheckout } = useCheckout();
+  // Two-step onboarding: office size → outbound-attribution consent.
+  const [step, setStep] = useState<'size' | 'consent'>('size');
 
   useEffect(() => {
     if (!loading && status?.onboarding_complete) {
@@ -21,6 +38,22 @@ export default function OnboardingPage() {
       <main className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
         Loading onboarding…
       </main>
+    );
+  }
+
+  if (step === 'size') {
+    return (
+      <OfficeSizePicker
+        onContinue={(choice) => {
+          try {
+            localStorage.setItem(OFFICE_SIZE_KEY, JSON.stringify(choice));
+          } catch {
+            /* best-effort */
+          }
+          setStep('consent');
+        }}
+        onUpgrade={(tier) => void startCheckout(tier)}
+      />
     );
   }
 

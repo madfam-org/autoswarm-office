@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
 import { HUD } from '@/components/HUD';
 import { SpaceRoster } from '@/components/SpaceRoster';
+import { WelcomeTour, hasSeenWelcomeTour } from '@/components/WelcomeTour';
 import { DashboardPanel } from '@/components/DashboardPanel';
 import { TaskDispatchPanel } from '@/components/TaskDispatchPanel';
 import { UpgradeModal } from '@/components/UpgradeModal';
@@ -284,6 +285,8 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   // Space roster (left rail) — open by default for "instant visibility into
   // your office"; collapsible for users who want maximum map.
   const [rosterOpen, setRosterOpen] = useState(true);
+  // First-run welcome tour — shown once, read client-side post-mount (SSR-safe).
+  const [tourOpen, setTourOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [dispatchPanelOpen, setDispatchPanelOpen] = useState(false);
   const [approvalPanelOpen, setApprovalPanelOpen] = useState(false);
@@ -487,6 +490,16 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     }
   }, [isFirstVisit, colyseusConnected]);
 
+  // Show the welcome tour once per browser, after the avatar editor step.
+  // Read localStorage post-mount (SSR-safe) and only when the editor is
+  // closed so the two first-run surfaces don't stack.
+  useEffect(() => {
+    if (avatarEditorOpen) return;
+    if (!hasSeenWelcomeTour()) {
+      setTourOpen(true);
+    }
+  }, [avatarEditorOpen]);
+
   // Send avatar config to server when connected
   useEffect(() => {
     if (colyseusConnected && avatarConfig) {
@@ -615,6 +628,13 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
           >
             {rosterOpen ? '‹' : '›'}
           </button>
+
+          {/* First-run welcome tour — orients a new arrival, shown once. */}
+          <WelcomeTour
+            open={tourOpen}
+            onClose={() => setTourOpen(false)}
+            rosterOpen={rosterOpen}
+          />
 
           {/* Ops controls (left side, below HUD) — hidden in demo */}
           {!isDemo && (

@@ -66,6 +66,7 @@ ENV SENTRY_RELEASE=$SENTRY_RELEASE
 RUN --mount=type=secret,id=sentry_auth_token,required=false \
     export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" && \
     pnpm --filter @selva/shared-types build && \
+    pnpm --filter @selva/map-gen build && \
     pnpm --filter office-ui build
 
 # Stage 3: Runner

@@ -8,6 +8,7 @@ import { OfficeSizePicker } from '@/components/OfficeSizePicker';
 import { ToastProvider } from '@/components/Toast';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useVoiceMode } from '@/hooks/useVoiceMode';
+import { apiFetch } from '@/lib/api';
 
 const OFFICE_SIZE_KEY = 'selva:office-size';
 
@@ -45,11 +46,20 @@ function OnboardingContent() {
     return (
       <OfficeSizePicker
         onContinue={(choice) => {
+          // Optimistic local write + fire-and-forget server persist. Office
+          // size is advisory (never gates access), so a failed POST must not
+          // block onboarding — the localStorage value remains the fallback.
           try {
             localStorage.setItem(OFFICE_SIZE_KEY, JSON.stringify(choice));
           } catch {
             /* best-effort */
           }
+          void apiFetch('/api/v1/onboarding/office-size', {
+            method: 'PUT',
+            body: JSON.stringify({ office_size: choice.sizeId }),
+          }).catch(() => {
+            /* advisory — server persist is best-effort */
+          });
           setStep('consent');
         }}
         onUpgrade={(tier) => void startCheckout(tier)}

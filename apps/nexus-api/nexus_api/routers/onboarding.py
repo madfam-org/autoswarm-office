@@ -147,6 +147,29 @@ class OnboardingStatus(BaseModel):
     clause_version: str
 
 
+#: Valid office-size band slugs (mirror the office-ui OfficeSizePicker buckets).
+OFFICE_SIZE_BANDS = frozenset({"1-10", "11-20", "21-50", "51-80", "81-100"})
+
+
+class OfficeSizeResponse(BaseModel):
+    """The tenant's chosen office-size band (advisory)."""
+
+    office_size: str | None
+
+
+class OfficeSizeSelection(BaseModel):
+    """Payload for PUT /onboarding/office-size."""
+
+    office_size: str = Field(..., description="One of the office-size bands.")
+
+    @field_validator("office_size")
+    @classmethod
+    def _validate_band(cls, v: str) -> str:
+        if v not in OFFICE_SIZE_BANDS:
+            raise ValueError(f"office_size must be one of {sorted(OFFICE_SIZE_BANDS)}")
+        return v
+
+
 class VoiceModeSelection(BaseModel):
     """Payload for POST /voice-mode and PUT /settings/outbound-voice."""
 
@@ -684,6 +707,40 @@ async def onboarding_status(
         onboarding_complete=voice_mode is not None,
         clause_version=CLAUSE_VERSION,
     )
+
+
+@router.get("/onboarding/office-size", response_model=OfficeSizeResponse)
+async def get_office_size(
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> OfficeSizeResponse:
+    """Return the tenant's chosen office-size band (NULL until chosen)."""
+    org_id = user.get("org_id", "default")
+    result = await db.execute(select(TenantConfig).where(TenantConfig.org_id == org_id))
+    config = result.scalar_one_or_none()
+    return OfficeSizeResponse(office_size=config.office_size if config else None)
+
+
+@router.put("/onboarding/office-size", response_model=OfficeSizeResponse)
+async def set_office_size(
+    body: OfficeSizeSelection,
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> OfficeSizeResponse:
+    """Persist the tenant's office-size band. Advisory — never gates access.
+
+    Upserts the ``tenant_configs`` row for the caller's org so onboarding
+    works before any other tenant config exists.
+    """
+    org_id = user.get("org_id", "default")
+    result = await db.execute(select(TenantConfig).where(TenantConfig.org_id == org_id))
+    config = result.scalar_one_or_none()
+    if config is None:
+        config = TenantConfig(org_id=org_id)
+        db.add(config)
+    config.office_size = body.office_size
+    await db.commit()
+    return OfficeSizeResponse(office_size=body.office_size)
 
 
 @router.get(

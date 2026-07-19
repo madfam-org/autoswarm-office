@@ -224,6 +224,9 @@ importers:
       '@janua/nextjs-sdk':
         specifier: workspace:*
         version: link:../../packages/janua-stub
+      '@selva/map-gen':
+        specifier: workspace:*
+        version: link:../../packages/map-gen
       '@selva/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

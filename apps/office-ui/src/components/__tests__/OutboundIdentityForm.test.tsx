@@ -104,18 +104,22 @@ describe('OutboundIdentityForm', () => {
       /Outbound mailbox/i,
     )) as HTMLInputElement;
 
-    fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
-    fireEvent.blur(emailInput);
-
-    // Retry the whole assertion until the blur-triggered re-render settles.
-    // A bare findByRole('alert') can race the render on a loaded CI runner
-    // (the alert and aria-invalid land in the same synchronous setState, but
-    // the query fires before React flushes) — waitFor makes it deterministic.
-    await waitFor(() => {
-      const err = screen.getByRole('alert');
-      expect(err.textContent).toMatch(/valid email address/i);
-      expect(emailInput.getAttribute('aria-invalid')).toBe('true');
+    // Flush the change's state update BEFORE blur. The blur handler
+    // (validateEmailOnBlur) closes over `emailInput` state via useCallback;
+    // if blur fires before React re-renders with the new value, the handler
+    // reads the stale empty string, hits its early-return, and never sets the
+    // error. That stale-closure race — not a render race — was the real
+    // source of the flake, so `waitFor` around the assertion couldn't fix it.
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
     });
+    await act(async () => {
+      fireEvent.blur(emailInput);
+    });
+
+    const err = await screen.findByRole('alert');
+    expect(err.textContent).toMatch(/valid email address/i);
+    expect(emailInput.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('submits PUT with the right payload and shows a success toast', async () => {

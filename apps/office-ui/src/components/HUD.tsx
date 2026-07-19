@@ -24,6 +24,9 @@ interface HUDProps {
   onApprovalClick?: () => void;
   followingPlayer?: string | null;
   explorerMode?: boolean;
+  /** When true, inset the top-left cluster on md+ so it clears the open
+   *  space-roster rail (w-64). No effect below md, where the rail is hidden. */
+  rosterInset?: boolean;
   viewMode?: 'game' | 'simple';
   onToggleViewMode?: () => void;
 }
@@ -184,6 +187,7 @@ export const HUD: FC<HUDProps> = ({
   onApprovalClick,
   followingPlayer = null,
   explorerMode = false,
+  rosterInset = false,
   viewMode = 'game',
   onToggleViewMode,
 }) => {
@@ -200,7 +204,9 @@ export const HUD: FC<HUDProps> = ({
 
   return (
     <div
-      className="pointer-events-none absolute left-0 right-0 top-0 z-hud flex items-start justify-between gap-1 p-2 sm:gap-2 sm:p-4"
+      className={`pointer-events-none absolute left-0 right-0 top-0 z-hud flex items-start justify-between gap-1 p-2 sm:gap-2 sm:p-4 ${
+        rosterInset ? 'md:pl-[17rem]' : ''
+      }`}
       role="status"
       aria-label="Game HUD"
     >

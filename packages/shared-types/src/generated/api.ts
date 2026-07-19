@@ -1021,6 +1021,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/tiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Subscription Tiers
+         * @description Return the purchasable subscription tiers for the pricing page.
+         *
+         *     Source of truth is ``infra/pricing/selva-tiers.json`` via
+         *     ``billing_tiers.get_subscription_tiers`` — the CI drift gate keeps this
+         *     from diverging from the canonical numbers.
+         */
+        get: operations["list_subscription_tiers_api_v1_billing_tiers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Checkout
+         * @description Start a subscription checkout for the caller's org.
+         *
+         *     Selva holds no Stripe keys — Dhanam is the sole payment surface (RFC 0011
+         *     / monetization north star). We validate the tier, resolve the caller's
+         *     Dhanam space, and ask Dhanam to create the hosted checkout; the resulting
+         *     ``subscription.created`` webhook flows back through the Dhanam webhook
+         *     handler. Returns ``{"url": ...}`` for the browser to redirect to.
+         *
+         *     While Dhanam's checkout API is not yet live (its endpoint 404s / the
+         *     ``DHANAM_API_URL`` is unset), this returns HTTP 501 with a clear
+         *     ``status: "not_configured"`` body rather than a 500 — the full contract
+         *     is wired and flips on the moment Dhanam ships the endpoint.
+         */
+        post: operations["create_checkout_api_v1_billing_checkout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/record": {
         parameters: {
             query?: never;
@@ -4829,6 +4884,21 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** CheckoutRequest */
+        CheckoutRequest: {
+            /** Tier */
+            tier: string;
+            /**
+             * Success Path
+             * @default /office?upgraded=1
+             */
+            success_path: string;
+            /**
+             * Cancel Path
+             * @default /pricing?checkout=cancelled
+             */
+            cancel_path: string;
         };
         /** CheckpointListItem */
         CheckpointListItem: {
@@ -8965,6 +9035,63 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_subscription_tiers_api_v1_billing_tiers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    create_checkout_api_v1_billing_checkout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

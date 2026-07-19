@@ -115,6 +115,34 @@ def get_daily_limit(tier: str | None) -> int:
     return TIER_DAILY_TASK_LIMIT.get(tier, TIER_DAILY_TASK_LIMIT[DEFAULT_TIER])
 
 
+def get_subscription_tiers() -> list[dict[str, Any]]:
+    """Return the purchasable Dhanam subscription tiers for the pricing page
+    and checkout validation, in JSON declaration order.
+
+    Each entry: ``{slug, name, daily_token_limit, stripe_price_id_env_key}``.
+    ``name`` falls back to a title-cased slug when the JSON omits it (the
+    ``dhanam_subscription_daily_limits`` section is limit-focused and may
+    not carry display names)."""
+    pricing = _load_pricing()
+    tiers = pricing["dhanam_subscription_daily_limits"]["tiers"]
+    out: list[dict[str, Any]] = []
+    for slug, spec in tiers.items():
+        out.append(
+            {
+                "slug": slug,
+                "name": spec.get("name", slug.replace("_", " ").title()),
+                "daily_token_limit": spec["daily_token_limit"],
+                "stripe_price_id_env_key": spec.get("stripe_price_id_env_key"),
+            }
+        )
+    return out
+
+
+def is_valid_subscription_tier(slug: str) -> bool:
+    """True when *slug* is a real purchasable subscription tier."""
+    return slug in TIER_DAILY_TASK_LIMIT
+
+
 def get_tulana_hourly_rate_mxn(pack_slug: str) -> int | None:
     """Return the Tulana metered hourly rate (MXN) for *pack_slug*.
 

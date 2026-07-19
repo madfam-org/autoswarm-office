@@ -85,6 +85,12 @@ export function HeroSection() {
         >
           Sign In
         </a>
+        <a
+          href={`${appUrl}/pricing`}
+          className="retro-btn rounded border border-slate-600 px-10 py-4 text-sm font-medium text-slate-300 transition-colors hover:border-emerald-500 hover:text-white"
+        >
+          Pricing
+        </a>
       </div>
 
       <p className="mt-6 text-xs text-slate-600">

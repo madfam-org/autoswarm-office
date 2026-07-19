@@ -28,6 +28,7 @@ import { useTaskDispatch } from '@/hooks/useTaskDispatch';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useMeetingNotes } from '@/hooks/useMeetingNotes';
 import { useColyseus } from '@/hooks/useColyseus';
+import { useComputeTokens } from '@/hooks/useComputeTokens';
 import type { PlayerEmoteEvent, ProximityUpdate, WebRTCSignal, SpotlightActiveEvent, LiveKitCredentialsEvent } from '@/hooks/useColyseus';
 import type { LiveKitCredentials } from '@/hooks/useProximityVideo';
 import { useAvatarConfig } from '@/hooks/useAvatarConfig';
@@ -84,6 +85,10 @@ export interface OfficeExperienceProps {
 
 export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const isDemo = mode === 'demo';
+
+  // Real daily compute-token usage for the HUD meter (disabled in demo,
+  // which has no billing). Replaces the old hardcoded {used:0, limit:10000}.
+  const computeTokens = useComputeTokens(!isDemo);
 
   // Lazy-load gameEventBus ref to bridge emote events to Phaser. The actual
   // import + listener wiring is consolidated into one useEffect lower in this
@@ -566,7 +571,7 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
           <HUD
             activeAgentCount={officeState?.activeAgentCount ?? 0}
             pendingApprovalCount={pendingApprovals.length}
-            computeTokens={officeState ? { used: 0, limit: 10000 } : undefined}
+            computeTokens={computeTokens}
             colyseusConnected={colyseusConnected}
             approvalsConnected={approvalsConnected}
             departments={officeState?.departments ?? []}

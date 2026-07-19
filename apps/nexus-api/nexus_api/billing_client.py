@@ -49,6 +49,44 @@ class DhanamClient:
             resp.raise_for_status()
             return resp.json()
 
+    async def create_checkout(
+        self,
+        bearer_token: str,
+        *,
+        tier: str,
+        success_url: str,
+        cancel_url: str,
+        space_id: str | None = None,
+    ) -> dict[str, Any]:
+        """POST /billing/checkout -- start a subscription checkout.
+
+        Selva never creates the Stripe object itself (RFC 0011 / the
+        monetization-architecture north star: Dhanam is the only holder of
+        Stripe keys). We hand Dhanam the tier + return URLs; Dhanam creates
+        the Stripe Checkout Session / PaymentIntent, and the resulting
+        ``subscription.created`` webhook flows back through
+        ``handle_dhanam_billing_event``.
+
+        Returns Dhanam's response, expected to contain a hosted-checkout
+        ``url`` the caller redirects the browser to. Raises on HTTP error
+        (including 404 while Dhanam's checkout endpoint is not yet live).
+        """
+        payload: dict[str, Any] = {
+            "tier": tier,
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+        }
+        if space_id:
+            payload["space_id"] = space_id
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{self.base_url}/billing/checkout",
+                headers={"Authorization": f"Bearer {bearer_token}"},
+                json=payload,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
     async def get_catalog(self, product_slug: str | None = None) -> dict[str, Any]:
         """GET /billing/catalog -- full product catalog or single product (public, no auth)."""
         path = f"/billing/catalog/{product_slug}" if product_slug else "/billing/catalog"

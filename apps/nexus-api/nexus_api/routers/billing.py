@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -173,6 +174,128 @@ async def create_billing_portal() -> dict[str, object]:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Billing service unavailable",
         ) from exc
+
+
+@router.get("/tiers")
+async def list_subscription_tiers() -> dict[str, object]:
+    """Return the purchasable subscription tiers for the pricing page.
+
+    Source of truth is ``infra/pricing/selva-tiers.json`` via
+    ``billing_tiers.get_subscription_tiers`` — the CI drift gate keeps this
+    from diverging from the canonical numbers.
+    """
+    from ..billing_tiers import get_subscription_tiers
+
+    return {"tiers": get_subscription_tiers()}
+
+
+class CheckoutRequest(BaseModel):
+    tier: str = Field(..., min_length=1, max_length=64)
+    # Optional client-provided return paths; the server rewrites them onto
+    # PUBLIC_APP_URL so a caller cannot redirect checkout to an arbitrary host.
+    success_path: str = Field(default="/office?upgraded=1", max_length=512)
+    cancel_path: str = Field(default="/pricing?checkout=cancelled", max_length=512)
+
+
+@router.post("/checkout")
+async def create_checkout(
+    body: CheckoutRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant: TenantContext = Depends(get_tenant),  # noqa: B008
+) -> dict[str, object]:
+    """Start a subscription checkout for the caller's org.
+
+    Selva holds no Stripe keys — Dhanam is the sole payment surface (RFC 0011
+    / monetization north star). We validate the tier, resolve the caller's
+    Dhanam space, and ask Dhanam to create the hosted checkout; the resulting
+    ``subscription.created`` webhook flows back through the Dhanam webhook
+    handler. Returns ``{"url": ...}`` for the browser to redirect to.
+
+    While Dhanam's checkout API is not yet live (its endpoint 404s / the
+    ``DHANAM_API_URL`` is unset), this returns HTTP 501 with a clear
+    ``status: "not_configured"`` body rather than a 500 — the full contract
+    is wired and flips on the moment Dhanam ships the endpoint.
+    """
+    from ..billing_tiers import is_valid_subscription_tier
+    from ..services.billing_sync import resolve_tenant_by_org_id
+
+    if not is_valid_subscription_tier(body.tier):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"unknown subscription tier: {body.tier}",
+        )
+
+    settings = get_settings()
+    if not settings.dhanam_api_url:
+        # Dhanam billing API not configured for this environment yet.
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail={
+                "status": "not_configured",
+                "message": "Checkout is not yet available — Dhanam billing API is not configured.",
+            },
+        )
+
+    # Confine return URLs to our own app host — never honor an arbitrary
+    # caller-supplied absolute URL as a redirect target.
+    app_base = (settings.public_app_url or "https://app.selva.town").rstrip("/")
+    success_url = f"{app_base}{_safe_path(body.success_path, '/office?upgraded=1')}"
+    cancel_url = f"{app_base}{_safe_path(body.cancel_path, '/pricing?checkout=cancelled')}"
+
+    tenant_config = await resolve_tenant_by_org_id(db, tenant.org_id)
+    space_id = tenant_config.dhanam_space_id if tenant_config else None
+
+    from ..billing_client import DhanamClient
+
+    client = DhanamClient(settings.dhanam_api_url, settings.dhanam_webhook_secret)
+    try:
+        result = await client.create_checkout(
+            settings.dhanam_webhook_secret,
+            tier=body.tier,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            space_id=space_id,
+        )
+    except httpx.HTTPStatusError as exc:
+        # 404 = Dhanam hasn't shipped the checkout endpoint yet → not_configured,
+        # not a server error. Other statuses are genuine upstream failures.
+        if exc.response.status_code == 404:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail={
+                    "status": "not_configured",
+                    "message": "Checkout endpoint is not yet available on Dhanam.",
+                },
+            ) from exc
+        logger.warning("Dhanam checkout failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Checkout service error",
+        ) from exc
+    except httpx.HTTPError as exc:
+        logger.warning("Dhanam checkout unreachable: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Checkout service unavailable",
+        ) from exc
+
+    url = result.get("url")
+    if not url:
+        logger.error("Dhanam checkout returned no url: %s", result)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Checkout service returned no redirect URL",
+        )
+    return {"url": url, "tier": body.tier}
+
+
+def _safe_path(path: str, fallback: str) -> str:
+    """Accept only same-origin absolute paths (start with a single '/').
+    Anything protocol-relative ('//host'), absolute-URL, or non-'/'-leading
+    falls back — the return URL must stay on our app host."""
+    if path.startswith("/") and not path.startswith("//"):
+        return path
+    return fallback
 
 
 @webhook_router.post("/webhooks/dhanam", include_in_schema=False)

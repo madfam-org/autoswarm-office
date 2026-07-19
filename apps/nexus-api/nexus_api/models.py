@@ -324,6 +324,45 @@ class ComputeTokenLedger(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class AgentHoursLedger(Base):
+    """Immutable ledger of metered agent-hours consumed per completed task.
+
+    This is Selva's WTP-validated metered SKU (the Tulana hourly packs —
+    Maker/Studio/Enterprise at 85/170/255 MXN/hr). One row is written when a
+    task reaches a terminal state, capturing the wall-clock work time
+    (``completed_at - started_at``) multiplied by the number of agents that
+    worked it. Dhanam reads this at invoice time; a downstream reporter can
+    roll it up to Tulana. Kept separate from ``ComputeTokenLedger`` because
+    the two SKUs bill on different units (tokens vs. agent-hours).
+    """
+
+    __tablename__ = "agent_hours_ledger"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_new_uuid)
+    org_id: Mapped[str] = mapped_column(String(255), nullable=False, default="default", index=True)
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("swarm_tasks.id"), nullable=True, index=True
+    )
+    graph_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    #: Number of distinct agents that worked the task (multiplier).
+    agent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    #: Wall-clock seconds the task was in-flight (completed_at - started_at).
+    duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    #: Billable agent-hours = agent_count * duration_seconds / 3600, rounded to
+    #: 6 dp so tiny tasks still accrue rather than truncating to zero.
+    agent_hours: Mapped[Decimal] = mapped_column(
+        Numeric(12, 6), nullable=False, default=Decimal("0")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    __table_args__ = (
+        # One accrual row per task — the completion path is idempotent-safe
+        # (a re-delivered completion must not double-bill).
+        UniqueConstraint("task_id", name="uq_agent_hours_task"),
+        Index("ix_agent_hours_org_created", "org_id", "created_at"),
+    )
+
+
 class SkillMarketplaceEntry(Base):
     """A published skill available in the marketplace for installation."""
 

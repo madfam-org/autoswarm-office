@@ -31,20 +31,33 @@ export interface DispatchResponse {
 
 export type DispatchStatus = 'idle' | 'submitting' | 'success' | 'error';
 
+/** Machine-readable code the backend attaches to every budget 402 detail. */
+const BUDGET_EXHAUSTED_CODE = 'budget_exhausted';
+
 export function useTaskDispatch(): {
   dispatch: (request: DispatchRequest) => Promise<DispatchResponse | null>;
   status: DispatchStatus;
   error: string | null;
+  /** True when the last dispatch was refused for hitting the plan's budget
+   *  (HTTP 402). Drives the upgrade modal — the highest-intent conversion
+   *  moment: the user hit a wall mid-value. */
+  limitReached: boolean;
+  /** Human message from the 402 (for the modal body). */
+  limitMessage: string | null;
   lastDispatchedTask: DispatchResponse | null;
   reset: () => void;
 } {
   const [status, setStatus] = useState<DispatchStatus>('idle');
+  const [limitReached, setLimitReached] = useState(false);
+  const [limitMessage, setLimitMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastDispatchedTask, setLastDispatchedTask] = useState<DispatchResponse | null>(null);
 
   const dispatch = useCallback(async (request: DispatchRequest): Promise<DispatchResponse | null> => {
     setStatus('submitting');
     setError(null);
+    setLimitReached(false);
+    setLimitMessage(null);
 
     // Demo mode: return mock response after a short delay
     if (isDemo()) {
@@ -75,6 +88,22 @@ export function useTaskDispatch(): {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const detail = (body as Record<string, unknown>).detail;
+
+        // 402 with the budget_exhausted code → the upgrade moment, not a
+        // generic error. detail is a structured {code, message} object.
+        if (
+          res.status === 402 &&
+          typeof detail === 'object' &&
+          detail !== null &&
+          (detail as Record<string, unknown>).code === BUDGET_EXHAUSTED_CODE
+        ) {
+          const msg = (detail as Record<string, unknown>).message;
+          setLimitMessage(typeof msg === 'string' ? msg : null);
+          setLimitReached(true);
+          setStatus('error');
+          return null;
+        }
+
         setError(typeof detail === 'string' ? detail : `Request failed (${res.status})`);
         setStatus('error');
         return null;
@@ -103,8 +132,10 @@ export function useTaskDispatch(): {
   const reset = useCallback(() => {
     setStatus('idle');
     setError(null);
+    setLimitReached(false);
+    setLimitMessage(null);
     setLastDispatchedTask(null);
   }, []);
 
-  return { dispatch, status, error, lastDispatchedTask, reset };
+  return { dispatch, status, error, limitReached, limitMessage, lastDispatchedTask, reset };
 }

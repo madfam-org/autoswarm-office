@@ -6,6 +6,7 @@ import { ToastProvider } from '@/components/Toast';
 import { HUD } from '@/components/HUD';
 import { DashboardPanel } from '@/components/DashboardPanel';
 import { TaskDispatchPanel } from '@/components/TaskDispatchPanel';
+import { UpgradeModal } from '@/components/UpgradeModal';
 import { ApprovalPanel } from '@/components/ApprovalPanel';
 import { ChatPanel } from '@/components/ChatPanel';
 import { EmotePicker } from '@/components/EmotePicker';
@@ -256,6 +257,8 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     dispatch: dispatchTask,
     status: dispatchStatus,
     error: dispatchError,
+    limitReached: dispatchLimitReached,
+    limitMessage: dispatchLimitMessage,
     lastDispatchedTask,
     reset: resetDispatch,
   } = useTaskDispatch();
@@ -834,6 +837,17 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
         departments={officeState?.departments ?? []}
         onReset={resetDispatch}
       />
+
+      {/* The upgrade moment: a dispatch refused for hitting the plan budget
+          (402) opens one-click checkout instead of a raw error. Not in demo
+          (no billing there). */}
+      {!isDemo && (
+        <UpgradeModal
+          open={dispatchLimitReached}
+          onClose={resetDispatch}
+          message={dispatchLimitMessage}
+        />
+      )}
 
       {!isDemo && (
         <WorkflowEditor

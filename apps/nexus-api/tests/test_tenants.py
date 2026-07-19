@@ -531,7 +531,9 @@ class TestComputeBudgetEnforcement:
                 },
             )
             assert resp.status_code == 402
-            assert "budget exhausted" in resp.json()["detail"].lower()
+            detail = resp.json()["detail"]
+            assert detail["code"] == "budget_exhausted"
+            assert "budget exhausted" in detail["message"].lower()
 
     async def test_compute_budget_allows_when_tokens_remain(
         self,

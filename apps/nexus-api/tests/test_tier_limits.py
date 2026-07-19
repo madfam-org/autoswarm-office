@@ -89,7 +89,10 @@ async def test_dispatch_rejected_when_past_due(client, auth_headers, db_session)
         headers=auth_headers,
     )
     assert resp.status_code == 402
-    assert "past_due" in resp.json()["detail"]
+    detail = resp.json()["detail"]
+    # Structured 402 so the office-ui upgrade modal can key on the code.
+    assert detail["code"] == "budget_exhausted"
+    assert "past_due" in detail["message"]
 
 
 @pytest.mark.asyncio

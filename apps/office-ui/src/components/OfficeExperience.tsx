@@ -104,6 +104,16 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     gameEventBusRef.current?.emit('player-emote', event);
   }, []);
 
+  // Monotonic sequence for 'walk-to-entity' commands — the event bus replays
+  // the last cached value to a late subscriber (e.g. the scene remounting on
+  // a map/room transition), so OfficeScene ignores any seq it's already
+  // handled to avoid an unintended walk firing again.
+  const walkToEntitySeqRef = useRef(0);
+  const handleWave = useCallback((target: { kind: 'player' | 'agent'; id: string }) => {
+    walkToEntitySeqRef.current += 1;
+    gameEventBusRef.current?.emit('walk-to-entity', { ...target, seq: walkToEntitySeqRef.current });
+  }, []);
+
   // Refs for bridging proximity video callbacks (breaks circular dep between hooks)
   const proximityUpdateRef = useRef<(update: ProximityUpdate) => void>(() => {});
   const webrtcSignalRef = useRef<(signal: WebRTCSignal) => void>(() => {});
@@ -671,6 +681,7 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
                 players={officeState?.players ?? []}
                 departments={officeState?.departments ?? []}
                 localSessionId={sessionId ?? ''}
+                onWave={handleWave}
               />
             </div>
           )}

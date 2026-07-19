@@ -143,6 +143,13 @@ export class OfficeScene extends Phaser.Scene {
   private avatarConfigCleanup: (() => void) | null = null;
   private zoneEnterCleanup: (() => void) | null = null;
   private zoneLeaveCleanup: (() => void) | null = null;
+  private walkToEntityCleanup: (() => void) | null = null;
+  /** Sequence id of the last handled 'walk-to-entity' command — guards
+   * against the event bus replaying a stale cached command to a scene that
+   * remounts (e.g. a map/room transition) after the walk was issued. */
+  private lastWalkToSeq: number = 0;
+  /** Set while following a click/walk-to path; fired once on arrival. */
+  private pendingArrivalAction: (() => void) | null = null;
   private localAvatarConfig: AvatarConfig | null = null;
   private virtualJoystick: VirtualJoystick | null = null;
   private touchButtons: TouchActionButtons | null = null;
@@ -252,6 +259,12 @@ export class OfficeScene extends Phaser.Scene {
     this.zoneLeaveCleanup = gameEventBus.on('zone_leave', (detail) => {
       const { areaName } = detail as { areaName: string };
       this.scriptBridge?.notifyAreaEvent(areaName, 'leave');
+    });
+
+    // Wave -> walk-over: roster/person-card sends {kind, id, seq}; walk the
+    // local avatar to stand next to the target, then wave on arrival.
+    this.walkToEntityCleanup = gameEventBus.on('walk-to-entity', (detail) => {
+      this.handleWalkToEntity(detail as { kind: 'player' | 'agent'; id: string; seq: number });
     });
 
     // Add keyboard instructions text
@@ -765,9 +778,11 @@ export class OfficeScene extends Phaser.Scene {
     // Click-to-move: follow path (cancelled by keyboard/gamepad input)
     if (this.clickPath.length > 0 && this.clickPathIndex < this.clickPath.length) {
       if (stickX !== 0 || stickY !== 0) {
-        // Manual input cancels click path
+        // Manual input cancels click path (and any pending arrival action —
+        // the player steered away, so don't wave at a target they didn't reach)
         this.clickPath = [];
         this.clickPathIndex = 0;
+        this.pendingArrivalAction = null;
       } else {
         const wp = this.clickPath[this.clickPathIndex];
         const cdx = wp.x - this.tactician.x;
@@ -778,6 +793,11 @@ export class OfficeScene extends Phaser.Scene {
           if (this.clickPathIndex >= this.clickPath.length) {
             this.clickPath = [];
             this.clickPathIndex = 0;
+            if (this.pendingArrivalAction) {
+              const action = this.pendingArrivalAction;
+              this.pendingArrivalAction = null;
+              action();
+            }
           }
         } else {
           stickX = cdx / cdist;
@@ -1044,6 +1064,11 @@ export class OfficeScene extends Phaser.Scene {
       this.zoneLeaveCleanup();
       this.zoneLeaveCleanup = null;
     }
+    if (this.walkToEntityCleanup) {
+      this.walkToEntityCleanup();
+      this.walkToEntityCleanup = null;
+    }
+    this.pendingArrivalAction = null;
     if (this.interactableManager) {
       this.interactableManager.destroy();
       this.interactableManager = null;
@@ -2073,6 +2098,58 @@ export class OfficeScene extends Phaser.Scene {
         gameEventBus.emit('approval-open', nearestAgentId);
       }
     }
+  }
+
+  // === Wave -> Walk Over (E1 roster/person-card action) ===
+
+  /**
+   * Path the local avatar to a walkable tile next to the target (remote
+   * player or agent-citizen), then wave on arrival. Reuses the click-to-move
+   * path follower in update() — a walk-to-entity command is just a
+   * server-resolved click destination.
+   */
+  private handleWalkToEntity(detail: { kind: 'player' | 'agent'; id: string; seq: number }): void {
+    if (!detail || typeof detail.seq !== 'number') return;
+    // Guard against the event bus replaying a stale cached command to a
+    // scene that (re)subscribes after the command was originally issued.
+    if (detail.seq <= this.lastWalkToSeq) return;
+    this.lastWalkToSeq = detail.seq;
+
+    if (!this.tactician || !this.pathfinder) return;
+
+    const targetSprite =
+      detail.kind === 'player'
+        ? this.remotePlayers.get(detail.id)?.sprite
+        : this.agentSprites.get(detail.id)?.sprite;
+    if (!targetSprite) return;
+
+    this.clickPath = this.pathfinder.findPathAdjacentTo(
+      this.tactician.x,
+      this.tactician.y,
+      targetSprite.x,
+      targetSprite.y,
+    );
+    this.clickPathIndex = 0;
+
+    // Visual marker at the target, mirroring click-to-move feedback.
+    if (this.clickMarker) this.clickMarker.destroy();
+    this.clickMarker = this.add.circle(targetSprite.x, targetSprite.y, 6, 0x6366f1, 0.5).setDepth(15);
+    this.tweens.add({
+      targets: this.clickMarker,
+      alpha: 0,
+      scale: 2,
+      duration: 800,
+      onComplete: () => {
+        if (this.clickMarker) {
+          this.clickMarker.destroy();
+          this.clickMarker = null;
+        }
+      },
+    });
+
+    this.pendingArrivalAction = () => {
+      gameEventBus.emit('send-emote', { type: 'wave' });
+    };
   }
 
   // === Follow Player Camera (PR 1.2) ===

@@ -6,6 +6,7 @@ import { ToastProvider } from '@/components/Toast';
 import { HUD } from '@/components/HUD';
 import { SpaceRoster } from '@/components/SpaceRoster';
 import { WelcomeTour, hasSeenWelcomeTour } from '@/components/WelcomeTour';
+import { CommandPalette, type PaletteAction } from '@/components/CommandPalette';
 import { DashboardPanel } from '@/components/DashboardPanel';
 import { TaskDispatchPanel } from '@/components/TaskDispatchPanel';
 import { UpgradeModal } from '@/components/UpgradeModal';
@@ -287,6 +288,8 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
   const [rosterOpen, setRosterOpen] = useState(true);
   // First-run welcome tour — shown once, read client-side post-mount (SSR-safe).
   const [tourOpen, setTourOpen] = useState(false);
+  // ⌘K command palette — global search over people/agents/actions.
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [dispatchPanelOpen, setDispatchPanelOpen] = useState(false);
   const [approvalPanelOpen, setApprovalPanelOpen] = useState(false);
@@ -500,6 +503,60 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
     }
   }, [avatarEditorOpen]);
 
+  // ⌘K / Ctrl+K toggles the command palette. Ignored while typing in an
+  // input/textarea so it never eats a literal 'k'.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        const el = document.activeElement;
+        const typing =
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          (el as HTMLElement | null)?.isContentEditable;
+        if (typing && !paletteOpen) return;
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [paletteOpen]);
+
+  // Quick actions surfaced in the ⌘K palette (memoized — stable handlers).
+  const paletteActions = useMemo<PaletteAction[]>(
+    () => [
+      {
+        id: 'dispatch',
+        label: 'Dispatch a task',
+        hint: 'Put an agent to work',
+        glyph: '⚡',
+        run: handleDispatchOpen,
+      },
+      {
+        id: 'approvals',
+        label: 'Open approval queue',
+        hint: `${pendingApprovals.length} pending`,
+        glyph: '✅',
+        run: handleApprovalPanelOpen,
+      },
+      {
+        id: 'dashboard',
+        label: 'Open task dashboard',
+        hint: 'Kanban board',
+        glyph: '📋',
+        run: () => setDashboardOpen(true),
+      },
+      {
+        id: 'roster',
+        label: rosterOpen ? 'Hide roster' : 'Show roster',
+        hint: 'Who’s in the office',
+        glyph: '👥',
+        run: () => setRosterOpen((v) => !v),
+      },
+    ],
+    [handleDispatchOpen, handleApprovalPanelOpen, pendingApprovals.length, rosterOpen],
+  );
+
   // Send avatar config to server when connected
   useEffect(() => {
     if (colyseusConnected && avatarConfig) {
@@ -634,6 +691,15 @@ export function OfficeExperience({ mode }: OfficeExperienceProps) {
             open={tourOpen}
             onClose={() => setTourOpen(false)}
             rosterOpen={rosterOpen}
+          />
+
+          {/* ⌘K command palette — search people, agents, and quick actions. */}
+          <CommandPalette
+            open={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            players={officeState?.players ?? []}
+            departments={officeState?.departments ?? []}
+            actions={paletteActions}
           />
 
           {/* Ops controls (left side, below HUD) — hidden in demo */}

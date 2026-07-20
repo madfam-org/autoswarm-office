@@ -134,6 +134,10 @@ class Settings(BaseSettings):
     # PHYND_CAMPAIGN_IMPORT_SECRET. Empty → bridge stays inert (handoff still
     # enqueues the Redis task; nothing is POSTed).
     phynd_campaign_import_secret: str = ""
+    # Service token for PhyndCRM tRPC service auth (campaignAuthorizations
+    # read/write scopes — the owner money-gate proxy). Matches PhyndCRM's
+    # FEDERATION_API_TOKEN. Empty -> the authorization proxy returns 503.
+    phynd_crm_federation_token: str = ""
 
     # -- Worker-to-API auth ---------------------------------------------------
     worker_api_token: str = "dev-bypass"  # Shared secret for worker/gateway → API calls

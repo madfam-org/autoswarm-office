@@ -126,3 +126,96 @@ export interface TulanaFeedbackResponse {
   tulana_event_id: string | null;
   message: string;
 }
+
+// -- PhyndCRM campaign authorizations (owner money-gate) ----------------------
+// Wire shapes proxied verbatim from PhyndCRM's campaignAuthorizations tRPC
+// router via nexus-api /api/v1/campaigns/authorizations/*. PhyndCRM stays the
+// source of truth and the fail-closed send gate; dates arrive as ISO strings.
+
+export interface AuthorizationConsentCoverage {
+  contactsWithEmail: number;
+  consent: { granted: number; pendingDoubleOptIn: number; revoked: number };
+  suppressed: number;
+  grantedNotSuppressed: number;
+}
+
+export interface AuthorizationVariant {
+  variantId: string | null;
+  language: string | null;
+  subject: string | null;
+  preheader: string | null;
+  body: string;
+  cta: string | null;
+  ctaUrl: string | null;
+  claimKeysUsed: string[];
+}
+
+export interface AuthorizationSnapshot {
+  version: number;
+  payload: {
+    campaignId: string;
+    name: string;
+    skuKey: string | null;
+    channel: string;
+    sender: string;
+    privacyUrl: string | null;
+    schedule: { startDate: string | null; endDate: string | null };
+    audienceDefinition: string | null;
+    campaignType: string | null;
+    guardrailsDoNotClaim: string[];
+    variants: AuthorizationVariant[];
+  };
+  context: {
+    capturedAt: string;
+    campaignStatus: string;
+    gaReadiness: string | null;
+    orchestrator: string | null;
+    coverage: AuthorizationConsentCoverage;
+    proofPoints: { label: string; value: string; source_url?: string }[];
+  };
+}
+
+export interface AuthorizationRecord {
+  id: string;
+  campaignId: string;
+  status: 'pending' | 'authorized' | 'rejected' | 'superseded';
+  payloadHash: string;
+  requestedBy: string;
+  decidedBy: string | null;
+  decidedVia: string | null;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  snapshot: AuthorizationSnapshot;
+}
+
+export interface PendingAuthorizationRow {
+  authorization: AuthorizationRecord;
+  campaign: {
+    id: string;
+    name: string;
+    skuKey: string | null;
+    status: string;
+    gaReadiness: string | null;
+    startDate: string | null;
+    endDate: string | null;
+  };
+}
+
+export interface RenderedAuthorizationVariant {
+  variantId: string | null;
+  language: string | null;
+  claimKeysUsed: string[];
+  subject: string;
+  html: string;
+  preheader?: string;
+}
+
+export interface AuthorizationPreview {
+  authorization: AuthorizationRecord;
+  snapshot: AuthorizationSnapshot;
+  rendered: RenderedAuthorizationVariant[];
+  currentHash: string;
+  stale: boolean;
+  campaignStatus: string;
+}

@@ -104,3 +104,44 @@ export async function updateScheduledActionHitl(
   });
   return parseOrThrow<ScheduledActionRow>(r);
 }
+
+// -- PhyndCRM campaign authorizations (owner money-gate) ----------------------
+
+export async function listPendingAuthorizations(): Promise<
+  import('./types').PendingAuthorizationRow[]
+> {
+  const r = await apiFetch('/api/v1/campaigns/authorizations/pending');
+  const body = await parseOrThrow<{ pending: import('./types').PendingAuthorizationRow[] }>(r);
+  return body.pending;
+}
+
+export async function getAuthorizationPreview(
+  authorizationId: string,
+): Promise<import('./types').AuthorizationPreview> {
+  const r = await apiFetch(
+    `/api/v1/campaigns/authorizations/${encodeURIComponent(authorizationId)}/preview`,
+  );
+  return parseOrThrow<import('./types').AuthorizationPreview>(r);
+}
+
+export async function decideAuthorization(
+  authorizationId: string,
+  decision: 'authorized' | 'rejected',
+  note?: string,
+): Promise<import('./types').AuthorizationRecord> {
+  const r = await apiFetch(
+    `/api/v1/campaigns/authorizations/${encodeURIComponent(authorizationId)}/decide`,
+    { method: 'POST', body: JSON.stringify({ decision, note: note || undefined }) },
+  );
+  return parseOrThrow<import('./types').AuthorizationRecord>(r);
+}
+
+export async function requestFreshAuthorization(
+  campaignId: string,
+): Promise<import('./types').AuthorizationRecord> {
+  const r = await apiFetch('/api/v1/campaigns/authorizations/request', {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId }),
+  });
+  return parseOrThrow<import('./types').AuthorizationRecord>(r);
+}

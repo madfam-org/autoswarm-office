@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
 import { CloseButton } from '@selva/ui';
 import type { TaskBoardItem } from '@selva/shared-types';
 
+import { CampaignAuthorizations } from '@/components/campaigns/CampaignAuthorizations';
 import { TulanaReadinessBadge } from '@/components/campaigns/TulanaReadinessBadge';
 import type {
   SocialPlatform,
@@ -22,13 +23,14 @@ interface CampaignDashboardProps {
   onClose: () => void;
 }
 
-type TabId = 'import' | 'tasks' | 'scheduled' | 'actions';
+type TabId = 'import' | 'tasks' | 'scheduled' | 'actions' | 'authorize';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'import', label: 'Import' },
   { id: 'tasks', label: 'Campaign Tasks' },
   { id: 'scheduled', label: 'Scheduled Posts' },
   { id: 'actions', label: 'Handoff & Feedback' },
+  { id: 'authorize', label: 'Authorize' },
 ];
 
 function formatWhen(iso: string): string {
@@ -593,6 +595,8 @@ export const CampaignDashboard: FC<CampaignDashboardProps> = ({ open, onClose })
               </div>
             </div>
           )}
+
+          {tab === 'authorize' && <CampaignAuthorizations />}
         </div>
       </div>
     </div>

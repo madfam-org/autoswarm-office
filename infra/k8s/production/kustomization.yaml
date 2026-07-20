@@ -26,6 +26,10 @@ resources:
 - keda-scaledobject.yaml
 - keda-trigger-auth.yaml
 - selva-secret-writer-sa.yaml
+# Cross-path read of phynd's HMAC/bearer values (secret/phynd-crm already
+# exists), so selva signs exactly what phynd verifies. Consumer mounts in
+# nexus-api are optional:true; safe to include pre-consumer.
+- phynd-external-secret.yaml
 
 commonLabels:
   app.kubernetes.io/managed-by: kustomize

@@ -127,6 +127,7 @@ from .phygital_tools import (
     GenerateQuoteTool,
     RunDFMAnalysisTool,
 )
+from .phyndcrm_campaign_authorizations import get_phyndcrm_campaign_authorization_tools
 from .phyndcrm_provisioning import get_phyndcrm_provisioning_tools
 from .pricing_intel import (
     CatalogLoadTool,
@@ -405,6 +406,10 @@ def get_builtin_tools() -> list[BaseTool]:
         # Phase 2 — Tenant onboarding primitives: PhyndCRM tenant_config +
         # pipeline bootstrap + config read (voice_mode / onboarding state).
         *get_phyndcrm_provisioning_tools(),
+        # Campaign authorization money-gate: owner reviews + authorizes
+        # campaign sends from Selva conversations; phynd-crm stays the
+        # source of truth and hard fail-closed send gate.
+        *get_phyndcrm_campaign_authorization_tools(),
         # Phase 2 — Tenant onboarding primitives: Karafiel org + SAT cert +
         # PAC register + invoice-serie setup (Mexican fiscal compliance).
         # SAT cert upload is explicitly HITL-gated (legal-entity signing key).

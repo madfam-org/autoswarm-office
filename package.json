@@ -2,7 +2,7 @@
   "name": "@selva/root",
   "version": "0.2.0",
   "private": true,
-  "description": "Selva Office — Gamified multi-agent business orchestration platform",
+  "description": "Selva Office \u2014 Gamified multi-agent business orchestration platform",
   "author": "Innovaciones MADFAM SAS de CV",
   "packageManager": "pnpm@9.15.4",
   "engines": {
@@ -28,10 +28,15 @@
   "pnpm": {
     "overrides": {
       "@janua/nextjs-sdk": "workspace:*",
-      "fast-uri": "3.1.2",
+      "brace-expansion@1.1.12": "1.1.16",
+      "brace-expansion@2.0.2": "2.1.2",
+      "brace-expansion@5.0.4": "5.0.8",
+      "fast-uri": "3.1.4",
       "path-to-regexp": "0.1.13",
       "picomatch@2.3.1": "2.3.2",
       "picomatch@4.0.3": "4.0.4",
+      "postcss@8.4.31": "8.5.18",
+      "sharp": "0.35.0",
       "ws": "8.21.0"
     }
   },

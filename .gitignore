@@ -36,6 +36,11 @@ Thumbs.db
 
 # Runtime SQLite databases
 *.db
+# SQLite in WAL mode writes two sidecars next to the database, and neither
+# matches *.db — a test run leaves selva_state.db-shm / -wal untracked and
+# committable. They were committed for real once before this line existed.
+*.db-shm
+*.db-wal
 *.sqlite3
 
 # Coverage

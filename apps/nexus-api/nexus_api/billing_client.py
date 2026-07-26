@@ -12,11 +12,35 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
+def _v1_base(base_url: str) -> str:
+    """Return ``base_url`` carrying exactly one ``/v1`` version segment.
+
+    ``DHANAM_API_URL`` is configured as a bare origin (``https://api.dhan.am``)
+    while Dhanam serves its whole API under ``/v1``. Spelling the segment out
+    at each call site is precisely how it went missing here: every request this
+    client made 404'd, and the 404 was then read as "Dhanam has not shipped the
+    endpoint yet". Normalising once means a new method cannot reintroduce it.
+
+    A base that already ends in ``/v1`` is left alone so re-pointing the env at
+    a versioned URL cannot produce ``/v1/v1``. An empty base stays empty — the
+    callers guard on "Dhanam not configured" themselves.
+    """
+    base = base_url.rstrip("/")
+    if not base or base.endswith("/v1"):
+        return base
+    return f"{base}/v1"
+
+
 class DhanamClient:
-    """Async client for the Dhanam billing API."""
+    """Async client for the Dhanam billing API.
+
+    Method docstrings name the path *below* the version segment; the
+    constructor appends ``/v1`` to the base, so ``/billing/status`` is
+    requested as ``<base>/v1/billing/status``.
+    """
 
     def __init__(self, base_url: str, webhook_secret: str = "") -> None:
-        self.base_url = base_url.rstrip("/")
+        self.base_url = _v1_base(base_url)
         self.webhook_secret = webhook_secret
 
     async def get_status(self, bearer_token: str) -> dict[str, Any]:
@@ -68,8 +92,9 @@ class DhanamClient:
         ``handle_dhanam_billing_event``.
 
         Returns Dhanam's response, expected to contain a hosted-checkout
-        ``url`` the caller redirects the browser to. Raises on HTTP error
-        (including 404 while Dhanam's checkout endpoint is not yet live).
+        ``url`` the caller redirects the browser to. Raises
+        ``httpx.HTTPStatusError`` on any non-2xx — including 404, which means
+        the request we built was wrong, not that Dhanam lacks the feature.
         """
         payload: dict[str, Any] = {
             "tier": tier,

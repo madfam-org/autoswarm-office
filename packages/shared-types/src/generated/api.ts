@@ -1088,10 +1088,10 @@ export interface paths {
          *     ``subscription.created`` webhook flows back through the Dhanam webhook
          *     handler. Returns ``{"url": ...}`` for the browser to redirect to.
          *
-         *     While Dhanam's checkout API is not yet live (its endpoint 404s / the
-         *     ``DHANAM_API_URL`` is unset), this returns HTTP 501 with a clear
-         *     ``status: "not_configured"`` body rather than a 500 — the full contract
-         *     is wired and flips on the moment Dhanam ships the endpoint.
+         *     When ``DHANAM_API_URL`` is unset this returns HTTP 501 with a clear
+         *     ``status: "not_configured"`` body rather than a 500. Any error from Dhanam
+         *     itself is a 502 — including a 404, which says the request we built was
+         *     wrong, not that the feature is missing.
          */
         post: operations["create_checkout_api_v1_billing_checkout_post"];
         delete?: never;

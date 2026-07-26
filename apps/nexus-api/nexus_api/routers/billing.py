@@ -159,15 +159,16 @@ async def compute_token_status(
 @router.post("/portal")
 async def create_billing_portal() -> dict[str, object]:
     """Create a Dhanam billing portal session for self-service management."""
+    # Goes through DhanamClient rather than building the URL inline: the
+    # inline version omitted the /v1 segment Dhanam serves everything under,
+    # so every portal request 404'd. One normalisation point, one place to
+    # get it wrong.
+    from ..billing_client import DhanamClient
+
     settings = get_settings()
+    client = DhanamClient(settings.dhanam_api_url, settings.dhanam_webhook_secret)
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(
-                f"{settings.dhanam_api_url.rstrip('/')}/billing/portal",
-                headers={"Authorization": f"Bearer {settings.dhanam_webhook_secret}"},
-            )
-            response.raise_for_status()
-            return response.json()
+        return await client.create_portal_session(settings.dhanam_webhook_secret)
     except httpx.HTTPError as exc:
         logger.warning("Dhanam portal API unreachable: %s", exc)
         raise HTTPException(
@@ -244,10 +245,10 @@ async def create_checkout(
     ``subscription.created`` webhook flows back through the Dhanam webhook
     handler. Returns ``{"url": ...}`` for the browser to redirect to.
 
-    While Dhanam's checkout API is not yet live (its endpoint 404s / the
-    ``DHANAM_API_URL`` is unset), this returns HTTP 501 with a clear
-    ``status: "not_configured"`` body rather than a 500 — the full contract
-    is wired and flips on the moment Dhanam ships the endpoint.
+    When ``DHANAM_API_URL`` is unset this returns HTTP 501 with a clear
+    ``status: "not_configured"`` body rather than a 500. Any error from Dhanam
+    itself is a 502 — including a 404, which says the request we built was
+    wrong, not that the feature is missing.
     """
     from ..billing_tiers import is_valid_subscription_tier
     from ..services.billing_sync import resolve_tenant_by_org_id
@@ -290,17 +291,19 @@ async def create_checkout(
             space_id=space_id,
         )
     except httpx.HTTPStatusError as exc:
-        # 404 = Dhanam hasn't shipped the checkout endpoint yet → not_configured,
-        # not a server error. Other statuses are genuine upstream failures.
-        if exc.response.status_code == 404:
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail={
-                    "status": "not_configured",
-                    "message": "Checkout endpoint is not yet available on Dhanam.",
-                },
-            ) from exc
-        logger.warning("Dhanam checkout failed: %s", exc)
+        # Every non-2xx is an upstream failure, 404 included. Reporting 404 as
+        # 501 "not_configured" told us for months that Dhanam had not shipped
+        # checkout, when in fact we were calling a URL of our own that was
+        # missing the /v1 segment — a misdiagnosis of our own request that
+        # pointed the blame at another team. Log the URL actually dialled so
+        # the next malformed path is one grep away; the response stays generic
+        # because this route is public and the upstream endpoint is not the
+        # browser's business.
+        logger.error(
+            "Dhanam checkout failed: HTTP %s from %s",
+            exc.response.status_code,
+            exc.request.url,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Checkout service error",

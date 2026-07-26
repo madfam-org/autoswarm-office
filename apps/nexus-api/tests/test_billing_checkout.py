@@ -1,9 +1,14 @@
 """Tests for the subscription checkout + tiers endpoints (M1 First-Peso).
 
 Selva holds no Stripe keys — it asks Dhanam to create the hosted checkout.
-Until Dhanam's checkout API is live these must degrade to a clear 501
-`not_configured`, never a 500, so the frontend can show a truthful message
-and the contract flips on the moment Dhanam ships.
+With ``DHANAM_API_URL`` unset the route must degrade to a clear 501
+`not_configured`, never a 500, so the frontend can show a truthful message.
+
+These patch ``DhanamClient.create_checkout`` to exercise route semantics
+(tier validation, return-URL confinement). What Dhanam is actually *called
+with*, and how its error statuses map, is covered in
+``test_dhanam_url_construction.py`` against a real client — patching the
+client method here is why a malformed URL went unnoticed for months.
 """
 
 from __future__ import annotations
@@ -65,32 +70,6 @@ class TestCheckout:
             json={"tier": "professional"},
             headers=auth_headers,
         )
-        assert resp.status_code == 501
-        assert resp.json()["detail"]["status"] == "not_configured"
-
-    async def test_dhanam_404_degrades_to_not_configured(
-        self, client: httpx.AsyncClient, auth_headers: dict[str, str]
-    ) -> None:
-        """Dhanam reachable but checkout endpoint not shipped yet (404) →
-        501 not_configured, not a 502."""
-        request = httpx.Request("POST", "https://api.dhan.am/billing/checkout")
-        response = httpx.Response(404, request=request)
-        http_404 = httpx.HTTPStatusError("404", request=request, response=response)
-        with (
-            patch(
-                "nexus_api.routers.billing.get_settings",
-                return_value=_settings_with_dhanam(),
-            ),
-            patch(
-                "nexus_api.billing_client.DhanamClient.create_checkout",
-                new=AsyncMock(side_effect=http_404),
-            ),
-        ):
-            resp = await client.post(
-                "/api/v1/billing/checkout",
-                json={"tier": "professional"},
-                headers=auth_headers,
-            )
         assert resp.status_code == 501
         assert resp.json()["detail"]["status"] == "not_configured"
 

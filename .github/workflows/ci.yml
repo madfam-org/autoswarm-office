@@ -558,8 +558,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # PINNED, not @master. Two reasons, and the first one already bit us:
+      #
+      # 1. It broke main. trivy-action's master branch changed to validate its
+      #    installer's `path` input and started failing with "The 'path' input
+      #    must be a literal path" on a workflow that passes no `path` at all.
+      #    Nothing in this repo changed; an upstream branch moved under us. CI on
+      #    main has been red since.
+      # 2. It is the only action in this repo on a branch ref -- everything else
+      #    uses a version tag. A mutable ref means whatever that branch holds at
+      #    the moment the job starts executes here with this workflow's token.
+      #
+      # Pinned by SHA rather than by tag, unlike the rest of this file. A git tag
+      # can be re-pointed too, and this particular action is the security scanner
+      # -- the one step whose job is to be trustworthy. The tag is recorded beside
+      # it so the version stays readable and Dependabot can still bump it.
+      #
+      # NOTE for whoever bumps this: the release tags carry a leading `v`. There
+      # is no `0.36.0` tag, only `v0.36.0`; a pin without the `v` resolves to
+      # nothing and fails the job for a reason that looks nothing like the cause.
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .

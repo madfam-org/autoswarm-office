@@ -347,9 +347,27 @@ jobs:
           --health-start-period 30s
       redis:
         image: redis:7
-        credentials:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        # NO `credentials:` here, deliberately. It used to carry
+        # DOCKERHUB_USERNAME/DOCKERHUB_TOKEN, and that made EVERY Dependabot PR in
+        # this repo permanently red.
+        #
+        # Dependabot-triggered runs read from the Dependabot secret store, not the
+        # Actions one. Those two secrets are not defined there, so they resolved to
+        # '' and GitHub rejected the whole workflow file before running anything:
+        #
+        #   ##[error]The template is not valid. .github/workflows/ci.yml
+        #   (Line: 351, Col: 21): Unexpected value ''
+        #
+        # The job died in ~3 seconds having executed zero steps, and it looked like
+        # a test failure. It is invisible on main because push events get the normal
+        # repo secrets — so main stayed green while every dependency PR was
+        # unmergeable under any "all checks must pass" policy.
+        #
+        # The postgres service in this same job has never had a credentials block
+        # and pulls fine, so anonymous pulls of official images work on these
+        # runners. If Docker Hub rate limits ever do bite, the fix is to add those
+        # secrets to the DEPENDABOT scope as well — not to authenticate one service
+        # and leave the other anonymous.
         ports:
           - 6379:6379
         options: >-

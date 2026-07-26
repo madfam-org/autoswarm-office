@@ -151,6 +151,30 @@ Selva Office is part of the MADFAM platform and integrates with:
 - **Dhanam** -- Billing, subscriptions, and compute token budgets
 - **Enclii** -- Deployment orchestration via ArgoCD (ports 4200-4204)
 
+## Role in the MADFAM monetization engine
+
+Selva Office sits in MADFAM's commercial pipeline in two ways.
+
+- **Inference gateway.** It is the ecosystem's centralized LLM inference path. Other MADFAM platforms call Selva
+  rather than each holding their own model credentials, which is what makes model spend measurable and governable
+  in one place instead of scattered across services.
+- **Human approval.** It hosts the human-in-the-loop workflows where machine-generated proposals are reviewed. An
+  agent can propose; a person approves or rejects, and the proposal does not take effect until they do. In a
+  pipeline that is otherwise automated end to end, this is the deliberate place where a human stays in the loop on
+  commercially consequential changes.
+
+Selva Office is also itself a sold product with its own paid tiers.
+
+The approval mechanics are documented in [Human-in-the-Loop Flow](docs/HITL_FLOW.md).
+
+> **Boundary note.** This is a deliberately sanitized summary of the repository's *designed* role. It is not a
+> statement about the live state of any deployment. The canonical end-to-end description of the monetization
+> pipeline is private and lives in the `internal-devops` repository at `docs/monetization-engine.md`. Which
+> downstream systems accept an approved proposal, endpoint and route detail, credential names, and deployment
+> topology belong there and must not be added to this repository.
+
+_Last Updated: 2026-07-26_
+
 ## Outbound Reddit Posting (operator runbook)
 
 Tenant swarms can submit text posts to a single subreddit via the

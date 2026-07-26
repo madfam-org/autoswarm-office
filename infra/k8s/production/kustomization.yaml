@@ -8,6 +8,9 @@ namespace: selva
   # selva-secret-writer-rolebinding.yaml and are applied OUTSIDE this
   # kustomize bundle (kustomize's namespace: selva would rewrite
   # them incorrectly). See that file's header for the ops procedure.
+# Cross-path read of phynd's HMAC/bearer values (secret/phynd-crm already
+# exists), so selva signs exactly what phynd verifies. Consumer mounts in
+# nexus-api are optional:true; safe to include pre-consumer.
 resources:
 - configmap.yaml
 - org-config.yaml
@@ -26,9 +29,6 @@ resources:
 - keda-scaledobject.yaml
 - keda-trigger-auth.yaml
 - selva-secret-writer-sa.yaml
-# Cross-path read of phynd's HMAC/bearer values (secret/phynd-crm already
-# exists), so selva signs exactly what phynd verifies. Consumer mounts in
-# nexus-api are optional:true; safe to include pre-consumer.
 - phynd-external-secret.yaml
 
 commonLabels:
@@ -58,7 +58,7 @@ commonLabels:
 # observed in a ready production ReplicaSet after the newer audit-derived
 # digest failed to pull.
 images:
-- digest: sha256:ed6658e3f1c7dfe28a1b682939e40fe9277b0178f8a3e084535377a1125b1d2d
+- digest: sha256:4a8e7b555079d1a56c3d1a697ecf48d068c46526530edf873c9348baac72f7a4
   name: ghcr.io/madfam-org/selva-admin
   newName: ghcr.io/madfam-org/selva-admin
 - digest: sha256:8d472437076ff6f1f7f7460da46b57e429a180ad7ba4b6dd6975b5a4d9e42867
@@ -67,16 +67,16 @@ images:
 - digest: sha256:66d3fa4a4bcc641c27e555cc7ccd962e90fa797843935f478c7f4ee406be26c2
   name: ghcr.io/madfam-org/selva-gateway
   newName: ghcr.io/madfam-org/selva-gateway
-- digest: sha256:dafed7c699002ea0a6f3f4f24f615eed85a41f4e64734e43dd32df565b08d6cb
+- digest: sha256:cbf63d41a2e2b4ca44d2f08a4050d6a25e958c9be37a30132c2c472b54ddf340
   name: ghcr.io/madfam-org/selva-inference-gateway
   newName: ghcr.io/madfam-org/selva-inference-gateway
-- digest: sha256:f408fe8b275dc3d9bdee9e4878f77c82a760c376094e8a5ef1531ef461620f40
+- digest: sha256:58735913d4a3649b5583eee7ddc047a80a8859d7a8d064cf887e8955252e4b6d
   name: ghcr.io/madfam-org/selva-nexus-api
   newName: ghcr.io/madfam-org/selva-nexus-api
-- digest: sha256:8964ce22e675ed60c3bf32770a3296e1a5c5240e076079eb06816fadbb3ed712
+- digest: sha256:4c4e67b399d8b26babce217011c67d5823a05f335d001ed34f60c773124808c0
   name: ghcr.io/madfam-org/selva-office-ui
   newName: ghcr.io/madfam-org/selva-office-ui
-- digest: sha256:9b1b77928279866d37818cdf7959d3793eee8f3628be3dc5be7cee24a52c09f2
+- digest: sha256:fddfaaf49e60811c30b2bed92e384b7ab5f7566a1efa5977a469ad2827748c30
   name: ghcr.io/madfam-org/selva-workers
   newName: ghcr.io/madfam-org/selva-workers
 

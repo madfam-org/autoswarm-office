@@ -163,7 +163,9 @@ Selva Office sits in MADFAM's commercial pipeline in two ways.
   pipeline that is otherwise automated end to end, this is the deliberate place where a human stays in the loop on
   commercially consequential changes.
 
-Selva Office is also itself a sold product with its own paid tiers.
+Selva Office is also a MADFAM product in its own right, with its tier definitions codified in
+[`infra/pricing/selva-tiers.json`](infra/pricing/selva-tiers.json). Current availability and prices are whatever
+the public pricing page shows; this document does not restate them.
 
 The approval mechanics are documented in [Human-in-the-Loop Flow](docs/HITL_FLOW.md).
 

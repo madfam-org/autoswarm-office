@@ -50,9 +50,9 @@ replicas:
 # digest below will be overwritten by the first staging deploy.
 images:
   - name: ghcr.io/madfam-org/selva-nexus-api
-    digest: sha256:1f58073fbedd0719d56edbb77bf54e1d662955a6a800d08f326c65dbb339d13d
+    digest: sha256:7ff3a9ca323315485219ca8462d480038c09d6ef545f97e01fcdf3ead0ebb82e
   - name: ghcr.io/madfam-org/selva-office-ui
-    digest: sha256:0ee217a8f8c3a8d56136bdbe451e0f7dccf9ea3650bd029236953bd8eb5b6219
+    digest: sha256:118c074fb9fa6ed4ab1c20ad0c4746b02e146f4f7a082ac35d6ffe41fa8eea49
   - name: ghcr.io/madfam-org/selva-colyseus
     digest: sha256:27ed8a1ef85055e1374ebd6ce008742f224ff787cfa7fbcf8110365d8d736c56
   - name: ghcr.io/madfam-org/selva-admin

@@ -260,7 +260,23 @@ class TestBillingHeaderFix:
         self, client: httpx.AsyncClient, auth_headers: dict[str, str]
     ) -> None:
         """Verify the webhook checks x-dhanam-signature (not x-janua-signature)."""
-        body = json.dumps({"type": "subscription.updated"}).encode()
+        # A well-formed canonical envelope (data.plan_id / data.organization_id
+        # per Dhanam's notifyProductWebhooks) — the reader now rejects
+        # unrecognizable shapes with 422, and this test is about the signature
+        # header, not the envelope shape.
+        body = json.dumps(
+            {
+                "type": "subscription.updated",
+                "id": "test-header-fix-event",
+                "data": {
+                    "customer_id": "dhanam-user-1",
+                    "plan_id": "selva_team",
+                    "organization_id": "org-header-fix",
+                    "status": "updated",
+                },
+                "timestamp": "2026-07-28T12:00:00.000Z",
+            }
+        ).encode()
 
         correct_sig = hmac_mod.new(b"test-secret", body, hashlib.sha256).hexdigest()
 

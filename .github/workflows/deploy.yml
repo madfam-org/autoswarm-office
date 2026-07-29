@@ -77,7 +77,7 @@ jobs:
             echo "${service}=false" >> "$GITHUB_OUTPUT"
           }
 
-          check_service "nexus-api"  "apps/nexus-api/" "packages/(orchestrator|skills|config|permissions|inference)/" "pyproject.toml" "uv.lock" "infra/docker/Dockerfile.nexus-api"
+          check_service "nexus-api"  "apps/nexus-api/" "packages/(orchestrator|skills|config|permissions|inference)/" "pyproject.toml" "uv.lock" "infra/docker/Dockerfile.nexus-api" "infra/pricing/"
           check_service "office-ui"  "apps/office-ui/" "packages/(shared-types|ui|config)/" "infra/docker/Dockerfile.office-ui"
           check_service "colyseus"   "apps/colyseus/" "packages/(shared-types|config)/" "infra/docker/Dockerfile.colyseus"
           check_service "admin"      "apps/admin/" "packages/(shared-types|ui|config|permissions)/" "infra/docker/Dockerfile.admin"

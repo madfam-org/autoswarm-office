@@ -63,11 +63,16 @@ def _load_pricing() -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         # Last-resort fallback: if the JSON file is missing or
         # corrupted, ship the same defaults the previous hardcoded
-        # version had so the worker still runs. Logged loud because
-        # this is a real misconfig.
-        logger.error(
-            "Pricing JSON missing or corrupted at %s — using emergency fallback. "
-            "This means CI / packaging dropped the canonical file. Investigate.",
+        # version had so the worker still runs. CRITICAL, not ERROR:
+        # this fallback ran silently in production for months because
+        # the Dockerfile never shipped infra/pricing/ — the documented
+        # fail-open defect class. The stable marker below is what the
+        # packaging regression test and log alerting key on.
+        logger.critical(
+            "pricing_json_fallback_active: pricing JSON missing or corrupted "
+            "at %s — using emergency fallback values. This means CI / "
+            "packaging dropped the canonical file (check Dockerfile COPY of "
+            "infra/pricing/). Investigate immediately.",
             _PRICING_JSON,
             exc_info=True,
         )

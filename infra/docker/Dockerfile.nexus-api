@@ -25,6 +25,10 @@ LABEL org.opencontainers.image.source=https://github.com/madfam-org/selva-office
 COPY --from=builder /app/.venv /app/.venv
 COPY apps/nexus-api/ apps/nexus-api/
 COPY packages/ packages/
+# Canonical pricing JSON — billing_tiers._load_pricing resolves
+# /app/infra/pricing/selva-tiers.json relative to the package. Without this
+# COPY the loader silently ran on its emergency fallback in production.
+COPY infra/pricing/ infra/pricing/
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1

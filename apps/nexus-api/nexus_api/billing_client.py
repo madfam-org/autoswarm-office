@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import logging
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -73,40 +74,83 @@ class DhanamClient:
             resp.raise_for_status()
             return resp.json()
 
-    async def create_checkout(
+    async def resolve_federation_customer(
         self,
-        bearer_token: str,
+        federation_token: str,
         *,
-        tier: str,
+        email: str,
+        janua_sub: str | None = None,
+        name: str | None = None,
+    ) -> dict[str, Any]:
+        """POST /customers/resolve -- resolve (or provision) the Dhanam billing
+        customer for a federated identity.
+
+        The server-to-server checkout path is Dhanam's customer-federation
+        surface, authenticated with the shared federation token — NOT the
+        webhook secret, which only signs inbound webhook payloads and is never
+        valid as an outbound credential. ``email`` is the required identity
+        key; ``janua_sub`` (the OIDC ``sub`` claim) is the stable
+        cross-ecosystem identity and is linked when supplied.
+
+        Returns Dhanam's response, expected to carry the Dhanam user id as
+        ``externalId`` — the key ``create_federation_checkout`` requires.
+        Raises ``httpx.HTTPStatusError`` on any non-2xx.
+        """
+        payload: dict[str, Any] = {"email": email}
+        if janua_sub:
+            payload["januaSub"] = janua_sub
+        if name:
+            payload["name"] = name
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{self.base_url}/customers/resolve",
+                headers={"Authorization": f"Bearer {federation_token}"},
+                json=payload,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def create_federation_checkout(
+        self,
+        federation_token: str,
+        *,
+        external_id: str,
+        plan_id: str,
         success_url: str,
         cancel_url: str,
-        space_id: str | None = None,
+        metadata: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        """POST /billing/checkout -- start a subscription checkout.
+        """POST /customers/{externalId}/checkout -- start a subscription checkout.
 
         Selva never creates the Stripe object itself (RFC 0011 / the
         monetization-architecture north star: Dhanam is the only holder of
-        Stripe keys). We hand Dhanam the tier + return URLs; Dhanam creates
-        the Stripe Checkout Session / PaymentIntent, and the resulting
-        ``subscription.created`` webhook flows back through
-        ``handle_dhanam_billing_event``.
+        Stripe keys). This is the federation checkout route — Dhanam declares
+        ``/billing/checkout`` GET-only, so the previous POST there could never
+        have succeeded (404 "Cannot POST"). The federated flow is: resolve the
+        customer's ``externalId`` first, then drive this endpoint with it.
 
-        Returns Dhanam's response, expected to contain a hosted-checkout
-        ``url`` the caller redirects the browser to. Raises
-        ``httpx.HTTPStatusError`` on any non-2xx — including 404, which means
-        the request we built was wrong, not that Dhanam lacks the feature.
+        ``plan_id`` must be the fully-qualified catalog plan id in Dhanam's
+        ``{product}_{tier}`` convention (e.g. ``selva_team``) — an unprefixed
+        tier slug resolves against the wrong product upstream. ``metadata``
+        string pairs are threaded into the PSP session and flow back on the
+        payment webhook, which is how the purchase is attributed to the org.
+
+        Returns Dhanam's response, expected to contain ``checkoutUrl`` (and a
+        ``sessionId``). Raises ``httpx.HTTPStatusError`` on any non-2xx —
+        including 404, which means the request we built was wrong, not that
+        Dhanam lacks the feature.
         """
         payload: dict[str, Any] = {
-            "tier": tier,
-            "success_url": success_url,
-            "cancel_url": cancel_url,
+            "planId": plan_id,
+            "successUrl": success_url,
+            "cancelUrl": cancel_url,
         }
-        if space_id:
-            payload["space_id"] = space_id
+        if metadata:
+            payload["metadata"] = metadata
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
-                f"{self.base_url}/billing/checkout",
-                headers={"Authorization": f"Bearer {bearer_token}"},
+                f"{self.base_url}/customers/{quote(external_id, safe='')}/checkout",
+                headers={"Authorization": f"Bearer {federation_token}"},
                 json=payload,
             )
             resp.raise_for_status()

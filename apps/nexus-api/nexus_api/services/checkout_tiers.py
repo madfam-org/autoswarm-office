@@ -42,6 +42,17 @@ LEGACY_TIER_ALIASES: dict[str, str] = {
     "enterprise": "business",
 }
 
+#: Inverse of ``LEGACY_TIER_ALIASES``: Dhanam catalog tier slug → the pricing
+#: JSON slug the rest of this codebase speaks (``billing_tiers`` daily limits,
+#: the pricing page, the Stripe price-id map). The webhook reader uses this so
+#: a purchase of catalog tier ``team`` lands as ``professional`` in
+#: ``tenant_configs.subscription_tier`` — the vocabulary ``get_daily_limit``
+#: resolves. Slugs missing from this map pass through unchanged, so if the
+#: pricing JSON ever adopts the catalog vocabulary nothing double-translates.
+CATALOG_TIER_TO_PRICING_SLUG: dict[str, str] = {
+    catalog: legacy for legacy, catalog in LEGACY_TIER_ALIASES.items()
+}
+
 # Mirrors Dhanam's catalog cache TTL. Successful fetches are cached; failures
 # are not, so a recovering catalog is picked up on the next checkout attempt.
 _CATALOG_TTL_SECONDS = 300.0
@@ -62,6 +73,39 @@ def plan_id_for_tier(tier: str) -> str:
     is attributed to the default product, not to Selva.
     """
     return f"{SELVA_PRODUCT_SLUG}_{tier}"
+
+
+def tier_for_plan_id(plan_id: str) -> str | None:
+    """Inverse of :func:`plan_id_for_tier`: ``selva_team`` → ``team``.
+
+    This is the reader-side half of the plan-id contract. Dhanam's outbound
+    product webhooks echo the plan id verbatim in ``data.plan_id``, and its
+    dispatcher routes on the ``{product}_`` prefix — so anything delivered to
+    Selva's subscription webhook should be ``selva_{tier}``.
+
+    Returns ``None`` when *plan_id* does not carry a Selva tier: either it
+    belongs to another product (``janua_pro``, a bare Dhanam consumer slug
+    like ``essentials``) or it is the bare product slug ``selva`` with no
+    tier segment. Callers distinguish those two cases via
+    :data:`SELVA_PRODUCT_SLUG` when the difference matters.
+    """
+    slug = plan_id.strip().lower()
+    prefix = f"{SELVA_PRODUCT_SLUG}_"
+    if not slug.startswith(prefix):
+        return None
+    return slug[len(prefix) :] or None
+
+
+def pricing_slug_for_catalog_tier(tier: str) -> str:
+    """Map a Dhanam catalog tier slug onto the pricing-JSON vocabulary.
+
+    ``team`` → ``professional``; slugs already in (or unknown to) the pricing
+    vocabulary pass through unchanged so callers can validate the result
+    against ``billing_tiers.is_valid_subscription_tier`` and decide how loud
+    to be about novel slugs.
+    """
+    slug = tier.strip().lower()
+    return CATALOG_TIER_TO_PRICING_SLUG.get(slug, slug)
 
 
 async def _fetch_catalog_tier_slugs() -> frozenset[str]:

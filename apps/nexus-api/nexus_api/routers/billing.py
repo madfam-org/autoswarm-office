@@ -62,6 +62,27 @@ async def _claim_webhook_event(event_id: str) -> bool:
         return True
 
 
+async def _release_webhook_event(event_id: str) -> None:
+    """Best-effort undo of a dedup claim after a FAILED processing attempt.
+
+    Without this, the first delivery claims the id, fails, and every retry
+    Dhanam's DLQ sends is answered 200 "duplicate" — a rejected event would
+    read as recovered upstream while never having been processed here."""
+    try:
+        from selva_redis_pool import get_redis_pool
+
+        settings = get_settings()
+        pool = get_redis_pool(url=settings.redis_url)
+        await pool.execute_with_retry("delete", f"selva:webhook:dhanam:{event_id}")
+    except Exception:
+        logger.warning(
+            "Webhook dedup release unavailable (Redis) for event=%s; a retry "
+            "of this event may be misreported as a duplicate",
+            event_id,
+            exc_info=True,
+        )
+
+
 @router.get("/status")
 async def billing_status() -> dict[str, object]:
     """Proxy to the Dhanam billing API to retrieve subscription status.
@@ -423,8 +444,38 @@ async def dhanam_webhook(request: Request) -> dict[str, str]:
 
     logger.info("Received Dhanam billing webhook: %s (event=%s)", event_type, event_id)
 
-    from ..services.billing_sync import handle_dhanam_billing_event
+    from ..services.billing_sync import (
+        UnrecognizedDhanamEnvelopeError,
+        handle_dhanam_billing_event,
+    )
 
-    await handle_dhanam_billing_event(payload)
+    try:
+        await handle_dhanam_billing_event(payload)
+    except UnrecognizedDhanamEnvelopeError as exc:
+        # A signed envelope we could not apply. Release the dedup claim (so a
+        # retry is genuinely reprocessed, not masked as a duplicate success)
+        # and answer non-2xx: Dhanam's dispatcher persists non-2xx responses
+        # to its DLQ, which is the upstream-visible signal a silent 200 never
+        # produces. The detail body lands in that DLQ row's error message.
+        await _release_webhook_event(event_id)
+        logger.error(
+            "dhanam_webhook_envelope_rejected: type=%s event=%s reason=%s",
+            event_type,
+            event_id,
+            exc.reason,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "status": "unrecognized_envelope",
+                "reason": exc.reason,
+                "event_type": str(event_type),
+            },
+        ) from exc
+    except Exception:
+        # Transient failure (DB down, etc.). Release the claim so the retry
+        # that follows the resulting 500 actually reprocesses the event.
+        await _release_webhook_event(event_id)
+        raise
 
     return {"status": "ok", "event_type": str(event_type)}

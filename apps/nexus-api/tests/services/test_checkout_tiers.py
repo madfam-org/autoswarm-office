@@ -20,8 +20,10 @@ from nexus_api.services.checkout_tiers import (
     LEGACY_TIER_ALIASES,
     get_valid_checkout_tiers,
     plan_id_for_tier,
+    pricing_slug_for_catalog_tier,
     reset_catalog_cache,
     resolve_checkout_tier,
+    tier_for_plan_id,
 )
 
 _CATALOG_TIERS = frozenset({"developer", "team", "business"})
@@ -191,3 +193,32 @@ class TestPlanId:
         attributed to the wrong product upstream."""
         assert plan_id_for_tier("team") == "selva_team"
         assert plan_id_for_tier("developer") == "selva_developer"
+
+
+class TestPlanIdInverse:
+    """Reader-side half of the plan-id contract (Dhanam webhook envelopes
+    echo the plan id verbatim in ``data.plan_id``)."""
+
+    def test_round_trips_plan_id_for_tier(self) -> None:
+        for tier in ("team", "developer", "business"):
+            assert tier_for_plan_id(plan_id_for_tier(tier)) == tier
+
+    def test_strips_selva_prefix(self) -> None:
+        assert tier_for_plan_id("selva_team") == "team"
+        assert tier_for_plan_id("  SELVA_Business ") == "business"
+
+    def test_foreign_plans_return_none(self) -> None:
+        assert tier_for_plan_id("janua_pro") is None
+        assert tier_for_plan_id("essentials") is None
+        # Bare product slug carries no tier segment.
+        assert tier_for_plan_id("selva") is None
+        assert tier_for_plan_id("selva_") is None
+
+    def test_pricing_slug_mapping_inverts_legacy_aliases(self) -> None:
+        for pricing_slug, catalog_slug in LEGACY_TIER_ALIASES.items():
+            assert pricing_slug_for_catalog_tier(catalog_slug) == pricing_slug
+
+    def test_pricing_slug_passthrough_for_canonical_and_unknown(self) -> None:
+        assert pricing_slug_for_catalog_tier("professional") == "professional"
+        assert pricing_slug_for_catalog_tier("scale") == "scale"
+        assert pricing_slug_for_catalog_tier("  Team ") == "professional"

@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     dhanam_api_url: str = ""
     dhanam_webhook_secret: str = ""
     dhanam_catalog_apply_secret: str = ""
+    # Bearer token for Dhanam's server-to-server customer-federation surface
+    # (POST /v1/customers/resolve + POST /v1/customers/{externalId}/checkout).
+    # Distinct from dhanam_webhook_secret, which only verifies inbound webhook
+    # HMACs and is never valid as an outbound credential. Empty -> checkout
+    # fails closed with 503 (see routers/billing.py). Provisioning is an
+    # operator action tracked in the private canonical doc (internal-devops).
+    federation_api_token: str = ""
 
     # -- Tulana (pricing intelligence handoff) --------------------------------
     tulana_api_url: str = ""

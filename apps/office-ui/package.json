@@ -26,7 +26,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "simple-peer": "^9.11.1",
-    "zustand": "^4.5.7"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@selva/config": "workspace:*",

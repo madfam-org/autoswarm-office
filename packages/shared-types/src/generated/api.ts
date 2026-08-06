@@ -1083,15 +1083,20 @@ export interface paths {
          * @description Start a subscription checkout for the caller's org.
          *
          *     Selva holds no Stripe keys — Dhanam is the sole payment surface (RFC 0011
-         *     / monetization north star). We validate the tier, resolve the caller's
-         *     Dhanam space, and ask Dhanam to create the hosted checkout; the resulting
-         *     ``subscription.created`` webhook flows back through the Dhanam webhook
-         *     handler. Returns ``{"url": ...}`` for the browser to redirect to.
+         *     / monetization north star). The server-to-server path is Dhanam's
+         *     customer-federation flow: resolve the caller's billing customer by their
+         *     identity (email + OIDC ``sub``), then create the hosted checkout against
+         *     the returned ``externalId``. The purchase is attributed to the caller's
+         *     org via checkout metadata, which flows back on the payment webhook.
+         *     Returns ``{"url": ...}`` for the browser to redirect to.
          *
-         *     While Dhanam's checkout API is not yet live (its endpoint 404s / the
-         *     ``DHANAM_API_URL`` is unset), this returns HTTP 501 with a clear
-         *     ``status: "not_configured"`` body rather than a 500 — the full contract
-         *     is wired and flips on the moment Dhanam ships the endpoint.
+         *     When ``DHANAM_API_URL`` is unset this returns HTTP 501 with a clear
+         *     ``status: "not_configured"`` body rather than a 500. When the federation
+         *     token is unset the route fails closed with 503 — without it every
+         *     upstream call is a guaranteed 401, and the webhook secret is NOT a
+         *     substitute credential (sending it upstream was the previous defect).
+         *     Any error from Dhanam itself is a 502 — including a 404, which says the
+         *     request we built was wrong, not that Dhanam lacks the feature.
          */
         post: operations["create_checkout_api_v1_billing_checkout_post"];
         delete?: never;

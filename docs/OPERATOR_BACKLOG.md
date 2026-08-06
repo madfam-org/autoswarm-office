@@ -119,12 +119,12 @@ operator:
   #244 fixed the real GET→reset race.
 
 **New operator blocker (see item 20 below): migrations 0040 AND 0041 need
-applying in prod.** The deploy pipeline still does not auto-run migrations.
+applying in prod.** *(Resolved 2026-08-06 — see item 20.)* The deploy pipeline still does not auto-run migrations.
 An ArgoCD PreSync migration hook (**PR #238**) is **open, not merged**
 (blocked on a live Kyverno dry-run pending an SSH-tunnel outage). Until #238
 merges, each new migration needs a manual `alembic upgrade head`.
 
-**Still open after this update:** apply migrations 0040/0041 in prod (item 20),
+**Still open after this update:** apply migrations 0040/0041 in prod (item 20 — **done 2026-08-06**),
 arm the inference budget gate (item 14), wire real collection (Dhanam
 `/billing/checkout` endpoint + Tulana usage reporter — items 3 and 20),
 per-product AI attribution (item 13), plus the prior 2.4.0 Tier 7 items —
@@ -601,8 +601,18 @@ Tracked in [PHASE_0_REMEDIATION_PLAN.md](PHASE_0_REMEDIATION_PLAN.md) § Gap ana
   0034 work shipped in PRs #222 / #229 and the gateway extraction (P2).
 - **Cross-refs**: `docs/rfcs/`, PR #222, #229 (RFC 0034 implementation).
 
-### 20. Apply migrations 0040 and 0041 in prod (no auto-migration hook)
+### 20. Apply migrations 0040 and 0041 in prod (no auto-migration hook) — **DONE (2026-08-06)**
 
+- **Status (2026-08-06)**: **RESOLVED.** Recon found prod already at 0040;
+  0041 applied today via `scripts/ops/create-selva-migrator-and-apply-0041.sh`
+  (landed by PR #262 from the operator's stash). The script also created the
+  `selva_migrator` role (member of `enclii` + `autoswarm`, default privileges
+  granting DML to the app role) and stored
+  `selva-secrets/migration-database-url` (direct :5432, not pgbouncer) — so the
+  PreSync migrate-job from PR #238 (since merged) now has its migration
+  identity and future migrations run hands-off. Verified in prod:
+  `alembic current` = `0041 (head)`; `tenant_configs.office_size`
+  (varchar, nullable) exists; app role reads `tenant_configs` normally.
 - **Status (2026-07-19)**: **Two new migrations unapplied in prod.** The
   monetization/onboarding work shipped **migration 0040** (`AgentHoursLedger`,
   PR #237) and **migration 0041** (`TenantConfig.office_size`, PR #246), but

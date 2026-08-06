@@ -15,6 +15,7 @@ resources:
 - configmap.yaml
 - org-config.yaml
 - service-account.yaml
+- migrate-job.yaml
 - nexus-api.yaml
 - inference-gateway.yaml
 - office-ui.yaml

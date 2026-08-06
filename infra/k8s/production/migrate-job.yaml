@@ -1,0 +1,131 @@
+# ArgoCD PreSync migration hook — the fix for schema drift.
+#
+# Prod sat at Alembic 0036 while the deployed image shipped 0040 because
+# nothing ran migrations: ArgoCD auto-syncs the manifests, but there was no
+# migration step, so every DDL migration silently failed-safe (columns/tables
+# absent, code degraded) until an operator hand-ran `alembic upgrade head`.
+#
+# This Job runs `alembic upgrade head` as a PreSync hook, so the schema is
+# advanced BEFORE the new app pods roll — new code never starts against an
+# old schema. It mirrors nexus-api.yaml's image (name-only, so kustomize pins
+# the SAME digest being deployed — the migration always matches the code),
+# env, and securityContext.
+#
+# Safety:
+#   - alembic upgrade head is idempotent + all Selva migrations are guarded
+#     (existence checks), so a re-run is a no-op — a retried/re-synced hook
+#     cannot corrupt state.
+#   - hook-delete-policy BeforeHookCreation gives every sync a fresh Job (no
+#     name-collision on the immutable Job).
+#   - A FAILING PreSync hook blocks the whole sync (by design — do not deploy
+#     code whose migration didn't apply). backoffLimit gives transient DB
+#     blips a couple of retries before the sync is failed.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nexus-api-migrate
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: nexus-api-migrate
+    app.kubernetes.io/part-of: selva-office
+    app.kubernetes.io/component: migration
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    # Fresh Job each sync — the previous one is deleted before this is created,
+    # so the immutable Job spec never collides on name.
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 2
+  # Reap finished migration Jobs after 30 min so they don't accumulate.
+  ttlSecondsAfterFinished: 1800
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        # The POD carries nexus-api's identity on purpose: if a cluster
+        # NetworkPolicy allowlists DB (postgres) access by
+        # `app.kubernetes.io/name: nexus-api` (the known pod-label DB
+        # allowlist pattern in this cluster), a fresh Job pod with a
+        # different name would get connection-refused on 5432. Reusing the
+        # allowed identity is the sanctioned way to let a Job reach the DB.
+        # The Job's own metadata.name (nexus-api-migrate) stays distinct.
+        app.kubernetes.io/name: nexus-api
+        app.kubernetes.io/part-of: selva-office
+        app.kubernetes.io/component: migration
+    spec:
+      serviceAccountName: selva-sa
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          # Name-only: kustomize `images:` rewrites this to the same pinned
+          # digest as the nexus-api Deployment, so the migration always runs
+          # the exact image being deployed.
+          image: ghcr.io/madfam-org/selva-nexus-api
+          workingDir: /app/apps/nexus-api
+          command: ["/app/.venv/bin/alembic"]
+          args: ["upgrade", "head"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          envFrom:
+            - configMapRef:
+                name: selva-config
+          env:
+            # alembic env.py calls get_settings(), so the Settings validator
+            # runs — it refuses to start without these prod secrets. Mirror the
+            # nexus-api Deployment's env so the migration image boots cleanly.
+            - name: ENVIRONMENT
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: redis-url
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: secret-key
+            - name: WORKER_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: WORKER_API_TOKEN
+            - name: CONSENT_LEDGER_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: CONSENT_LEDGER_SIGNING_SECRET
+            - name: COLYSEUS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: selva-secrets
+                  key: colyseus-secret
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

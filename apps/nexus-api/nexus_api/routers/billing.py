@@ -7,6 +7,7 @@ import hmac as hmac_mod
 import json
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -59,6 +60,27 @@ async def _claim_webhook_event(event_id: str) -> bool:
             exc_info=True,
         )
         return True
+
+
+async def _release_webhook_event(event_id: str) -> None:
+    """Best-effort undo of a dedup claim after a FAILED processing attempt.
+
+    Without this, the first delivery claims the id, fails, and every retry
+    Dhanam's DLQ sends is answered 200 "duplicate" — a rejected event would
+    read as recovered upstream while never having been processed here."""
+    try:
+        from selva_redis_pool import get_redis_pool
+
+        settings = get_settings()
+        pool = get_redis_pool(url=settings.redis_url)
+        await pool.execute_with_retry("delete", f"selva:webhook:dhanam:{event_id}")
+    except Exception:
+        logger.warning(
+            "Webhook dedup release unavailable (Redis) for event=%s; a retry "
+            "of this event may be misreported as a duplicate",
+            event_id,
+            exc_info=True,
+        )
 
 
 @router.get("/status")
@@ -159,15 +181,16 @@ async def compute_token_status(
 @router.post("/portal")
 async def create_billing_portal() -> dict[str, object]:
     """Create a Dhanam billing portal session for self-service management."""
+    # Goes through DhanamClient rather than building the URL inline: the
+    # inline version omitted the /v1 segment Dhanam serves everything under,
+    # so every portal request 404'd. One normalisation point, one place to
+    # get it wrong.
+    from ..billing_client import DhanamClient
+
     settings = get_settings()
+    client = DhanamClient(settings.dhanam_api_url, settings.dhanam_webhook_secret)
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(
-                f"{settings.dhanam_api_url.rstrip('/')}/billing/portal",
-                headers={"Authorization": f"Bearer {settings.dhanam_webhook_secret}"},
-            )
-            response.raise_for_status()
-            return response.json()
+        return await client.create_portal_session(settings.dhanam_webhook_secret)
     except httpx.HTTPError as exc:
         logger.warning("Dhanam portal API unreachable: %s", exc)
         raise HTTPException(
@@ -233,26 +256,31 @@ class CheckoutRequest(BaseModel):
 @router.post("/checkout")
 async def create_checkout(
     body: CheckoutRequest,
-    db: AsyncSession = Depends(get_db),
+    user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
     tenant: TenantContext = Depends(get_tenant),  # noqa: B008
 ) -> dict[str, object]:
     """Start a subscription checkout for the caller's org.
 
     Selva holds no Stripe keys — Dhanam is the sole payment surface (RFC 0011
-    / monetization north star). We validate the tier, resolve the caller's
-    Dhanam space, and ask Dhanam to create the hosted checkout; the resulting
-    ``subscription.created`` webhook flows back through the Dhanam webhook
-    handler. Returns ``{"url": ...}`` for the browser to redirect to.
+    / monetization north star). The server-to-server path is Dhanam's
+    customer-federation flow: resolve the caller's billing customer by their
+    identity (email + OIDC ``sub``), then create the hosted checkout against
+    the returned ``externalId``. The purchase is attributed to the caller's
+    org via checkout metadata, which flows back on the payment webhook.
+    Returns ``{"url": ...}`` for the browser to redirect to.
 
-    While Dhanam's checkout API is not yet live (its endpoint 404s / the
-    ``DHANAM_API_URL`` is unset), this returns HTTP 501 with a clear
-    ``status: "not_configured"`` body rather than a 500 — the full contract
-    is wired and flips on the moment Dhanam ships the endpoint.
+    When ``DHANAM_API_URL`` is unset this returns HTTP 501 with a clear
+    ``status: "not_configured"`` body rather than a 500. When the federation
+    token is unset the route fails closed with 503 — without it every
+    upstream call is a guaranteed 401, and the webhook secret is NOT a
+    substitute credential (sending it upstream was the previous defect).
+    Any error from Dhanam itself is a 502 — including a 404, which says the
+    request we built was wrong, not that Dhanam lacks the feature.
     """
-    from ..billing_tiers import is_valid_subscription_tier
-    from ..services.billing_sync import resolve_tenant_by_org_id
+    from ..services.checkout_tiers import plan_id_for_tier, resolve_checkout_tier
 
-    if not is_valid_subscription_tier(body.tier):
+    tier = await resolve_checkout_tier(body.tier)
+    if tier is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"unknown subscription tier: {body.tier}",
@@ -269,38 +297,77 @@ async def create_checkout(
             },
         )
 
+    if not settings.federation_api_token:
+        # Fail closed, loudly. The token value itself is never logged.
+        logger.error(
+            "checkout_federation_token_missing: FEDERATION_API_TOKEN is unset; "
+            "refusing checkout rather than dialling Dhanam with a credential "
+            "that cannot work. Provisioning is an operator action — see the "
+            "private canonical doc (internal-devops)."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "status": "not_configured",
+                "message": "Checkout is temporarily unavailable.",
+            },
+        )
+
+    email = str(user.get("email") or "").strip()
+    if not email:
+        # Dhanam resolves the billing customer by email; a token without one
+        # (legacy/worker credentials) cannot start a checkout.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="checkout requires an account email; sign in again and retry",
+        )
+
     # Confine return URLs to our own app host — never honor an arbitrary
     # caller-supplied absolute URL as a redirect target.
     app_base = (settings.public_app_url or "https://app.selva.town").rstrip("/")
     success_url = f"{app_base}{_safe_path(body.success_path, '/office?upgraded=1')}"
     cancel_url = f"{app_base}{_safe_path(body.cancel_path, '/pricing?checkout=cancelled')}"
 
-    tenant_config = await resolve_tenant_by_org_id(db, tenant.org_id)
-    space_id = tenant_config.dhanam_space_id if tenant_config else None
-
     from ..billing_client import DhanamClient
 
-    client = DhanamClient(settings.dhanam_api_url, settings.dhanam_webhook_secret)
+    client = DhanamClient(settings.dhanam_api_url)
     try:
-        result = await client.create_checkout(
-            settings.dhanam_webhook_secret,
-            tier=body.tier,
+        resolved = await client.resolve_federation_customer(
+            settings.federation_api_token,
+            email=email,
+            janua_sub=str(user.get("sub") or "") or None,
+        )
+        external_id = str(resolved.get("externalId") or "")
+        if not external_id:
+            logger.error("Dhanam federation resolve returned no externalId")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Checkout service error",
+            )
+        result = await client.create_federation_checkout(
+            settings.federation_api_token,
+            external_id=external_id,
+            plan_id=plan_id_for_tier(tier),
             success_url=success_url,
             cancel_url=cancel_url,
-            space_id=space_id,
+            # orgId is the metadata key Dhanam's webhook processing propagates
+            # to product webhooks — it is how the purchase maps back to the org.
+            metadata={"orgId": tenant.org_id, "source": "selva-office"},
         )
     except httpx.HTTPStatusError as exc:
-        # 404 = Dhanam hasn't shipped the checkout endpoint yet → not_configured,
-        # not a server error. Other statuses are genuine upstream failures.
-        if exc.response.status_code == 404:
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail={
-                    "status": "not_configured",
-                    "message": "Checkout endpoint is not yet available on Dhanam.",
-                },
-            ) from exc
-        logger.warning("Dhanam checkout failed: %s", exc)
+        # Every non-2xx is an upstream failure, 404 included. Reporting 404 as
+        # 501 "not_configured" told us for months that Dhanam had not shipped
+        # checkout, when in fact we were calling a URL of our own that was
+        # missing the /v1 segment — a misdiagnosis of our own request that
+        # pointed the blame at another team. Log the URL actually dialled so
+        # the next malformed path is one grep away; the response stays generic
+        # because this route is public and the upstream endpoint is not the
+        # browser's business.
+        logger.error(
+            "Dhanam checkout failed: HTTP %s from %s",
+            exc.response.status_code,
+            exc.request.url,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Checkout service error",
@@ -312,14 +379,14 @@ async def create_checkout(
             detail="Checkout service unavailable",
         ) from exc
 
-    url = result.get("url")
+    url = result.get("checkoutUrl") or result.get("url")
     if not url:
         logger.error("Dhanam checkout returned no url: %s", result)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Checkout service returned no redirect URL",
         )
-    return {"url": url, "tier": body.tier}
+    return {"url": url, "tier": tier, "session_id": result.get("sessionId")}
 
 
 def _safe_path(path: str, fallback: str) -> str:
@@ -377,8 +444,38 @@ async def dhanam_webhook(request: Request) -> dict[str, str]:
 
     logger.info("Received Dhanam billing webhook: %s (event=%s)", event_type, event_id)
 
-    from ..services.billing_sync import handle_dhanam_billing_event
+    from ..services.billing_sync import (
+        UnrecognizedDhanamEnvelopeError,
+        handle_dhanam_billing_event,
+    )
 
-    await handle_dhanam_billing_event(payload)
+    try:
+        await handle_dhanam_billing_event(payload)
+    except UnrecognizedDhanamEnvelopeError as exc:
+        # A signed envelope we could not apply. Release the dedup claim (so a
+        # retry is genuinely reprocessed, not masked as a duplicate success)
+        # and answer non-2xx: Dhanam's dispatcher persists non-2xx responses
+        # to its DLQ, which is the upstream-visible signal a silent 200 never
+        # produces. The detail body lands in that DLQ row's error message.
+        await _release_webhook_event(event_id)
+        logger.error(
+            "dhanam_webhook_envelope_rejected: type=%s event=%s reason=%s",
+            event_type,
+            event_id,
+            exc.reason,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "status": "unrecognized_envelope",
+                "reason": exc.reason,
+                "event_type": str(event_type),
+            },
+        ) from exc
+    except Exception:
+        # Transient failure (DB down, etc.). Release the claim so the retry
+        # that follows the resulting 500 actually reprocesses the event.
+        await _release_webhook_event(event_id)
+        raise
 
     return {"status": "ok", "event_type": str(event_type)}

@@ -465,7 +465,7 @@ decommission the `commit-digests` stage of `deploy.yml`.
 ## Quick Start (Local Dev)
 
 ```bash
-# Prerequisites: Docker, Node 20+, pnpm 9+, Python 3.12+, uv
+# Prerequisites: Docker, Node 22.12+ (see .nvmrc), pnpm 9+, Python 3.12+, uv
 
 # 1. Clone and install
 git clone <repo-url>

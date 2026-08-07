@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@selva/shared-types": "workspace:*",
-    "@colyseus/core": "^0.16.24",
+    "@colyseus/core": "^0.18.2",
     "@colyseus/schema": "^4.0.30",
     "@colyseus/ws-transport": "^0.16.5",
     "dotenv": "^16.4.7",

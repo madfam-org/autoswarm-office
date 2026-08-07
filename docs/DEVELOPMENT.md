@@ -4,7 +4,7 @@
 
 | Tool | Version | Install |
 |------|---------|---------|
-| Node.js | >= 20 | https://nodejs.org or `nvm install 20` |
+| Node.js | >= 22.12 | https://nodejs.org or `nvm use` (reads `.nvmrc`) |
 | pnpm | >= 9 | `npm install -g pnpm` |
 | Python | >= 3.12 | https://www.python.org or `pyenv install 3.12` |
 | UV | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |

@@ -4,7 +4,7 @@ Thank you for your interest in contributing to Selva Office! This guide covers e
 
 ## Prerequisites
 
-- **Node.js** >= 20
+- **Node.js** >= 22.12 (see `.nvmrc`; `nvm use` picks it up)
 - **pnpm** >= 9
 - **Python** >= 3.12
 - **uv** (Python package manager)

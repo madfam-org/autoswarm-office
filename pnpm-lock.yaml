@@ -136,13 +136,13 @@ importers:
     dependencies:
       '@colyseus/core':
         specifier: ^0.16.24
-        version: 0.16.24(@colyseus/schema@3.0.76)(@pm2/io@6.1.0)
+        version: 0.16.24(@colyseus/schema@4.0.30(typescript@5.9.3))(@pm2/io@6.1.0)
       '@colyseus/schema':
-        specifier: ^3.0.76
-        version: 3.0.76
+        specifier: ^4.0.30
+        version: 4.0.30(typescript@5.9.3)
       '@colyseus/ws-transport':
         specifier: ^0.16.5
-        version: 0.16.5(@colyseus/core@0.16.24(@colyseus/schema@3.0.76)(@pm2/io@6.1.0))
+        version: 0.16.5(@colyseus/core@0.16.24(@colyseus/schema@4.0.30(typescript@5.9.3))(@pm2/io@6.1.0))
       '@selva/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -673,6 +673,15 @@ packages:
   '@colyseus/schema@3.0.76':
     resolution: {integrity: sha512-i+ceBZyhB7lTn5+BoG/xxYfzW4dKKyLOywsGKVgXHe9fD905AS/Lk180jd1bICEJhebGeiRXEQ2YUPl/xwFg2g==}
     hasBin: true
+
+  '@colyseus/schema@4.0.30':
+    resolution: {integrity: sha512-5XupVTuaz2vMY7fKz9aZ7FW1NaZ8MEAUtKrRTunybhIiQkN4aGHvF48w+nzJb5AGbpOr6ZbEyFrbyw9XMW+8DA==}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   '@colyseus/timer@1.0.3':
     resolution: {integrity: sha512-Vy8FGTt2vbmkXn2RzMkCGphcDIdCeYeZx2CADdQM/0EWEBrFM67FTcSJATB2q/lm2vlZfvkBjEDtJHePSePB1A==}
@@ -5949,11 +5958,11 @@ snapshots:
 
   '@colyseus/clock@1.0.1': {}
 
-  '@colyseus/core@0.16.24(@colyseus/schema@3.0.76)(@pm2/io@6.1.0)':
+  '@colyseus/core@0.16.24(@colyseus/schema@4.0.30(typescript@5.9.3))(@pm2/io@6.1.0)':
     dependencies:
       '@colyseus/greeting-banner': 2.0.6
       '@colyseus/msgpackr': 1.11.2
-      '@colyseus/schema': 3.0.76
+      '@colyseus/schema': 4.0.30(typescript@5.9.3)
       '@colyseus/timer': 1.0.3
       '@pm2/io': 6.1.0
       debug: 4.4.3(supports-color@10.2.2)
@@ -5971,13 +5980,17 @@ snapshots:
 
   '@colyseus/schema@3.0.76': {}
 
+  '@colyseus/schema@4.0.30(typescript@5.9.3)':
+    optionalDependencies:
+      typescript: 5.9.3
+
   '@colyseus/timer@1.0.3':
     dependencies:
       '@colyseus/clock': 1.0.1
 
-  '@colyseus/ws-transport@0.16.5(@colyseus/core@0.16.24(@colyseus/schema@3.0.76)(@pm2/io@6.1.0))':
+  '@colyseus/ws-transport@0.16.5(@colyseus/core@0.16.24(@colyseus/schema@4.0.30(typescript@5.9.3))(@pm2/io@6.1.0))':
     dependencies:
-      '@colyseus/core': 0.16.24(@colyseus/schema@3.0.76)(@pm2/io@6.1.0)
+      '@colyseus/core': 0.16.24(@colyseus/schema@4.0.30(typescript@5.9.3))(@pm2/io@6.1.0)
       '@types/ws': 8.18.1
       ws: 8.21.0
     transitivePeerDependencies:

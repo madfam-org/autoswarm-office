@@ -11,6 +11,23 @@ updates:
         # framework-shifting bump (eslint, next, colyseus, redis, jose, etc.)
         # can be reviewed, smoke-tested, and landed independently.
         # See claudedocs/security-remediation-2026-04-27/remediation-plan.md.
+        #
+        # CAVEAT this filter cannot express: `update-types` is evaluated with
+        # semver semantics, where a package still on 0.x has NO major segment.
+        # For those, a breaking release lands as a "minor" and is grouped here
+        # anyway. That is not hypothetical -- PR #261 grouped @colyseus/core
+        # 0.16.24 -> 0.18.2 and @colyseus/ws-transport 0.16.5 -> 0.17.13 into
+        # an 18-package bump, i.e. exactly the package this comment names, via
+        # exactly this hole. Those two carry three separate breakages for this
+        # repo (Room generic shape, onLeave signature, and core 0.17+ refusing
+        # schema-v2 states) plus a wire-protocol desync from colyseus.js 0.16
+        # in apps/office-ui.
+        #
+        # So 0.x packages whose breaking changes we actually care about are
+        # excluded from the group below and get their own PRs, which is what
+        # the paragraph above always intended.
+        exclude-patterns:
+          - "@colyseus/*"
         update-types: ["minor", "patch"]
   - package-ecosystem: "pip"
     directory: "/"

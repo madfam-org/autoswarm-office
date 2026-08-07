@@ -15,7 +15,7 @@ overrides:
   picomatch@4.0.3: 4.0.4
   postcss@8.4.31: 8.5.18
   sharp: 0.35.0
-  ws: 8.21.0
+  ws: 8.21.2
 
 importers:
 
@@ -27,7 +27,7 @@ importers:
     devDependencies:
       '@commitlint/cli':
         specifier: ^19.6.1
-        version: 19.8.1(@types/node@26.1.2)(typescript@5.9.3)
+        version: 19.8.1(@types/node@26.2.0)(typescript@5.9.3)
       '@commitlint/config-conventional':
         specifier: ^19.6.0
         version: 19.8.1
@@ -42,7 +42,7 @@ importers:
         version: link:packages/config
       '@vitest/coverage-v8':
         specifier: ^2.1.8
-        version: 2.1.9(vitest@2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2))
+        version: 2.1.9(vitest@2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2))
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -63,7 +63,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+        version: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
 
   apps/admin:
     dependencies:
@@ -83,8 +83,8 @@ importers:
         specifier: ^15.5.21
         version: 15.5.22(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       posthog-js:
-        specifier: ^1.410.6
-        version: 1.410.6
+        specifier: ^1.411.0
+        version: 1.411.0
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -179,7 +179,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+        version: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
 
   apps/gateway:
     dependencies:
@@ -202,8 +202,8 @@ importers:
         specifier: ^9.14.0
         version: 9.14.0
       ws:
-        specifier: 8.21.0
-        version: 8.21.0
+        specifier: 8.21.2
+        version: 8.21.2
     devDependencies:
       '@types/cron':
         specifier: ^2.4.1
@@ -222,7 +222,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+        version: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
 
   apps/office-ui:
     dependencies:
@@ -260,8 +260,8 @@ importers:
         specifier: ^3.87.0
         version: 3.90.0
       posthog-js:
-        specifier: ^1.410.6
-        version: 1.410.6
+        specifier: ^1.411.0
+        version: 1.411.0
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -295,7 +295,7 @@ importers:
         version: 19.2.4(@types/react@19.2.18)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.7.0(vite@5.4.21(@types/node@26.1.2)(terser@5.49.2))
+        version: 4.7.0(vite@5.4.21(@types/node@26.2.0)(terser@5.49.2))
       autoprefixer:
         specifier: ^10.5.4
         version: 10.5.4(postcss@8.5.26)
@@ -313,7 +313,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+        version: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
 
   packages/config:
     dependencies:
@@ -346,7 +346,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+        version: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
 
   packages/shared-types:
     devDependencies:
@@ -358,7 +358,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+        version: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
 
   packages/ui:
     dependencies:
@@ -392,7 +392,7 @@ importers:
         version: 19.2.18
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.7.0(vite@5.4.21(@types/node@26.1.2)(terser@5.49.2))
+        version: 4.7.0(vite@5.4.21(@types/node@26.2.0)(terser@5.49.2))
       jsdom:
         specifier: ^25.0.1
         version: 25.0.1
@@ -407,7 +407,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+        version: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
 
 packages:
 
@@ -2378,6 +2378,9 @@ packages:
 
   '@types/node@26.1.2':
     resolution: {integrity: sha512-Vu4a5UFA9rIIFJ7rB/Vaafh9lrCQszopTCx6KjFboXTGQbPNasehVR5TEiithSDGyd1DEiUByggTZsg8jukeIg==}
+
+  '@types/node@26.2.0':
+    resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
 
   '@types/qs@6.15.0':
     resolution: {integrity: sha512-JawvT8iBVWpzTrz3EGw9BTQFg3BQNmwERdKE22vlTxawwtbyUSlMppvZYKLZzB5zgACXdXxbD3m1bXaMqP/9ow==}
@@ -4574,8 +4577,8 @@ packages:
     resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
     engines: {node: ^10 || ^12 || >=14}
 
-  posthog-js@1.410.6:
-    resolution: {integrity: sha512-/LRekY3DN0SRDD98xS7DPXeTRGozMhkxO/mi+i9F783c3YnaGRP7UGKyS9In1adjmp0xXKc4PfKkwKHonB2liQ==}
+  posthog-js@1.411.0:
+    resolution: {integrity: sha512-nTYMucbJHotQXHWpHH6x3UHP9IrnHqoxrIwfJeQ7yHA3rcNGF/SEa4Z0UlfssMtcXHOH5bse+8ASouc0YL+02w==}
 
   powershell-utils@0.1.0:
     resolution: {integrity: sha512-dM0jVuXJPsDN6DvRpea484tCUaMiXWjuCn++HGTqUWzGDjv5tZkEZldAJ/UMlqRYGFrD/etByo4/xOuC/snX2A==}
@@ -5447,6 +5450,9 @@ packages:
   web-vitals@5.3.0:
     resolution: {integrity: sha512-q6LWsLatGYZp5VGBIOvbTj6JBV2nOmC8KvWztXBmwJcfFAzhwKwbOxhUH306XY3CcaZDUlSmSuNPBsCn0bFu+g==}
 
+  web-vitals@6.0.0:
+    resolution: {integrity: sha512-Guaibvy/+uNtL6Bsu4jmMJGzuSl91oeRH5iO9pPRbYftnFUr3yqT1TUNX/OE4o9HexuEMU3Kb/Wg7iKhlffZUA==}
+
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
 
@@ -5514,8 +5520,8 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  ws@8.21.0:
-    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+  ws@8.21.2:
+    resolution: {integrity: sha512-54dMVAo4WIe6SKy3vBgN+9bJZqqQ8IMRevAkOLQALhi49qkkQDQfWdAZ8KQlXiEabw88ARXXdUrlvtbKQX+aKw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -5992,16 +5998,16 @@ snapshots:
     dependencies:
       '@colyseus/core': 0.16.24(@colyseus/schema@4.0.30(typescript@5.9.3))(@pm2/io@6.1.0)
       '@types/ws': 8.18.1
-      ws: 8.21.0
+      ws: 8.21.2
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@commitlint/cli@19.8.1(@types/node@26.1.2)(typescript@5.9.3)':
+  '@commitlint/cli@19.8.1(@types/node@26.2.0)(typescript@5.9.3)':
     dependencies:
       '@commitlint/format': 19.8.1
       '@commitlint/lint': 19.8.1
-      '@commitlint/load': 19.8.1(@types/node@26.1.2)(typescript@5.9.3)
+      '@commitlint/load': 19.8.1(@types/node@26.2.0)(typescript@5.9.3)
       '@commitlint/read': 19.8.1
       '@commitlint/types': 19.8.1
       tinyexec: 1.0.2
@@ -6048,7 +6054,7 @@ snapshots:
       '@commitlint/rules': 19.8.1
       '@commitlint/types': 19.8.1
 
-  '@commitlint/load@19.8.1(@types/node@26.1.2)(typescript@5.9.3)':
+  '@commitlint/load@19.8.1(@types/node@26.2.0)(typescript@5.9.3)':
     dependencies:
       '@commitlint/config-validator': 19.8.1
       '@commitlint/execute-rule': 19.8.1
@@ -6056,7 +6062,7 @@ snapshots:
       '@commitlint/types': 19.8.1
       chalk: 5.6.2
       cosmiconfig: 9.0.2(typescript@5.9.3)
-      cosmiconfig-typescript-loader: 6.2.0(@types/node@26.1.2)(cosmiconfig@9.0.2(typescript@5.9.3))(typescript@5.9.3)
+      cosmiconfig-typescript-loader: 6.2.0(@types/node@26.2.0)(cosmiconfig@9.0.2(typescript@5.9.3))(typescript@5.9.3)
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
@@ -7469,6 +7475,10 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
+  '@types/node@26.2.0':
+    dependencies:
+      undici-types: 8.3.0
+
   '@types/qs@6.15.0': {}
 
   '@types/range-parser@1.2.7': {}
@@ -7598,7 +7608,19 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@2.1.9(vitest@2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2))':
+  '@vitejs/plugin-react@4.7.0(vite@5.4.21(@types/node@26.2.0)(terser@5.49.2))':
+    dependencies:
+      '@babel/core': 7.29.0
+      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0)
+      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.29.0)
+      '@rolldown/pluginutils': 1.0.0-beta.27
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.17.0
+      vite: 5.4.21(@types/node@26.2.0)(terser@5.49.2)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@vitest/coverage-v8@2.1.9(vitest@2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 0.2.3
@@ -7612,7 +7634,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 1.2.0
-      vitest: 2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2)
+      vitest: 2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -7630,6 +7652,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 5.4.21(@types/node@26.1.2)(terser@5.49.2)
+
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@26.2.0)(terser@5.49.2))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@26.2.0)(terser@5.49.2)
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
@@ -8069,7 +8099,7 @@ snapshots:
       '@colyseus/msgpackr': 1.11.2
       '@colyseus/schema': 3.0.76
       tslib: 2.8.1
-      ws: 8.21.0
+      ws: 8.21.2
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -8148,9 +8178,9 @@ snapshots:
       object-assign: 4.1.1
       vary: 1.1.2
 
-  cosmiconfig-typescript-loader@6.2.0(@types/node@26.1.2)(cosmiconfig@9.0.2(typescript@5.9.3))(typescript@5.9.3):
+  cosmiconfig-typescript-loader@6.2.0(@types/node@26.2.0)(cosmiconfig@9.0.2(typescript@5.9.3))(typescript@5.9.3):
     dependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.2.0
       cosmiconfig: 9.0.2(typescript@5.9.3)
       jiti: 2.6.1
       typescript: 5.9.3
@@ -9146,7 +9176,7 @@ snapshots:
       whatwg-encoding: 3.1.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 14.2.0
-      ws: 8.21.0
+      ws: 8.21.2
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -9174,7 +9204,7 @@ snapshots:
       whatwg-encoding: 3.1.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 14.2.0
-      ws: 8.21.0
+      ws: 8.21.2
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -9757,7 +9787,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  posthog-js@1.410.6:
+  posthog-js@1.411.0:
     dependencies:
       '@posthog/browser-common': 0.3.1
       '@posthog/core': 1.46.9
@@ -9768,6 +9798,7 @@ snapshots:
       preact: 10.29.8
       query-selector-shadow-dom: 1.0.1
       web-vitals: 5.3.0
+      web-vitals-soft-navs: web-vitals@6.0.0
     transitivePeerDependencies:
       - preact-render-to-string
 
@@ -10673,6 +10704,24 @@ snapshots:
       - supports-color
       - terser
 
+  vite-node@2.1.9(@types/node@26.2.0)(terser@5.49.2):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.4.3(supports-color@10.2.2)
+      es-module-lexer: 1.7.0
+      pathe: 1.1.2
+      vite: 5.4.21(@types/node@26.2.0)(terser@5.49.2)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
   vite@5.4.21(@types/node@26.1.2)(terser@5.49.2):
     dependencies:
       esbuild: 0.21.5
@@ -10680,6 +10729,16 @@ snapshots:
       rollup: 4.59.0
     optionalDependencies:
       '@types/node': 26.1.2
+      fsevents: 2.3.3
+      terser: 5.49.2
+
+  vite@5.4.21(@types/node@26.2.0)(terser@5.49.2):
+    dependencies:
+      esbuild: 0.21.5
+      postcss: 8.5.26
+      rollup: 4.59.0
+    optionalDependencies:
+      '@types/node': 26.2.0
       fsevents: 2.3.3
       terser: 5.49.2
 
@@ -10719,10 +10778,10 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@2.1.9(@types/node@26.1.2)(jsdom@25.0.1)(terser@5.49.2):
+  vitest@2.1.9(@types/node@26.2.0)(jsdom@25.0.1)(terser@5.49.2):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@26.1.2)(terser@5.49.2))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@26.2.0)(terser@5.49.2))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
@@ -10738,11 +10797,11 @@ snapshots:
       tinyexec: 0.3.2
       tinypool: 1.1.1
       tinyrainbow: 1.2.0
-      vite: 5.4.21(@types/node@26.1.2)(terser@5.49.2)
-      vite-node: 2.1.9(@types/node@26.1.2)(terser@5.49.2)
+      vite: 5.4.21(@types/node@26.2.0)(terser@5.49.2)
+      vite-node: 2.1.9(@types/node@26.2.0)(terser@5.49.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.2.0
       jsdom: 25.0.1
     transitivePeerDependencies:
       - less
@@ -10764,6 +10823,8 @@ snapshots:
       graceful-fs: 4.2.11
 
   web-vitals@5.3.0: {}
+
+  web-vitals@6.0.0: {}
 
   webidl-conversions@3.0.1: {}
 
@@ -10855,7 +10916,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@8.21.0: {}
+  ws@8.21.2: {}
 
   wsl-utils@0.3.1:
     dependencies:

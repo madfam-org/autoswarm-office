@@ -22,7 +22,7 @@
     "js-yaml": "^4.3.0",
     "next": "^15.5.21",
     "phaser": "^3.87.0",
-    "posthog-js": "^1.410.6",
+    "posthog-js": "^1.411.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "simple-peer": "^9.11.1",

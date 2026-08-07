@@ -59,7 +59,7 @@ commonLabels:
 # observed in a ready production ReplicaSet after the newer audit-derived
 # digest failed to pull.
 images:
-- digest: sha256:a05d4e1940726e25002290166bfd0d047e62e5807d27df2bf0b6f57e44787df2
+- digest: sha256:a3432aa9fe771e602d16f7fa33f0157c0efe487e79267a1ee99f357e68589274
   name: ghcr.io/madfam-org/selva-admin
   newName: ghcr.io/madfam-org/selva-admin
 - digest: sha256:6657e00f49e5d39fd34ed87a3926cb19eb6231af37dfcfab9f9fa483926dd0c3

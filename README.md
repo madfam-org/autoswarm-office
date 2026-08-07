@@ -340,7 +340,9 @@ For each persona that will post from a given instance:
 1. Create a feature branch from `main`.
 2. Use conventional commits: `feat(scope): description`, `fix(scope): description`.
 3. Open a pull request -- CI must pass before merge.
-4. Commits are enforced by commitlint via husky pre-commit hooks.
+4. Commit messages are checked by commitlint from a husky `commit-msg` hook,
+   installed automatically by `pnpm install`. Scopes are free-form; the type
+   must be one of the list in [CONTRIBUTING.md](./CONTRIBUTING.md#commit-messages).
 
 ## License
 

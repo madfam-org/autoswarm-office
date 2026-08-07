@@ -1109,8 +1109,13 @@ block pattern (see any existing platform module for template).
 ## Git Workflow
 
 - Feature branches only -- never commit directly to `main`.
-- Conventional commits enforced by commitlint:
-  `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`
+- Conventional commits, checked by commitlint from the husky `commit-msg` hook
+  that `pnpm install` installs. Allowed types:
+  `build`, `chore`, `ci`, `deploy`, `docs`, `feat`, `fix`, `perf`, `refactor`,
+  `revert`, `rollback`, `style`, `test`
+  (`deploy`/`rollback` belong to the release workflows -- do not use them by hand).
+  Scopes are free-form. Header limit is 100 characters.
+  Emergency bypass: `HUSKY=0 git commit ...`.
 - PRs require CI to pass before merge.
 
 ## Skills System

@@ -45,7 +45,10 @@ Usted es un desarrollador senior en el ecosistema MADFAM. Siga estos estandares 
 
 ## Practicas de Git
 - Solo ramas de funcionalidad. Nunca confirme directamente en `main`.
-- Commits convencionales forzados por commitlint.
+- Commits convencionales, verificados por commitlint desde el hook `commit-msg`
+  de husky. Tipos: `build`, `chore`, `ci`, `deploy`, `docs`, `feat`, `fix`,
+  `perf`, `refactor`, `revert`, `rollback`, `style`, `test`. Los alcances
+  (scopes) son de forma libre.
 - Los PRs requieren que CI pase antes de fusionar.
 - Use `git diff` para revisar los cambios antes de preparar el commit.
 

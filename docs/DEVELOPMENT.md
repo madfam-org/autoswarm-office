@@ -212,7 +212,9 @@ make build
 
 ## Git Workflow
 
-This project uses conventional commits enforced by commitlint and husky.
+This project uses conventional commits, checked by commitlint from a husky
+`commit-msg` hook. `pnpm install` installs the hook (via the `prepare` script),
+so it runs on every local `git commit` after a fresh clone and install.
 
 ```bash
 # Create a feature branch
@@ -225,4 +227,11 @@ git commit -m "feat(nexus-api): add agent level-up endpoint"
 git push -u origin feat/my-feature
 ```
 
-Commit types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`.
+Commit types: `build`, `chore`, `ci`, `deploy`, `docs`, `feat`, `fix`, `perf`,
+`refactor`, `revert`, `rollback`, `style`, `test`. (`deploy` and `rollback` are
+written by the release workflows, not by hand.)
+
+Scopes are free-form -- use whatever names the area you touched. The header must
+be 100 characters or less.
+
+To bypass the hook in an emergency: `HUSKY=0 git commit ...`.

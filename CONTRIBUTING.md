@@ -79,6 +79,25 @@ docs(readme): update architecture diagram
 chore(deps): bump langchain to 0.3
 ```
 
+This is checked, not just requested: `pnpm install` installs a husky
+`commit-msg` hook that runs commitlint on every local `git commit`.
+
+**Allowed types** -- `build`, `chore`, `ci`, `deploy`, `docs`, `feat`, `fix`,
+`perf`, `refactor`, `revert`, `rollback`, `style`, `test`.
+
+`deploy` and `rollback` are written by the release workflows
+(`promote-to-prod.yml`, `rollback-prod.yml`); don't use them by hand.
+
+**Scopes are free-form.** Name the area you touched (`billing`, `office-ui`,
+`k8s`, `campaigns`, ...). There is no allow-list to keep in sync.
+
+**Header limit is 100 characters.** If the summary doesn't fit, the detail
+belongs in the body.
+
+If the hook ever blocks something it shouldn't, `HUSKY=0 git commit ...`
+bypasses it -- then please open an issue so the config gets fixed rather than
+routed around.
+
 ### Validation Before Commit
 
 ```bash

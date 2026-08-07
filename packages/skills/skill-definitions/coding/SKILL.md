@@ -44,7 +44,9 @@ You are a senior developer in the MADFAM ecosystem. Follow these standards rigor
 
 ## Git Practices
 - Feature branches only. Never commit directly to `main`.
-- Conventional commits enforced by commitlint.
+- Conventional commits, checked by commitlint from the husky `commit-msg` hook.
+  Types: `build`, `chore`, `ci`, `deploy`, `docs`, `feat`, `fix`, `perf`,
+  `refactor`, `revert`, `rollback`, `style`, `test`. Scopes are free-form.
 - PRs require CI to pass before merge.
 - Use `git diff` to review changes before staging.
 

@@ -201,11 +201,33 @@ jobs:
         if: needs.detect-changes.outputs[matrix.changed] == 'true'
         uses: sigstore/cosign-installer@v3
 
+      # Retry: 2026-08-26 crea-frontend run 33010085743 lost a deploy when
+      # GitHub's OIDC endpoint returned non-JSON ("invalid character 'u'") and
+      # cosign died. Image was pushed, digest never pinned, ArgoCD never rolled.
       - name: Sign image
         if: needs.detect-changes.outputs[matrix.changed] == 'true'
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
         run: |
-          cosign sign --yes \
-            ${{ env.REGISTRY }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          set -euo pipefail
+          signed=0
+          for wait in 0 20 60; do
+            if [ "$wait" -gt 0 ]; then
+              echo "::warning::cosign sign failed for ${IMAGE_REF} (transient OIDC/Fulcio/Rekor?); retrying in ${wait}s..."
+              sleep "$wait"
+            fi
+            if cosign sign --yes "${IMAGE_REF}"; then
+              signed=1
+              break
+            fi
+          done
+          if [ "$signed" -ne 1 ]; then
+            echo "::error::cosign sign failed 3 times for ${IMAGE_REF}."
+            echo "::error::The image was BUILT AND PUSHED but is NOT signed, so it will not be"
+            echo "::error::pinned and ArgoCD will not roll it: the live host is still serving the"
+            echo "::error::PREVIOUS build even though this commit is on main. Rerun the failed jobs."
+            exit 1
+          fi
 
       - name: Output digest
         if: needs.detect-changes.outputs[matrix.changed] == 'true'
@@ -282,6 +304,20 @@ jobs:
           done
 
           echo "Failed to push digest commit after 3 attempts"
+          exit 1
+
+      # Loud-stale guard. `commit-digests` runs on failure() too, so a build
+      # job that pushed its image and then died at the sign step would leave
+      # this job green while that service's digest was never pinned.
+      - name: Guard — fail loudly if a build was not pinned
+        if: always() && needs.build.result != 'success'
+        run: |
+          echo "::error title=Image pushed but NOT pinned/deployed::At least one build job did not"
+          echo "::error::reach a successful sign+digest export (needs.build.result=${{ needs.build.result }})."
+          echo "::error::Its image may have been BUILT AND PUSHED to GHCR, but ArgoCD was never handed"
+          echo "::error::a new digest, so THE LIVE HOST IS STILL SERVING THE PREVIOUS BUILD even though"
+          echo "::error::this commit is green on main. Rerun the failed jobs:"
+          echo "::error::  gh run rerun ${{ github.run_id }} --failed"
           exit 1
 
   notify-enclii:

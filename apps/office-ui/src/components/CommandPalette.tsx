@@ -86,8 +86,15 @@ export function CommandPalette({
       run: () => onSelectPlayer?.(p.sessionId),
     }));
 
+    // `d.agents` can be a Colyseus ArraySchema proxy rather than a real Array.
+    // It fails Array.isArray(), so Array.prototype.flatMap treats the whole
+    // proxy as a single non-flattening element — yielding one bogus entry per
+    // department instead of one per agent. Array.from() normalizes it to a
+    // true array first. Same normalization as SpaceRoster.tsx. (ArraySchema's
+    // own .flatMap() throws outright under @colyseus/schema v5, so the fix
+    // must stay on this side.)
     const agentEntries: Entry[] = departments
-      .flatMap((d) => d.agents ?? [])
+      .flatMap((d) => (d.agents ? Array.from(d.agents) : []))
       .map((a) => ({
         id: `agent:${a.id}`,
         label: a.name,

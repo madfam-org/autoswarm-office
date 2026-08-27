@@ -1,4 +1,4 @@
-import { Room, Client } from "@colyseus/core";
+import { Room, Client, CloseCode } from "@colyseus/core";
 import {
   OfficeStateSchema,
   DepartmentSchema,
@@ -151,13 +151,20 @@ const DEFAULT_DEPARTMENTS: Array<{
   },
 ];
 
-// @colyseus/core 0.16.x: the Room generic is the state class itself. The
-// server runs 0.16 to match colyseus.js 0.16 in office-ui and the
-// @colyseus/schema v2 state classes — core 0.17 refuses to seat schema-v2
-// states ("schema v2 compatibility currently missing").
+// @colyseus/core 0.18.x: the Room generic is a *room-options* object
+// (`Room<{ state, metadata, client, input }>`), no longer the bare state class
+// as in 0.16 — passing `Room<OfficeStateSchema>` fails with "has no properties
+// in common with type 'RoomOptions'". This shape was introduced in 0.17 and is
+// unchanged in 0.18.
+//
+// `@colyseus/schema` moved v4 -> v5 with core 0.18, but the `@type` decorator
+// API and the wire format are both unchanged, so the state classes in
+// src/schema/ needed no edits. The client is version-locked to this server:
+// apps/office-ui must ship @colyseus/sdk 0.18.x. See
+// docs/COLYSEUS_UPGRADE_BLAST_RADIUS.md.
 // State is also assigned explicitly via `setState(new OfficeStateSchema())`
 // in onCreate (kept below for explicit ordering with the seed-departments path).
-export class OfficeRoom extends Room<OfficeStateSchema> {
+export class OfficeRoom extends Room<{ state: OfficeStateSchema }> {
 
   private nexusApiUrl: string = process.env.NEXUS_API_URL ?? "http://localhost:4300";
   private stopProximityLoop: (() => void) | null = null;
@@ -507,12 +514,15 @@ export class OfficeRoom extends Room<OfficeStateSchema> {
     }
   }
 
-  // @colyseus/core 0.16.x: second arg is `consented` (client left on
-  // purpose vs dropped). The cleanup logic below runs unconditionally —
-  // disconnect always means clean up — so both paths behave the same.
-  override onLeave(client: Client, consented?: boolean): void {
+  // @colyseus/core 0.17.x: the second arg changed from `consented: boolean`
+  // to `code: number` (a WebSocket close code). `CloseCode.CONSENTED` (4000)
+  // is the intentional-leave case, so `consented` is derived rather than
+  // passed. The cleanup logic below still runs unconditionally — disconnect
+  // always means clean up — so both paths behave the same as under 0.16.
+  override onLeave(client: Client, code?: number): void {
+    const consented = code === CloseCode.CONSENTED;
     logger.info(
-      { sessionId: client.sessionId, consented },
+      { sessionId: client.sessionId, code, consented },
       "Client left"
     );
 

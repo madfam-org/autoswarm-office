@@ -194,7 +194,14 @@ export function useColyseus(options?: string | ColyseusOptions): ColyseusState {
 
   const connect = useCallback(async () => {
     try {
-      const { Client } = await import('colyseus.js');
+      // @colyseus/sdk replaces colyseus.js, which froze at 0.16.22 and cannot
+      // join a 0.17+ server (it reads `response.room.name`, a field the
+      // flattened seat reservation removed). The client API surface this hook
+      // uses — `new Client(url)`, `joinOrCreate`, `onStateChange`, `onMessage`,
+      // `send`, `leave`, `onLeave`, `onError`, `sessionId` — is unchanged, so
+      // the swap is the import only. The server must be on @colyseus/core
+      // 0.18.x at the same time: the versions are protocol-locked.
+      const { Client } = await import('@colyseus/sdk');
       const client = new Client(COLYSEUS_URL);
       // The room's onAuth requires the session JWT (janua-session cookie —
       // signed for live sessions, unsigned org_id=demo-public for the demo).

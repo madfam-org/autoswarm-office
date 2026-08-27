@@ -18,14 +18,20 @@ updates:
         # anyway. That is not hypothetical -- PR #261 grouped @colyseus/core
         # 0.16.24 -> 0.18.2 and @colyseus/ws-transport 0.16.5 -> 0.17.13 into
         # an 18-package bump, i.e. exactly the package this comment names, via
-        # exactly this hole. Those two carry three separate breakages for this
-        # repo (Room generic shape, onLeave signature, and core 0.17+ refusing
-        # schema-v2 states) plus a wire-protocol desync from colyseus.js 0.16
-        # in apps/office-ui.
+        # exactly this hole.
         #
         # So 0.x packages whose breaking changes we actually care about are
         # excluded from the group below and get their own PRs, which is what
         # the paragraph above always intended.
+        #
+        # STILL REQUIRED after the 0.18 cutover, for a second reason: the
+        # colyseus server (apps/colyseus: @colyseus/core, @colyseus/schema,
+        # @colyseus/ws-transport) and the client (apps/office-ui:
+        # @colyseus/sdk) are PROTOCOL-LOCKED and must move together in one PR
+        # and one deploy. A grouped bump that carried only one side, or a solo
+        # PR merged without its counterpart, breaks every client's ability to
+        # join. Review @colyseus/* bumps as a set.
+        # See docs/COLYSEUS_UPGRADE_BLAST_RADIUS.md.
         exclude-patterns:
           - "@colyseus/*"
         update-types: ["minor", "patch"]

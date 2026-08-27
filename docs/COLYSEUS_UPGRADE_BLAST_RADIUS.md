@@ -1,5 +1,13 @@
-# Colyseus 0.16 → 0.18 Upgrade: Blast Radius
+# Colyseus 0.16 → 0.18 Upgrade: Executed Record (was: Blast Radius plan)
 
+> **⛔ EXECUTED — do not re-run.** This cutover SHIPPED in PR #279, merged
+> 2026-08-27T04:06Z (commit a8fe293), and was independently re-verified the
+> same day: @colyseus/core 0.18.8 + schema 5.0.22 + @colyseus/sdk 0.18.2 on
+> disk, nanoid 2.x gone from the lockfile, both Trivy suppressions deleted,
+> all flatMap call sites audited safe, 1068 tests green. This document is the
+> planning/execution record, kept for the reasoning; it prescribes no
+> remaining work.
+>
 > **Status:** DONE — executed as a paired server+client cutover.
 >
 > **Why this doc exists:** two HIGH Trivy findings (CVE-2026-67213,

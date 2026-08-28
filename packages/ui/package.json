@@ -22,7 +22,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.2.18",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.0",
     "jsdom": "^25.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

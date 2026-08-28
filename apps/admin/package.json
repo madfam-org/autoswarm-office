@@ -16,7 +16,7 @@
     "@janua/nextjs-sdk": "^0.5.0",
     "jose": "^5.2.0",
     "next": "^15.5.21",
-    "posthog-js": "^1.418.10",
+    "posthog-js": "^1.419.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -24,7 +24,7 @@
     "@selva/config": "workspace:*",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.1.0",
-    "@types/node": "26.2.0",
+    "@types/node": "26.3.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^4.3.4",

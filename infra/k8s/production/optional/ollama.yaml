@@ -1,3 +1,34 @@
+# ══════════════════════════════════════════════════════════════════════
+# ⚠️  NO DESPLEGADO TODAVÍA — ESTE ARCHIVO NO ESTÁ EN kustomization.yaml
+# ══════════════════════════════════════════════════════════════════════
+#
+# REQUISITO PREVIO: EL MIRROR DE LA IMAGEN DEBE EXISTIR PRIMERO.
+#
+# La ClusterPolicy de Kyverno `restrict-image-registries` (Enforce) sólo
+# admite imágenes cuyo prefijo empate LITERALMENTE con uno de los
+# registros aprobados (`ghcr.io/madfam-org/*`, `docker.io/*`, `gcr.io/*`,
+# `quay.io/*`, `registry.k8s.io/*`, …). El valor original de este
+# manifiesto, `ollama/ollama:0.5.7`, es un nombre corto de Docker Hub: el
+# runtime lo resuelve a docker.io, pero Kyverno compara la cadena tal cual
+# y la rechaza. Eso bloqueó el sync completo de `selva-services` el
+# 2026-09-02 04:42Z.
+#
+# La imagen quedó apuntada a `ghcr.io/madfam-org/ollama:0.5.7`, que SÍ
+# empata la política — pero ese mirror **todavía no existe**. Publicarlo
+# es un paso de operador, documentado en
+# `docs/RUNBOOK_SELVA_CTM.md` § «1. Espejar la imagen de Ollama».
+#
+# Orden obligatorio para encender el backend local:
+#   1. Espejar y verificar `ghcr.io/madfam-org/ollama:0.5.7`.
+#   2. Re-agregar `- optional/ollama.yaml` a
+#      `infra/k8s/production/kustomization.yaml`.
+#   3. Sincronizar y validar (§ 1 del runbook).
+#
+# Si se lista este archivo ANTES de espejar la imagen, el Deployment
+# quedará `ImagePullBackOff` en vez de bloqueado en admisión — un modo de
+# falla distinto pero igual de roto.
+# ══════════════════════════════════════════════════════════════════════
+#
 # ═══════════════════════════════════════════════════════════════════════
 # Ollama — the LOCAL inference backend that serves `restricted` and
 # `confidential` requests. This is the in-cluster counterpart to the
@@ -121,7 +152,7 @@ spec:
         # Idempotent: `ollama pull` is a no-op when the blob is present,
         # so a pod restart costs a manifest check, not a re-download.
         - name: pull-model
-          image: ollama/ollama:0.5.7
+          image: ghcr.io/madfam-org/ollama:0.5.7
           command: ["/bin/sh", "-c"]
           args:
             - |
@@ -165,7 +196,7 @@ spec:
               mountPath: /tmp
       containers:
         - name: ollama
-          image: ollama/ollama:0.5.7
+          image: ghcr.io/madfam-org/ollama:0.5.7
           ports:
             - name: http
               containerPort: 11434

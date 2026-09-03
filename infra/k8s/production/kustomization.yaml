@@ -15,7 +15,28 @@ resources:
 - configmap.yaml
 - org-config.yaml
 - tenant-policies.yaml
-- ollama.yaml
+# ollama.yaml — DELIBERADAMENTE NO LISTADO. Vive en optional/ollama.yaml.
+#
+# El Deployment de Ollama fue bloqueado en admisión por la ClusterPolicy
+# de Kyverno `restrict-image-registries` (Enforce), lo que dejó la app
+# `selva-services` OutOfSync y bloqueó el resto del sync:
+#
+#   resource Deployment/selva/ollama was blocked due to the following
+#   policies — restrict-image-registries: Images must come from approved
+#   registries
+#
+# La política compara PREFIJOS LITERALES de registro; `ollama/ollama:…`
+# (nombre corto de Docker Hub) no empata con `docker.io/*` aunque el
+# runtime lo resuelva al mismo lugar. El manifiesto ya quedó corregido a
+# `ghcr.io/madfam-org/ollama:0.5.7`, pero ESE MIRROR AÚN NO EXISTE.
+#
+# Para volver a listarlo aquí hacen falta, en orden:
+#   1. Espejar la imagen al registro aprobado (ver
+#      docs/RUNBOOK_SELVA_CTM.md § 1. Espejar la imagen de Ollama).
+#   2. Verificar que el mirror se puede jalar desde el cluster.
+#   3. Re-agregar `- optional/ollama.yaml` a esta lista.
+# Hasta entonces `restricted`/`confidential` siguen fallando cerrado con
+# 503 `local_backend_unavailable`, que es el comportamiento correcto.
 - service-account.yaml
 - migrate-job.yaml
 - nexus-api.yaml

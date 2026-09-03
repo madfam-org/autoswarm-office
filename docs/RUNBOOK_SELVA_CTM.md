@@ -32,15 +32,101 @@ el ConfigMap de políticas por tenant, y la validación del modelo en es-MX.
 
 ---
 
-## 1. Desplegar el backend local
+## 1. Espejar la imagen de Ollama a un registro aprobado
+
+> **Sin este paso, el despliegue no falla «un poco»: bloquea el sync
+> entero de `selva-services`.** Ocurrió el 2026-09-02 04:42Z.
+
+La ClusterPolicy de Kyverno `restrict-image-registries` corre en modo
+**Enforce** y compara el **prefijo literal** de la imagen contra la lista
+de registros aprobados (`ghcr.io/madfam-org/*`, `docker.io/*`, `gcr.io/*`,
+`quay.io/*`, `registry.k8s.io/*`, …). El manifiesto original usaba el
+nombre corto de Docker Hub `ollama/ollama:0.5.7`: el runtime lo resuelve a
+`docker.io`, pero **Kyverno compara la cadena tal cual y la rechaza**, con
+
+```
+resource Deployment/selva/ollama was blocked due to the following
+policies — restrict-image-registries: Images must come from approved
+registries
+```
+
+Como la admisión rechaza el recurso, ArgoCD marca la aplicación
+`OutOfSync` / `Missing` y **los demás recursos del bundle tampoco
+avanzan**. Por eso `optional/ollama.yaml` está hoy **fuera** de
+`infra/k8s/production/kustomization.yaml`.
+
+### 1.1 Publicar el mirror (paso de operador)
+
+El manifiesto ya apunta a `ghcr.io/madfam-org/ollama:0.5.7`. Ese mirror
+**todavía no existe**; hay que publicarlo:
+
+```bash
+docker pull ollama/ollama:0.5.7
+docker tag ollama/ollama:0.5.7 ghcr.io/madfam-org/ollama:0.5.7
+docker push ghcr.io/madfam-org/ollama:0.5.7
+```
+
+Requiere `docker login ghcr.io` con un PAT que tenga `write:packages` en
+`madfam-org`. Mantén la etiqueta **fija** (`0.5.7`, nunca `latest`): la
+política de tags mutables es fail-closed.
+
+Tras el push, haz el paquete accesible al cluster (los paquetes de GHCR
+nacen privados). O bien marca `ollama` como público en
+`https://github.com/orgs/madfam-org/packages`, o bien confirma que el
+namespace `selva` tiene el pull secret `ghcr-credentials`.
+
+### 1.2 ¿Hace falta firmar con cosign?
+
+**Hoy no.** La ClusterPolicy `verify-image-signatures` sólo aplica a
+namespaces con la etiqueta `enclii.dev/verify-signatures: "true"`, y
+`selva` **no la tiene** (los runbooks de enclii advierten explícitamente
+de no etiquetar los namespaces del ecosistema mientras sus imágenes no
+estén firmadas).
+
+Verifica antes de desplegar — si alguien etiquetó el namespace, un mirror
+sin firma vuelve a bloquear la admisión con `no matching signatures`:
+
+```bash
+kubectl get ns selva -o jsonpath='{.metadata.labels.enclii\.dev/verify-signatures}{"\n"}'
+# vacío  ⇒ no hace falta firmar.
+# "true" ⇒ hay que firmar ANTES de desplegar (§1.3).
+```
+
+### 1.3 Sólo si el namespace exige firma
+
+`cosign sign` keyless usa OIDC de GitHub Actions, así que la firma debe
+hacerse **desde un workflow**, no desde una laptop: el atestador exige
+`issuer: https://token.actions.githubusercontent.com`. Una firma local
+con cuenta personal **no** empata la política.
+
+Un mirror de tercero no lo produce ningún build de MADFAM, así que la
+salida correcta es una `PolicyException` de Kyverno acotada al Deployment
+`ollama` del namespace `selva`, acordada con quien opera el cluster —
+**no** quitar la etiqueta del namespace, que sería una regresión de la
+línea base de seguridad.
+
+### 1.4 Verificar el mirror antes de re-listar el manifiesto
+
+```bash
+docker manifest inspect ghcr.io/madfam-org/ollama:0.5.7 >/dev/null && echo "mirror OK"
+```
+
+Sólo cuando esto pase, vuelve a agregar `- optional/ollama.yaml` a
+`infra/k8s/production/kustomization.yaml` y continúa con §2.
+
+---
+
+## 2. Desplegar el backend local
 
 Los manifiestos ya están en el repo:
 
-- `infra/k8s/production/ollama.yaml` — PVC, Deployment, Service ClusterIP,
-  ConfigMap `selva-ollama-config`, NetworkPolicy.
+- `infra/k8s/production/optional/ollama.yaml` — PVC, Deployment, Service
+  ClusterIP, ConfigMap `selva-ollama-config`, NetworkPolicy.
+  **NO está listado en `kustomization.yaml`**: se saca del sync hasta que
+  el mirror de §1 exista. Re-agrégalo como `- optional/ollama.yaml`
+  después de verificar el mirror (§1.4).
 - `infra/k8s/production/tenant-policies.yaml` — ConfigMap con el tenant
-  de CTM.
-- Ambos ya están listados en `kustomization.yaml`.
+  de CTM. Éste sí está listado y ya se aplica.
 
 Despliegue **vía Enclii** (Enclii-first; `kubectl` sólo si Enclii no
 tiene adaptador y se registra el hueco):
@@ -89,7 +175,7 @@ humo. Si sale `503`, lee el cuerpo: nombra la variable que falta.
 
 ---
 
-## 2. Elegir y validar el modelo (es-MX)
+## 3. Elegir y validar el modelo (es-MX)
 
 El manifiesto propone `llama3.1:8b-instruct-q4_K_M`. **Es una suposición
 razonada, no una medición** — ver el encabezado de `ollama.yaml` para el
@@ -113,7 +199,7 @@ Ollama; **no toca código del MAP ni de Selva**.
 
 ---
 
-## 3. Confirmar el tenant de CTM
+## 4. Confirmar el tenant de CTM
 
 ```bash
 enclii logs selva-inference-gateway --env production | grep "tenant policy:"
@@ -142,7 +228,7 @@ Política vigente para CTM (`infra/k8s/production/tenant-policies.yaml`):
 
 ---
 
-## 4. Fijar el tope de gasto (recomendado antes del uso diario)
+## 5. Fijar el tope de gasto (recomendado antes del uso diario)
 
 El `daily_usd_budget` de arriba es **informativo**: la aplicación dura
 vive en el budget-gate, que requiere `BUDGET_GATE_ENABLED=true` y Redis.
@@ -171,7 +257,7 @@ GROUP BY 1 ORDER BY 1 DESC LIMIT 14;
 
 ---
 
-## 5. Encender el MAP (último paso)
+## 6. Encender el MAP (último paso)
 
 En el manifiesto de crea-map (`infra/k8s/production/deployment.yaml`):
 
@@ -201,7 +287,7 @@ encender.
 
 ---
 
-## 6. Lista de verificación de encendido
+## 7. Lista de verificación de encendido
 
 Ninguno de estos puntos es opcional:
 
@@ -217,11 +303,11 @@ Ninguno de estos puntos es opcional:
 
 ---
 
-## 7. Diagnóstico rápido
+## 8. Diagnóstico rápido
 
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
-| `503 local_backend_unavailable` | No hay backend local alcanzable | §1. Revisa `OLLAMA_BASE_URL` y que el pod de Ollama esté `Ready` |
+| `503 local_backend_unavailable` | No hay backend local alcanzable | §2. Revisa `OLLAMA_BASE_URL` y que el pod de Ollama esté `Ready` |
 | `400 missing_sensitivity` | El llamador no manda `X-Sensitivity` | Es el comportamiento correcto. Arregla al llamador; **no** relajes el gateway |
 | `400 invalid_sensitivity` | Valor fuera del enum (typo) | Idem. El log nombra el valor rechazado |
 | `400 task_type_not_allowed` | Superficie nueva del MAP sin dar de alta | Agrega el `task_type` a `allowed_task_types` del tenant y redespliega |
@@ -232,7 +318,7 @@ Ninguno de estos puntos es opcional:
 
 ---
 
-## 8. Handoff al MAP (crea-map)
+## 9. Handoff al MAP (crea-map)
 
 Contrato del cliente, para la lane de crea-map:
 

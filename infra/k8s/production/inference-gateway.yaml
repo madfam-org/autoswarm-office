@@ -119,6 +119,22 @@ spec:
                   optional: true
             - name: ORG_CONFIG_PATH
               value: "/etc/selva/org-config.yaml"
+            # Per-tenant floors, caps, and rate limits (tenant-policies.yaml).
+            # Absent file ⇒ no floors in force; the startup log says which
+            # tenants loaded. See docs/RUNBOOK_SELVA_CTM.md.
+            - name: TENANT_POLICY_PATH
+              value: "/etc/selva/tenant-policies/tenant-policies.yaml"
+            # The local backend that serves restricted/confidential data.
+            # Without this the factory default (http://localhost:11434)
+            # points at nothing inside this pod and every regulated call
+            # 503s. Optional so the gateway still boots (and still fails
+            # closed) before the Ollama bundle is applied.
+            - name: OLLAMA_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: selva-ollama-config
+                  key: OLLAMA_BASE_URL
+                  optional: true
           workingDir: /data
           volumeMounts:
             - name: tmp
@@ -128,6 +144,9 @@ spec:
             - name: org-config
               mountPath: /etc/selva
               readOnly: true
+            - name: tenant-policies
+              mountPath: /etc/selva/tenant-policies
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir: {}
@@ -136,6 +155,10 @@ spec:
         - name: org-config
           configMap:
             name: selva-org-config
+        - name: tenant-policies
+          configMap:
+            name: selva-tenant-policies
+            optional: true
 ---
 apiVersion: v1
 kind: Service

@@ -119,6 +119,11 @@ def _is_fallback_eligible(exc: BaseException) -> bool:
 # Provider names expected by the router.  The keys in the providers dict
 # passed to ModelRouter should use these identifiers.
 LOCAL_PROVIDER = "ollama"
+# Sensitivity levels that may ONLY be served by the local provider.
+# This is the data-residency boundary the ecosystem contract rests on
+# (clinical notes on minors, CFDI, payroll): the request's data must
+# never reach a third-party cloud vendor.
+LOCAL_ONLY_SENSITIVITIES = (Sensitivity.RESTRICTED, Sensitivity.CONFIDENTIAL)
 CLOUD_PRIORITY = [
     "anthropic",
     "openai",
@@ -148,18 +153,29 @@ CHEAPEST_PRIORITY = [
 class ModelRouter:
     """Routes inference requests to providers based on sensitivity policy.
 
-    Routing rules (applied in order):
-    1. ``task_type`` — if the org config has a model assignment for the
-       request's task type, jump directly to that provider and override
-       the model name.
-    2. ``require_local=True``  -> only use Ollama (local).
-    3. ``restricted`` / ``confidential`` sensitivity -> Ollama only.
-    4. ``internal`` -> first available cloud provider (CLOUD_PRIORITY).
-    5. ``public``   -> cheapest available (CHEAPEST_PRIORITY).
-    6. ``prefer_local=True`` prepends Ollama to the candidate list.
+    **Sensitivity is evaluated FIRST and is never overridable.** The
+    allowed provider set for the request's sensitivity level is computed
+    before anything else; every later rule can only pick *within* that
+    set, never outside it.
 
-    If the primary candidate is unavailable the router falls through to
-    the next candidate in the list.
+    Routing rules (applied in order):
+    1. **Sensitivity gate** — compute the allowed provider set:
+       ``restricted`` / ``confidential`` -> ``[LOCAL_PROVIDER]`` only;
+       ``internal`` -> CLOUD_PRIORITY; ``public`` -> CHEAPEST_PRIORITY.
+       ``require_local=True`` narrows the set to the local provider.
+    2. ``task_type`` — if the org config has a model assignment for the
+       request's task type **and that assignment's provider is inside the
+       allowed set**, jump to it and override the model name. An
+       assignment pointing outside the allowed set is REFUSED (logged at
+       WARNING) and routing falls through to the sensitivity-derived
+       candidates. This is what stops a ``model_assignments`` entry from
+       silently sending clinical ``restricted`` data to a cloud vendor.
+    3. Otherwise take the first registered provider in the allowed set.
+    4. ``prefer_local=True`` moves the local provider first *within* the
+       allowed set (it can never add it to a set that excludes it).
+
+    If no provider in the allowed set is registered, the router raises —
+    it never widens the set to find something that answers.
     """
 
     def __init__(
@@ -183,79 +199,125 @@ class ModelRouter:
     def available_providers(self) -> list[str]:
         return list(self._providers.keys())
 
-    def _select_provider(self, request: InferenceRequest) -> InferenceProvider:
-        """Determine which provider to use for the given request."""
-        policy = request.policy
-
-        # ── Task-type routing (highest priority after require_local) ──
-        if policy.task_type and self._org_config is not None:
-            from .org_config import TaskType
-
-            try:
-                task_enum = TaskType(policy.task_type)
-                assignments = getattr(self._org_config, "model_assignments", {})
-                if task_enum in assignments:
-                    assignment = assignments[task_enum]
-                    provider = self._providers.get(assignment.provider)
-                    if provider is not None:
-                        policy.model_override = assignment.model
-                        if assignment.max_tokens:
-                            policy.max_tokens = assignment.max_tokens
-                        if assignment.temperature is not None:
-                            policy.temperature = assignment.temperature
-                        logger.debug(
-                            "Task-type routing: %s → %s/%s",
-                            policy.task_type,
-                            assignment.provider,
-                            assignment.model,
-                        )
-                        return provider
-                    logger.debug(
-                        "Task-type assignment for %s points to %s, "
-                        "but provider is not registered — falling through",
-                        policy.task_type,
-                        assignment.provider,
-                    )
-            except ValueError:
-                pass  # Unknown task type — fall through to default routing
-
-        # Hard constraint: local only
-        if policy.require_local:
-            provider = self._providers.get(LOCAL_PROVIDER)
-            if provider is None:
-                raise RuntimeError("require_local is True but no Ollama provider is registered.")
-            return provider
-
-        # Determine priority lists — org config can override defaults
-        cloud_priority = CLOUD_PRIORITY
-        cheapest_priority = CHEAPEST_PRIORITY
+    def _priority_lists(self) -> tuple[list[str], list[str]]:
+        """Return ``(cloud_priority, cheapest_priority)`` honouring org config."""
+        cloud_priority = list(CLOUD_PRIORITY)
+        cheapest_priority = list(CHEAPEST_PRIORITY)
         if self._org_config is not None:
             org_cloud = getattr(self._org_config, "cloud_priority", None)
             org_cheap = getattr(self._org_config, "cheapest_priority", None)
             if org_cloud:
-                cloud_priority = org_cloud
+                cloud_priority = list(org_cloud)
             if org_cheap:
-                cheapest_priority = org_cheap
+                cheapest_priority = list(org_cheap)
+        return cloud_priority, cheapest_priority
 
-        candidates: list[str] = []
+    def allowed_providers_for(self, request: InferenceRequest) -> list[str]:
+        """Return the provider names this request's SENSITIVITY permits.
 
-        if policy.sensitivity in (Sensitivity.RESTRICTED, Sensitivity.CONFIDENTIAL):
-            # Sensitive data must stay local
-            candidates = [LOCAL_PROVIDER]
-        elif policy.sensitivity == Sensitivity.INTERNAL:
+        This is the security boundary of the router and it is computed
+        before any other routing input is consulted. ``restricted`` and
+        ``confidential`` may only ever resolve to ``LOCAL_PROVIDER`` —
+        no task-type assignment, no ``prefer_local``, no fallback chain,
+        and no org-config priority list can widen this set.
+        """
+        policy = request.policy
+
+        # Hard constraint: caller demanded local.
+        if policy.require_local:
+            return [LOCAL_PROVIDER]
+
+        if policy.sensitivity in LOCAL_ONLY_SENSITIVITIES:
+            # Regulated data (clinical notes on minors, CFDI, payroll):
+            # local model only, data never leaves the perimeter.
+            return [LOCAL_PROVIDER]
+
+        cloud_priority, cheapest_priority = self._priority_lists()
+        if policy.sensitivity == Sensitivity.INTERNAL:
             candidates = list(cloud_priority)
         else:
             # PUBLIC -> cheapest first
             candidates = list(cheapest_priority)
 
-        # If prefer_local, prepend Ollama so it's tried first
-        if policy.prefer_local and LOCAL_PROVIDER not in candidates:
-            candidates.insert(0, LOCAL_PROVIDER)
-        elif policy.prefer_local and LOCAL_PROVIDER in candidates:
-            candidates.remove(LOCAL_PROVIDER)
+        # prefer_local reorders WITHIN the allowed set; for public/internal
+        # the local provider is an acceptable (and cheapest) destination.
+        if policy.prefer_local:
+            if LOCAL_PROVIDER in candidates:
+                candidates.remove(LOCAL_PROVIDER)
             candidates.insert(0, LOCAL_PROVIDER)
 
-        # For multimodal requests, prefer vision-capable providers
+        return candidates
+
+    def _task_type_assignment(self, request: InferenceRequest) -> Any | None:
+        """Return the org-config ``ModelAssignment`` for the request, if any."""
+        policy = request.policy
+        if not policy.task_type or self._org_config is None:
+            return None
+        from .org_config import TaskType
+
+        try:
+            task_enum = TaskType(policy.task_type)
+        except ValueError:
+            # Unknown task type — default routing applies.
+            return None
+        assignments = getattr(self._org_config, "model_assignments", {})
+        return assignments.get(task_enum)
+
+    def _select_provider(self, request: InferenceRequest) -> InferenceProvider:
+        """Determine which provider to use for the given request.
+
+        Order is load-bearing: the sensitivity-allowed set is computed
+        FIRST, and every later decision picks inside it.
+        """
+        policy = request.policy
+
+        # ── 1. Sensitivity gate (never overridable) ───────────────────
+        candidates = self.allowed_providers_for(request)
+
+        # ── 2. Task-type routing, constrained to the allowed set ──────
+        assignment = self._task_type_assignment(request)
+        if assignment is not None:
+            if assignment.provider not in candidates:
+                # THE bypass this guard exists to close: an org-config
+                # model_assignments entry must never be able to send
+                # restricted/confidential data to a cloud vendor.
+                logger.warning(
+                    "Task-type routing REFUSED: task_type=%s is assigned to "
+                    "provider %s, which is not permitted for sensitivity=%s "
+                    "(allowed: %s). Falling back to sensitivity routing.",
+                    policy.task_type,
+                    assignment.provider,
+                    policy.sensitivity.value,
+                    candidates,
+                )
+            else:
+                provider = self._providers.get(assignment.provider)
+                if provider is not None:
+                    policy.model_override = assignment.model
+                    if assignment.max_tokens:
+                        policy.max_tokens = assignment.max_tokens
+                    if assignment.temperature is not None:
+                        policy.temperature = assignment.temperature
+                    logger.debug(
+                        "Task-type routing: %s → %s/%s",
+                        policy.task_type,
+                        assignment.provider,
+                        assignment.model,
+                    )
+                    return provider
+                logger.debug(
+                    "Task-type assignment for %s points to %s, "
+                    "but provider is not registered — falling through",
+                    policy.task_type,
+                    assignment.provider,
+                )
+
+        # ── 3. First registered provider inside the allowed set ───────
+        if policy.require_local and self._providers.get(LOCAL_PROVIDER) is None:
+            raise RuntimeError("require_local is True but no Ollama provider is registered.")
+
+        # For multimodal requests, prefer vision-capable providers — still
+        # only ever WITHIN the sensitivity-allowed set.
         if request.has_media():
             vision_candidates = [
                 n
@@ -280,28 +342,20 @@ class ModelRouter:
         request: InferenceRequest,
         exclude: InferenceProvider,
     ) -> list[str]:
-        """Return provider names suitable for fallback, excluding the primary."""
+        """Return provider names suitable for fallback, excluding the primary.
+
+        Fallback is drawn from the SAME sensitivity-allowed set as primary
+        selection, so a restricted/confidential request can never fall back
+        to a cloud vendor — for those levels the only allowed provider is
+        the primary, so the list is empty by construction.
+        """
         policy = request.policy
-        if policy.sensitivity in (Sensitivity.RESTRICTED, Sensitivity.CONFIDENTIAL):
-            return []  # Cannot fall back from local-only constraint
+        if policy.sensitivity in LOCAL_ONLY_SENSITIVITIES or policy.require_local:
+            return []  # Cannot fall back from the local-only constraint
 
-        cloud_priority = CLOUD_PRIORITY
-        cheapest_priority = CHEAPEST_PRIORITY
-        if self._org_config is not None:
-            org_cloud = getattr(self._org_config, "cloud_priority", None)
-            org_cheap = getattr(self._org_config, "cheapest_priority", None)
-            if org_cloud:
-                cloud_priority = org_cloud
-            if org_cheap:
-                cheapest_priority = org_cheap
-
-        if policy.sensitivity == Sensitivity.INTERNAL:
-            candidates = list(cloud_priority)
-        else:
-            candidates = list(cheapest_priority)
         return [
             n
-            for n in candidates
+            for n in self.allowed_providers_for(request)
             if self._providers.get(n) is not None and self._providers[n] is not exclude
         ]
 

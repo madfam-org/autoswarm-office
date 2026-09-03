@@ -14,6 +14,8 @@ namespace: selva
 resources:
 - configmap.yaml
 - org-config.yaml
+- tenant-policies.yaml
+- ollama.yaml
 - service-account.yaml
 - migrate-job.yaml
 - nexus-api.yaml

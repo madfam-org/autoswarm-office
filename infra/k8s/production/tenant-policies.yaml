@@ -1,0 +1,72 @@
+# ═══════════════════════════════════════════════════════════════════════
+# Per-tenant inference policy — mounted at /etc/selva/tenant-policies.yaml
+# ═══════════════════════════════════════════════════════════════════════
+# Read by madfam_inference.tenant_policy.load_tenant_policies() via
+# TENANT_POLICY_PATH. This is the SERVER-SIDE floor: it holds even if a
+# consumer drops or mangles its X-Sensitivity header.
+#
+# Onboarding a regulated tenant is a change to THIS FILE plus a rollout —
+# never a code change. Adding a tenant here only ever TIGHTENS what that
+# tenant can do; a tenant with no entry keeps the gateway defaults.
+#
+# After any edit: restart the inference-gateway pods and confirm the
+# startup log line `tenant policy: loaded N tenant(s) …` names the tenant
+# you expect. A parse failure logs at ERROR and leaves NO floors in
+# force — never assume a floor is applied without reading that line.
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: selva-tenant-policies
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: tenant-policies
+    app.kubernetes.io/part-of: selva-office
+data:
+  tenant-policies.yaml: |
+    # ── Gateway-wide defaults (apply to every tenant without an entry) ──
+    # 45 s matches the client contract published to consumers: the MAP
+    # sends AbortSignal.timeout(45_000), so the server deadline and the
+    # client deadline agree instead of one silently outliving the other.
+    default_request_timeout_seconds: 45
+    default_max_tokens_cap: 4096
+
+    tenants:
+      # ── Crea Tu Mundo (CTM) — the MAP, clinical data about minors ────
+      # Org id issued by Janua; sent by crea-map as X-Selva-Tenant-Org.
+      # Contract: Anexo A (LFPDPPP encargado) signed 2026-08-24. The
+      # public privacy notice tells families their data is not transferred
+      # to third parties, which is only true while inference is served
+      # inside the encargado chain — hence the restricted floor.
+      e6cbd51d-8329-4c4e-8c74-aba643ab4575:
+        display_name: Crea Tu Mundo
+        # The load-bearing line. Even a request arriving as `public` is
+        # served as `restricted`, i.e. local-model only. There is no
+        # code path that can lower this.
+        sensitivity_floor: restricted
+        # The MAP's two AI surfaces today: «Sugerir con IA» on minutas
+        # and «Generar retroalimentación para Padlet». Anything else is
+        # a 400 — a new surface must be added here deliberately.
+        allowed_task_types:
+          - summarization
+          - family-feedback
+        # A clinical summary or a family note is short. Capping output
+        # bounds both cost and the time a therapist waits.
+        max_tokens_cap: 1500
+        # Server deadline, below the 45 s client budget so the gateway
+        # answers with a clean 504 before the client aborts.
+        request_timeout_seconds: 40
+        # Runaway brake, PER GATEWAY REPLICA (the limiter is in-process).
+        # With 2 replicas the real ceiling is 60/min. Sized well above
+        # a plausible human workload (a handful of suggestions per
+        # session) and well below anything that could run up a bill.
+        rate_limit_per_minute: 30
+        # Informational daily budget for cost attribution and operator
+        # review. Enforcement lands when BUDGET_GATE_ENABLED is armed
+        # with Redis; until then this is the number to alert on from the
+        # inference_usage_ledger.
+        daily_usd_budget: 2.0
+        notes: >-
+          CTM/MAP. Contrato vCTO + Anexo A (encargado LFPDPPP) 2026-08-24.
+          No se persiste prompt ni respuesta. Ver docs/RUNBOOK_SELVA_CTM.md
+          y docs/DATA_CONTRACT_RESTRICTED.md.

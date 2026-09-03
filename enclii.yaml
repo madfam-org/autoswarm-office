@@ -454,6 +454,17 @@ spec:
         secretKeyRef:
           name: selva-secrets
           key: WORKER_API_TOKEN
+    # Local inference backend for restricted/confidential data. Serves the
+    # ecosystem's regulated payloads (clinical, fiscal, payroll) without
+    # contacting any third-party vendor. Deployed by
+    # infra/k8s/production/ollama.yaml; unset ⇒ every restricted call
+    # fails closed with a 503 that names this variable.
+    - name: OLLAMA_BASE_URL
+      value: http://ollama.selva.svc.cluster.local:11434
+    # Per-tenant sensitivity floors, token caps, timeouts and rate limits
+    # (infra/k8s/production/tenant-policies.yaml).
+    - name: TENANT_POLICY_PATH
+      value: /etc/selva/tenant-policies/tenant-policies.yaml
   domains:
     - domain: inference.selva.town
       tls: true
@@ -469,4 +480,8 @@ spec:
         ingress: [cloudflare-tunnel]
         # No redis: the gateway deliberately does not depend on real-time
         # state — a Redis outage must never take the inference chokepoint down.
-        egress: [dns, https, postgres]
+        # `ollama` is the in-cluster local model backend (ClusterIP :11434)
+        # that serves restricted/confidential traffic. It is deliberately
+        # NOT reachable over `https` egress: the point is that regulated
+        # data never leaves the cluster perimeter.
+        egress: [dns, https, postgres, ollama]

@@ -1,0 +1,310 @@
+# ═══════════════════════════════════════════════════════════════════════
+# Ollama — the LOCAL inference backend that serves `restricted` and
+# `confidential` requests. This is the in-cluster counterpart to the
+# router's data-residency rule (madfam_inference/router.py:
+# LOCAL_ONLY_SENSITIVITIES), and without it every regulated call is a 503.
+# ═══════════════════════════════════════════════════════════════════════
+#
+# WHY IN-CLUSTER AND NOT A SIDECAR
+# --------------------------------
+# A sidecar would give each gateway replica its own model copy: N× the
+# RAM, N× the model pull, and no way to warm a model once. A single
+# in-cluster Service is addressed by every replica over the cluster
+# network, never leaves the node's perimeter, and is not reachable from
+# the public internet (ClusterIP, no ingress, no domain).
+#
+# DATA RESIDENCY
+# --------------
+# Traffic is gateway → ollama.selva.svc.cluster.local:11434, entirely
+# inside the cluster. No third-party vendor is contacted, which is what
+# makes the MAP's family-facing privacy notice ("no transferimos tus
+# datos a terceros") true for AI-assisted drafting.
+#
+# ═══════════════════════════════════════════════════════════════════════
+# MODEL CHOICE — llama3.1:8b-instruct-q4_K_M   (ASSUMPTION, see below)
+# ═══════════════════════════════════════════════════════════════════════
+# The workload is Spanish (es-MX) clinical-register summarisation: turn a
+# therapist's session notes into a minuta draft, or a set of observations
+# into a family-facing Padlet note. Short inputs (≤ ~2k tokens), short
+# outputs (capped at 1500 tokens by the CTM tenant policy), and a human
+# always reviews before anything is sent.
+#
+# Requirements that drove the pick, in order:
+#   1. Genuinely usable Spanish. An English-first model that "does"
+#      Spanish produces stilted output a therapist will not send to a
+#      family; that makes the feature worse than the manual path.
+#   2. Fits the cluster. The nodes already sit near 100% CPU *requests*
+#      (see inference-gateway.yaml:21-23). A 4-bit 8B model needs
+#      ~5-6 GiB resident and runs CPU-only at a few tokens/second —
+#      acceptable for a 1500-token cap inside a 40 s deadline, and it
+#      does not require a GPU node the cluster does not have.
+#   3. Permissive licence for commercial client work (Llama Community
+#      Licence; well under the 700M-MAU threshold).
+#
+# Alternatives considered and why not (today):
+#   - qwen2.5:7b-instruct — comparable size, strong multilingual scores;
+#     a reasonable second choice. Pick it if Spanish fluency measures
+#     better on CTM's own samples.
+#   - llama3.2:3b — the Ollama library default and ~2 GiB; would fit
+#     more comfortably, but summarisation quality on clinical register
+#     is materially weaker. Use it only as a degraded fallback.
+#   - Anything ≥ 30B or unquantised — does not fit the current nodes
+#     without a GPU node pool. That is a cluster-capacity decision, not
+#     a Selva one.
+#
+# THIS IS AN ASSUMPTION, NOT A MEASUREMENT. No model has been downloaded
+# or benchmarked in this lane. Before flipping the MAP to SELVA_ENABLED,
+# run the es-MX quality pass described in docs/RUNBOOK_SELVA_CTM.md
+# (§ "Elegir y validar el modelo") against real-shaped (never real)
+# clinical text, and change OLLAMA_DEFAULT_MODEL here if a different
+# model wins. The router does not hard-code a model name; the provider
+# default and this env are the only places it is stated.
+#
+# THE MODEL IS NOT BAKED INTO THE IMAGE. The initContainer pulls it on
+# first start into the PVC. First boot therefore takes as long as the
+# pull (minutes on a cold cache); readiness deliberately does not go
+# green until the model is actually present, so the gateway never sees a
+# "healthy" backend that would 404 on the first real request.
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/part-of: selva-office
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # ~5 GiB for a 4-bit 8B model + room for one alternate while
+      # evaluating a replacement.
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/part-of: selva-office
+    app.kubernetes.io/component: inference-backend
+spec:
+  # Single replica: the PVC is ReadWriteOnce and the model cache is not
+  # shareable. Scaling this means a GPU node pool and a rethink, not a
+  # replica bump.
+  replicas: 1
+  strategy:
+    # Recreate, not RollingUpdate: two pods cannot bind one RWO volume.
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ollama
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ollama
+        app.kubernetes.io/part-of: selva-office
+        app.kubernetes.io/component: inference-backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Pull the model into the PVC before the server accepts traffic.
+        # Idempotent: `ollama pull` is a no-op when the blob is present,
+        # so a pod restart costs a manifest check, not a re-download.
+        - name: pull-model
+          image: ollama/ollama:0.5.7
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              ollama serve &
+              SERVER_PID=$!
+              # Wait for the local API before pulling.
+              for _ in $(seq 1 60); do
+                if ollama list >/dev/null 2>&1; then break; fi
+                sleep 2
+              done
+              echo "Pulling ${OLLAMA_DEFAULT_MODEL}…"
+              ollama pull "${OLLAMA_DEFAULT_MODEL}"
+              kill "${SERVER_PID}"
+              wait "${SERVER_PID}" 2>/dev/null || true
+              echo "Model ${OLLAMA_DEFAULT_MODEL} present."
+          env:
+            - name: OLLAMA_MODELS
+              value: /models
+            - name: OLLAMA_DEFAULT_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: selva-ollama-config
+                  key: OLLAMA_DEFAULT_MODEL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 8Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: models
+              mountPath: /models
+            - name: tmp
+              mountPath: /tmp
+      containers:
+        - name: ollama
+          image: ollama/ollama:0.5.7
+          ports:
+            - name: http
+              containerPort: 11434
+              protocol: TCP
+          env:
+            - name: OLLAMA_MODELS
+              value: /models
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:11434"
+            # Keep the model resident between calls; a cold load on every
+            # request would blow the 40 s tenant deadline.
+            - name: OLLAMA_KEEP_ALIVE
+              value: "30m"
+            # One at a time: CPU inference on a shared node degrades
+            # sharply under concurrency, and a queued request is better
+            # than two slow ones that both time out.
+            - name: OLLAMA_NUM_PARALLEL
+              value: "1"
+            - name: OLLAMA_MAX_LOADED_MODELS
+              value: "1"
+          resources:
+            requests:
+              # Modest CPU request so it can schedule on the current,
+              # heavily-requested nodes; the limit is what it actually
+              # uses while generating.
+              cpu: 200m
+              memory: 6Gi
+            limits:
+              cpu: "3"
+              memory: 10Gi
+          readinessProbe:
+            # /api/tags lists locally-present models. It answers only
+            # once the server is up AND the model store is readable, so
+            # it is a truer readiness signal than a bare TCP check.
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            # Generous: a cold start after a node move can take minutes
+            # while the model loads from the PVC.
+            httpGet:
+              path: /api/tags
+              port: 11434
+            periodSeconds: 10
+            failureThreshold: 60
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: models
+              mountPath: /models
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: ollama-models
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/part-of: selva-office
+spec:
+  # ClusterIP only. No ingress, no domain, no tunnel: the local backend
+  # must not be reachable from outside the cluster.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ollama
+  ports:
+    - name: http
+      port: 11434
+      targetPort: 11434
+      protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: selva-ollama-config
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/part-of: selva-office
+data:
+  # Single source of truth for the model name: read by the initContainer
+  # that pulls it and by the gateway that requests it. Changing the model
+  # is an edit here plus a rollout of both.
+  OLLAMA_DEFAULT_MODEL: "llama3.1:8b-instruct-q4_K_M"
+  # In-cluster address the inference gateway dials. This is the value the
+  # audit found missing: without it madfam_inference/factory.py falls back
+  # to http://localhost:11434 inside the gateway pod, where nothing
+  # listens, and every restricted call becomes a 503.
+  OLLAMA_BASE_URL: "http://ollama.selva.svc.cluster.local:11434"
+---
+# Only the inference gateway and nexus-api may reach the local backend.
+# Regulated prompts must not be reachable from any other workload in the
+# namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ollama-allow-inference-callers
+  namespace: selva
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/part-of: selva-office
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ollama
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: inference-gateway
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: nexus-api
+      ports:
+        - protocol: TCP
+          port: 11434

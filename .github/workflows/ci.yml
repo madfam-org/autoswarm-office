@@ -484,6 +484,23 @@ jobs:
             --cov-fail-under=75 \
             -q
 
+      # Data-residency / tenancy gate. Per docs/CI_TEST_SCOPE.md's change
+      # rule, tenant-safety regressions must be always-on. Three properties
+      # that were real defects before this suite: X-Sensitivity fails CLOSED
+      # (was: silent downgrade to `public`), sensitivity outranks task_type
+      # (was: a model_assignments entry could route restricted clinical data
+      # to a cloud vendor), and no prompt/completion is ever persisted or
+      # logged. See docs/DATA_CONTRACT_RESTRICTED.md.
+      - name: inference sensitivity + tenant policy critical paths
+        run: |
+          uv run pytest \
+            packages/inference/tests/test_router_sensitivity_precedence.py \
+            packages/inference/tests/test_tenant_policy.py \
+            apps/nexus-api/tests/test_inference_proxy_sensitivity.py \
+            -q
+        env:
+          ENVIRONMENT: development
+
       - name: outbound governance (email + marketing) critical paths
         run: |
           cd packages/tools

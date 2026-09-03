@@ -97,7 +97,7 @@ deepinfra > groq > together > siliconflow > fireworks > mistral > moonshot > ope
 
 | Sensitivity | Routing Behavior |
 |-------------|-----------------|
-| `restricted` / `confidential` | Ollama only (local). Fails if unavailable. |
+| `restricted` / `confidential` | Ollama only (local). **Fails closed with 503** if unavailable — never falls back to a cloud provider, and no `task_type` assignment can override it. |
 | `internal` | Cloud priority order. Falls through on unavailability. |
 | `public` | Cheapest priority order. Falls through on unavailability. |
 
@@ -259,14 +259,65 @@ curl http://nexus-api:4300/v1/chat/completions \
   -d '{"model":"auto","messages":[{"role":"user","content":"hello"}]}'
 ```
 
-### Routing hints
+### Routing headers
 
-Services can pass optional headers to influence routing:
+| Header | Required | Effect | Example |
+|--------|----------|--------|---------|
+| `X-Sensitivity` | **YES** | Data classification. Drives provider eligibility. | `public`, `internal`, `confidential`, `restricted` |
+| `X-Task-Type` | no | Org-config model assignment, *within* what the sensitivity allows | `crm`, `coding`, `research` |
+| `X-Selva-Tenant-Org` | for worker-token callers | Tenant scope; selects the per-tenant policy | a Janua org id |
 
-| Header | Effect | Example |
-|--------|--------|---------|
-| `X-Task-Type` | Maps to `RoutingPolicy.task_type` (org-config model assignment) | `crm`, `coding`, `research` |
-| `X-Sensitivity` | Maps to `RoutingPolicy.sensitivity` | `public`, `internal` |
+**`X-Sensitivity` is mandatory and fails closed.** A request without the
+header, or with a value outside the enum, is rejected with **400** and
+never routed. It used to default to `public` and to swallow an invalid
+value silently, which made "the cheapest cloud vendor" the failure mode
+for a dropped header.
+
+**Sensitivity is evaluated before everything else.** The allowed provider
+set is computed from the sensitivity level first; `X-Task-Type`,
+`prefer_local`, the org-config priority lists, and the fallback chain can
+only pick *inside* that set. A `model_assignments` entry that points
+outside it is refused with a WARNING, not honoured. This is what stops a
+future `summarization: {provider: deepinfra}` entry from silently routing
+clinical data to a cloud vendor.
+
+| Sensitivity | Eligible providers | Fallback chain |
+|---|---|---|
+| `public` | `cheapest_priority` | rest of the list |
+| `internal` | `cloud_priority` | rest of the list |
+| `confidential` | **local only** (`ollama`) | **empty** |
+| `restricted` | **local only** (`ollama`) | **empty** |
+
+With no local backend reachable, a `restricted`/`confidential` call
+returns **503 `local_backend_unavailable`** naming `OLLAMA_BASE_URL`. It
+is never served from the cloud instead. See
+[DATA_CONTRACT_RESTRICTED.md](DATA_CONTRACT_RESTRICTED.md).
+
+### Per-tenant policy
+
+`TENANT_POLICY_PATH` (default `/etc/selva/tenant-policies.yaml`, shipped
+by `infra/k8s/production/tenant-policies.yaml`) declares, per
+`X-Selva-Tenant-Org`:
+
+- `sensitivity_floor` — the weakest level that tenant's data may be
+  served at. A request declaring less is **raised**, never rejected;
+  a request declaring more keeps the stronger level. This is the
+  server-side backstop for a header dropped in transit.
+- `allowed_task_types` — anything else is a 400.
+- `max_tokens_cap`, `request_timeout_seconds`, `rate_limit_per_minute`,
+  `daily_usd_budget`.
+
+A tenant with no entry keeps the gateway defaults; the file only ever
+tightens. A parse failure logs at ERROR and leaves **no floors in
+force** — verify the startup line `tenant policy: loaded N tenant(s)`.
+
+### Timeouts
+
+The gateway applies a server-side deadline per request
+(`request_timeout_seconds`, default 45 s) and answers **504
+`inference_timeout`** when it expires. Clients should send their own
+abort signal slightly above the server deadline. Without this a
+`restricted` call could hang for ~601 s (300 s Ollama timeout + retry).
 
 When `model` is `"auto"`, the router picks the best provider via
 task-type or priority-list routing. Otherwise the `model` value is

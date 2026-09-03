@@ -456,9 +456,12 @@ spec:
           key: WORKER_API_TOKEN
     # Local inference backend for restricted/confidential data. Serves the
     # ecosystem's regulated payloads (clinical, fiscal, payroll) without
-    # contacting any third-party vendor. Deployed by
-    # infra/k8s/production/ollama.yaml; unset ⇒ every restricted call
-    # fails closed with a 503 that names this variable.
+    # contacting any third-party vendor. Manifest lives at
+    # infra/k8s/production/optional/ollama.yaml and is NOT yet in the
+    # production kustomization (its image must first be mirrored to an
+    # approved registry — see docs/RUNBOOK_SELVA_CTM.md § 1). Until then
+    # the backend is absent and every restricted call fails closed with a
+    # 503 that names this variable — which is the intended behaviour.
     - name: OLLAMA_BASE_URL
       value: http://ollama.selva.svc.cluster.local:11434
     # Per-tenant sensitivity floors, token caps, timeouts and rate limits
